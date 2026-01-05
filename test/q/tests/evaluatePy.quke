@@ -4,7 +4,6 @@ feature removeExtraIndents
         .test.evaluatePy: {[isString; code]
             0i (.test.src; isString; code; "first"; 10000)
             };
-            .qu.compare: (~)
     should handle unmatched dedents
         expect both expressions to be moved to column 0
             x:  "  a = 1 + 2\n",
@@ -242,7 +241,7 @@ feature evaluatePy 2
 
     should define nothing in the global namespace except when explicitly the result of user code
         expect sendMe to not define anything in the remote process
-          ;  .test.evaluatePy["text"; "1+2"];
+            .test.evaluatePy["text"; "1+2"];
             .test.evaluatePy["serialized"; "1+2"];
             .pykx.qeval "all(map(lambda x: not(x in globals()), ['_kx_ast', 'BytesIO', 'tokenize', 'is_expr', 'run_line', 'range_to_text', 'run', 'find_strings']))"
 
@@ -282,3 +281,325 @@ feature evaluatePy 2
                     (`data; ::);
                     (`error; 1b);
                     (`errorMsg; ".pykx is not defined: please load pykx"))]
+
+feature python toStructuredText 
+    before
+        .test.src: "\n" sv read0 `:resources/evaluatePy.q;
+        .test.evaluatePy: {[isString; code]
+            0i (.test.src; isString; code; "first"; 10000)
+            };
+
+    should test the structured text functionality in python
+        expect python structured text to handle lists
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "['apple', 'banana', 'cherry', 'date']"]`data;
+                "{\"count\":4,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'apple'\",\"'banana'\",\"'cherry'\",\"'date'\"],\"order\":[0,1,2,3]}],\"warnings\":[]}"]
+        expect python structured text to handle lists of lists
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "[['zapple', 'banana', 'cherry'],['dog', 'elephant', 'fox'],['green', 'blue', 'red']]"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"['zapple', 'banana', 'cherry']\",\"['dog', 'elephant', 'fox']\",\"['green', 'blue', 'red']\"],\"order\":[1,2,0]}],\"warnings\":[]}"]
+        expect python structured text to handle lists of mixed data types
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "[['zapple', 'banana', 'cherry'],['dog', 'elephant', 'fox'],[4, 2, 'red']]"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"['zapple', 'banana', 'cherry']\",\"['dog', 'elephant', 'fox']\",\"[4, 2, 'red']\"],\"order\":\"Sort unsupported: '<' not supported between instances of 'int' and 'str'\"}],\"warnings\":[]}"]
+        expect python structured text to handle a 3d list
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "[
+                [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+                [[10, 11, 12], [13, 14, 15], [16, 17, 18]],
+                [[19, 20, 21], [22, 23, 24], [25, 26, 27]]
+                ]"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"[[1, 2, 3], [4, 5, 6], [7, 8, 9]]\",\"[[10, 11, 12], [13, 14, 15], [16, 17, 18]]\",\"[[19, 20, 21], [22, 23, 24], [25, 26, 27]]\"],\"order\":[0,1,2]}],\"warnings\":[]}"]
+        expect python structured text to handle dictionaries
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "{
+                            'make': 'Toyota',
+                            'model': 'Camry',
+                            'year': 2020,
+                            'color': 'Blue',
+                            'price': '$24,425'
+                            }"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"keys\",\"type\":\"list\",\"values\":[\"'make'\",\"'model'\",\"'year'\",\"'color'\",\"'price'\"],\"order\":[3,0,1,4,2],\"isKey\":true},{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'Toyota'\",\"'Camry'\",\"2020\",\"'Blue'\",\"'$24,425'\"],\"order\":[4,2,3,1,0]}],\"warnings\":[]}"]
+        expect python structured text to handle premade functions
+            .pykx.pyexec "import re";
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "re.compile"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"function\",\"values\":[\"def compile(pattern, flags=0):\\n    \\\"Compile a regular expression pattern, returning a Pattern object.\\\"\\n    return _compile(pattern, flags)\\n\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle custom functions
+            .pykx.pyexec ["def example_function():
+                return 'I am a function'"];
+                (.test.evaluatePy["structuredText"; "example_function"]`data) like "{\"count\":1,\"columns\":[[]{\"name\":\"value\",\"type\":\"function\",\"values\":[[]\"<function example_function at 0x*>\"[]],\"order\":[[]0]}[]],\"warnings\":[[][]]}"
+        expect python structured text to handle a string array
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "['I am an example string']"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'I am an example string'\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle a string
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "'The brown fox'"]`data;
+                "{\"count\":13,\"columns\":[{\"name\":\"values\",\"type\":\"str\",\"values\":[\"'The brown fox'\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle unicode characters
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "'你好'"]`data;
+                "{\"count\":2,\"columns\":[{\"name\":\"values\",\"type\":\"str\",\"values\":[\"'你好'\"],\"order\":[0]}],\"warnings\":[]}"]
+        // The output's order should be 2 0 1
+        expect python structured text to handle a list of unicode characters
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "['你','好','a']"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'你'\",\"'好'\",\"'a'\"],\"order\":[2,0,1]}],\"warnings\":[]}"]
+        expect python structured text to handle list of dicts
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "[
+                            {'make': 'Toyota', 'model': 'Camry', 'year': 2020, 'color': 'Red'},
+                            {'make': 'Honda', 'model': 'Accord', 'year': 2019, 'color': 'Blue'},
+                            {'make': 'Ford', 'model': 'Fusion', 'year': 2021, 'color': 'Black'},
+                            {'make': 'Chevrolet', 'model': 'Impala', 'year': 2018, 'color': 'White'},
+                            {'make': 'Tesla', 'model': 'Model S', 'year': 2022, 'color': 'Silver'}
+                            ]"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"{'make': 'Toyota', 'model': 'Camry', 'year': 2020, 'color': 'Red'}\",\"{'make': 'Honda', 'model': 'Accord', 'year': 2019, 'color': 'Blue'}\",\"{'make': 'Ford', 'model': 'Fusion', 'year': 2021, 'color': 'Black'}\",\"{'make': 'Chevrolet', 'model': 'Impala', 'year': 2018, 'color': 'White'}\",\"{'make': 'Tesla', 'model': 'Model S', 'year': 2022, 'color': 'Silver'}\"],\"order\":\"Sort unsupported: '<' not supported between instances of 'dict' and 'dict'\"}],\"warnings\":[]}"]
+        expect python structured text to handle a list of booleans 
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "[True, False, True, False, True]"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"True\",\"False\",\"True\",\"False\",\"True\"],\"order\":[1,3,0,2,4]}],\"warnings\":[]}"]
+        expect python structured text to handle booleans
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "True"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"bool\",\"values\":[\"True\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle sets
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "{'apple', 'banana', 'cherry'}"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"set\",\"values\":[\"'apple'\",\"'cherry'\",\"'banana'\"],\"order\":[0,2,1]}],\"warnings\":[]}"]
+        expect python structured text to handle lists of sets 
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "[
+                            {'apple', 'banana', 'cherry'},
+                            {'dog', 'cat', 'mouse'},
+                            {'red', 'green', 'blue'},
+                            {1, 2, 3},
+                            {'Python', 'Java', 'C++'}
+                            ]"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"{'apple', 'cherry', 'banana'}\",\"{'mouse', 'dog', 'cat'}\",\"{'green', 'red', 'blue'}\",\"{1, 2, 3}\",\"{'Java', 'C++', 'Python'}\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
+        expect python structured text to handle byte arrays 
+            // UTF-8 is standard    
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "bytearray(b'hello world')"]`data;
+                "{\"count\":11,\"columns\":[{\"name\":\"values\",\"type\":\"bytearray\",\"values\":[\"104\",\"101\",\"108\",\"108\",\"111\",\"32\",\"119\",\"111\",\"114\",\"108\",\"100\"],\"order\":[5,10,1,0,2,3,9,4,7,8,6]}],\"warnings\":[]}"]
+        expect python structured text to handle empty pandas dataframes uniquely 
+            .pykx.pyexec "import pandas as pd";
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.DataFrame()"]`data;
+                "{\"count\":0,\"columns\":[{\"name\":\"value\",\"type\":\"DataFrame\",\"values\":[\"Empty DataFrame\\nColumns: []\\nIndex: []\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas dataframe 
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.DataFrame({
+                    'Name': ['Alice', 'Bob', 'Charlie'],
+                    'Age': [25, 30, 35],
+                    'City': ['New York', 'Los Angeles', 'Chicago']
+                    })"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"Name\",\"type\":\"list\",\"values\":[\"'Alice'\",\"'Bob'\",\"'Charlie'\"],\"order\":[0,1,2]},{\"name\":\"Age\",\"type\":\"list\",\"values\":[\"25\",\"30\",\"35\"],\"order\":[0,1,2]},{\"name\":\"City\",\"type\":\"list\",\"values\":[\"'New York'\",\"'Los Angeles'\",\"'Chicago'\"],\"order\":[2,1,0]}],\"warnings\":[]}"]
+        expect python structured text to handle custom indexed pandas dataframe 
+            .pykx.pyexec "data = {
+                            'Name': ['Alice', 'Bob', 'Charlie'],
+                            'Age': [25, 30, 35],
+                            'City': ['New York', 'Los Angeles', 'Chicago']
+                            }";
+            .pykx.pyexec "df = pd.DataFrame(data)";
+            .pykx.pyexec "df.set_index('Age', inplace=True)";
+           .qu.compare[
+                .test.evaluatePy["structuredText"; "df"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"Age\",\"type\":\"list\",\"values\":[\"25\",\"30\",\"35\"],\"order\":[0,1,2],\"isKey\":true},{\"name\":\"Name\",\"type\":\"list\",\"values\":[\"'Alice'\",\"'Bob'\",\"'Charlie'\"],\"order\":[0,1,2]},{\"name\":\"City\",\"type\":\"list\",\"values\":[\"'New York'\",\"'Los Angeles'\",\"'Chicago'\"],\"order\":[2,1,0]}],\"warnings\":[]}"]
+        expect python structured text to handle multi index pandas dataframes
+            .pykx.pyexec "data = {
+                            'level_1': ['A', 'C', 'B', 'D'],
+                            'level_2': [1, 2, 1, 2],
+                            'value1': [10, 20, 30, 40],
+                            'value2': [50, 60, 70, 80]
+                        }";
+            .pykx.pyexec "df = pd.DataFrame(data)";        
+            .pykx.pyexec "df.set_index(['level_1', 'level_2'], inplace=True)";
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "df"]`data;
+                "{\"count\":4,\"columns\":[{\"name\":\"['level_1', 'level_2']\",\"type\":\"list\",\"values\":[\"('A', 1)\",\"('C', 2)\",\"('B', 1)\",\"('D', 2)\"],\"order\":[0,2,1,3],\"isKey\":true},{\"name\":\"value1\",\"type\":\"list\",\"values\":[\"10\",\"20\",\"30\",\"40\"],\"order\":[0,1,2,3]},{\"name\":\"value2\",\"type\":\"list\",\"values\":[\"50\",\"60\",\"70\",\"80\"],\"order\":[0,1,2,3]}],\"warnings\":[]}"]
+        expect python structured text to handle numpy array
+            .pykx.pyexec "import numpy as np"; 
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "np.array([1, 2, 3, 4, 5])"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"ndarray\",\"values\":[\"np.int64(1)\",\"np.int64(2)\",\"np.int64(3)\",\"np.int64(4)\",\"np.int64(5)\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
+        expect python structured text to handle empty lists
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "[]"]`data;
+                "{\"count\":0,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
+        expect python structured text to handle empty dictionaries
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "{}"]`data;
+                "{\"count\":0,\"columns\":[{\"name\":\"keys\",\"type\":\"list\",\"values\":[],\"order\":[],\"isKey\":true},{\"name\":\"values\",\"type\":\"list\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
+        expect python structured text to handle empty sets
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "set()"]`data;
+                "{\"count\":0,\"columns\":[{\"name\":\"values\",\"type\":\"set\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
+        expect python structured text to handle None Types
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "None"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"NoneType\",\"values\":[\"None\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle empty strings
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "''"]`data;
+                "{\"count\":0,\"columns\":[{\"name\":\"values\",\"type\":\"str\",\"values\":[\"''\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle built in functions
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "len"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"builtin_function_or_method\",\"values\":[\"<built-in function len>\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle ints
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "10"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"int\",\"values\":[\"10\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle frozen sets
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "frozenset({1, 2, 3, 6, 5})"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"frozenset\",\"values\":[\"1\",\"2\",\"3\",\"5\",\"6\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
+        expect python structured text to handle ranges
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "range(10)"]`data;
+                "{\"count\":10,\"columns\":[{\"name\":\"values\",\"type\":\"range\",\"values\":[\"range(0, 10)\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle date times 
+            .pykx.pyexec "from datetime import datetime";
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "datetime(2000, 1, 1)"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"datetime\",\"values\":[\"2000-01-01 00:00:00\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle Ellipsis
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "..."]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"ellipsis\",\"values\":[\"Ellipsis\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle Named Tuples
+            .pykx.pyexec "from collections import namedtuple";
+            .pykx.pyexec "Point = namedtuple('Point', ['x', 'y'])";
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "Point(1, 2)"]`data;
+                "{\"count\":2,\"columns\":[{\"name\":\"values\",\"type\":\"Point\",\"values\":[\"1\",\"2\"],\"order\":[0,1]}],\"warnings\":[]}"]
+        expect python structured text to handle circular references 
+            .pykx.pyexec "a = []";
+            .pykx.pyexec "a.append(a)";
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "a"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"[[...]]\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle iterators
+            .pykx.pyexec "iterable = [1, 2, 3]";
+            .pykx.pyexec "iterator = iter(iterable)";
+            (.test.evaluatePy["structuredText"; "iterator"]`data)
+                like "{\"count\":1,\"columns\":[[]{\"name\":\"value\",\"type\":\"list_iterator\",\"values\":[[]\"<list_iterator object at 0x*>\"[]],\"order\":[[]0]}[]],\"warnings\":[[][]]}"
+        expect python structured text to handle Q charvectors as Python strings
+            .pykx.pyexec "import pykx as kx";
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "kx.q(\"\\\"hello\\\"\")"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"CharVector\",\"values\":[\"hello\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle Q dictionaries
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "kx.q(\"`a`b`c!3 1 2\")"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"keys\",\"type\":\"list\",\"values\":[\"pykx.SymbolAtom(pykx.q('`a'))\",\"pykx.SymbolAtom(pykx.q('`b'))\",\"pykx.SymbolAtom(pykx.q('`c'))\"],\"order\":[0,1,2],\"isKey\":true},{\"name\":\"values\",\"type\":\"list\",\"values\":[\"pykx.LongAtom(pykx.q('3'))\",\"pykx.LongAtom(pykx.q('1'))\",\"pykx.LongAtom(pykx.q('2'))\"],\"order\":[1,2,0]}],\"warnings\":[]}"]
+        expect python structured text to handle Q tables
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "kx.q(\"([] x: 1 2 3 4 5; y: 6 7 8 9 10; z: `a`b`c`d`e)\")"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"x\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('1'))\",\"pykx.LongAtom(pykx.q('2'))\",\"pykx.LongAtom(pykx.q('3'))\",\"pykx.LongAtom(pykx.q('4'))\",\"pykx.LongAtom(pykx.q('5'))\"],\"order\":[0,1,2,3,4]},{\"name\":\"y\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('6'))\",\"pykx.LongAtom(pykx.q('7'))\",\"pykx.LongAtom(pykx.q('8'))\",\"pykx.LongAtom(pykx.q('9'))\",\"pykx.LongAtom(pykx.q('10'))\"],\"order\":[0,1,2,3,4]},{\"name\":\"z\",\"type\":\"SymbolVector\",\"values\":[\"pykx.SymbolAtom(pykx.q('`a'))\",\"pykx.SymbolAtom(pykx.q('`b'))\",\"pykx.SymbolAtom(pykx.q('`c'))\",\"pykx.SymbolAtom(pykx.q('`d'))\",\"pykx.SymbolAtom(pykx.q('`e'))\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
+        expect python structured text to handle Q keyed tables
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "kx.q(\"([x: 1 2 3 4 5] y: 6 7 8 9 10; z: `a`b`c`d`e)\")"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"x\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('1'))\",\"pykx.LongAtom(pykx.q('2'))\",\"pykx.LongAtom(pykx.q('3'))\",\"pykx.LongAtom(pykx.q('4'))\",\"pykx.LongAtom(pykx.q('5'))\"],\"order\":[0,1,2,3,4],\"isKey\":true},{\"name\":\"y\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('6'))\",\"pykx.LongAtom(pykx.q('7'))\",\"pykx.LongAtom(pykx.q('8'))\",\"pykx.LongAtom(pykx.q('9'))\",\"pykx.LongAtom(pykx.q('10'))\"],\"order\":[0,1,2,3,4]},{\"name\":\"z\",\"type\":\"SymbolVector\",\"values\":[\"pykx.SymbolAtom(pykx.q('`a'))\",\"pykx.SymbolAtom(pykx.q('`b'))\",\"pykx.SymbolAtom(pykx.q('`c'))\",\"pykx.SymbolAtom(pykx.q('`d'))\",\"pykx.SymbolAtom(pykx.q('`e'))\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
+        expect python structured text to handle empty lists
+            .pykx.pyexec "import pykx as kx";
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "kx.q(\"()\")"]`data;
+                "{\"count\":0,\"columns\":[{\"name\":\"values\",\"type\":\"List\",\"values\":[],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas series containing None values
+            // Note: When supplying a pandas dataframes anything that is NaN whether it be None or np.Nan, it will default to 'nan'
+            // This is the expected outcome of the test
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.Series([2,3,None, None, None,1])"]`data;
+                "{\"count\":6,\"columns\":[{\"name\":\"values\",\"type\":\"Series\",\"values\":[\"2.0\",\"3.0\",\"nan\",\"nan\",\"nan\",\"1.0\"],\"order\":[5,0,1,2,3,4]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas series containing numeric values
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.Series([12,14,63,6,98,3555,1,2,3,4,5])"]`data;
+                "{\"count\":11,\"columns\":[{\"name\":\"values\",\"type\":\"Series\",\"values\":[\"12\",\"14\",\"63\",\"6\",\"98\",\"3555\",\"1\",\"2\",\"3\",\"4\",\"5\"],\"order\":[6,7,8,9,10,3,0,1,2,4,5]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas series containing np NaN values
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.Series([1.5, np.nan, 3.2, np.nan, 5.0])"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"Series\",\"values\":[\"1.5\",\"nan\",\"3.2\",\"nan\",\"5.0\"],\"order\":[0,2,4,1,3]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas series containing strings
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.Series(['zapple', 'banana', 'cherry', 'date'])"]`data;
+                "{\"count\":4,\"columns\":[{\"name\":\"values\",\"type\":\"Series\",\"values\":[\"'zapple'\",\"'banana'\",\"'cherry'\",\"'date'\"],\"order\":[1,2,3,0]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas series containing booleans
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.Series([True, False, True, True, False])"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"Series\",\"values\":[\"True\",\"False\",\"True\",\"True\",\"False\"],\"order\":[1,4,0,2,3]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas series containing mixed data types
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.Series([10, 'hello', 3.14, None, True])"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"Series\",\"values\":[\"10\",\"'hello'\",\"3.14\",\"None\",\"True\"],\"order\":\"Sort unsupported: '<' not supported between instances of 'int' and 'str'\"}],\"warnings\":[]}"]
+        expect python structured text to handle pandas series containing datetimes
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.Series(pd.to_datetime(['2024-03-10', '2023-12-25', '2024-01-01', '2025-07-04', '2022-06-15']))"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"Series\",\"values\":[\"Timestamp('2024-03-10 00:00:00')\",\"Timestamp('2023-12-25 00:00:00')\",\"Timestamp('2024-01-01 00:00:00')\",\"Timestamp('2025-07-04 00:00:00')\",\"Timestamp('2022-06-15 00:00:00')\"],\"order\":[4,1,2,0,3]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas categorical indexes
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.CategoricalIndex(['spring', 'summer', 'fall', 'winter'])"]`data;
+                "{\"count\":4,\"columns\":[{\"name\":\"values\",\"type\":\"CategoricalIndex\",\"values\":[\"'spring'\",\"'summer'\",\"'fall'\",\"'winter'\"],\"order\":[2,0,1,3]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas categorical indexes with duplicates
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.CategoricalIndex(['apple', 'banana', 'cherry', 'apple', 'banana'])"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"CategoricalIndex\",\"values\":[\"'apple'\",\"'banana'\",\"'cherry'\",\"'apple'\",\"'banana'\"],\"order\":[0,3,1,4,2]}],\"warnings\":[]}"]
+        expect python structured text to handle pandas categorical indexes with custom order 
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.CategoricalIndex(['high', 'medium', 'low'], categories=['low', 'medium', 'high'], ordered=True)"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"CategoricalIndex\",\"values\":[\"'high'\",\"'medium'\",\"'low'\"],\"order\":[2,1,0]}],\"warnings\":[]}"]
+        expect python structured text to only handle empty pandas dataframes values when TABULAR_LIMIT is 0
+            .struct.TABULAR_LIMIT: 0;
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.DataFrame()"]`data;
+                "{\"count\":0,\"columns\":[{\"name\":\"value\",\"type\":\"DataFrame\",\"values\":[\"Empty DataFrame\\nColumns: []\\nIndex: []\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to handle q tables when the number of cells equals the TABULAR_LIMIT 
+            .struct.TABULAR_LIMIT : 3;
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "kx.q(\"([] x: 1 2 3 4 5; y: 6 7 8 9 10; z: `a`b`c`d`e)\")"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"x\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('1'))\"],\"order\":[0]},{\"name\":\"y\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('6'))\"],\"order\":[0]},{\"name\":\"z\",\"type\":\"SymbolVector\",\"values\":[\"pykx.SymbolAtom(pykx.q('`a'))\"],\"order\":[0]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"]
+        expect python structured text to truncate pandas dataframes tables when number of cells is over TABULAR_LIMIT 
+            .struct.TABULAR_LIMIT : 2;
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "pd.DataFrame({
+                    'Name': ['Alice', 'Bob', 'Charlie'],
+                    'Age': [25, 30, 35],
+                    'City': ['New York', 'Los Angeles', 'Chicago']
+                    })"]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"Name\",\"type\":\"list\",\"values\":[\"'Alice'\"],\"order\":[0]},{\"name\":\"Age\",\"type\":\"list\",\"values\":[\"25\"],\"order\":[0]},{\"name\":\"City\",\"type\":\"list\",\"values\":[\"'New York'\"],\"order\":[0]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"]
+        expect python structured text to truncate dictionaries when number of cells is over TABULAR_LIMIT 
+            .struct.TABULAR_LIMIT : 2;
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "{
+                    'make': 'Toyota',
+                    'model': 'Camry',
+                    'year': 2020,
+                    'color': 'Blue',
+                    'price': '$24,425'
+                    }"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"keys\",\"type\":\"list\",\"values\":[\"'make'\"],\"order\":[0],\"isKey\":true},{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'Toyota'\"],\"order\":[0]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"]
+        expect python structured text to ignore truncating strings
+            .struct.TABULAR_LIMIT : 2;
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "'The brown fox'"]`data;
+                "{\"count\":13,\"columns\":[{\"name\":\"values\",\"type\":\"str\",\"values\":[\"'The brown fox'\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python structured text to truncate all other data types when count of data is over TABULAR_LIMIT
+            .struct.TABULAR_LIMIT : 2;
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "(1,2,3,4,5)"]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"tuple\",\"values\":[\"1\",\"2\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"]
+        // There is currently a bug where type error would be returned even if being handled in the codebase.
+        // Since this is a relatively minor bug as the code appears to work on runtime, we will xexpect until a fix is found
+        xexpect python structuredText using the default TABULAR_LIMIT if no valid value is found.
+            .struct.TABULAR_LIMIT: "Adrian";
+            .test.util.run[
+                (.j.j {.pykx.qeval["pystruct_to_structured_text_wrapper"][x;y;z]}["(1,2,3,4,5)"; "first"; 100];.pykx.qeval "int(pykx.q('\"J\"$.struct.DEFAULT_TABULAR_LIMIT'))");
+                ::;
+                ("{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"tuple\",\"values\":[\"1\",\"2\",\"3\",\"4\",\"5\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}";600000)
+            ]
+        expect python structured text to work with indented code
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "    1 + 2"]`data;
+                "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"int\",\"values\":[\"3\"],\"order\":[0]}],\"warnings\":[]}"]
