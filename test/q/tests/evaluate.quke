@@ -183,19 +183,19 @@ feature toStructuredText
             .qu.compare[.test.evaluate["."; "`s#10 + til 5"; ::; "structuredText"]`data; "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"10\",\"11\",\"12\",\"13\",\"14\"],\"order\":[0,1,2,3,4],\"attributes\":\"s\"}],\"warnings\":[]}"]
         expect structured text to handle functions
             exampleFunction: {[x;y]x + y};
-            .qu.compare[.test.evaluate["."; "exampleFunction"; ::; "structuredText"]`data; "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"lambda\",\"values\":[\"{[x;y]x + y}\"],\"order\":[0]}],\"warnings\":[]}"]
+            .qu.compare[.test.evaluate["."; "exampleFunction"; ::; "structuredText"]; "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"lambda\",\"values\":[\"{[x;y]x + y}\"],\"order\":[0]}],\"warnings\":[]}"]
         expect structured text to handle ? as sampling function
             sampleFn: 2?;
             .qu.compare[.test.evaluate["."; "0 0 0"; sampleFn; "structuredText"]`data; "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"0\",\"0\"],\"order\":[0,1]}],\"warnings\":[]}"]
         expect structured text to handle atoms
             exampleAtom: {[x;y]x + y};
-            .qu.compare[.test.evaluate["."; "exampleAtom"; ::; "structuredText"]`data; "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"lambda\",\"values\":[\"{[x;y]x + y}\"],\"order\":[0]}],\"warnings\":[]}"]
+            .qu.compare[.test.evaluate["."; "exampleAtom"; ::; "structuredText"]; "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"lambda\",\"values\":[\"{[x;y]x + y}\"],\"order\":[0]}],\"warnings\":[]}"]
         expect structured text to handle lists
             exampleList: 1.1 452 -32.9;
             .qu.compare[.test.evaluate["."; "0 0 0"; ::; "structuredText"]`data; "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"0\",\"0\",\"0\"],\"order\":[0,1,2]}],\"warnings\":[]}"]
         expect structured text to handle 2D lists
             example2dList: (1.1 1.0 2.0; 452 112 561);
-            .qu.compare[.test.evaluate["."; "example2dList"; ::; "structuredText"]`data; "{\"count\":2,\"columns\":[{\"name\":\"values\",\"type\":\"general\",\"values\":[\"1.1 1 2\",\"452 112 561\"],\"order\":[1,0]}],\"warnings\":[]}"]
+            .qu.compare[.test.evaluate["."; "example2dList"; ::; "structuredText"]; "{\"count\":2,\"columns\":[{\"name\":\"values\",\"type\":\"general\",\"values\":[\"1.1 1 2\",\"452 112 561\"],\"order\":[1,0]}],\"warnings\":[]}"]
         expect structured text to handle dictionaries
             exampleDict: `tom`dick`harry!1040 59 27;    
             .qu.compare[.test.evaluate["."; "exampleDict"; ::; "structuredText"]`data; "{\"count\":3,\"columns\":[{\"name\":\"key\",\"type\":\"symbols\",\"values\":[\"`tom\",\"`dick\",\"`harry\"],\"order\":[1,2,0],\"isKey\":true},{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"1040\",\"59\",\"27\"],\"order\":[2,1,0]}],\"warnings\":[]}"]
