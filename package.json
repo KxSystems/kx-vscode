@@ -971,7 +971,7 @@
         },
         {
           "command": "kdb.connections.edit",
-          "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
+          "when": "view == kdb-servers && viewItem not in kdb.kdbQuickNodes && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@4"
         },
         {
@@ -981,12 +981,12 @@
         },
         {
           "command": "kdb.connections.addAuthentication",
-          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth && viewItem not in kdb.local",
+          "when": "view == kdb-servers && viewItem not in kdb.kdbQuickNodes &&  viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth && viewItem not in kdb.local",
           "group": "connection@3"
         },
         {
           "command": "kdb.connections.enableTLS",
-          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls && viewItem not in kdb.local",
+          "when": "view == kdb-servers && viewItem not in kdb.kdbQuickNodes &&  viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls && viewItem not in kdb.local",
           "group": "connection@4"
         },
         {
@@ -1006,12 +1006,12 @@
         },
         {
           "command": "kdb.connections.remove.kdb",
-          "when": "view == kdb-servers && viewItem in kdb.rootNodes",
+          "when": "view == kdb-servers && viewItem in kdb.rootNodes && viewItem not in kdb.kdbQuickNodes",
           "group": "connection@5"
         },
         {
           "command": "kdb.connections.export.single",
-          "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
+          "when": "view == kdb-servers && viewItem not in kdb.kdbQuickNodes &&  (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@6"
         },
         {
@@ -1201,8 +1201,8 @@
   },
   "scripts": {
     "update-deps": "ncu --target patch -u",
-    "format": "prettier --write \"**/*.+(js|ts)\"",
-    "lint": "eslint $(git ls-files '*.ts') --fix --no-warn-ignored",
+    "format": "prettier --write \"**/*.ts\"",
+    "lint": "eslint --fix --no-warn-ignored",
     "esbuild-base": "rimraf out && node ./esbuild.mjs",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "build": "npm run -S esbuild-base -- --sourcemap",

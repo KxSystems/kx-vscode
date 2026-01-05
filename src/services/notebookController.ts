@@ -30,7 +30,7 @@ import {
 } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";
-import { getBasename } from "../utils/core";
+import { getBasename, isQuickAlias } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import {
   resultToBase64,
@@ -177,6 +177,7 @@ export class KxNotebookController {
             (variable ? 0 : RunFlag.Run) |
             (isInsights ? RunFlag.Insights : 0) |
             (target ? RunFlag.Dap : 0) |
+            (isQuickAlias(conn.connLabel) ? RunFlag.Quick : 0) |
             (kind === CellKind.PYTHON ? RunFlag.Python : 0) |
             (kind === CellKind.SQL ? RunFlag.Sql : 0),
         );

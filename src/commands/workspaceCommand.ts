@@ -29,7 +29,12 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { resetScratchpad, runQuery } from "./serverCommand";
+import {
+  ensureQuickConnection,
+  resetScratchpad,
+  runQuery,
+  setQuickPassword,
+} from "./serverCommand";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
@@ -38,7 +43,12 @@ import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
-import { getBasename, offerConnectAction } from "../utils/core";
+import {
+  getBasename,
+  isQuick,
+  isQuickAlias,
+  offerConnectAction,
+} from "../utils/core";
 import { importOldDsFiles } from "../utils/dataSource";
 import {
   Cancellable,
@@ -58,6 +68,7 @@ import {
   errorMessage,
   normalizeAssemblyTarget,
 } from "../utils/shared";
+import { showInputPicker } from "../utils/widgets";
 
 const logger = "workspaceCommand";
 
@@ -119,6 +130,21 @@ function getServers() {
     ...Object.keys(servers).map((key) => servers[key].serverAlias),
     ...getInsightsServers(),
   ];
+}
+
+const quickServers: string[] = [];
+
+function getQuickServers(uri: Uri) {
+  const conf = workspace.getConfiguration("kdb", uri);
+  const connections = conf.get<{ [key: string]: string }>("connectionMap", {});
+  const size = quickServers.length;
+  Object.keys(connections).forEach((key) => {
+    const target = connections[key];
+    if (target.includes(":") && !quickServers.includes(target)) {
+      quickServers.push(target);
+    }
+  });
+  return size !== quickServers.length ? quickServers.sort() : quickServers;
 }
 
 export async function getConnectionForServer(
@@ -189,7 +215,8 @@ export function getServerForUri(uri: Uri) {
   const server = map[relativePath(uri)];
   const servers = getServers();
 
-  return server && (server === ext.REPL || servers.includes(server))
+  return isQuick(server) ||
+    (server && (server === ext.REPL || servers.includes(server)))
     ? server
     : undefined;
 }
@@ -213,39 +240,69 @@ export function getTargetForUri(uri: Uri) {
 export function getConnectionForUri(uri: Uri) {
   const server = getServerForUri(uri);
   if (server) {
-    return ext.connectionsList.find((item) => {
-      if (item instanceof InsightsNode) {
-        return item.details.alias === server;
-      }
-      return item.details.serverAlias === server;
-    }) as KdbNode | InsightsNode;
+    if (isQuick(server)) {
+      const [host, port, user] = server.split(":");
+      return ext.connectionsList.find(
+        (item) =>
+          item instanceof KdbNode &&
+          host === item.details.serverName &&
+          port === item.details.serverPort &&
+          user === item.details.username,
+      );
+    }
+    return ext.connectionsList.find((item) =>
+      item instanceof InsightsNode
+        ? item.details.alias === server
+        : item.details.serverAlias === server,
+    );
   }
 }
 
 export async function pickConnection(uri: Uri) {
   /* c8 ignore start */
   const server = getServerForUri(uri);
-  const servers = getServers();
-  const items = ["(none)", ...servers];
+  const items = ["(none)", ...getServers(), ...getQuickServers(uri)];
 
-  let picked = await window.showQuickPick(items, {
-    title: `Choose Connection (${getBasename(uri)})`,
+  let picked = await showInputPicker(items, {
+    title: `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
     placeHolder: server,
   });
 
-  if (picked) {
-    if (picked === "(none)") {
-      picked = undefined;
-      await setTargetForUri(uri, undefined);
-    }
-    if (picked) {
-      setRunScratchpadItemText(uri, picked);
-      ext.runScratchpadItem.show();
+  if (picked === undefined) return undefined;
+
+  if (isQuick(picked)) {
+    const [host, port, user, pass] = picked.split(":");
+    if (host && port && /^\d+$/s.test(port)) {
+      if (user) {
+        picked = `${host}:${port}:${user}`;
+        if (pass !== undefined) await setQuickPassword(host, port, user, pass);
+      } else {
+        picked = `${host}:${port}`;
+      }
     } else {
-      ext.runScratchpadItem.hide();
+      notify(`Connection string (${picked}) is not valid.`, MessageKind.ERROR, {
+        logger,
+      });
+      return undefined;
     }
-    await setServerForUri(uri, picked);
+  } else if (picked === "(none)") {
+    picked = undefined;
+    await setTargetForUri(uri, undefined);
+  } else if (!items.includes(picked)) {
+    notify(`Connection "${picked}" is not found.`, MessageKind.ERROR, {
+      logger,
+    });
+    return undefined;
   }
+
+  if (picked) {
+    setRunScratchpadItemText(uri, picked);
+    ext.runScratchpadItem.show();
+  } else {
+    ext.runScratchpadItem.hide();
+  }
+  await setServerForUri(uri, picked);
+
   return picked;
   /* c8 ignore stop */
 }
@@ -588,6 +645,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
         (type === ExecutionTypes.PopulateScratchpad ? 0 : RunFlag.Run) |
           (isInsights ? RunFlag.Insights : 0) |
           (target ? RunFlag.Dap : 0) |
+          (isQuickAlias(conn.connLabel) ? RunFlag.Quick : 0) |
           (isWorkbook(uri) ? RunFlag.Workbook : 0) |
           (isPython(uri) ? RunFlag.Python : 0) |
           (isSql(uri) ? RunFlag.Sql : 0),
@@ -641,14 +699,12 @@ export class ConnectionLensProvider implements CodeLensProvider {
       title: server ? `Run on ${server}` : "Choose Connection",
     });
 
-    const target = getTargetForUri(document.uri);
-
     if (server) {
       const conn = await getConnectionForServer(server);
       if (!isSql(document.uri) && conn instanceof InsightsNode) {
         const pickTarget = new CodeLens(top, {
           command: "kdb.file.pickTarget",
-          title: target || "scratchpad",
+          title: getTargetForUri(document.uri) || "scratchpad",
         });
         return [pickConnection, pickTarget];
       }
@@ -736,14 +792,14 @@ export async function importOldDSFiles() {
 
 export async function findConnection(uri: Uri) {
   /* c8 ignore start */
-  const connMngService = new ConnectionManagementService();
-
   let conn: InsightsConnection | LocalConnection | undefined;
   let server = getServerForUri(uri) ?? "";
 
   if (server) {
+    if (isQuick(server)) server = await ensureQuickConnection(server);
     const node = await getConnectionForServer(server);
     if (node) {
+      const connMngService = new ConnectionManagementService();
       server = node.label;
       conn = connMngService.retrieveConnectedConnection(server);
       if (conn === undefined) {

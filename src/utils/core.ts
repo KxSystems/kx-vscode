@@ -684,3 +684,11 @@ export function isBaseVersionGreaterOrEqual(
 export function getBasename(uri: Uri): string {
   return path.basename(uri.path);
 }
+
+export function isQuick(server: string | undefined) {
+  return server?.includes(":");
+}
+
+export function isQuickAlias(alias: string | undefined) {
+  return alias?.startsWith("(");
+}

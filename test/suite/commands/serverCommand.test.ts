@@ -1555,8 +1555,44 @@ describe("serverCommand", () => {
         success: true,
         isDatasource: true,
       };
+
       await serverCommand.copyQuery(queryHistory);
       sinon.assert.called(showInfoStub);
+    });
+  });
+
+  describe("ensureQuickConnection", () => {
+    let secretSettings: any;
+    let setAuthDataLabel: any;
+    let setAuthDataAuth: any;
+    beforeEach(() => {
+      secretSettings = ext.secretSettings;
+      ext.secretSettings = <any>{
+        getAuthData() {
+          return "test:1234";
+        },
+        storeAuthData(label: any, auth: any) {
+          setAuthDataLabel = label;
+          setAuthDataAuth = auth;
+        },
+      };
+    });
+    afterEach(() => {
+      ext.secretSettings = secretSettings;
+      secretSettings = undefined;
+      setAuthDataAuth = undefined;
+      setAuthDataLabel = undefined;
+    });
+    afterEach(() => {});
+    it("should create quick connection", async () => {
+      const label = await serverCommand.ensureQuickConnection("local:1234");
+      assert.strictEqual(label, "(Connection 1)");
+    });
+    it("should create quick connection with auth", async () => {
+      const label =
+        await serverCommand.ensureQuickConnection("local:1234:test");
+      assert.strictEqual(setAuthDataLabel, label);
+      assert.strictEqual(setAuthDataAuth, "test:1234");
     });
   });
 });

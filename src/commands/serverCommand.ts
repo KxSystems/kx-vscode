@@ -1429,3 +1429,85 @@ function isValidExportedConnections(data: any): data is ExportedConnections {
     Array.isArray(data.connections.KDB)
   );
 }
+
+const quickConnections: ServerDetails[] = [];
+
+function getQuickLabel(conn: ServerDetails) {
+  return `${conn.serverAlias} [${conn.serverName}:${conn.serverPort}]`;
+}
+
+function getQuickDetail(host: string, port: string, user: string) {
+  return quickConnections.find(
+    (conn) =>
+      conn.serverName === host &&
+      conn.serverPort === port &&
+      conn.username === user,
+  );
+}
+
+async function removeQuickDetail(conn: ServerDetails) {
+  quickConnections.splice(quickConnections.indexOf(conn), 1);
+  const label = getQuickLabel(conn);
+  ext.connectedConnectionList
+    .find((conn) => conn.connLabel === label)
+    ?.disconnect();
+  await refreshQuickProvider();
+}
+
+async function refreshQuickProvider() {
+  const servers = getServers();
+  quickConnections.forEach((conn) => (servers[conn.serverAlias] = conn));
+  await commands.executeCommand(
+    "setContext",
+    "kdb.kdbQuickNodes",
+    quickConnections.map((conn) => getQuickLabel(conn)),
+  );
+  ext.serverProvider.refresh(servers);
+}
+
+export async function setQuickPassword(
+  host: string,
+  port: string,
+  user: string,
+  pass: string,
+) {
+  const conn = getQuickDetail(host, port, user);
+  if (conn) await removeQuickDetail(conn);
+  await ext.secretSettings.storeAuthData(
+    `${host}:${port}:${user}`,
+    `${user}:${pass}`,
+  );
+}
+
+export async function ensureQuickConnection(server: string) {
+  const [host, port, user] = server.split(":");
+
+  let connection = getQuickDetail(host, port, user);
+  if (!connection) {
+    const serverAlias = "(Connection " + (quickConnections.length + 1) + ")";
+    if (user) {
+      let auth = await ext.secretSettings.getAuthData(server);
+      if (!auth) {
+        const password = await window.showInputBox({
+          password: true,
+          prompt: `Enter password for ${server}`,
+        });
+        auth = `${user}:${password ?? ""}`;
+        await ext.secretSettings.storeAuthData(server, auth);
+      }
+      await ext.secretSettings.storeAuthData(serverAlias, auth);
+    }
+    connection = {
+      serverAlias,
+      serverName: host,
+      serverPort: port,
+      username: user,
+      auth: !!user,
+      tls: false,
+    };
+    quickConnections.push(connection);
+    await refreshQuickProvider();
+  }
+
+  return connection.serverAlias;
+}

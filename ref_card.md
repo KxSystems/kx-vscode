@@ -135,15 +135,15 @@
 | Run.Cell.ie.dap.q                 |              | src/utils/queryUtils.ts                  |
 | Run.Cell.ie.dap.py                |              | src/utils/queryUtils.ts                  |
 | ¦                                 |              |                                          |
-| Run.Workbook.kdb.quick.q          |              |                                          |
-| Run.Workbook.kdb.quick.py         |              |                                          |
-| Run.Workbook.kdb.quick.sql        |              |                                          |
-| Run.File.kdb.quick.q              |              |                                          |
-| Run.File.kdb.quick.py             |              |                                          |
-| Run.File.kdb.quick.sql            |              |                                          |
-| Run.Cell.kdb.quick.q              |              |                                          |
-| Run.Cell.kdb.quick.py             |              |                                          |
-| Run.Cell.kdb.quick.sql            |              |                                          |
+| Run.Workbook.kdb.quick.q          |              | src/utils/queryUtils.ts                  |
+| Run.Workbook.kdb.quick.py         |              | src/utils/queryUtils.ts                  |
+| Run.Workbook.kdb.quick.sql        |              | src/utils/queryUtils.ts                  |
+| Run.File.kdb.quick.q              |              | src/utils/queryUtils.ts                  |
+| Run.File.kdb.quick.py             |              | src/utils/queryUtils.ts                  |
+| Run.File.kdb.quick.sql            |              | src/utils/queryUtils.ts                  |
+| Run.Cell.kdb.quick.q              |              | src/utils/queryUtils.ts                  |
+| Run.Cell.kdb.quick.py             |              | src/utils/queryUtils.ts                  |
+| Run.Cell.kdb.quick.sql            |              | src/utils/queryUtils.ts                  |
 | ¦                                 |              |                                          |
 | Run.Datasource.api                |              | src/utils/queryUtils.ts                  |
 | Run.Datasource.qsql               |              | src/utils/queryUtils.ts                  |

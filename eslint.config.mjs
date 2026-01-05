@@ -8,16 +8,14 @@ import * as tseslint from "typescript-eslint";
 const currentYear = new Date().getFullYear();
 
 export default [
-  {
-    ignores: ["**/*.d.ts", "**/*.js", "**/*.mjs", "src/ipc/**", "test/fixtures/**"],
-  },
+  { ignores: ["**/*.d.ts", "**/*.js", "**/*.mjs", "src/ipc/**/*"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
-        ecmaVersion: 2018,
+        ecmaVersion: 2020,
         sourceType: "module",
       },
     },
