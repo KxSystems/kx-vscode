@@ -73,7 +73,7 @@ feature removeExtraIndents
                 "    print(2)\n";
 
             .qu.compare[.test.evaluatePy["serialized"; x]`errorMsg;
-                `$"('unindent does not match any outer indentation level', ('<unknown>', 3, 7, ' else:\\n', 3, -1))"]
+                "('unindent does not match any outer indentation level', ('<unknown>', 3, 7, ' else:\\n', 3, -1))"]
 
             
 feature evaluatePy 1
@@ -83,7 +83,7 @@ feature evaluatePy 1
         .test.evaluatePy: {[isString; code]
             0i (.test.src; isString; code; "first"; 10000)
             };
-        .test.wrap: {`error`errorMsg`data!(0b; `; x)}
+        .test.wrap: {`error`errorMsg`data!(0b; "None"; x)}
         
     should run python code
         expect an empty input to return "None"
@@ -136,7 +136,7 @@ feature evaluatePy 1
                 result;
                 (!) . flip (
                     (`error;      1b);
-                    (`errorMsg;   `$"('invalid syntax', ('<unknown>', 1, 5, '1+++\\n', 1, 5))");
+                    (`errorMsg;   "('invalid syntax', ('<unknown>', 1, 5, '1+++\\n', 1, 5))");
                     (`data;       ::);
                     (`stacktrace; "  File \"<unknown>\", line 1\n    1+++\n        ^\nSyntaxError: invalid syntax"))]
 
@@ -191,7 +191,7 @@ feature evaluatePy 1
                 result;
                 (!) . flip (
                     (`error;      1b);
-                    (`errorMsg;   `$"(\"unsupported operand type(s) for +: 'int' and 'str'\",)");
+                    (`errorMsg;   "(\"unsupported operand type(s) for +: 'int' and 'str'\",)");
                     (`data;       ::);
                     (`stacktrace; "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 2, in foo\n  File \"<string>\", line 5, in bar\nTypeError: unsupported operand type(s) for +: 'int' and 'str'"))]
 
@@ -203,7 +203,7 @@ feature evaluatePy 1
                 result;
                 (!) . flip (
                     (`error;      1b);
-                    (`errorMsg;   `$"('invalid syntax', ('<unknown>', 1, 3, '1 2 + 3 4\\n', 1, 4))");
+                    (`errorMsg;   "('invalid syntax', ('<unknown>', 1, 3, '1 2 + 3 4\\n', 1, 4))");
                     (`data;       ::);
                     (`stacktrace; "  File \"<unknown>\", line 1\n    1 2 + 3 4\n      ^\nSyntaxError: invalid syntax"))]
             
@@ -215,7 +215,7 @@ feature evaluatePy 1
                 result;
                 (!) . flip (
                     (`error;      1b);
-                    (`errorMsg;   `$"(\"unsupported operand type(s) for +: 'int' and 'str'\",)");
+                    (`errorMsg;   "(\"unsupported operand type(s) for +: 'int' and 'str'\",)");
                     (`data;       ::);
                     (`stacktrace; "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nTypeError: unsupported operand type(s) for +: 'int' and 'str'"))]
 
@@ -227,7 +227,7 @@ feature evaluatePy 1
                 result;
                 (!) . flip (
                     (`error;      1b);
-                    (`errorMsg;   `$"(\"unmatched ')'\", ('<unknown>', 1, 2, '2)', 1, 2))");
+                    (`errorMsg;   "(\"unmatched ')'\", ('<unknown>', 1, 2, '2)', 1, 2))");
                     (`data;       ::);
                     (`stacktrace; "  File \"<unknown>\", line 1\n    2)\n     ^\nSyntaxError: unmatched ')'"))]
 
@@ -625,7 +625,7 @@ feature python toStructuredText
     should return errors in structured text
         expect error dictionary to contain keys in the form of `data`error`errorMsg`stacktrace
             a: .test.evaluatePy["structuredText"; "1 + '2'"];
-            .qu.compare[key a; `data`error`errorMsg`stacktrace]
+            .qu.compare[key a; `error`errorMsg`data`stacktrace]
         expect error dictionary to contain null for data
             .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`data; "null"]
         expect error dictionary to contain a 1b for error
