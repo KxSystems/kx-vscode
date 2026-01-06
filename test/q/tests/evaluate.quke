@@ -286,8 +286,6 @@ feature toStructuredText
             .qu.compare[.test.evaluate["."; "something"; ::; "text"]`errorMsg; "something"]
         expect error dictionary to contain stacktrace
             a: .j.j .test.evaluate["."; ".test.adr"; ::; "text"];
-            show "aaaaaaaaaaaaaaaaaaaaaaa";
-            show a;
-            b: "{\"data\":null,\"error\":true,\"errorMsg\":\".test.adr\",\"stacktrace\":\"  [7]  ;[::;.test.adr]\\n            ^\\n  [6]  {[expr] `data`error`errorMsg`stacktrace!({$[x ~ (::); (::); x]} value expr; 0b; \\\"\\\"; ())}\\n                                                                       ^\\n  [5]  (.Q.trp)\\n\\n  [4]  \\n  expr: prefix , expr , suffix;\\n  result: .Q.trp[{[expr] `data`error`errorMsg`stacktrace!({$[x ~ (::); (::); x]} value expr; 0b; \\\"\\\"; ())};\\n          ^\\n  expr;\\n  [3]  \\n  }[generateTableColumns; generateColumns; sample];\\n  result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];\\n          ^\\n  if [result`error; :result];\\n  [2]  .test.evaluate:{[ctx; code; sampleFn; returnFormat]\\n            0i (.test.src; ctx; code; sampleFn; returnFormat)\\n            ^\\n            }\\n  [1]  a: .j.j .test.evaluate[\\\".\\\"; \\\".test.adr\\\"; ::; \\\"text\\\"]\\n               ^\\n\"}";
+            b:  "{\"data\":null,\"error\":true,\"errorMsg\":\".test.adr\",\"stacktrace\":\"  [1]  .test.adr\\n       ^\\n\"}";
             .qu.compare[a;b]
             
