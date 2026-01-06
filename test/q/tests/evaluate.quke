@@ -259,4 +259,18 @@ feature toStructuredText
         expect structured text to handle invalid TABULAR_LIMIT
             setenv[`TABULAR_LIMIT;"ADRIAN"];
             .test.exampleList: 1.1 452 -32.9;
-            .qu.compare[.test.evaluate["."; ".test.exampleList"; ::; "structuredText"]`data; "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"floats\",\"values\":[\"1.1\",\"452f\",\"-32.9\"],\"order\":[2,0,1]}],\"warnings\":[]}"]
+            .qu.compare[.test.evaluate["."; ".test.exampleList"; ::; "structuredText"]`data; "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"floats\",\"values\":[\"1.1\",\"452f\",\"-32.9\"],\"order\":[2,0,1]}],\"warnings\":[]}"]   
+    should return errors in structured text
+        expect error dictionary to contain keys in the form of `data`error`errorMsg`stacktrace
+            .test.errorDict: `data`error`errorMsg`stacktrace!(::;1b;"something";"");
+            a: .test.evaluate["."; "something"; ::; "text"];
+            .qu.compare[key a; key .test.errorDict]
+        expect error dictionary to contain null for errors
+            .qu.compare[.test.evaluate["."; "something"; ::; "text"]`data; ::]
+        expect error dictionary to contain proper errorMsg
+            .qu.compare[.test.evaluate["."; "something"; ::; "text"]`errorMsg; "something"]
+        expect error dictionary to contain stacktrace
+            a: .j.j .test.evaluate["."; ".test.adr"; ::; "text"];
+            b: "{\"data\":null,\"error\":true,\"errorMsg\":\".test.adr\",\"stacktrace\":\"  [7]  ;[::;.test.adr]\\n            ^\\n  [6]  {[expr] `data`error`errorMsg`stacktrace!({$[x ~ (::); (::); x]} value expr; 0b; \\\"\\\"; ())}\\n                                                                       ^\\n  [5]  (.Q.trp)\\n\\n  [4]  \\n  expr: prefix , expr , suffix;\\n  result: .Q.trp[{[expr] `data`error`errorMsg`stacktrace!({$[x ~ (::); (::); x]} value expr; 0b; \\\"\\\"; ())};\\n          ^\\n  expr;\\n  [3]  \\n  }[generateTableColumns; generateColumns; sample];\\n  result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];\\n          ^\\n  if [result`error; :result];\\n  [2]  .test.evaluate:{[ctx; code; sampleFn; returnFormat]\\n            0i (.test.src; ctx; code; sampleFn; returnFormat)\\n            ^\\n            }\\n  [1]  a: .j.j .test.evaluate[\\\".\\\"; \\\".test.adr\\\"; ::; \\\"text\\\"]\\n               ^\\n\"}";
+            .qu.compare[a;b]
+            

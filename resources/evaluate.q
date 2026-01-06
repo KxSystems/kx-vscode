@@ -108,12 +108,12 @@
   prefix: ";[::;";
   suffix: $[(not isLastLine) and not ";" ~ last expr; ";]"; "]"];
   expr: prefix , expr , suffix;
-  result: .Q.trp[{[expr] `data`error`errorMsg`backtrace!({$[x ~ (::); (::); x]} value expr; 0b; ""; ())};
+  result: .Q.trp[{[expr] `data`error`errorMsg`stacktrace!({$[x ~ (::); (::); x]} value expr; 0b; ""; ())};
   expr;
-  {[suffix; prefix; err; backtrace]
+  {[suffix; prefix; err; stacktrace]
   if [err ~ enlist " ";
   err: "syntax error"];
-  userCode: (-1 + last where (.Q.trp ~ first first @) each backtrace) # backtrace;
+  userCode: (-1 + last where (.Q.trp ~ first first @) each stacktrace) # stacktrace;
   userCode[;3]: reverse 1 + til count userCode;
   userCode[-1 + count userCode; 1; 3]: (neg count suffix) _ (count prefix) _ userCode[-1 + count userCode; 1; 3];
   userCode[-1 + count userCode; 2]-: count prefix;
@@ -121,7 +121,7 @@
   (`data;    ::);
   (`error;   1b);
   (`errorMsg;     err);
-  (`backtrace; .Q.sbt userCode))
+  (`stacktrace; .Q.sbt userCode))
   }[suffix; prefix]];
   if [isLastLine or result`error;
   system "d ", cachedCtx;
