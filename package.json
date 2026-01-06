@@ -471,7 +471,7 @@
         "command": "kdb.execute.selectedQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+        "when": "resourceFilename =~ /\\.(?:q|quke|sql)$/i"
       },
       {
         "command": "kdb.execute.fileQuery",
@@ -817,7 +817,7 @@
         },
         {
           "command": "kdb.execute.selectedQuery",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql)$/i"
         },
         {
           "command": "kdb.execute.fileQuery",
@@ -1079,7 +1079,7 @@
         {
           "command": "kdb.execute.selectedQuery",
           "group": "q1@1",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql)$/i"
         },
         {
           "command": "kdb.execute.block",
@@ -1101,7 +1101,7 @@
         {
           "command": "kdb.execute.selectedQuery",
           "group": "q@1",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql)$/i"
         },
         {
           "command": "kdb.execute.block",

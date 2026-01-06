@@ -192,7 +192,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(
-      { pattern: "**/*.{q,py,sql}" },
+      { pattern: "**/*.{q,quke,py,sql}" },
       new ConnectionLensProvider(),
     ),
 

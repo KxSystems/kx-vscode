@@ -60,6 +60,7 @@
 | Type                | REPL | My q | IE SP | IE q/SQL | IE API | IE UDA | IE Populate SP |
 | :------------------ | :--: | :--: | :---: | :------: | :----: | :----: | :------------: |
 | File `q`            |  ✓   |  ✓   |   ✓   |    ✓     |        |        |       ✓        |
+| File `quke`         |  ✓   |  ✓   |   ✓   |    ✓     |        |        |                |
 | File `py`           |  ✓   |  ✓   |   ✓   |    ✓     |        |        |       ✓        |
 | File `sql`          |  ✓   |  ✓   |       |    ✓     |        |        |       ✓        |
 | Workbook `q`        |  ✓   |  ✓   |   ✓   |    ✓     |        |        |       ✓        |
@@ -102,6 +103,7 @@
 | Run.Workbook.repl.py              |              | src/utils/queryUtils.ts                  |
 | Run.Workbook.repl.sql             |              | src/utils/queryUtils.ts                  |
 | Run.File.repl.q                   |              | src/utils/queryUtils.ts                  |
+| Run.File.repl.quke                |              | src/utils/queryUtils.ts                  |
 | Run.File.repl.py                  |              | src/utils/queryUtils.ts                  |
 | Run.File.repl.sql                 |              | src/utils/queryUtils.ts                  |
 | Run.Cell.repl.q                   |              | src/utils/queryUtils.ts                  |
@@ -112,6 +114,7 @@
 | Run.Workbook.kdb.py               |              | src/utils/queryUtils.ts                  |
 | Run.Workbook.kdb.sql              |              | src/utils/queryUtils.ts                  |
 | Run.File.kdb.q                    |              | src/utils/queryUtils.ts                  |
+| Run.File.kdb.quke                 |              | src/utils/queryUtils.ts                  |
 | Run.File.kdb.py                   |              | src/utils/queryUtils.ts                  |
 | Run.File.kdb.sql                  |              | src/utils/queryUtils.ts                  |
 | Run.Cell.kdb.q                    |              | src/utils/queryUtils.ts                  |
@@ -122,6 +125,7 @@
 | Run.Workbook.ie.py                |              | src/utils/queryUtils.ts                  |
 | Run.Workbook.ie.sql               |              | src/utils/queryUtils.ts                  |
 | Run.File.ie.q                     |              | src/utils/queryUtils.ts                  |
+| Run.File.ie.quke                  |              | src/utils/queryUtils.ts                  |
 | Run.File.ie.py                    |              | src/utils/queryUtils.ts                  |
 | Run.File.ie.sql                   |              | src/utils/queryUtils.ts                  |
 | Run.Cell.ie.q                     |              | src/utils/queryUtils.ts                  |
@@ -131,6 +135,7 @@
 | Run.Workbook.ie.dap.q             |              | src/utils/queryUtils.ts                  |
 | Run.Workbook.ie.dap.py            |              | src/utils/queryUtils.ts                  |
 | Run.File.ie.dap.q                 |              | src/utils/queryUtils.ts                  |
+| Run.File.ie.dap.quke              |              | src/utils/queryUtils.ts                  |
 | Run.File.ie.dap.py                |              | src/utils/queryUtils.ts                  |
 | Run.Cell.ie.dap.q                 |              | src/utils/queryUtils.ts                  |
 | Run.Cell.ie.dap.py                |              | src/utils/queryUtils.ts                  |
@@ -139,6 +144,7 @@
 | Run.Workbook.kdb.quick.py         |              | src/utils/queryUtils.ts                  |
 | Run.Workbook.kdb.quick.sql        |              | src/utils/queryUtils.ts                  |
 | Run.File.kdb.quick.q              |              | src/utils/queryUtils.ts                  |
+| Run.File.kdb.quick.quke           |              | src/utils/queryUtils.ts                  |
 | Run.File.kdb.quick.py             |              | src/utils/queryUtils.ts                  |
 | Run.File.kdb.quick.sql            |              | src/utils/queryUtils.ts                  |
 | Run.Cell.kdb.quick.q              |              | src/utils/queryUtils.ts                  |
