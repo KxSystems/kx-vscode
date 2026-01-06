@@ -1,3 +1,4 @@
+\c 100000 100000
 feature EDI
     before
         .test.src: "\n" sv read0 `:resources/evaluate.q;
