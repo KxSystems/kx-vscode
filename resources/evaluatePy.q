@@ -79,7 +79,7 @@
   try:
    return{
     'error': False,
-    'errorMsg': '',
+    'errorMsg': str(None).encode('UTF-8'),
     'data': pystruct_run(code, as_string)
    }
   except Exception as e:
@@ -91,7 +91,7 @@
    formatted_tb = formatted_tb.rstrip()
    return{
     'error': True,
-    'errorMsg': str(e.args),
+    'errorMsg': str(e.args).encode('UTF-8'),
     'data': None,
     'stacktrace': formatted_tb
    }
@@ -346,9 +346,9 @@
      formatted_tb = formatted_tb.rstrip()
      return {
       'error': True,
-      'errorMsg': str(e.args),
+      'errorMsg': str(e.args).encode('UTF-8'),
       'data': None,
-      'stacktrace': formatted_tb
+      'stacktrace': str(formatted_tb).encode('UTF-8')
      }
 
 
@@ -367,7 +367,7 @@
       return{
       'data': pystruct_to_structured_text(result, length),
       'error': False,
-      'errorMsg':''
+      'errorMsg':str(None).encode('UTF-8')
       }
     except Exception as e:
       type,error,tb=sys.exc_info()
@@ -379,7 +379,7 @@
       return{
        'data':None,
        'error':True,
-      'errorMsg':str(e),
+      'errorMsg':str(e).encode('UTF-8'),
       'backtrace':tb2
       }";
   

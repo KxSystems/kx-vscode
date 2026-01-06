@@ -289,6 +289,13 @@ feature evaluatePy 2
 
 feature python toStructuredText 
     before
+        .pykx.pyexec "import pykx as kx";
+        .pykx.pyexec "import re";
+        .pykx.pyexec "import pandas as pd";
+        .pykx.pyexec "import numpy as np";
+        .pykx.pyexec "from datetime import datetime";
+        .pykx.pyexec "from collections import namedtuple";
+        .pykx.pyexec "import traceback";
         .test.src: "\n" sv read0 `:resources/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
             0i (.test.src; isString; code; "first"; 10000)
@@ -326,7 +333,6 @@ feature python toStructuredText
                             }"]`data;
                 "{\"count\":5,\"columns\":[{\"name\":\"keys\",\"type\":\"list\",\"values\":[\"'make'\",\"'model'\",\"'year'\",\"'color'\",\"'price'\"],\"order\":[3,0,1,4,2],\"isKey\":true},{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'Toyota'\",\"'Camry'\",\"2020\",\"'Blue'\",\"'$24,425'\"],\"order\":[4,2,3,1,0]}],\"warnings\":[]}"]
         expect python structured text to handle premade functions
-            .pykx.pyexec "import re";
             .qu.compare[
                 .test.evaluatePy["structuredText"; "re.compile"]`data;
                 "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"function\",\"values\":[\"def compile(pattern, flags=0):\\n    \\\"Compile a regular expression pattern, returning a Pattern object.\\\"\\n    return _compile(pattern, flags)\\n\"],\"order\":[0]}],\"warnings\":[]}"]
@@ -393,7 +399,6 @@ feature python toStructuredText
                 .test.evaluatePy["structuredText"; "bytearray(b'hello world')"]`data;
                 "{\"count\":11,\"columns\":[{\"name\":\"values\",\"type\":\"bytearray\",\"values\":[\"104\",\"101\",\"108\",\"108\",\"111\",\"32\",\"119\",\"111\",\"114\",\"108\",\"100\"],\"order\":[5,10,1,0,2,3,9,4,7,8,6]}],\"warnings\":[]}"]
         expect python structured text to handle empty pandas dataframes uniquely 
-            .pykx.pyexec "import pandas as pd";
             .qu.compare[
                 .test.evaluatePy["structuredText"; "pd.DataFrame()"]`data;
                 "{\"count\":0,\"columns\":[{\"name\":\"value\",\"type\":\"DataFrame\",\"values\":[\"Empty DataFrame\\nColumns: []\\nIndex: []\"],\"order\":[0]}],\"warnings\":[]}"]
@@ -429,7 +434,6 @@ feature python toStructuredText
                 .test.evaluatePy["structuredText"; "df"]`data;
                 "{\"count\":4,\"columns\":[{\"name\":\"['level_1', 'level_2']\",\"type\":\"list\",\"values\":[\"('A', 1)\",\"('C', 2)\",\"('B', 1)\",\"('D', 2)\"],\"order\":[0,2,1,3],\"isKey\":true},{\"name\":\"value1\",\"type\":\"list\",\"values\":[\"10\",\"20\",\"30\",\"40\"],\"order\":[0,1,2,3]},{\"name\":\"value2\",\"type\":\"list\",\"values\":[\"50\",\"60\",\"70\",\"80\"],\"order\":[0,1,2,3]}],\"warnings\":[]}"]
         expect python structured text to handle numpy array
-            .pykx.pyexec "import numpy as np"; 
             .qu.compare[
                 .test.evaluatePy["structuredText"; "np.array([1, 2, 3, 4, 5])"]`data;
                 "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"ndarray\",\"values\":[\"1\",\"2\",\"3\",\"4\",\"5\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
@@ -470,7 +474,6 @@ feature python toStructuredText
                 .test.evaluatePy["structuredText"; "range(10)"]`data;
                 "{\"count\":10,\"columns\":[{\"name\":\"values\",\"type\":\"range\",\"values\":[\"range(0, 10)\"],\"order\":[0]}],\"warnings\":[]}"]
         expect python structured text to handle date times 
-            .pykx.pyexec "from datetime import datetime";
             .qu.compare[
                 .test.evaluatePy["structuredText"; "datetime(2000, 1, 1)"]`data;
                 "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"datetime\",\"values\":[\"2000-01-01 00:00:00\"],\"order\":[0]}],\"warnings\":[]}"]
@@ -479,7 +482,6 @@ feature python toStructuredText
                 .test.evaluatePy["structuredText"; "..."]`data;
                 "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"ellipsis\",\"values\":[\"Ellipsis\"],\"order\":[0]}],\"warnings\":[]}"]
         expect python structured text to handle Named Tuples
-            .pykx.pyexec "from collections import namedtuple";
             .pykx.pyexec "Point = namedtuple('Point', ['x', 'y'])";
             .qu.compare[
                 .test.evaluatePy["structuredText"; "Point(1, 2)"]`data;
@@ -496,7 +498,6 @@ feature python toStructuredText
             (.test.evaluatePy["structuredText"; "iterator"]`data)
                 like "{\"count\":1,\"columns\":[[]{\"name\":\"value\",\"type\":\"list_iterator\",\"values\":[[]\"<list_iterator object at 0x*>\"[]],\"order\":[[]0]}[]],\"warnings\":[[][]]}"
         expect python structured text to handle Q charvectors as Python strings
-            .pykx.pyexec "import pykx as kx";
             .qu.compare[
                 .test.evaluatePy["structuredText"; "kx.q(\"\\\"hello\\\"\")"]`data;
                 "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"CharVector\",\"values\":[\"hello\"],\"order\":[0]}],\"warnings\":[]}"]
@@ -513,7 +514,6 @@ feature python toStructuredText
                 .test.evaluatePy["structuredText"; "kx.q(\"([x: 1 2 3 4 5] y: 6 7 8 9 10; z: `a`b`c`d`e)\")"]`data;
                 "{\"count\":5,\"columns\":[{\"name\":\"x\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('1'))\",\"pykx.LongAtom(pykx.q('2'))\",\"pykx.LongAtom(pykx.q('3'))\",\"pykx.LongAtom(pykx.q('4'))\",\"pykx.LongAtom(pykx.q('5'))\"],\"order\":[0,1,2,3,4],\"isKey\":true},{\"name\":\"y\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('6'))\",\"pykx.LongAtom(pykx.q('7'))\",\"pykx.LongAtom(pykx.q('8'))\",\"pykx.LongAtom(pykx.q('9'))\",\"pykx.LongAtom(pykx.q('10'))\"],\"order\":[0,1,2,3,4]},{\"name\":\"z\",\"type\":\"SymbolVector\",\"values\":[\"pykx.SymbolAtom(pykx.q('`a'))\",\"pykx.SymbolAtom(pykx.q('`b'))\",\"pykx.SymbolAtom(pykx.q('`c'))\",\"pykx.SymbolAtom(pykx.q('`d'))\",\"pykx.SymbolAtom(pykx.q('`e'))\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
         expect python structured text to handle empty lists
-            .pykx.pyexec "import pykx as kx";
             .qu.compare[
                 .test.evaluatePy["structuredText"; "kx.q(\"()\")"]`data;
                 "{\"count\":0,\"columns\":[{\"name\":\"values\",\"type\":\"List\",\"values\":[],\"order\":[0]}],\"warnings\":[]}"]
@@ -612,3 +612,26 @@ feature python toStructuredText
             .qu.compare[
                 .test.evaluatePy["structuredText"; "    1 + 2"]`data;
                 "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"int\",\"values\":[\"3\"],\"order\":[0]}],\"warnings\":[]}"]
+    should return a dictionary in structured text
+        expect return dictionary to contain proper keys in the form of `data`error`errorMsg`stacktrace
+            a: .test.evaluatePy["structuredText"; "['apple', 'banana', 'cherry', 'date']"];
+            .qu.compare[key a; `data`error`errorMsg]
+        expect return dictionary to contain 0b for error
+            .qu.compare[.test.evaluatePy["structuredText"; "['apple', 'banana', 'cherry', 'date']"]`error; 0b]
+        expect return dictionary to contain proper errorMsg
+            .qu.compare[.test.evaluatePy["structuredText"; "['apple', 'banana', 'cherry', 'date']"]`errorMsg; "None"]
+        expect return dictionary to contain a empty stacktrace
+            .qu.compare[.test.evaluatePy["structuredText"; "['apple', 'banana', 'cherry', 'date']"]`stacktrace; ""]
+    should return errors in structured text
+        expect error dictionary to contain keys in the form of `data`error`errorMsg`stacktrace
+            a: .test.evaluatePy["structuredText"; "1 + '2'"];
+            .qu.compare[key a; `data`error`errorMsg`stacktrace]
+        expect error dictionary to contain null for data
+            .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`data; "null"]
+        expect error dictionary to contain a 1b for error
+            .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`error; 1b]
+        expect error dictionary to contain proper errorMsg
+            .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`errorMsg; "(\"unsupported operand type(s) for +: 'int' and 'str'\",)"]
+        expect error dictionary to contain stacktrace
+            .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`stacktrace; "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nTypeError: unsupported operand type(s) for +: 'int' and 'str'"]
+            
