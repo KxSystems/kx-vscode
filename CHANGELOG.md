@@ -14,6 +14,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Nested objects are better supported in kdb Results View
 - Add support for KDB-X modules in language server
 - Moved documentation to its own site
+- Ability to execute selection in quke files
 
 ### Fixes
 

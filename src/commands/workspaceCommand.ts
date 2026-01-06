@@ -502,6 +502,10 @@ function createProcessKey(dap: MetaDap): string | null {
   /* c8 ignore stop */
 }
 
+function isQuke(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".quke");
+}
+
 function isSql(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".sql");
 }
@@ -604,7 +608,8 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           RunFlag.Repl |
           (isWorkbook(uri) ? RunFlag.Workbook : 0) |
           (isPython(uri) ? RunFlag.Python : 0) |
-          (isSql(uri) ? RunFlag.Sql : 0),
+          (isSql(uri) ? RunFlag.Sql : 0) |
+          (isQuke(uri) ? RunFlag.Quke : 0),
       );
       return;
     }
@@ -648,7 +653,8 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           (isQuickAlias(conn.connLabel) ? RunFlag.Quick : 0) |
           (isWorkbook(uri) ? RunFlag.Workbook : 0) |
           (isPython(uri) ? RunFlag.Python : 0) |
-          (isSql(uri) ? RunFlag.Sql : 0),
+          (isSql(uri) ? RunFlag.Sql : 0) |
+          (isQuke(uri) ? RunFlag.Quke : 0),
       );
     } catch (error) {
       notify(

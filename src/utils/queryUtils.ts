@@ -547,15 +547,16 @@ export function resetScratchpadStarted(connLabel: string) {
 }
 
 export const enum RunFlag {
-  Run = 0b000000001,
-  Workbook = 0b000000010,
-  Notebook = 0b000000100,
-  Repl = 0b000001000,
-  Insights = 0b000010000,
-  Quick = 0b000100000,
-  Dap = 0b001000000,
-  Python = 0b010000000,
-  Sql = 0b100000000,
+  Run = 0b0000000001,
+  Workbook = 0b0000000010,
+  Notebook = 0b0000000100,
+  Repl = 0b0000001000,
+  Insights = 0b0000010000,
+  Quick = 0b0000100000,
+  Dap = 0b0001000000,
+  Python = 0b0010000000,
+  Sql = 0b0100000000,
+  Quke = 0b1000000000,
 }
 
 export function notifyExecution(flags: number, dsType?: string) {
@@ -575,7 +576,13 @@ export function notifyExecution(flags: number, dsType?: string) {
             : ".kdb") +
         (flags & RunFlag.Quick ? ".quick" : "") +
         (flags & RunFlag.Dap ? ".dap" : "") +
-        (flags & RunFlag.Python ? ".py" : flags & RunFlag.Sql ? ".sql" : ".q"));
+        (flags & RunFlag.Python
+          ? ".py"
+          : flags & RunFlag.Sql
+            ? ".sql"
+            : flags & RunFlag.Quke
+              ? ".quke"
+              : ".q"));
 
   notify(`Query ${telemetry} executed.`, MessageKind.DEBUG, {
     logger,
