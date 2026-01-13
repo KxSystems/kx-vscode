@@ -15,7 +15,7 @@ All guides, setup instructions, and feature documentation are available at:
 ## Reference
 
 - [Reference Card](https://github.com/KxSystems/kx-vscode/wiki/Reference-Card) for a list of all commands, shortcuts, and settings
-- [Contribution Guide](https://github.com/KxSystems/kx-vscode/.github/CONTRIBUTING.md) for details on how to help improve the extension
+- [Contribution Guide](https://github.com/KxSystems/kx-vscode/blob/-/.github/CONTRIBUTING.md) for details on how to help improve the extension
 
 ## Data and telemetry
 
