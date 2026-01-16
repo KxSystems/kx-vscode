@@ -574,7 +574,7 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
       repl.show();
       return repl.executeQuery(
         isPython(uri)
-          ? getPythonWrapper(text)
+          ? getPythonWrapper(text, "serialized")
           : isSql(uri)
             ? getSQLWrapper(text)
             : text,
