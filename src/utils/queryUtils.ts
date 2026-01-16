@@ -281,7 +281,7 @@ export function normalizePyQuery(query: string): string {
 
 export function getPythonWrapper(
   query: string,
-  returnFormat: "serialized" | "text" | "structuredText" = "serialized",
+  returnFormat: "serialized" | "text" | "structuredText",
 ): string {
   const wrapper = normalizeQSQLQuery(queryWrapper(true));
   const args = {
@@ -293,8 +293,14 @@ export function getPythonWrapper(
   return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`errored;res\`error;res\`result]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
 }
 
-export function getQSQLWrapper(query: string, isPython?: boolean): string {
-  return isPython ? getPythonWrapper(query) : normalizeQSQLQuery(query);
+export function getQSQLWrapper(
+  query: string,
+  returnFormat: "serialized" | "text" | "structuredText",
+  isPython?: boolean,
+): string {
+  return isPython
+    ? getPythonWrapper(query, returnFormat)
+    : normalizeQSQLQuery(query);
 }
 
 export function getSQLWrapper(query: string): string {

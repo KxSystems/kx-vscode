@@ -6,30 +6,28 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
-- Added quick connections
-- Run on REPL by default
-- SQL Workbook
-- Connect and auto execute query functionality
-- Use own grid instead of ag-grid-community for kdb Results View
-- Nested objects are better supported in kdb Results View
-- Add support for KDB-X modules in language server
-- Moved documentation to its own site
-- Ability to execute selection in quke files
+- Added quick connections for faster access to kdb environments
+- REPL is now the default execution target
+- Introduced SQL Workbook support
+- Added ability to connect and automatically execute queries
+- Replaced ag-grid-community with a custom grid for the kdb Results View
+- Improved support for nested objects in the kdb Results View
+- Moved documentation to a dedicated [documentation site](code.kx.com/vscode)
+- Added ability to execute selection in quke files
 
 ### Fixes
 
-- kdb output channel should support log levels
-- CSV export does not work properly for cells that contain lists or strings
-- Auto resizing of grid columns
-- Specific python query executions not working
+- kdb output channel now correctly supports log levels
+- Fixed CSV export issues for cells containing lists or strings
+- Fixed auto-resizing behavior for grid columns
+- Resolved issues with specific Python query executions
 
 ### Internal Improvements
 
-- Updated telemetry data sent
-- Use structured text for datasources
-- Integrate KDB-X KX_TTY feature in REPL
+- Updated telemetry data collection
+- Implemented the use of structured text for datasources
+- Added use of structured text for Python
 - Added q CI testing
-- Updated query wrappers
 
 # v1.16.1
 

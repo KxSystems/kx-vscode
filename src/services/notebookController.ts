@@ -87,7 +87,7 @@ export class KxNotebookController {
         const text = cell.document.getText();
         const result = await repl.executeQuery(
           kind === CellKind.PYTHON
-            ? getPythonWrapper(text)
+            ? getPythonWrapper(text, "serialized")
             : kind === CellKind.SQL
               ? getSQLWrapper(text)
               : text,

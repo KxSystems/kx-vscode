@@ -19,7 +19,7 @@ import { commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { QueryResult, QueryResultType } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
-import { convertStringToArray, handleQueryResults } from "../utils/execution";
+import { handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
 import { queryWrapper } from "../utils/queryUtils";
 
@@ -128,7 +128,12 @@ export class LocalConnection {
         const args: any[] = [];
         const wrapper = queryWrapper(!!isPython);
         if (isPython) {
-          args.push(stringify ? "text" : "serialized", command, "first", 10000);
+          args.push(
+            stringify ? "text" : "structuredText",
+            command,
+            "first",
+            10000,
+          );
         } else {
           args.push(
             context ?? ".",
@@ -148,12 +153,10 @@ export class LocalConnection {
             );
           } else {
             const result = res.result === null ? "" : res.result;
-            if (!stringify && !isPython) {
-              resolve(JSON.parse(result));
-            } else if (ext.isResultsTabVisible && stringify) {
-              resolve(convertStringToArray(result ? result : ""));
-            } else {
+            if (stringify) {
               resolve(result);
+            } else {
+              resolve(JSON.parse(result));
             }
           }
           this.updateGlobal();

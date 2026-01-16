@@ -615,13 +615,13 @@ describe("queryUtils", () => {
     let queryWrappeStub: sinon.SinonStub;
 
     it("should not add extra semicolon", () => {
-      const res = queryUtils.getQSQLWrapper("a:1;\na");
+      const res = queryUtils.getQSQLWrapper("a:1;\na", "serialized");
       assert.strictEqual(res, "a:1;\na");
     });
 
     it("should normalize python code using wrapper", () => {
       assert.throws(() => {
-        queryUtils.getQSQLWrapper(``, true);
+        queryUtils.getQSQLWrapper(``, "serialized", true);
         sinon.assert.calledOnce(queryWrappeStub);
       });
     });
