@@ -130,6 +130,18 @@
           "default": {},
           "scope": "resource"
         },
+        "kdb.timeoutMap": {
+          "type": "object",
+          "description": "Timeout map for workspace files",
+          "default": {},
+          "scope": "resource"
+        },
+        "kdb.defaultTimeout": {
+          "type": "number",
+          "description": "Timeout in seconds for Insights Enterprise requests",
+          "default": 30,
+          "scope": "machine-overridable"
+        },
         "kdb.connectionLabels": {
           "type": "array",
           "description": "List of label names and colorset",

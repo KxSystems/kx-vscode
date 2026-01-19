@@ -86,6 +86,7 @@ export async function populateScratchpad(
   connLabel: string,
   outputVariable?: string,
   silent?: boolean,
+  timeout?: number,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
 
@@ -112,6 +113,7 @@ export async function populateScratchpad(
       outputVariable,
       dataSourceForm,
       silent,
+      timeout,
     );
   } else {
     notify(
@@ -126,6 +128,7 @@ export async function runDataSource(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
   executorName: string,
+  timeout?: number,
 ): Promise<any> {
   if (DataSourcesPanel.running) {
     return;
@@ -165,17 +168,18 @@ export async function runDataSource(
 
     switch (selectedType) {
       case "API":
-        res = await runApiDataSource(fileContent, selectedConnection);
+        res = await runApiDataSource(fileContent, selectedConnection, timeout);
         break;
       case "QSQL":
         res = await runQsqlDataSource(
           fileContent,
           selectedConnection,
           isNotebook || undefined,
+          timeout,
         );
         break;
       case "UDA":
-        res = await runUDADataSource(fileContent, selectedConnection);
+        res = await runUDADataSource(fileContent, selectedConnection, timeout);
         break;
       case "SQL":
       default:
@@ -183,6 +187,7 @@ export async function runDataSource(
           fileContent,
           selectedConnection,
           isNotebook || undefined,
+          timeout,
         );
         break;
     }
@@ -300,6 +305,7 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
 export async function runApiDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
+  timeout?: number,
 ): Promise<any> {
   const isTimeCorrect = checkIfTimeParamIsCorrect(
     fileContent.dataSource.api.startTS,
@@ -317,6 +323,7 @@ export async function runApiDataSource(
   const apiCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.API,
     JSON.stringify(apiBody),
+    timeout,
   );
 
   if (apiCall?.error) {
@@ -420,6 +427,7 @@ export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
   isTableView?: boolean,
+  timeout?: number,
 ): Promise<any> {
   const qsqlBody = selectedConn.generateQSqlBody(
     fileContent.dataSource.qsql.query,
@@ -430,6 +438,7 @@ export async function runQsqlDataSource(
   const qsqlCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.QSQL,
     JSON.stringify(qsqlBody),
+    timeout,
   );
 
   if (qsqlCall?.error) {
@@ -448,6 +457,7 @@ export async function runSqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
   isTableView?: boolean,
+  timeout?: number,
 ): Promise<any> {
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
@@ -455,6 +465,7 @@ export async function runSqlDataSource(
   const sqlCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.SQL,
     JSON.stringify(sqlBody),
+    timeout,
   );
 
   if (sqlCall?.error) {
@@ -472,6 +483,7 @@ export async function runSqlDataSource(
 export async function runUDADataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
+  timeout?: number,
 ): Promise<any> {
   const uda = fileContent.dataSource.uda;
 
@@ -485,16 +497,18 @@ export async function runUDADataSource(
     return udaReqBody;
   }
 
-  return await executeUDARequest(selectedConn, udaReqBody);
+  return await executeUDARequest(selectedConn, udaReqBody, timeout);
 }
 
 export async function executeUDARequest(
   selectedConn: InsightsConnection,
   udaReqBody: UDARequestBody,
+  timeout?: number,
 ): Promise<any> {
   const udaCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.UDA,
     udaReqBody,
+    timeout,
   );
 
   if (udaCall?.error) {

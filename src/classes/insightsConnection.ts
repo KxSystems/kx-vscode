@@ -41,21 +41,15 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import {
+  getHeaders,
+  handleScratchpadTableRes,
+  handleWSResults,
+} from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const logger = "insightsConnection";
-
-const customHeadersOctet = {
-  Accept: "application/struct-text",
-  "Content-Type": "application/json",
-};
-const customHeadersJson = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
-  json: true,
-};
 
 export class InsightsConnection {
   public connected: boolean;
@@ -295,6 +289,7 @@ export class InsightsConnection {
       importSql: "scratchpadmanager/scratchpad/import/sql",
       importQsql: "scratchpadmanager/scratchpad/import/qsql",
       importUDA: "scratchpadmanager/scratchpad/import/uda",
+      cancel: "scratchpadmanager/scratchpad/cancel",
       reset: "scratchpadmanager/reset",
     };
 
@@ -457,6 +452,7 @@ export class InsightsConnection {
   public async getDatasourceQuery(
     type: DataSourceTypes,
     body: any,
+    timeout?: number,
   ): Promise<GetDataObjectPayload | undefined> {
     if (this.connected) {
       const udaName = (body as UDARequestBody).name
@@ -473,7 +469,7 @@ export class InsightsConnection {
       const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(
         false,
-        customHeadersOctet,
+        getHeaders(timeout ? timeout * 1000 : 0, "struct-text"), // DAPs use milliseconds
         "POST",
         requestUrl,
         body,
@@ -518,6 +514,7 @@ export class InsightsConnection {
     variableName: string,
     params: DataSourceFiles,
     silent?: boolean,
+    timeout?: number,
   ): Promise<void> {
     if (this.connected && this.connEndpoints) {
       let coreUrl: string;
@@ -579,7 +576,7 @@ export class InsightsConnection {
       const scratchpadURL = new url.URL(coreUrl!, this.node.details.server);
       const options = await this.getOptions(
         true,
-        customHeadersJson,
+        getHeaders(timeout),
         "POST",
         scratchpadURL.toString(),
         body,
@@ -654,6 +651,7 @@ export class InsightsConnection {
 
   public async getUDAScratchpadQuery(
     udaReqBody: UDARequestBody,
+    timeout?: number,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = udaReqBody.returnFormat === "structuredText";
@@ -663,7 +661,7 @@ export class InsightsConnection {
       );
       const options = await this.getOptions(
         true,
-        customHeadersJson,
+        getHeaders(timeout),
         "POST",
         udaURL.toString(),
         udaReqBody,
@@ -706,6 +704,7 @@ export class InsightsConnection {
     context?: string,
     isPython?: boolean,
     isTableView?: boolean,
+    timeout?: number,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       if (isTableView === undefined) {
@@ -733,7 +732,7 @@ export class InsightsConnection {
 
       const options = await this.getOptions(
         true,
-        customHeadersJson,
+        getHeaders(timeout),
         "POST",
         scratchpadURL.toString(),
         body,
@@ -792,6 +791,52 @@ export class InsightsConnection {
     return undefined;
   }
 
+  public async cancelScratchpad(): Promise<boolean | undefined> {
+    if (this.connected && this.connEndpoints) {
+      const scratchpadURL = new url.URL(
+        this.connEndpoints.scratchpad.cancel,
+        this.node.details.server,
+      );
+      const options = await this.getOptions(
+        true,
+        getHeaders(),
+        "POST",
+        scratchpadURL.toString(),
+        undefined,
+      );
+
+      if (!options) {
+        return;
+      }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
+      return await axios(options)
+        .then((_response: any) => {
+          notify(
+            `Scratchpad cancel request sent for ${this.connLabel}.`,
+            MessageKind.INFO,
+            { logger, telemetry: "Connection.Cancel.ie.sp" },
+          );
+          return true;
+        })
+        .catch((_error: any) => {
+          notify(
+            `Scratchpad cancel request error: ${_error.response.data.message}`,
+            MessageKind.ERROR,
+            { logger },
+          );
+          return false;
+        });
+    } else {
+      this.noConnectionOrEndpoints();
+      return false;
+    }
+  }
+
   public async resetScratchpad(): Promise<boolean | undefined> {
     if (this.connected && this.connEndpoints) {
       const scratchpadURL = new url.URL(
@@ -800,7 +845,7 @@ export class InsightsConnection {
       );
       const options = await this.getOptions(
         true,
-        customHeadersJson,
+        getHeaders(),
         "POST",
         scratchpadURL.toString(),
         null,

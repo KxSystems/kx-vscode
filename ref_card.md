@@ -52,6 +52,8 @@
 | [kdb.qHomeDirectoryWorkspace](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) | resource | `string`  | `""`          |
 | kdb.connectionMap                                                                         | resource | `object`  | `{}`          |
 | kdb.targetMap                                                                             | resource | `object`  | `{}`          |
+| kdb.timeoutMap                                                                            | resource | `object`  | `{}`          |
+| kdb.defaultTimeout                                                                        | resource | `number`  | `30`          |
 | kdb.linting                                                                               | resource | `boolean` | `false`       |
 | kdb.refactoring                                                                           | resource | `string`  | `"Workspace"` |
 
@@ -95,6 +97,7 @@
 | Connection.Export.All             |              | src/extension.ts                         |
 | Connection.Export.Single          |              | src/extension.ts                         |
 | Connection.Import                 |              | src/extension.ts                         |
+| Connection.Cancel.ie.sp           |              | src/classes/insightsConnection.ts        |
 | Connection.Reset.ie.sp            |              | src/classes/insightsConnection.ts        |
 | Connection.Label.Create           |      ✓       | src/utils/connLabel.ts                   |
 | Connection.Label.Delete           |      ✓       | src/utils/connLabel.ts                   |

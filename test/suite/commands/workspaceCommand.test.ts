@@ -30,8 +30,10 @@ import * as widgets from "../../../src/utils/widgets";
 
 describe("workspaceCommand", () => {
   const kdbUri = vscode.Uri.file("test-kdb.q");
-  const insightsUri = vscode.Uri.file("test-insights.q");
+  const insightsUri = vscode.Uri.file("tests.q");
   const pythonUri = vscode.Uri.file("test-python.q");
+
+  const updateConfStub = sinon.stub();
 
   beforeEach(() => {
     const insightNode = new InsightsNode(
@@ -63,7 +65,7 @@ describe("workspaceCommand", () => {
     ext.activeTextEditor = <any>{
       document: {
         uri: insightsUri,
-        fileName: "test-insights.q",
+        fileName: "tests.q",
         getText() {
           return "";
         },
@@ -77,6 +79,9 @@ describe("workspaceCommand", () => {
       .stub(ConnectionManagementService.prototype, "retrieveMetaContent")
       .returns(JSON.stringify([{ assembly: "assembly", target: "target" }]));
     sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+      const relativePath = (uri: vscode.Uri) =>
+        vscode.workspace.asRelativePath(uri, false);
+
       return {
         get(key: string) {
           switch (key) {
@@ -86,24 +91,31 @@ describe("workspaceCommand", () => {
               return [{ alias: "connection1" }];
             case "connectionMap":
               return {
-                [kdbUri.path]: "connection2",
-                [pythonUri.path]: "connection1",
-                [insightsUri.path]: "connection1",
+                [relativePath(kdbUri)]: "connection2",
+                [relativePath(pythonUri)]: "connection1",
+                [relativePath(insightsUri)]: "connection1",
               };
             case "targetMap":
               return {
-                [insightsUri.path]: "assembly target",
+                [relativePath(insightsUri)]: "assembly target",
+              };
+            case "defaultTimeout":
+              return 30;
+            case "timeoutMap":
+              return {
+                [relativePath(insightsUri)]: 45,
               };
           }
           return {};
         },
-        update() {},
+        update: updateConfStub,
       };
     });
   });
 
   afterEach(() => {
     sinon.restore();
+    updateConfStub.reset();
     ext.serverProvider = <any>{};
     ext.connectionsList.length = 0;
     ext.activeTextEditor = undefined;
@@ -149,6 +161,85 @@ describe("workspaceCommand", () => {
           "connection1",
         ),
       );
+    });
+  });
+
+  describe("timeouts", () => {
+    let unitStub: sinon.SinonStub;
+    let valueStub: sinon.SinonStub;
+    let notifyStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      unitStub = sinon.stub(vscode.window, "showQuickPick");
+      valueStub = sinon.stub(vscode.window, "showInputBox");
+      notifyStub = sinon.stub(notifications, "notify");
+    });
+
+    it("should show timeout options for Insights connections", async () => {
+      const spy = sinon.spy(ext.pickTimeoutItem, "show");
+      await workspaceCommand.setTimeoutItem(insightsUri);
+      sinon.assert.called(spy);
+    });
+
+    it("should hide timeout options for q connections", async () => {
+      const spy = sinon.spy(ext.pickTimeoutItem, "hide");
+      await workspaceCommand.setTimeoutItem(kdbUri);
+      sinon.assert.called(spy);
+    });
+
+    it("should hide timeout options for other files", async () => {
+      const spy = sinon.spy(ext.pickTimeoutItem, "hide");
+      await workspaceCommand.setTimeoutItem(vscode.Uri.file("main.js"));
+      sinon.assert.called(spy);
+    });
+
+    it("should set a valid timeout", async () => {
+      unitStub.resolves({ label: "Seconds" });
+      valueStub.resolves("30");
+
+      await workspaceCommand.pickTimeout(insightsUri);
+
+      sinon.assert.calledOnceWithExactly(
+        updateConfStub,
+        "timeoutMap",
+        sinon.match({
+          [vscode.workspace.asRelativePath(insightsUri, false)]: 30,
+        }),
+      );
+    });
+
+    it("should set a long timeout if user accepts", async () => {
+      unitStub.resolves({ label: "Minutes" });
+      valueStub.resolves("30");
+      notifyStub.resolves("Keep Timeout");
+
+      await workspaceCommand.pickTimeout(insightsUri);
+
+      sinon.assert.calledOnceWithMatch(
+        notifyStub,
+        sinon.match("High timeout warning"),
+      );
+      sinon.assert.calledOnceWithExactly(
+        updateConfStub,
+        "timeoutMap",
+        sinon.match({
+          [vscode.workspace.asRelativePath(insightsUri, false)]: 1800,
+        }),
+      );
+    });
+
+    it("should not set a long timeout if user cancels", async () => {
+      unitStub.resolves({ label: "Minutes" });
+      valueStub.resolves("30");
+      notifyStub.resolves("Cancel");
+
+      await workspaceCommand.pickTimeout(insightsUri);
+
+      sinon.assert.calledOnceWithMatch(
+        notifyStub,
+        sinon.match("High timeout warning"),
+      );
+      sinon.assert.notCalled(updateConfStub);
     });
   });
 
@@ -210,12 +301,12 @@ describe("workspaceCommand", () => {
   });
 
   describe("importOldDSFiles", () => {
-    let windowErrorStub,
-      windowWithProgressStub,
-      windowShowInfo,
-      workspaceFolderStub,
-      tokenOnCancellationRequestedStub,
-      kdbOutputLogStub: sinon.SinonStub;
+    let windowErrorStub: sinon.SinonStub;
+    let windowWithProgressStub: sinon.SinonStub;
+    let windowShowInfo: sinon.SinonStub;
+    let workspaceFolderStub: sinon.SinonStub;
+    let tokenOnCancellationRequestedStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
 
     beforeEach(() => {
       windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");

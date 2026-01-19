@@ -611,6 +611,34 @@ describe("queryUtils", () => {
     });
   });
 
+  describe("getHeaders", () => {
+    const jsonHeaders = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      json: true,
+    };
+
+    const structTextHeaders = {
+      Accept: "application/struct-text",
+      "Content-Type": "application/json",
+    };
+
+    it("should return JSON headers by default", () => {
+      const res = queryUtils.getHeaders();
+      assert.deepStrictEqual(res, jsonHeaders);
+    });
+
+    it("should return JSON headers with timeout", () => {
+      const res = queryUtils.getHeaders(30, "json");
+      assert.deepStrictEqual(res, { ...jsonHeaders, timeout: "30" });
+    });
+
+    it("should return Structured Text headers with timeout", () => {
+      const res = queryUtils.getHeaders(30, "struct-text");
+      assert.deepStrictEqual(res, { ...structTextHeaders, timeout: "30" });
+    });
+  });
+
   describe("getQSQLWrapper", () => {
     let queryWrappeStub: sinon.SinonStub;
 

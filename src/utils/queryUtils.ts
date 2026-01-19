@@ -279,6 +279,35 @@ export function normalizePyQuery(query: string): string {
   );
 }
 
+/**
+ * Generate request headers including timeout
+ * @param {Number} timeout - request timeout (ms)
+ * @param {('struct-text'|'json')} type - type of response to accept
+ */
+export function getHeaders(
+  timeout?: number,
+  type: "json" | "struct-text" = "json",
+) {
+  const headers: Record<string, boolean | string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (type === "struct-text") {
+    headers["Accept"] = "application/struct-text";
+  } else if (type === "json") {
+    headers["Accept"] = "application/json";
+    headers["json"] = true;
+  } else {
+    throw "Unsupported type";
+  }
+
+  if (timeout) {
+    headers["timeout"] = String(timeout);
+  }
+
+  return headers;
+}
+
 export function getPythonWrapper(
   query: string,
   returnFormat: "serialized" | "text" | "structuredText",

@@ -52,6 +52,7 @@ import {
   importOldDSFiles,
   pickConnection,
   pickTarget,
+  pickTimeout,
   resetScratchpadFromEditor,
   runActiveEditor,
   setServerForUri,
@@ -928,6 +929,15 @@ function registerFileCommands(): CommandRegistration[] {
         const editor = ext.activeTextEditor;
         if (editor) {
           await pickTarget(editor.document.uri, cell);
+        }
+      },
+    },
+    {
+      command: "kdb.file.pickTimeout",
+      callback: async () => {
+        const editor = ext.activeTextEditor;
+        if (editor) {
+          await pickTimeout(editor.document.uri);
         }
       },
     },

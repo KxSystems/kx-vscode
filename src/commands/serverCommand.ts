@@ -883,6 +883,7 @@ export async function executeQuery(
   isWorkbook: boolean,
   isFromConnTree?: boolean,
   token?: CancellationToken,
+  timeout?: number,
 ): Promise<any> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
@@ -933,6 +934,7 @@ export async function executeQuery(
     context,
     isStringfy,
     isPython,
+    timeout,
   );
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
@@ -1078,6 +1080,8 @@ export async function runQuery(
   target?: string,
   isSql?: boolean,
   isInsights?: boolean,
+  timeout?: number,
+  cancel?: () => void,
 ) {
   const editor = ext.activeTextEditor;
   if (!editor) {
@@ -1129,17 +1133,24 @@ export async function runQuery(
   }
 
   const runner = Runner.create((_, token) => {
+    if (cancel) {
+      token.onCancellationRequested(cancel);
+    }
+
     return target || (isSql && isInsights)
       ? variable
         ? populateScratchpad(
             getPartialDatasourceFile(query, target, isSql, isPython),
             connLabel,
             variable,
+            undefined,
+            timeout,
           )
         : runDataSource(
             getPartialDatasourceFile(query, target, isSql, isPython),
             connLabel,
             executorName,
+            timeout,
           )
       : executeQuery(
           query,
@@ -1150,6 +1161,7 @@ export async function runQuery(
           isWorkbook,
           false,
           token,
+          timeout,
         );
   });
 

@@ -123,6 +123,7 @@ export const dataSourceStyles = css`
     display: flex;
     flex-flow: column nowrap;
     flex-grow: 0;
+    width: 13rem;
     gap: var(--sl-spacing-x-small);
     margin-top: calc(
       1rem * var(--sl-line-height-dense) + 3 * var(--sl-spacing-medium)
@@ -198,6 +199,27 @@ export const dataSourceStyles = css`
   .reset-widths-limit {
     min-width: 0%;
     max-width: 100%;
+  }
+
+  .timeout-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .timeout-input {
+    display: flex;
+    gap: 5px;
+  }
+
+  .timeout-input sl-input {
+    width: 34%;
+    min-width: unset;
+  }
+
+  .timeout-input sl-select {
+    width: 66%;
+    min-width: unset;
   }
 `;
 

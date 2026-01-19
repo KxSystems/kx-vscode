@@ -59,6 +59,7 @@ export namespace ext {
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
   export let dataSourceTreeProvider: WorkspaceTreeProvider;
   export let runScratchpadItem: StatusBarItem;
+  export let pickTimeoutItem: StatusBarItem;
   export const activeScratchPadList: Array<ScratchpadFile> = [];
   export const connectedScratchPadList: Array<ScratchpadFile> = [];
   export const activeDatasourceList: Array<DataSourceFiles> = [];

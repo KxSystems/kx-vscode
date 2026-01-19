@@ -31,6 +31,7 @@ export const enum DataSourceCommand {
   Update,
   Change,
   Server,
+  Timeout,
   Save,
   Run,
   Populate,
@@ -39,6 +40,9 @@ export const enum DataSourceCommand {
 
 export interface DataSourceMessage2 {
   command: DataSourceCommand;
+  timeoutDefault: boolean;
+  timeoutUnit: string;
+  timeoutValue: number;
   servers: string[];
   selectedServer: string;
   selectedServerVersion: number;

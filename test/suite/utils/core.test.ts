@@ -943,4 +943,33 @@ describe("core", () => {
       assert.strictEqual(executeCommandStub.called, false);
     });
   });
+
+  describe("Seconds", () => {
+    it("should calculate seconds correctly", () => {
+      assert.strictEqual(coreUtils.calculateSeconds(30, "Seconds"), 30);
+      assert.strictEqual(coreUtils.calculateSeconds(30, "Minutes"), 1800);
+      assert.strictEqual(coreUtils.calculateSeconds(7, "Hours"), 25200);
+    });
+
+    it("should deconstruct seconds correctly", () => {
+      assert.deepStrictEqual(coreUtils.deconstructSeconds(30), {
+        value: 30,
+        unit: "Seconds",
+      });
+      assert.deepStrictEqual(coreUtils.deconstructSeconds(1800), {
+        value: 30,
+        unit: "Minutes",
+      });
+      assert.deepStrictEqual(coreUtils.deconstructSeconds(25200), {
+        value: 7,
+        unit: "Hours",
+      });
+    });
+
+    it("should format seconds correctly", () => {
+      assert.strictEqual(coreUtils.formatSeconds(30), "30s");
+      assert.strictEqual(coreUtils.formatSeconds(1800), "30m");
+      assert.strictEqual(coreUtils.formatSeconds(25200), "7h");
+    });
+  });
 });
