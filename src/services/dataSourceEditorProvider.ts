@@ -235,14 +235,38 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         }
         case DataSourceCommand.Run: {
-          runner = Runner.create(() =>
-            runDataSource(
-              msg.dataSourceFile,
-              msg.selectedServer,
-              this.filenname,
-              calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
-            ),
-          );
+          runner = Runner.create(async (_, token) => {
+            const cancellation = new Promise((_, reject) => {
+              token.onCancellationRequested(() =>
+                reject(new Error("Cancelled")),
+              );
+            });
+
+            try {
+              return await Promise.race([
+                runDataSource(
+                  msg.dataSourceFile,
+                  msg.selectedServer,
+                  this.filenname,
+                  token,
+                  calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
+                ),
+                cancellation,
+              ]);
+            } catch (err) {
+              if (err instanceof Error && err.message === "Cancelled") {
+                // user cancelled
+                notify(
+                  `Cancel request sent for ${msg.selectedServer}, however, the query will continue running on the database until it finishes or times out`,
+                  MessageKind.INFO,
+                  { logger },
+                );
+                return;
+              }
+
+              throw err;
+            }
+          });
           runner.location = ProgressLocation.Notification;
           runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
           if (connected) await runner.execute();
@@ -255,9 +279,39 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         }
         case DataSourceCommand.Populate: {
-          runner = Runner.create(() =>
-            populateScratchpad(msg.dataSourceFile, msg.selectedServer),
-          );
+          runner = Runner.create(async (_, token) => {
+            const cancellation = new Promise((_, reject) => {
+              token.onCancellationRequested(() =>
+                reject(new Error("Cancelled")),
+              );
+            });
+
+            try {
+              return await Promise.race([
+                populateScratchpad(
+                  msg.dataSourceFile,
+                  msg.selectedServer,
+                  undefined,
+                  undefined,
+                  token,
+                  calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
+                ),
+                cancellation,
+              ]);
+            } catch (err) {
+              if (err instanceof Error && err.message === "Cancelled") {
+                // user cancelled
+                notify(
+                  `Scratchpad cancel request sent for ${msg.selectedServer}`,
+                  MessageKind.INFO,
+                  { logger, telemetry: "Connection.Cancel.ie.sp" },
+                );
+                return;
+              }
+
+              throw err;
+            }
+          });
           runner.title = "Populating scratchpad.";
           if (connected) await runner.execute();
           else if (await offerConnectAction(selectedServer))

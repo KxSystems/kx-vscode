@@ -14,6 +14,7 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
+import { CancellationToken } from "vscode-languageclient";
 
 import { ext } from "../extensionVariables";
 import {
@@ -514,6 +515,7 @@ export class InsightsConnection {
     variableName: string,
     params: DataSourceFiles,
     silent?: boolean,
+    token?: CancellationToken,
     timeout?: number,
   ): Promise<void> {
     if (this.connected && this.connEndpoints) {
@@ -592,24 +594,26 @@ export class InsightsConnection {
       });
 
       return await axios(options).then((response: any) => {
-        if (response.data.error) {
-          notify(
-            "Error occured while populating scratchpad.",
-            silent ? MessageKind.DEBUG : MessageKind.ERROR,
-            {
-              logger,
-              params: { status: response.status },
-            },
-          );
-        } else {
-          notify(
-            `Scratchpad variable (${variableName}) populated.`,
-            silent ? MessageKind.DEBUG : MessageKind.INFO,
-            {
-              logger,
-              params: { status: response.status },
-            },
-          );
+        if (!token?.isCancellationRequested) {
+          if (response.data.error) {
+            notify(
+              "Error occured while populating scratchpad.",
+              silent ? MessageKind.DEBUG : MessageKind.ERROR,
+              {
+                logger,
+                params: { status: response.status },
+              },
+            );
+          } else {
+            notify(
+              `Scratchpad variable (${variableName}) populated.`,
+              silent ? MessageKind.DEBUG : MessageKind.INFO,
+              {
+                logger,
+                params: { status: response.status },
+              },
+            );
+          }
         }
       });
     } else {
@@ -791,7 +795,9 @@ export class InsightsConnection {
     return undefined;
   }
 
-  public async cancelScratchpad(): Promise<boolean | undefined> {
+  public async cancelScratchpad(
+    isPython?: boolean,
+  ): Promise<boolean | undefined> {
     if (this.connected && this.connEndpoints) {
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.cancel,
@@ -817,7 +823,7 @@ export class InsightsConnection {
       return await axios(options)
         .then((_response: any) => {
           notify(
-            `Scratchpad cancel request sent for ${this.connLabel}.`,
+            `Scratchpad cancel request sent for ${this.connLabel}${isPython ? ", however, Python queries may ignore this." : "."}`,
             MessageKind.INFO,
             { logger, telemetry: "Connection.Cancel.ie.sp" },
           );
