@@ -38,12 +38,19 @@ import {
   getConnectionForServer,
   getInsightsServers,
   getServerForUri,
+  getTimeoutForUri,
   setServerForUri,
+  setTimeoutForUri,
 } from "../commands/workspaceCommand";
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 import { MetaObjectPayload } from "../models/meta";
 import { UDA } from "../models/uda";
-import { getBasename, offerConnectAction } from "../utils/core";
+import {
+  calculateSeconds,
+  deconstructSeconds,
+  getBasename,
+  offerConnectAction,
+} from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { MessageKind, Runner, notify } from "../utils/notifications";
 import { RunFlag, notifyExecution } from "../utils/queryUtils";
@@ -121,6 +128,8 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     const updateWebview = async () => {
       if (changing === 0) {
         const selectedServer = getServerForUri(document.uri) || "";
+        const timeout = getTimeoutForUri(document.uri);
+        const timeoutParts = deconstructSeconds(timeout.value);
         const selectedServerVersion =
           await connMngService.retrieveInsightsConnVersion(selectedServer);
         await getConnectionForServer(selectedServer);
@@ -129,6 +138,9 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         webview.postMessage(<DataSourceMessage2>{
           command: DataSourceCommand.Update,
           selectedServer,
+          timeoutUnit: timeoutParts.unit,
+          timeoutDefault: timeout.source === "workspace",
+          timeoutValue: timeoutParts.value,
           servers: getInsightsServers(),
           selectedServerVersion,
           dataSourceFile: this.getDocumentAsJson(document),
@@ -176,6 +188,19 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           updateWebview();
           break;
         }
+        case DataSourceCommand.Timeout: {
+          if (msg.timeoutDefault) {
+            await setTimeoutForUri(document.uri, undefined);
+          } else {
+            await setTimeoutForUri(
+              document.uri,
+              calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
+            );
+          }
+
+          updateWebview();
+          break;
+        }
         case DataSourceCommand.Change: {
           const changed = msg.dataSourceFile;
           const current = this.getDocumentAsJson(document);
@@ -215,6 +240,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
               msg.dataSourceFile,
               msg.selectedServer,
               this.filenname,
+              calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
             ),
           );
           runner.location = ProgressLocation.Notification;

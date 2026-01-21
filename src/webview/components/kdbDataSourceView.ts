@@ -157,6 +157,9 @@ export class KdbDataSourceView extends LitElement {
   running = false;
   servers: string[] = [];
   selectedServer = "";
+  timeoutDefault = true;
+  timeoutUnit = "Seconds";
+  timeoutValue = 0;
   updating = 0;
   view: {
     dap: (
@@ -199,6 +202,9 @@ export class KdbDataSourceView extends LitElement {
     if (msg.command === DataSourceCommand.Update) {
       this.servers = msg.servers;
       this.selectedServer = msg.selectedServer;
+      this.timeoutDefault = msg.timeoutDefault;
+      this.timeoutValue = msg.timeoutValue;
+      this.timeoutUnit = msg.timeoutUnit;
       this.selectedServerVersion = msg.selectedServerVersion
         ? msg.selectedServerVersion
         : 0;
@@ -360,6 +366,8 @@ export class KdbDataSourceView extends LitElement {
       command: DataSourceCommand.Run,
       selectedServer: this.selectedServer,
       dataSourceFile: this.data,
+      timeoutValue: this.timeoutValue,
+      timeoutUnit: this.timeoutUnit,
     });
   }
 
@@ -385,6 +393,39 @@ export class KdbDataSourceView extends LitElement {
     this.postMessage({
       command: DataSourceCommand.Server,
       selectedServer: this.selectedServer,
+    });
+  }
+
+  requestTimeoutDefaultChange(event: Event) {
+    this.timeoutDefault = (event.target as HTMLInputElement).checked;
+    this.requestUpdate();
+    this.postMessage({
+      command: DataSourceCommand.Timeout,
+      timeoutValue: this.timeoutValue,
+      timeoutUnit: this.timeoutUnit,
+      timeoutDefault: this.timeoutDefault,
+    });
+  }
+
+  requestTimeoutUnitChange(event: Event) {
+    this.timeoutUnit = (event.target as HTMLSelectElement).value;
+    this.requestUpdate();
+    this.postMessage({
+      command: DataSourceCommand.Timeout,
+      timeoutValue: this.timeoutValue,
+      timeoutUnit: this.timeoutUnit,
+      timeoutDefault: this.timeoutDefault,
+    });
+  }
+
+  requestTimeoutValueChange(event: Event) {
+    this.timeoutValue = Number((event.target as HTMLInputElement).value);
+    this.requestUpdate();
+    this.postMessage({
+      command: DataSourceCommand.Timeout,
+      timeoutValue: this.timeoutValue,
+      timeoutUnit: this.timeoutUnit,
+      timeoutDefault: this.timeoutDefault,
     });
   }
 
@@ -1791,15 +1832,17 @@ export class KdbDataSourceView extends LitElement {
         .value="${live(this.selectedServer)}"
         @sl-change="${this.requestServerChange}"
         ?disabled="${this.running}">
-        ${!selectedServerExists
-          ? html`<sl-option .value="${live("")}" .selected="${live(true)}"
-              >(none)</sl-option
-            >`
-          : html`<sl-option
-              .value="${live(this.selectedServer)}"
-              .selected="${live(true)}"
-              >${this.selectedServer}</sl-option
-            >`}
+        ${
+          !selectedServerExists
+            ? html`<sl-option .value="${live("")}" .selected="${live(true)}"
+                >(none)</sl-option
+              >`
+            : html`<sl-option
+                .value="${live(this.selectedServer)}"
+                .selected="${live(true)}"
+                >${this.selectedServer}</sl-option
+              >`
+        }
         <small>Connections</small>
         ${this.servers.map(
           (server) => html`
@@ -1807,29 +1850,52 @@ export class KdbDataSourceView extends LitElement {
           `,
         )}
       </sl-select>
-      <sl-button-group>
-        <sl-button variant="primary" class="grow" @click="${this.save}"
-          >Save</sl-button
+      <div class="timeout ${this.isInsights ? "" : "display-none"}"">
+        <div class="timeout-header">
+          Timeout
+          <sl-checkbox
+            .checked="${live(this.timeoutDefault)}"
+            @sl-change="${this.requestTimeoutDefaultChange}">
+              Default
+          </sl-checkbox>
+        </div>
+        <div class="timeout-input ${this.timeoutDefault ? "display-none" : ""}">
+          <sl-input type="number" min="1" placeholder="Number" .value="${live(this.timeoutValue)}"
+            @sl-change="${this.requestTimeoutValueChange}"></sl-input>
+          <sl-select
+            .value="${live(this.timeoutUnit)}"
+            @sl-change="${this.requestTimeoutUnitChange}">
+            <sl-option value="Seconds">Seconds</sl-option>
+            <sl-option value="Minutes">Minutes</sl-option>
+            <sl-option value="Hours">Hours</sl-option>
+          </sl-select>
+        </div>
+      </div>
+
+        <sl-button-group>
+          <sl-button variant="primary" class="grow" @click="${this.save}"
+            >Save</sl-button
+          >
+          <sl-button
+            variant="neutral"
+            @click="${this.refresh}"
+            ?disabled="${this.running}"
+            >Refresh</sl-button
+          >
+        </sl-button-group>
+        <sl-button
+          variant="neutral"
+          @click="${this.run}"
+          ?disabled="${this.running}"
+          >Run</sl-button
         >
         <sl-button
           variant="neutral"
-          @click="${this.refresh}"
+          @click="${this.populateScratchpad}"
           ?disabled="${this.running}"
-          >Refresh</sl-button
+          >Populate Scratchpad</sl-button
         >
-      </sl-button-group>
-      <sl-button
-        variant="neutral"
-        @click="${this.run}"
-        ?disabled="${this.running}"
-        >Run</sl-button
-      >
-      <sl-button
-        variant="neutral"
-        @click="${this.populateScratchpad}"
-        ?disabled="${this.running}"
-        >Populate Scratchpad</sl-button
-      >
+      </div>
     `;
   }
 

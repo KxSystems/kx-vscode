@@ -692,3 +692,45 @@ export function isQuick(server: string | undefined) {
 export function isQuickAlias(alias: string | undefined) {
   return alias?.startsWith("(");
 }
+
+export function calculateSeconds(value: number, unit: string): number {
+  switch (unit) {
+    case "Seconds":
+      return value;
+    case "Minutes":
+      return value * 60;
+    case "Hours":
+      return value * 60 * 60;
+    default:
+      return value;
+  }
+}
+
+export function deconstructSeconds(seconds: number): {
+  value: number;
+  unit: "Seconds" | "Minutes" | "Hours";
+} {
+  const minutes = seconds / 60;
+  const hours = minutes / 60;
+
+  if (hours > 0 && hours % 1 === 0) {
+    return { value: hours, unit: "Hours" };
+  } else if (minutes > 0 && minutes % 1 === 0) {
+    return { value: minutes, unit: "Minutes" };
+  } else {
+    return { value: seconds, unit: "Seconds" };
+  }
+}
+
+export function formatSeconds(seconds: number): string {
+  const minutes = seconds / 60;
+  const hours = minutes / 60;
+
+  if (hours >= 1 && hours % 1 === 0) {
+    return `${hours}h`;
+  } else if (minutes >= 1 && minutes % 1 === 0) {
+    return `${minutes}m`;
+  } else {
+    return `${seconds}s`;
+  }
+}
