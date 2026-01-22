@@ -416,6 +416,12 @@ export async function pickConnection(uri: Uri) {
   }
   await setServerForUri(uri, picked);
 
+  if (server) {
+    setTimeoutItem(uri);
+  } else {
+    ext.pickTimeoutItem.hide();
+  }
+
   return picked;
   /* c8 ignore stop */
 }
