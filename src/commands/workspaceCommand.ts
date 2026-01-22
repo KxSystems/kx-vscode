@@ -416,6 +416,12 @@ export async function pickConnection(uri: Uri) {
   }
   await setServerForUri(uri, picked);
 
+  if (server) {
+    setTimeoutItem(uri);
+  } else {
+    ext.pickTimeoutItem.hide();
+  }
+
   return picked;
   /* c8 ignore stop */
 }
@@ -811,8 +817,16 @@ export async function runActiveEditor(type?: ExecutionTypes) {
         isInsights,
         timeout,
         () => {
-          if (isInsights && !target) {
-            conn.cancelScratchpad();
+          if (isInsights) {
+            if (target) {
+              notify(
+                `Cancel request sent for ${conn.connLabel}, however, the query will continue running on the database until it finishes or times out`,
+                MessageKind.INFO,
+                { logger },
+              );
+            } else {
+              conn.cancelScratchpad(isPython(uri));
+            }
           }
         },
       );
@@ -827,6 +841,14 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           (isQuke(uri) ? RunFlag.Quke : 0),
       );
     } catch (error) {
+      // don't show message if execution was cancelled
+      if (
+        error instanceof Error &&
+        error.message.substring(0, 8) === "Canceled"
+      ) {
+        return;
+      }
+
       notify(
         `Executing ${executorName} on ${conn.connLabel} failed.`,
         MessageKind.ERROR,

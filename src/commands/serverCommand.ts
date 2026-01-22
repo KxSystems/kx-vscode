@@ -1144,12 +1144,14 @@ export async function runQuery(
             connLabel,
             variable,
             undefined,
+            token,
             timeout,
           )
         : runDataSource(
             getPartialDatasourceFile(query, target, isSql, isPython),
             connLabel,
             executorName,
+            token,
             timeout,
           )
       : executeQuery(

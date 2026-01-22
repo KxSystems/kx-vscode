@@ -13,7 +13,7 @@
 
 import * as fs from "fs";
 import path from "path";
-import { InputBoxOptions, window } from "vscode";
+import { CancellationToken, InputBoxOptions, window } from "vscode";
 
 import { ext } from "../extensionVariables";
 import {
@@ -86,6 +86,7 @@ export async function populateScratchpad(
   connLabel: string,
   outputVariable?: string,
   silent?: boolean,
+  token?: CancellationToken,
   timeout?: number,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
@@ -113,6 +114,7 @@ export async function populateScratchpad(
       outputVariable,
       dataSourceForm,
       silent,
+      token,
       timeout,
     );
   } else {
@@ -128,6 +130,7 @@ export async function runDataSource(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
   executorName: string,
+  token?: CancellationToken,
   timeout?: number,
 ): Promise<any> {
   if (DataSourcesPanel.running) {
@@ -193,7 +196,7 @@ export async function runDataSource(
     }
 
     ext.isDatasourceExecution = false;
-    if (res) {
+    if (res && !token?.isCancellationRequested) {
       const success = !res.error;
       const query = getQuery(fileContent, selectedType);
 
