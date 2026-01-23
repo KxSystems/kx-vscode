@@ -14,6 +14,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Improved support for nested objects in the kdb Results View
 - Moved documentation to a dedicated [documentation site](code.kx.com/vscode)
 - Added ability to execute selection in quke files
+- Scratchpad and Data Sources now support configurable query timeouts helping prevent long-running or runaway queries
 
 ### Fixes
 
