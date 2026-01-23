@@ -325,7 +325,7 @@ export async function runApiDataSource(
   const apiBody = getApiBody(fileContent);
   const apiCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.API,
-    JSON.stringify(apiBody),
+    apiBody,
     timeout,
   );
 
@@ -440,7 +440,7 @@ export async function runQsqlDataSource(
 
   const qsqlCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.QSQL,
-    JSON.stringify(qsqlBody),
+    qsqlBody,
     timeout,
   );
 
@@ -467,7 +467,7 @@ export async function runSqlDataSource(
   };
   const sqlCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.SQL,
-    JSON.stringify(sqlBody),
+    sqlBody,
     timeout,
   );
 
