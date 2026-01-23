@@ -467,10 +467,16 @@ export class InsightsConnection {
         //   parameterTypes: body.parameterTypes,
         // };
       }
+      if (timeout) {
+        body.opts = {
+          ...body.opts,
+          timeout: timeout * 1000, // DAPs use milliseconds
+        };
+      }
       const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(
         false,
-        getHeaders(timeout ? timeout * 1000 : 0, "struct-text"), // DAPs use milliseconds
+        getHeaders(undefined, "struct-text"),
         "POST",
         requestUrl,
         body,
