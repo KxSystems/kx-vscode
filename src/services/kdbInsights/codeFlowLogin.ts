@@ -321,15 +321,15 @@ function createServer() {
         res.end();
         break;
       }
-      case "/main.css": {
+      case "/favicon.ico": {
         sendFile(
           res,
           join(
             ext.context.asAbsolutePath("resources"),
             "codeFlowResult",
-            "main.css",
+            "favicon.ico",
           ),
-          "text/css; charset=utf-8",
+          "image/vnd.microsoft.icon",
         );
         break;
       }
