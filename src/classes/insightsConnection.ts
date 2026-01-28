@@ -17,6 +17,8 @@ import * as url from "url";
 import { CancellationToken } from "vscode-languageclient";
 
 import { ext } from "../extensionVariables";
+import { deserialize, isCompressed, uncompress } from "../ipc/c";
+import { Parse } from "../ipc/parse.qlist";
 import {
   InsightsApiConfig,
   InsightsConfig,
@@ -49,7 +51,6 @@ import {
 } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
-
 const logger = "insightsConnection";
 
 export class InsightsConnection {
@@ -485,6 +486,7 @@ export class InsightsConnection {
       if (!options) {
         return undefined;
       }
+      options.responseType = "arraybuffer";
 
       notify("REST", MessageKind.DEBUG, {
         logger,
@@ -498,9 +500,41 @@ export class InsightsConnection {
             MessageKind.DEBUG,
             { logger },
           );
+          const buffer = Buffer.from(response.data);
+          let jsonString;
+
+          // large responses will be IPC encoded, otherwise standard JSON
+          // check first byte for endian flag to determine encoding
+          const firstByte = buffer[0];
+          if (firstByte === 0x01 || firstByte === 0x00) {
+            try {
+              const ab = isCompressed(response.data.buffer)
+                ? uncompress(response.data.buffer)
+                : response.data.buffer;
+              const results = Parse.reshape(deserialize(ab), ab);
+              jsonString = results.cols.string.toLegacy(0);
+            } catch (e) {
+              console.error("Failed to deserialize response", e);
+            }
+          }
+
+          // check first char for opening bracket
+          const firstChar = buffer.toString("utf8").trim()[0];
+          if (firstChar === "{" || firstChar === "[") {
+            jsonString = buffer.toString("utf8");
+          }
+
+          if (jsonString) {
+            const json = JSON.parse(jsonString);
+            return {
+              error: "",
+              results: json.payload,
+            };
+          }
+
           return {
-            error: "",
-            results: response.data.payload,
+            error: "Unknown data format received",
+            results: undefined,
           };
         })
         .catch((error: any) => {
