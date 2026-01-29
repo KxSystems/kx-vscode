@@ -12,7 +12,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Added ability to connect and automatically execute queries
 - Replaced ag-grid-community with a custom grid for the kdb Results View
 - Improved support for nested objects in the kdb Results View
-- Moved documentation to a dedicated [documentation site](code.kx.com/vscode)
+- Moved documentation to a dedicated [documentation site](https://code.kx.com/vscode/)
 - Added ability to execute selection in quke files
 - Scratchpad and Data Sources now support configurable query timeouts helping prevent long-running or runaway queries
 
