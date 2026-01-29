@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -62,7 +62,7 @@ async function showSurveyDialog() {
   } else if (result === "Don't show me this message next time") {
     notify("Take survey message silenced.", MessageKind.DEBUG, {
       logger,
-      telemetry: "Help&Feedback.Hide.Survey",
+      telemetry: "Help.Hide.Survey",
     });
 
     await vscode.workspace

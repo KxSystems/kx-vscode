@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -33,7 +33,7 @@ import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { errorMessage } from "./shared";
 import { readTextFile, stat, which } from "./shell";
-import { showWelcome } from "../commands/setupTools";
+import { showWelcome } from "../commands/setupCommand";
 import {
   InsightDetails,
   Insights,
@@ -75,7 +75,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
     // kdbOutputLog(`Error in checking OpenSSL version: ${err}`, "ERROR");
     notify("OpenSSL not found.", MessageKind.DEBUG, {
       logger,
-      telemetry: err as Error,
+      params: err,
     });
   }
   return null;
@@ -272,47 +272,6 @@ export function getServers(): Server {
     : {};
 }
 
-// TODO: Remove this on 1.9.0 release
-export function fixUnnamedAlias(): void {
-  /* c8 ignore start */
-  const servers = getServers();
-  const insights = getInsights();
-  let counter = 1;
-
-  if (servers) {
-    const updatedServers: Server = {};
-    for (const key in servers) {
-      if (Object.prototype.hasOwnProperty.call(servers, key)) {
-        const server = servers[key];
-        if (server.serverAlias === "") {
-          server.serverAlias = `unnamedServer-${counter}`;
-          counter++;
-        }
-        updatedServers[server.serverAlias] = server;
-      }
-    }
-    updateServers(updatedServers);
-    ext.serverProvider.refresh(servers);
-  }
-
-  if (insights) {
-    const updatedInsights: Insights = {};
-    for (const key in insights) {
-      if (Object.prototype.hasOwnProperty.call(insights, key)) {
-        const insight = insights[key];
-        if (insight.alias === "") {
-          insight.alias = `unnamedServer-${counter}`;
-          counter++;
-        }
-        updatedInsights[insight.alias] = insight;
-      }
-    }
-    updateInsights(updatedInsights);
-    ext.serverProvider.refreshInsights(insights);
-  }
-  /* c8 ignore stop */
-}
-
 export function getAutoFocusOutputOnEntrySetting(): boolean {
   return workspace
     .getConfiguration("kdb")
@@ -423,30 +382,31 @@ export function invalidUsernameJWT(connLabel: string): void {
   );
 }
 
-export function offerConnectAction(connLabel?: string): void {
+export async function offerConnectAction(connLabel?: string) {
   /* c8 ignore start */
   if (connLabel) {
-    notify(
-      `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
+    const result = await notify(
+      `You aren't connected to ${connLabel}, would you like to connect?`,
       MessageKind.WARNING,
       {},
       "Connect",
       "Cancel",
-    ).then(async (result) => {
-      if (result === "Connect") {
-        await commands.executeCommand(
-          "kdb.connections.connect.via.dialog",
-          connLabel,
-        );
-      }
-    });
+    );
+    if (result === "Connect") {
+      await commands.executeCommand(
+        "kdb.connections.connect.via.dialog",
+        connLabel,
+      );
+      return true;
+    }
   } else {
     notify(
-      "You aren't connected to any connection. Once connected please try again.",
+      "No connection choosen. Once choosen please try again.",
       MessageKind.WARNING,
       { logger },
     );
   }
+  return false;
   /* c8 ignore stop */
 }
 
@@ -511,10 +471,6 @@ export function getStatus(label: string): string {
     return "- connected";
   }
   return "- disconnected";
-}
-
-export function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function checkLocalInstall() {
@@ -727,4 +683,54 @@ export function isBaseVersionGreaterOrEqual(
 
 export function getBasename(uri: Uri): string {
   return path.basename(uri.path);
+}
+
+export function isQuick(server: string | undefined) {
+  return server?.includes(":");
+}
+
+export function isQuickAlias(alias: string | undefined) {
+  return alias?.startsWith("(");
+}
+
+export function calculateSeconds(value: number, unit: string): number {
+  switch (unit) {
+    case "Seconds":
+      return value;
+    case "Minutes":
+      return value * 60;
+    case "Hours":
+      return value * 60 * 60;
+    default:
+      return value;
+  }
+}
+
+export function deconstructSeconds(seconds: number): {
+  value: number;
+  unit: "Seconds" | "Minutes" | "Hours";
+} {
+  const minutes = seconds / 60;
+  const hours = minutes / 60;
+
+  if (hours > 0 && hours % 1 === 0) {
+    return { value: hours, unit: "Hours" };
+  } else if (minutes > 0 && minutes % 1 === 0) {
+    return { value: minutes, unit: "Minutes" };
+  } else {
+    return { value: seconds, unit: "Seconds" };
+  }
+}
+
+export function formatSeconds(seconds: number): string {
+  const minutes = seconds / 60;
+  const hours = minutes / 60;
+
+  if (hours >= 1 && hours % 1 === 0) {
+    return `${hours}h`;
+  } else if (minutes >= 1 && minutes % 1 === 0) {
+    return `${minutes}m`;
+  } else {
+    return `${seconds}s`;
+  }
 }

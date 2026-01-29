@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -15,12 +15,12 @@ import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { createDefaultDataSourceFile } from "../../../src/models/dataSource";
 import { DataSourcesPanel } from "../../../src/panels/datasource";
 import * as loggers from "../../../src/utils/loggers";
+import { createMockDatasource } from "../../fixtures/config/datasource";
 
 describe("DataSourcesPanel", () => {
-  const dsTest = createDefaultDataSourceFile();
+  const dsTest = createMockDatasource();
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
   let kdbOutputLogStub: sinon.SinonStub;
 

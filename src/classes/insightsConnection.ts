@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,9 +14,9 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
+import { CancellationToken } from "vscode-languageclient";
 
 import { ext } from "../extensionVariables";
-import { isCompressed, uncompress } from "../ipc/c";
 import {
   InsightsApiConfig,
   InsightsConfig,
@@ -42,21 +42,15 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import {
+  getHeaders,
+  handleScratchpadTableRes,
+  handleWSResults,
+} from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const logger = "insightsConnection";
-
-const customHeadersOctet = {
-  Accept: "application/octet-stream",
-  "Content-Type": "application/json",
-};
-const customHeadersJson = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
-  json: true,
-};
 
 export class InsightsConnection {
   public connected: boolean;
@@ -296,6 +290,7 @@ export class InsightsConnection {
       importSql: "scratchpadmanager/scratchpad/import/sql",
       importQsql: "scratchpadmanager/scratchpad/import/qsql",
       importUDA: "scratchpadmanager/scratchpad/import/uda",
+      cancel: "scratchpadmanager/scratchpad/cancel",
       reset: "scratchpadmanager/reset",
     };
 
@@ -458,6 +453,7 @@ export class InsightsConnection {
   public async getDatasourceQuery(
     type: DataSourceTypes,
     body: any,
+    timeout?: number,
   ): Promise<GetDataObjectPayload | undefined> {
     if (this.connected) {
       const udaName = (body as UDARequestBody).name
@@ -471,10 +467,16 @@ export class InsightsConnection {
         //   parameterTypes: body.parameterTypes,
         // };
       }
+      if (timeout) {
+        body.opts = {
+          ...body.opts,
+          timeout: timeout * 1000, // DAPs use milliseconds
+        };
+      }
       const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(
         false,
-        customHeadersOctet,
+        getHeaders(undefined, "struct-text"),
         "POST",
         requestUrl,
         body,
@@ -483,7 +485,6 @@ export class InsightsConnection {
       if (!options) {
         return undefined;
       }
-      options.responseType = "arraybuffer";
 
       notify("REST", MessageKind.DEBUG, {
         logger,
@@ -497,14 +498,9 @@ export class InsightsConnection {
             MessageKind.DEBUG,
             { logger },
           );
-          if (isCompressed(response.data)) {
-            response.data = uncompress(response.data);
-          }
           return {
             error: "",
-            arrayBuffer: response.data.buffer
-              ? response.data.buffer
-              : response.data,
+            results: response.data.payload,
           };
         })
         .catch((error: any) => {
@@ -514,7 +510,7 @@ export class InsightsConnection {
             { logger, params: error },
           );
           return {
-            error: { buffer: error.response.data },
+            error: error.response.data.header.ai,
             arrayBuffer: undefined,
           };
         });
@@ -525,8 +521,9 @@ export class InsightsConnection {
     variableName: string,
     params: DataSourceFiles,
     silent?: boolean,
+    token?: CancellationToken,
+    timeout?: number,
   ): Promise<void> {
-    let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
       let coreUrl: string;
       const body: any = {
@@ -541,13 +538,11 @@ export class InsightsConnection {
             endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
           };
           coreUrl = this.connEndpoints.scratchpad.import;
-          dsTypeString = "API";
           break;
         }
         case DataSourceTypes.SQL: {
           body.params = { query: params.dataSource.sql.query };
           coreUrl = this.connEndpoints.scratchpad.importSql;
-          dsTypeString = "SQL";
           break;
         }
         case DataSourceTypes.QSQL: {
@@ -558,7 +553,6 @@ export class InsightsConnection {
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;
-          dsTypeString = "QSQL";
           break;
         }
         case DataSourceTypes.UDA: {
@@ -590,7 +584,7 @@ export class InsightsConnection {
       const scratchpadURL = new url.URL(coreUrl!, this.node.details.server);
       const options = await this.getOptions(
         true,
-        customHeadersJson,
+        getHeaders(timeout),
         "POST",
         scratchpadURL.toString(),
         body,
@@ -606,27 +600,26 @@ export class InsightsConnection {
       });
 
       return await axios(options).then((response: any) => {
-        if (response.data.error) {
-          notify(
-            "Error occured while populating scratchpad.",
-            silent ? MessageKind.DEBUG : MessageKind.ERROR,
-            {
-              logger,
-              params: { status: response.status },
-              telemetry:
-                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
-            },
-          );
-        } else {
-          notify(
-            `Scratchpad variable (${variableName}) populated.`,
-            silent ? MessageKind.DEBUG : MessageKind.INFO,
-            {
-              logger,
-              params: { status: response.status },
-              telemetry: "Datasource." + dsTypeString + ".Scratchpad.Populated",
-            },
-          );
+        if (!token?.isCancellationRequested) {
+          if (response.data.error) {
+            notify(
+              "Error occured while populating scratchpad.",
+              silent ? MessageKind.DEBUG : MessageKind.ERROR,
+              {
+                logger,
+                params: { status: response.status },
+              },
+            );
+          } else {
+            notify(
+              `Scratchpad variable (${variableName}) populated.`,
+              silent ? MessageKind.DEBUG : MessageKind.INFO,
+              {
+                logger,
+                params: { status: response.status },
+              },
+            );
+          }
         }
       });
     } else {
@@ -668,6 +661,7 @@ export class InsightsConnection {
 
   public async getUDAScratchpadQuery(
     udaReqBody: UDARequestBody,
+    timeout?: number,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = udaReqBody.returnFormat === "structuredText";
@@ -677,7 +671,7 @@ export class InsightsConnection {
       );
       const options = await this.getOptions(
         true,
-        customHeadersJson,
+        getHeaders(timeout),
         "POST",
         udaURL.toString(),
         udaReqBody,
@@ -720,6 +714,7 @@ export class InsightsConnection {
     context?: string,
     isPython?: boolean,
     isTableView?: boolean,
+    timeout?: number,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       if (isTableView === undefined) {
@@ -738,11 +733,7 @@ export class InsightsConnection {
       };
 
       if (this.insightsVersion) {
-        /* TODO: Workaround for Python structuredText bug */
-        if (
-          !isPython &&
-          isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
-        ) {
+        if (isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
@@ -751,7 +742,7 @@ export class InsightsConnection {
 
       const options = await this.getOptions(
         true,
-        customHeadersJson,
+        getHeaders(timeout),
         "POST",
         scratchpadURL.toString(),
         body,
@@ -782,8 +773,6 @@ export class InsightsConnection {
           if (!response.data.error) {
             if (isTableView) {
               if (
-                /* TODO: Workaround for Python structuredText bug */
-                !isPython &&
                 this.insightsVersion &&
                 isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
               ) {
@@ -812,6 +801,54 @@ export class InsightsConnection {
     return undefined;
   }
 
+  public async cancelScratchpad(
+    isPython?: boolean,
+  ): Promise<boolean | undefined> {
+    if (this.connected && this.connEndpoints) {
+      const scratchpadURL = new url.URL(
+        this.connEndpoints.scratchpad.cancel,
+        this.node.details.server,
+      );
+      const options = await this.getOptions(
+        true,
+        getHeaders(),
+        "POST",
+        scratchpadURL.toString(),
+        undefined,
+      );
+
+      if (!options) {
+        return;
+      }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
+      return await axios(options)
+        .then((_response: any) => {
+          notify(
+            `Scratchpad cancel request sent for ${this.connLabel}${isPython ? ", however, Python queries may ignore this." : "."}`,
+            MessageKind.INFO,
+            { logger, telemetry: "Connection.Cancel.ie.sp" },
+          );
+          return true;
+        })
+        .catch((_error: any) => {
+          notify(
+            `Scratchpad cancel request error: ${_error.response.data.message}`,
+            MessageKind.ERROR,
+            { logger },
+          );
+          return false;
+        });
+    } else {
+      this.noConnectionOrEndpoints();
+      return false;
+    }
+  }
+
   public async resetScratchpad(): Promise<boolean | undefined> {
     if (this.connected && this.connEndpoints) {
       const scratchpadURL = new url.URL(
@@ -820,7 +857,7 @@ export class InsightsConnection {
       );
       const options = await this.getOptions(
         true,
-        customHeadersJson,
+        getHeaders(),
         "POST",
         scratchpadURL.toString(),
         null,
@@ -840,7 +877,7 @@ export class InsightsConnection {
           notify(
             `Scratchpad reset for ${this.connLabel} executed successfully.`,
             MessageKind.INFO,
-            { logger, telemetry: "Scratchpad.Reseted" },
+            { logger, telemetry: "Connection.Reset.ie.sp" },
           );
           return true;
         })

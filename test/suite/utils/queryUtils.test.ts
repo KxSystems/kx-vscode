@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -280,6 +280,19 @@ describe("queryUtils", () => {
     it("should work with empty rows", () => {
       const rows = [];
       const expectedRes = [];
+      const result = queryUtils.convertRowsToConsole(rows);
+
+      assert.deepEqual(result, expectedRes);
+    });
+
+    it("should work with rows with newlines", () => {
+      const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
+      const expectedRes = [
+        "a   b   ",
+        "--------",
+        "a1  \na2  b1  \n    b2  ",
+        "3   4   ",
+      ];
       const result = queryUtils.convertRowsToConsole(rows);
 
       assert.deepEqual(result, expectedRes);
@@ -598,17 +611,45 @@ describe("queryUtils", () => {
     });
   });
 
+  describe("getHeaders", () => {
+    const jsonHeaders = {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      json: true,
+    };
+
+    const structTextHeaders = {
+      Accept: "application/struct-text",
+      "Content-Type": "application/json",
+    };
+
+    it("should return JSON headers by default", () => {
+      const res = queryUtils.getHeaders();
+      assert.deepStrictEqual(res, jsonHeaders);
+    });
+
+    it("should return JSON headers with timeout", () => {
+      const res = queryUtils.getHeaders(30, "json");
+      assert.deepStrictEqual(res, { ...jsonHeaders, timeout: "30" });
+    });
+
+    it("should return Structured Text headers with timeout", () => {
+      const res = queryUtils.getHeaders(30, "struct-text");
+      assert.deepStrictEqual(res, { ...structTextHeaders, timeout: "30" });
+    });
+  });
+
   describe("getQSQLWrapper", () => {
     let queryWrappeStub: sinon.SinonStub;
 
     it("should not add extra semicolon", () => {
-      const res = queryUtils.getQSQLWrapper("a:1;\na");
+      const res = queryUtils.getQSQLWrapper("a:1;\na", "serialized");
       assert.strictEqual(res, "a:1;\na");
     });
 
     it("should normalize python code using wrapper", () => {
       assert.throws(() => {
-        queryUtils.getQSQLWrapper(``, true);
+        queryUtils.getQSQLWrapper(``, "serialized", true);
         sinon.assert.calledOnce(queryWrappeStub);
       });
     });
@@ -628,6 +669,119 @@ describe("queryUtils", () => {
       ext.scratchpadStarted.add("test");
       queryUtils.resetScratchpadStarted("test");
       assert.strictEqual(ext.scratchpadStarted.has("test"), false);
+    });
+  });
+
+  describe("notifyExecution", () => {
+    describe("repl", () => {
+      describe("File", () => {
+        it("should return telemetry for q", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run | queryUtils.RunFlag.Repl,
+          );
+          assert.strictEqual(res, "Run.File.repl.q");
+        });
+        it("should return telemetry for Python", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Repl |
+              queryUtils.RunFlag.Python,
+          );
+          assert.strictEqual(res, "Run.File.repl.py");
+        });
+        it("should return telemetry for SQL", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Repl |
+              queryUtils.RunFlag.Sql,
+          );
+          assert.strictEqual(res, "Run.File.repl.sql");
+        });
+      });
+      describe("Workbook", () => {
+        it("should return telemetry for q", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Workbook |
+              queryUtils.RunFlag.Repl,
+          );
+          assert.strictEqual(res, "Run.Workbook.repl.q");
+        });
+        it("should return telemetry for Python", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Workbook |
+              queryUtils.RunFlag.Repl |
+              queryUtils.RunFlag.Python,
+          );
+          assert.strictEqual(res, "Run.Workbook.repl.py");
+        });
+        it("should return telemetry for SQL", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Workbook |
+              queryUtils.RunFlag.Repl |
+              queryUtils.RunFlag.Sql,
+          );
+          assert.strictEqual(res, "Run.Workbook.repl.sql");
+        });
+      });
+    });
+    describe("kdb", () => {
+      describe("Workbook", () => {
+        it("should return telemetry for q", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run | queryUtils.RunFlag.Workbook,
+          );
+          assert.strictEqual(res, "Run.Workbook.kdb.q");
+        });
+        it("should return telemetry for Python", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Workbook |
+              queryUtils.RunFlag.Python,
+          );
+          assert.strictEqual(res, "Run.Workbook.kdb.py");
+        });
+        it("should return telemetry for SQL", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Workbook |
+              queryUtils.RunFlag.Sql,
+          );
+          assert.strictEqual(res, "Run.Workbook.kdb.sql");
+        });
+      });
+    });
+    describe("ie", () => {
+      describe("Workbook", () => {
+        it("should return telemetry for q", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Workbook |
+              queryUtils.RunFlag.Insights,
+          );
+          assert.strictEqual(res, "Run.Workbook.ie.q");
+        });
+        it("should return telemetry for Python", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Workbook |
+              queryUtils.RunFlag.Insights |
+              queryUtils.RunFlag.Python,
+          );
+          assert.strictEqual(res, "Run.Workbook.ie.py");
+        });
+        it("should return telemetry for SQL", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.RunFlag.Run |
+              queryUtils.RunFlag.Workbook |
+              queryUtils.RunFlag.Insights |
+              queryUtils.RunFlag.Sql,
+          );
+          assert.strictEqual(res, "Run.Workbook.ie.sql");
+        });
+      });
     });
   });
 });

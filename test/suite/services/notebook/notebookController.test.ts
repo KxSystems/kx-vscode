@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -21,7 +21,6 @@ import { LocalConnection } from "../../../../src/classes/localConnection";
 import { ReplConnection } from "../../../../src/classes/replConnection";
 import * as serverCommand from "../../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
-import { ext } from "../../../../src/extensionVariables";
 import { ConnectionManagementService } from "../../../../src/services/connectionManagerService";
 import { KdbNode } from "../../../../src/services/kdbTreeProvider";
 import * as controlller from "../../../../src/services/notebookController";
@@ -80,7 +79,7 @@ describe("Controller", () => {
       sinon
         .stub(ReplConnection.prototype, "executeQuery")
         .resolves({ output: "RESULT" });
-      sinon.stub(workspaceCommand, "getServerForUri").returns(ext.REPL);
+      sinon.stub(workspaceCommand, "getServerForUri").returns(undefined);
       sinon.stub(queryUtils, "getPythonWrapper").returns("expression");
       createInstance();
     });
@@ -229,7 +228,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.notCalled(notifyStub);
+              sinon.assert.calledOnce(notifyStub);
               assert.strictEqual(success, true);
             });
 
@@ -240,7 +239,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.notCalled(notifyStub);
+              sinon.assert.calledOnce(notifyStub);
               assert.strictEqual(success, true);
             });
 
@@ -251,7 +250,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.notCalled(notifyStub);
+              sinon.assert.calledOnce(notifyStub);
               assert.strictEqual(success, true);
             });
           });
@@ -264,7 +263,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.notCalled(notifyStub);
+              sinon.assert.calledOnce(notifyStub);
               assert.strictEqual(success, true);
             });
           });
@@ -277,12 +276,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.calledOnceWithExactly(
-                notifyStub,
-                sinon.match.string,
-                notifications.MessageKind.DEBUG,
-                sinon.match.any,
-              );
+              sinon.assert.calledTwice(notifyStub);
               assert.strictEqual(success, false);
             });
           });
@@ -302,89 +296,6 @@ describe("Controller", () => {
               createController(),
             );
 
-            assert.strictEqual(success, undefined);
-          });
-        });
-      });
-    });
-  });
-
-  describe("Connection Not Picked", () => {
-    beforeEach(() => {
-      sinon.stub(workspaceCommand, "getServerForUri").returns(undefined);
-    });
-
-    describe("Connected", () => {
-      const text = "results";
-
-      afterEach(() => {
-        ext.activeConnection = undefined;
-      });
-
-      describe("LocalConnection", () => {
-        beforeEach(() => {
-          ext.activeConnection = sinon.createStubInstance(LocalConnection);
-          createInstance();
-        });
-
-        describe("q cell", () => {
-          it("should display results", async () => {
-            executeQueryStub.resolves(text);
-            await instance.execute(
-              [notebookTestUtils.createCell("q")],
-              notebookTestUtils.createNotebook(),
-              createController(),
-            );
-            sinon.assert.notCalled(notifyStub);
-            assert.strictEqual(success, true);
-          });
-        });
-
-        describe("q cell with target", () => {
-          it("should error", async () => {
-            executeQueryStub.resolves(text);
-            await instance.execute(
-              [notebookTestUtils.createCell("q", { target: "target" })],
-              notebookTestUtils.createNotebook(),
-              createController(),
-            );
-            sinon.assert.called(notifyStub);
-          });
-        });
-
-        describe("q cell with variable", () => {
-          it("should error", async () => {
-            executeQueryStub.resolves(text);
-            await instance.execute(
-              [notebookTestUtils.createCell("q", { variable: "variable" })],
-              notebookTestUtils.createNotebook(),
-              createController(),
-            );
-            sinon.assert.called(notifyStub);
-          });
-        });
-      });
-    });
-
-    describe("Disconnected", () => {
-      beforeEach(() => {
-        createInstance();
-      });
-
-      describe("LocalConnection", () => {
-        describe("q cell", async () => {
-          it("should show warning message", async () => {
-            await instance.execute(
-              [notebookTestUtils.createCell("q")],
-              notebookTestUtils.createNotebook(),
-              createController(),
-            );
-            sinon.assert.calledOnceWithExactly(
-              notifyStub,
-              sinon.match.string,
-              notifications.MessageKind.WARNING,
-              sinon.match.any,
-            );
             assert.strictEqual(success, undefined);
           });
         });

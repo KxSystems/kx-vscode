@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,8 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { GridOptions } from "ag-grid-community";
-
 import { ext } from "../extensionVariables";
 import { isBaseVersionGreaterOrEqual } from "./core";
 import { decodeQUTF } from "./decode";
@@ -23,14 +21,17 @@ export function convertToGrid(
   isInsights: boolean,
   connVersion?: number,
   isPython?: boolean,
-): GridOptions {
+): any {
   let rowData = [];
   let columnDefs = [];
 
   if (
     (!isInsights && !isPython) ||
     /* TODO: Workaround for Python structuredText bug */
-    (!isPython && connVersion && isBaseVersionGreaterOrEqual(connVersion, 1.12))
+    (!isPython &&
+      connVersion &&
+      isBaseVersionGreaterOrEqual(connVersion, 1.12)) ||
+    results.columns
   ) {
     rowData = updatedExtractRowData(results);
     columnDefs = updatedExtractColumnDefs(results);
@@ -83,6 +84,7 @@ export function convertToGrid(
       field: "index",
       headerName: "Index",
       cellDataType: "number",
+      pinned: "left",
     });
   }
 
@@ -90,7 +92,7 @@ export function convertToGrid(
     ext.resultPanelCSV = convertToCsv(rowData).join("\n");
   }
 
-  const gridOptions: GridOptions = {
+  const gridOptions: any = {
     rowData: rowData,
     columnDefs: columnDefs,
   };
@@ -245,13 +247,14 @@ export function formatResult(queryResult: string | number): string {
 
 export function convertToCsv(data: any[]): string[] {
   const keys = Object.keys(data[0]);
-  const header = keys.join(",");
-  const rows = data.map((obj) => {
-    return keys
-      .map((key) => {
-        return obj[key];
-      })
-      .join(",");
-  });
+  const header = keys.map((k) => normalize(k)).join(",");
+  const rows = data.map((obj) =>
+    keys.map((key) => normalize(obj[key])).join(","),
+  );
   return [header, ...rows];
+}
+
+function normalize(obj: any) {
+  const o = `${obj}`;
+  return `"${o.replace(/"/gs, '""')}"`;
 }

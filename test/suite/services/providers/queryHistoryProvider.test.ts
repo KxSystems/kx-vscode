@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -16,15 +16,15 @@ import * as vscode from "vscode";
 
 import { ext } from "../../../../src/extensionVariables";
 import { ServerType } from "../../../../src/models/connectionsModels";
-import { createDefaultDataSourceFile } from "../../../../src/models/dataSource";
 import { QueryHistory } from "../../../../src/models/queryHistory";
 import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "../../../../src/services/queryHistoryProvider";
+import { createMockDatasource } from "../../../fixtures/config/datasource";
 
 describe("queryHistoryProvider", () => {
-  const dummyDS = createDefaultDataSourceFile();
+  const dummyDS = createMockDatasource();
   const dummyQueryHistory: QueryHistory[] = [
     {
       executorName: "testExecutorName",

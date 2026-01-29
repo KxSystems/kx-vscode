@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -12,12 +12,12 @@
  */
 
 import { PythonExtension, ResolvedEnvironment } from "@vscode/python-extension";
+import kill from "kill-sync";
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import path from "node:path";
-import kill from "tree-kill";
 import * as vscode from "vscode";
 
-import { showSetupError } from "../commands/setupTools";
+import { showSetupError } from "../commands/setupCommand";
 import { ext } from "../extensionVariables";
 import {
   getAutoFocusOutputOnEntrySetting,
@@ -246,6 +246,7 @@ export class ReplConnection {
         onDidWrite: this.onDidWrite.event,
       },
       name: `${CONF.TITLE} (${this.workspace ? this.workspace.name : CONF.DEFAULT})`,
+      isTransient: true,
     });
   }
 
@@ -338,12 +339,12 @@ export class ReplConnection {
 
   private stopExecution() {
     this.stopped = this.win32;
-    if (this.process.pid) kill(this.process.pid, "SIGINT");
+    if (this.process.pid) kill(this.process.pid, "SIGINT", true);
   }
 
   private stopProcess(restart = false) {
     this.stopped = restart;
-    if (this.process.pid) kill(this.process.pid, "SIGKILL");
+    if (this.process.pid) kill(this.process.pid, "SIGKILL", true);
   }
 
   private runQuery(data: string) {
@@ -750,9 +751,5 @@ export class ReplConnection {
     }
 
     return repl;
-  }
-
-  static dispose() {
-    Array.from(this.repls.values()).forEach((repl) => repl.close());
   }
 }

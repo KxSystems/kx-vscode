@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -34,7 +34,7 @@ import {
   QServerNode,
 } from "../../../../src/services/kdbTreeProvider";
 import { KdbTreeService } from "../../../../src/services/kdbTreeService";
-import { dummyMeta } from "../services.utils.test";
+import { getMetaResponse } from "../../../fixtures/api/getMeta";
 
 describe("kdbTreeProvider", () => {
   let servers: Server;
@@ -621,7 +621,7 @@ describe("kdbTreeProvider", () => {
         insightNode,
       );
       sinon.stub(connMng, "retrieveConnectedConnection").returns(insightsConn);
-      insightsConn.meta = dummyMeta;
+      insightsConn.meta = getMetaResponse;
       const result = await kdbProvider.getChildren(metaNode);
       assert.notStrictEqual(result, undefined);
     });

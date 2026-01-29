@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -41,14 +41,6 @@ export function clearWorkspaceLabels() {
   getWorkspaceLabelsConnMap();
 
   if (ext.connLabelList.length === 0) {
-    notify(
-      "Cleaning connection mappings for nonexistent labels.",
-      MessageKind.DEBUG,
-      {
-        logger,
-        telemetry: "Label.Cleanup.NoLabels",
-      },
-    );
     workspace.getConfiguration().update("kdb.labelsConnectionMap", [], true);
     return;
   }
@@ -67,16 +59,6 @@ export function clearWorkspaceLabels() {
     workspace
       .getConfiguration()
       .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
-
-    notify(
-      `Removed ${removedCount} orphaned label connection mapping${removedCount > 1 ? "s" : ""}.`,
-      MessageKind.DEBUG,
-      {
-        logger,
-        telemetry: "Label.Cleanup.OrphanedMappings",
-        measurements: { removedMappings: removedCount },
-      },
-    );
   }
 }
 
@@ -92,7 +74,6 @@ export function createNewLabel(name: string, colorName: string) {
   if (checkIfLabelExists(name)) {
     notify("Label with this name already exists.", MessageKind.ERROR, {
       logger,
-      telemetry: "Label.Create.Exists",
     });
     return;
   }
@@ -111,7 +92,7 @@ export function createNewLabel(name: string, colorName: string) {
 
     notify("Connection label created.", MessageKind.DEBUG, {
       logger,
-      telemetry: "Label.Create",
+      telemetry: "Connection.Label.Create",
       measurements: getLabelStatistics(),
     });
   } else {
@@ -165,11 +146,6 @@ export function addConnToLabel(labelName: string, connName: string) {
         connections: [connName],
       });
     }
-    notify("Connection assigned to label.", MessageKind.DEBUG, {
-      logger,
-      telemetry: "Label.Assign.Connection",
-      measurements: getConnectionLabelStatistics(connName),
-    });
   }
 }
 
@@ -184,12 +160,6 @@ export function removeConnFromLabels(connName: string) {
   workspace
     .getConfiguration()
     .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
-
-  notify("Connection removed from label.", MessageKind.DEBUG, {
-    logger,
-    telemetry: "Label.Remove.Connection",
-    measurements: getConnectionLabelStatistics(connName),
-  });
 }
 
 export async function handleLabelsConnMap(labels: string[], connName: string) {
@@ -224,7 +194,6 @@ export function renameLabel(name: string, newName: string) {
   if (checkIfLabelExists(newName)) {
     notify("Label with this name already exists.", MessageKind.ERROR, {
       logger,
-      telemetry: "Label.Rename.Exists",
     });
     return;
   }
@@ -275,7 +244,7 @@ export function deleteLabel(name: string) {
 
   notify("Connection label deleted.", MessageKind.DEBUG, {
     logger,
-    telemetry: "Label.Delete",
+    telemetry: "Connection.Label.Delete",
     measurements: getLabelStatistics(),
   });
 

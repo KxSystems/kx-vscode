@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -32,7 +32,7 @@ export async function showInputBox(options: InputBoxOptions): Promise<string> {
 
 export async function showQuickPick<T extends QuickPickItem>(
   items: T[] | Promise<T[]>,
-  options: QuickPickOptions
+  options: QuickPickOptions,
 ): Promise<T> {
   const result = await window.showQuickPick(items, options);
 

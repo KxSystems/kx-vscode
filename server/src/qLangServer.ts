@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -199,14 +199,13 @@ export default class QLangServer {
     options: {
       logger?: string;
       params?: any;
+      telemetry?: string | boolean;
     } = {},
-    telemetry?: string | boolean,
   ) {
     this.connection.sendNotification("notify", {
       message,
       kind,
       options,
-      telemetry,
     });
   }
 
@@ -252,6 +251,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: ReferenceParams): Promise<Location[]> {
+    this.notify("onReferences", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.References",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
@@ -271,6 +275,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: DefinitionParams): Promise<Location[]> {
+    this.notify("onDefinition", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.Definition",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
@@ -291,6 +300,11 @@ export default class QLangServer {
     position,
     newName,
   }: RenameParams): Promise<WorkspaceEdit | null> {
+    this.notify("onRenameRequest", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.RenameRequest",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
@@ -325,6 +339,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: CompletionParams): Promise<CompletionItem[]> {
+    this.notify("onCompletion", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.Completion",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
@@ -373,6 +392,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: TextDocumentPositionParams) {
+    this.notify("onParameterCache", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.ParameterCache",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
     if (!target) {
@@ -486,6 +510,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: CallHierarchyPrepareParams): Promise<CallHierarchyItem[]> {
+    this.notify("onCallHierarchy", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.CallHierarchy",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 

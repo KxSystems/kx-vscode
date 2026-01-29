@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -31,6 +31,7 @@ export const enum DataSourceCommand {
   Update,
   Change,
   Server,
+  Timeout,
   Save,
   Run,
   Populate,
@@ -39,6 +40,9 @@ export const enum DataSourceCommand {
 
 export interface DataSourceMessage2 {
   command: DataSourceCommand;
+  timeoutDefault: boolean;
+  timeoutUnit: string;
+  timeoutValue: number;
   servers: string[];
   selectedServer: string;
   selectedServerVersion: number;

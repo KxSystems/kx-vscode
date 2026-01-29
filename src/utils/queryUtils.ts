@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -279,9 +279,38 @@ export function normalizePyQuery(query: string): string {
   );
 }
 
+/**
+ * Generate request headers including timeout
+ * @param {Number} timeout - request timeout (ms)
+ * @param {('struct-text'|'json')} type - type of response to accept
+ */
+export function getHeaders(
+  timeout?: number,
+  type: "json" | "struct-text" = "json",
+) {
+  const headers: Record<string, boolean | string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (type === "struct-text") {
+    headers["Accept"] = "application/struct-text";
+  } else if (type === "json") {
+    headers["Accept"] = "application/json";
+    headers["json"] = true;
+  } else {
+    throw "Unsupported type";
+  }
+
+  if (timeout) {
+    headers["timeout"] = String(timeout);
+  }
+
+  return headers;
+}
+
 export function getPythonWrapper(
   query: string,
-  returnFormat: "serialized" | "text" | "structuredText" = "serialized",
+  returnFormat: "serialized" | "text" | "structuredText",
 ): string {
   const wrapper = normalizeQSQLQuery(queryWrapper(true));
   const args = {
@@ -293,8 +322,14 @@ export function getPythonWrapper(
   return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`errored;res\`error;res\`result]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
 }
 
-export function getQSQLWrapper(query: string, isPython?: boolean): string {
-  return isPython ? getPythonWrapper(query) : normalizeQSQLQuery(query);
+export function getQSQLWrapper(
+  query: string,
+  returnFormat: "serialized" | "text" | "structuredText",
+  isPython?: boolean,
+): string {
+  return isPython
+    ? getPythonWrapper(query, returnFormat)
+    : normalizeQSQLQuery(query);
 }
 
 export function getSQLWrapper(query: string): string {
@@ -357,8 +392,10 @@ export function convertRowsToConsole(rows: string[]): string[] {
   }
 
   const columnCounters = vector[0].reduce((counters: number[], _, j) => {
+    // get max width of column, splitting values by new line
     const maxLength = vector.reduce(
-      (max, row) => Math.max(max, row[j].length),
+      (max, row) =>
+        Math.max(max, Math.max(...row[j].split("\n").map((l) => l.length))),
       0,
     );
     counters.push(maxLength + 2);
@@ -368,14 +405,29 @@ export function convertRowsToConsole(rows: string[]): string[] {
   vector.forEach((row) => {
     row.forEach((value, j) => {
       const counter = columnCounters[j];
-      const diff = counter - value.length;
-      if (diff > 0) {
-        if (!haveHeader && j !== columnCounters.length - 1) {
-          row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
-        } else {
-          row[j] = value + " ".repeat(diff);
+      const lines = value.split("\n");
+      row[j] = "";
+
+      lines.forEach((line, lineIndex) => {
+        if (lineIndex > 0) {
+          // prepend spacing to align lines within the same cell
+          const prevCol = columnCounters[j - 1];
+          if (prevCol) {
+            row[j] += "\n" + " ".repeat(prevCol);
+          } else {
+            row[j] += "\n";
+          }
         }
-      }
+
+        const diff = counter - line.length;
+        if (diff > 0) {
+          if (!haveHeader && j !== columnCounters.length - 1) {
+            row[j] += line + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
+          } else {
+            row[j] += line + " ".repeat(diff);
+          }
+        }
+      });
     });
   });
 
@@ -527,4 +579,50 @@ export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
 
 export function resetScratchpadStarted(connLabel: string) {
   ext.scratchpadStarted.delete(connLabel);
+}
+
+export const enum RunFlag {
+  Run = 0b0000000001,
+  Workbook = 0b0000000010,
+  Notebook = 0b0000000100,
+  Repl = 0b0000001000,
+  Insights = 0b0000010000,
+  Quick = 0b0000100000,
+  Dap = 0b0001000000,
+  Python = 0b0010000000,
+  Sql = 0b0100000000,
+  Quke = 0b1000000000,
+}
+
+export function notifyExecution(flags: number, dsType?: string) {
+  const telemetry =
+    (flags & RunFlag.Run ? "Run" : "Populate") +
+    (dsType
+      ? ".Datasource." + dsType.toLowerCase()
+      : (flags & RunFlag.Workbook
+          ? ".Workbook"
+          : flags & RunFlag.Notebook
+            ? ".Cell"
+            : ".File") +
+        (flags & RunFlag.Repl
+          ? ".repl"
+          : flags & RunFlag.Insights
+            ? ".ie"
+            : ".kdb") +
+        (flags & RunFlag.Quick ? ".quick" : "") +
+        (flags & RunFlag.Dap ? ".dap" : "") +
+        (flags & RunFlag.Python
+          ? ".py"
+          : flags & RunFlag.Sql
+            ? ".sql"
+            : flags & RunFlag.Quke
+              ? ".quke"
+              : ".q"));
+
+  notify(`Query ${telemetry} executed.`, MessageKind.DEBUG, {
+    logger,
+    telemetry,
+  });
+
+  return telemetry;
 }

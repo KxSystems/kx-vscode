@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -26,11 +26,14 @@ import { WorkspaceTreeProvider } from "../../../src/services/workspaceTreeProvid
 import * as dataSourceUtils from "../../../src/utils/dataSource";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
+import * as widgets from "../../../src/utils/widgets";
 
 describe("workspaceCommand", () => {
   const kdbUri = vscode.Uri.file("test-kdb.q");
-  const insightsUri = vscode.Uri.file("test-insights.q");
+  const insightsUri = vscode.Uri.file("tests.q");
   const pythonUri = vscode.Uri.file("test-python.q");
+
+  const updateConfStub = sinon.stub();
 
   beforeEach(() => {
     const insightNode = new InsightsNode(
@@ -62,7 +65,7 @@ describe("workspaceCommand", () => {
     ext.activeTextEditor = <any>{
       document: {
         uri: insightsUri,
-        fileName: "test-insights.q",
+        fileName: "tests.q",
         getText() {
           return "";
         },
@@ -76,6 +79,9 @@ describe("workspaceCommand", () => {
       .stub(ConnectionManagementService.prototype, "retrieveMetaContent")
       .returns(JSON.stringify([{ assembly: "assembly", target: "target" }]));
     sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+      const relativePath = (uri: vscode.Uri) =>
+        vscode.workspace.asRelativePath(uri, false);
+
       return {
         get(key: string) {
           switch (key) {
@@ -85,24 +91,31 @@ describe("workspaceCommand", () => {
               return [{ alias: "connection1" }];
             case "connectionMap":
               return {
-                [kdbUri.path]: "connection2",
-                [pythonUri.path]: "connection1",
-                [insightsUri.path]: "connection1",
+                [relativePath(kdbUri)]: "connection2",
+                [relativePath(pythonUri)]: "connection1",
+                [relativePath(insightsUri)]: "connection1",
               };
             case "targetMap":
               return {
-                [insightsUri.path]: "assembly target",
+                [relativePath(insightsUri)]: "assembly target",
+              };
+            case "defaultTimeout":
+              return 30;
+            case "timeoutMap":
+              return {
+                [relativePath(insightsUri)]: 45,
               };
           }
           return {};
         },
-        update() {},
+        update: updateConfStub,
       };
     });
   });
 
   afterEach(() => {
     sinon.restore();
+    updateConfStub.reset();
     ext.serverProvider = <any>{};
     ext.connectionsList.length = 0;
     ext.activeTextEditor = undefined;
@@ -151,41 +164,92 @@ describe("workspaceCommand", () => {
     });
   });
 
-  describe("pickConnection", () => {
-    it("should pick from available servers", async () => {
-      sinon.stub(vscode.window, "showQuickPick").value(async () => "test");
-      const result = await workspaceCommand.pickConnection(
-        vscode.Uri.file("test.kdb.q"),
-      );
-      assert.strictEqual(result, "test");
+  describe("timeouts", () => {
+    let unitStub: sinon.SinonStub;
+    let valueStub: sinon.SinonStub;
+    let notifyStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      unitStub = sinon.stub(vscode.window, "showQuickPick");
+      valueStub = sinon.stub(vscode.window, "showInputBox");
+      notifyStub = sinon.stub(notifications, "notify");
     });
 
+    it("should show timeout options for Insights connections", async () => {
+      const spy = sinon.spy(ext.pickTimeoutItem, "show");
+      await workspaceCommand.setTimeoutItem(insightsUri);
+      sinon.assert.called(spy);
+    });
+
+    it("should hide timeout options for q connections", async () => {
+      const spy = sinon.spy(ext.pickTimeoutItem, "hide");
+      await workspaceCommand.setTimeoutItem(kdbUri);
+      sinon.assert.called(spy);
+    });
+
+    it("should hide timeout options for other files", async () => {
+      const spy = sinon.spy(ext.pickTimeoutItem, "hide");
+      await workspaceCommand.setTimeoutItem(vscode.Uri.file("main.js"));
+      sinon.assert.called(spy);
+    });
+
+    it("should set a valid timeout", async () => {
+      unitStub.resolves({ label: "Seconds" });
+      valueStub.resolves("30");
+
+      await workspaceCommand.pickTimeout(insightsUri);
+
+      sinon.assert.calledOnceWithExactly(
+        updateConfStub,
+        "timeoutMap",
+        sinon.match({
+          [vscode.workspace.asRelativePath(insightsUri, false)]: 30,
+        }),
+      );
+    });
+
+    it("should set a long timeout if user accepts", async () => {
+      unitStub.resolves({ label: "Minutes" });
+      valueStub.resolves("30");
+      notifyStub.resolves("Keep Timeout");
+
+      await workspaceCommand.pickTimeout(insightsUri);
+
+      sinon.assert.calledOnceWithMatch(
+        notifyStub,
+        sinon.match("High timeout warning"),
+      );
+      sinon.assert.calledOnceWithExactly(
+        updateConfStub,
+        "timeoutMap",
+        sinon.match({
+          [vscode.workspace.asRelativePath(insightsUri, false)]: 1800,
+        }),
+      );
+    });
+
+    it("should not set a long timeout if user cancels", async () => {
+      unitStub.resolves({ label: "Minutes" });
+      valueStub.resolves("30");
+      notifyStub.resolves("Cancel");
+
+      await workspaceCommand.pickTimeout(insightsUri);
+
+      sinon.assert.calledOnceWithMatch(
+        notifyStub,
+        sinon.match("High timeout warning"),
+      );
+      sinon.assert.notCalled(updateConfStub);
+    });
+  });
+
+  describe("pickConnection", () => {
     it("should return undefined from (none)", async () => {
-      sinon.stub(vscode.window, "showQuickPick").value(async () => "(none)");
+      sinon.stub(widgets, "showInputPicker").value(async () => "(none)");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
       assert.strictEqual(result, undefined);
-    });
-  });
-
-  describe("pickTarget", () => {
-    it("should pick from available targets", async () => {
-      sinon
-        .stub(vscode.window, "showQuickPick")
-        .value(async () => "scratchpad");
-      let res = await workspaceCommand.pickTarget(insightsUri);
-      assert.strictEqual(res, undefined);
-      res = await workspaceCommand.pickTarget(kdbUri);
-      assert.strictEqual(res, undefined);
-    });
-
-    it("should only show scratchpad for .py files", async () => {
-      sinon
-        .stub(vscode.window, "showQuickPick")
-        .value(async () => "scratchpad");
-      const res = await workspaceCommand.pickTarget(pythonUri);
-      assert.strictEqual(res, undefined);
     });
   });
 
@@ -199,12 +263,6 @@ describe("workspaceCommand", () => {
       ext.connectionsList.length = 0;
       const node = workspaceCommand.getConnectionForUri(insightsUri);
       assert.strictEqual(node, undefined);
-    });
-  });
-
-  describe("runActiveEditor", () => {
-    it("should run query", async () => {
-      await workspaceCommand.runActiveEditor();
     });
   });
 
@@ -240,21 +298,15 @@ describe("workspaceCommand", () => {
     afterEach(() => {
       oldFilesExistsStub.restore();
     });
-
-    it("should check for old datasource files", async () => {
-      oldFilesExistsStub.returns(true);
-      await workspaceCommand.checkOldDatasourceFiles();
-      sinon.assert.calledOnce(oldFilesExistsStub);
-    });
   });
 
   describe("importOldDSFiles", () => {
-    let windowErrorStub,
-      windowWithProgressStub,
-      windowShowInfo,
-      workspaceFolderStub,
-      tokenOnCancellationRequestedStub,
-      kdbOutputLogStub: sinon.SinonStub;
+    let windowErrorStub: sinon.SinonStub;
+    let windowWithProgressStub: sinon.SinonStub;
+    let windowShowInfo: sinon.SinonStub;
+    let workspaceFolderStub: sinon.SinonStub;
+    let tokenOnCancellationRequestedStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
 
     beforeEach(() => {
       windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");

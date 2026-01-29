@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -29,7 +29,12 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { resetScratchpad, runQuery } from "./serverCommand";
+import {
+  ensureQuickConnection,
+  resetScratchpad,
+  runQuery,
+  setQuickPassword,
+} from "./serverCommand";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
@@ -38,21 +43,34 @@ import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
-import { getBasename, offerConnectAction } from "../utils/core";
-import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
+import {
+  calculateSeconds,
+  formatSeconds,
+  getBasename,
+  isQuick,
+  isQuickAlias,
+  offerConnectAction,
+} from "../utils/core";
+import { importOldDsFiles } from "../utils/dataSource";
 import {
   Cancellable,
   MessageKind,
   notify,
   Runner,
 } from "../utils/notifications";
-import { getPythonWrapper, getSQLWrapper } from "../utils/queryUtils";
+import {
+  RunFlag,
+  getPythonWrapper,
+  getSQLWrapper,
+  notifyExecution,
+} from "../utils/queryUtils";
 import {
   cleanAssemblyName,
   cleanDapName,
   errorMessage,
   normalizeAssemblyTarget,
 } from "../utils/shared";
+import { showInputPicker } from "../utils/widgets";
 
 const logger = "workspaceCommand";
 
@@ -70,18 +88,22 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
 function activeEditorChanged(editor?: TextEditor | undefined) {
   /* c8 ignore start */
   setRealActiveTextEditor(editor);
-  const item = ext.runScratchpadItem;
+  const runItem = ext.runScratchpadItem;
+
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
     const server = getServerForUri(uri);
     if (server) {
       setRunScratchpadItemText(uri, server);
-      item.show();
+      runItem.show();
     } else {
-      item.hide();
+      runItem.hide();
     }
+
+    setTimeoutItem(uri);
   } else {
-    item.hide();
+    runItem.hide();
+    ext.pickTimeoutItem.hide();
   }
   /* c8 ignore stop */
 }
@@ -91,6 +113,43 @@ function setRunScratchpadItemText(uri: Uri, text: string) {
   ext.runScratchpadItem.text = `$(cloud) ${text}`;
   ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
   /* c8 ignore stop */
+}
+
+export async function setTimeoutItem(uri: Uri) {
+  const server = getServerForUri(uri);
+  const timeoutItem = ext.pickTimeoutItem;
+
+  if (server) {
+    const conn = await getConnectionForServer(server);
+
+    if (conn instanceof InsightsNode) {
+      const timeout = getTimeoutForUri(uri);
+      setTimeouttemText(uri, timeout);
+      timeoutItem.show();
+    } else {
+      timeoutItem.hide();
+    }
+  } else {
+    timeoutItem.hide();
+  }
+}
+
+function setTimeouttemText(
+  uri: Uri,
+  { source, value }: { source: string; value?: number },
+) {
+  let text = "default";
+
+  if (value) {
+    if (source === "uri") {
+      text = formatSeconds(value);
+    } else if (source === "workspace") {
+      text = `Default (${formatSeconds(value)})`;
+    }
+  }
+
+  ext.pickTimeoutItem.text = `$(watch) ${text}`;
+  ext.pickTimeoutItem.tooltip = `KX: Choose timeout for '${getBasename(uri)}'`;
 }
 
 export function getInsightsServers() {
@@ -114,6 +173,21 @@ function getServers() {
     ...Object.keys(servers).map((key) => servers[key].serverAlias),
     ...getInsightsServers(),
   ];
+}
+
+const quickServers: string[] = [];
+
+function getQuickServers(uri: Uri) {
+  const conf = workspace.getConfiguration("kdb", uri);
+  const connections = conf.get<{ [key: string]: string }>("connectionMap", {});
+  const size = quickServers.length;
+  Object.keys(connections).forEach((key) => {
+    const target = connections[key];
+    if (target.includes(":") && !quickServers.includes(target)) {
+      quickServers.push(target);
+    }
+  });
+  return size !== quickServers.length ? quickServers.sort() : quickServers;
 }
 
 export async function getConnectionForServer(
@@ -184,7 +258,8 @@ export function getServerForUri(uri: Uri) {
   const server = map[relativePath(uri)];
   const servers = getServers();
 
-  return server && (server === ext.REPL || servers.includes(server))
+  return isQuick(server) ||
+    (server && (server === ext.REPL || servers.includes(server)))
     ? server
     : undefined;
 }
@@ -205,47 +280,148 @@ export function getTargetForUri(uri: Uri) {
   return target ? normalizeAssemblyTarget(target) : undefined;
 }
 
+export async function setTimeoutForUri(uri: Uri, timeout: number | undefined) {
+  let apply = true;
+  let explainer = "";
+
+  if (timeout) {
+    // info message for unsupported timeout (>7hrs)
+    if (timeout > 25200) {
+      explainer = "the maximum allowed";
+      timeout = 25200;
+    }
+
+    const formatted = formatSeconds(timeout);
+
+    // warning for high timeouts (>20min)
+    if (timeout > 1200) {
+      const highTimeoutPrompt = await notify(
+        `High timeout warning: You have set an execution timeout of ${formatted}${explainer ? " (" + explainer + ")" : ""}. Note that database queries will continue to run on the Data Access Process until completion or timeout, even if a Scratchpad query is cancelled. The DAP will be unavailable for all users while a query is running.`,
+        MessageKind.WARNING,
+        {},
+        "Keep Timeout",
+        "Cancel",
+      );
+
+      if (highTimeoutPrompt === "Cancel") {
+        apply = false;
+      }
+    }
+  }
+
+  if (apply) {
+    uri = Uri.file(uri.path);
+    const conf = workspace.getConfiguration("kdb", uri);
+    const map = conf.get<{ [key: string]: number | undefined }>(
+      "timeoutMap",
+      {},
+    );
+    map[relativePath(uri)] = timeout;
+    await conf.update("timeoutMap", map);
+    setTimeouttemText(uri, { source: "uri", value: timeout });
+  }
+}
+
+export function getTimeoutForUri(uri: Uri) {
+  uri = Uri.file(uri.path);
+  const conf = workspace.getConfiguration("kdb", uri);
+  const map = conf.get<{ [key: string]: number | undefined }>("timeoutMap", {});
+  const uriTimeout = map[relativePath(uri)];
+
+  if (uriTimeout) {
+    return {
+      source: "uri",
+      value: uriTimeout,
+    };
+  }
+
+  const workspaceTimeout = conf.get<number | undefined>("defaultTimeout");
+
+  if (workspaceTimeout) {
+    return {
+      source: "workspace",
+      value: workspaceTimeout,
+    };
+  }
+
+  return {
+    source: "none",
+    value: 30,
+  };
+}
+
 export function getConnectionForUri(uri: Uri) {
   const server = getServerForUri(uri);
   if (server) {
-    return ext.connectionsList.find((item) => {
-      if (item instanceof InsightsNode) {
-        return item.details.alias === server;
-      }
-      return item.details.serverAlias === server;
-    }) as KdbNode | InsightsNode;
+    if (isQuick(server)) {
+      const [host, port, user] = server.split(":");
+      return ext.connectionsList.find(
+        (item) =>
+          item instanceof KdbNode &&
+          host === item.details.serverName &&
+          port === item.details.serverPort &&
+          user === item.details.username,
+      );
+    }
+    return ext.connectionsList.find((item) =>
+      item instanceof InsightsNode
+        ? item.details.alias === server
+        : item.details.serverAlias === server,
+    );
   }
 }
 
 export async function pickConnection(uri: Uri) {
   /* c8 ignore start */
   const server = getServerForUri(uri);
-  const servers = getServers();
+  const items = ["(none)", ...getServers(), ...getQuickServers(uri)];
 
-  const items = ["(none)"];
-  if (isQ(uri) || isNotebook(uri) || isPython(uri) || isSql(uri)) {
-    items.push(ext.REPL);
-  }
-  items.push(...servers);
-
-  let picked = await window.showQuickPick(items, {
-    title: `Choose Connection (${getBasename(uri)})`,
+  let picked = await showInputPicker(items, {
+    title: `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
     placeHolder: server,
   });
 
-  if (picked) {
-    if (picked === "(none)") {
-      picked = undefined;
-      await setTargetForUri(uri, undefined);
-    }
-    if (picked) {
-      setRunScratchpadItemText(uri, picked);
-      ext.runScratchpadItem.show();
+  if (picked === undefined) return undefined;
+
+  if (isQuick(picked)) {
+    const [host, port, user, pass] = picked.split(":");
+    if (host && port && /^\d+$/s.test(port)) {
+      if (user) {
+        picked = `${host}:${port}:${user}`;
+        if (pass !== undefined) await setQuickPassword(host, port, user, pass);
+      } else {
+        picked = `${host}:${port}`;
+      }
     } else {
-      ext.runScratchpadItem.hide();
+      notify(`Connection string (${picked}) is not valid.`, MessageKind.ERROR, {
+        logger,
+      });
+      return undefined;
     }
-    await setServerForUri(uri, picked);
+  } else if (picked === "(none)") {
+    picked = undefined;
+    await setTargetForUri(uri, undefined);
+  } else if (!items.includes(picked)) {
+    notify(`Connection "${picked}" is not found.`, MessageKind.ERROR, {
+      logger,
+    });
+    return undefined;
   }
+
+  if (picked) {
+    setRunScratchpadItemText(uri, picked);
+    ext.runScratchpadItem.show();
+  } else {
+    ext.runScratchpadItem.hide();
+  }
+  await setServerForUri(uri, picked);
+
+  if (server) {
+    setTimeoutItem(uri);
+  } else {
+    ext.pickTimeoutItem.hide();
+  }
+
   return picked;
   /* c8 ignore stop */
 }
@@ -307,6 +483,56 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
 
   return selectedValue;
   /* c8 ignore stop */
+}
+
+export async function pickTimeout(uri: Uri) {
+  // prompt for unit
+  const unitItems: QuickPickItem[] = [
+    { label: "Seconds", description: "s" },
+    { label: "Minutes", description: "min" },
+    { label: "Hours", description: "hr" },
+    { label: "", kind: QuickPickItemKind.Separator },
+    { label: "Clear", description: "Use default timeout" },
+  ];
+  const selectedUnit = await window.showQuickPick(unitItems, {
+    placeHolder: "Select the timeout unit",
+    canPickMany: false,
+  });
+
+  const timeoutUnit = selectedUnit?.label;
+
+  if (timeoutUnit === "Clear") {
+    await setTimeoutForUri(uri, undefined);
+    const timeout = await getTimeoutForUri(uri);
+    setTimeouttemText(uri, timeout);
+  } else if (timeoutUnit) {
+    // prompt for value
+    const timeoutValue = await window.showInputBox({
+      prompt: `Enter timeout value in ${timeoutUnit.toLowerCase()}`,
+      placeHolder: "e.g. 30",
+      validateInput: (text) => {
+        if (text !== "" && (isNaN(Number(text)) || Number(text) <= 0)) {
+          return "Please enter a positive number";
+        }
+
+        const timeout = calculateSeconds(Number(text), timeoutUnit);
+        if (timeout > 60 * 60 * 7) {
+          return "Please enter a maximum of 7 hours";
+        }
+
+        return null;
+      },
+    });
+
+    if (timeoutValue) {
+      // convert to seconds
+      const timeout = calculateSeconds(Number(timeoutValue), timeoutUnit);
+
+      if (timeout) {
+        await setTimeoutForUri(uri, timeout);
+      }
+    }
+  }
 }
 
 function createTierKey(dap: MetaDap): string {
@@ -445,16 +671,12 @@ function createProcessKey(dap: MetaDap): string | null {
   /* c8 ignore stop */
 }
 
+function isQuke(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".quke");
+}
+
 function isSql(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".sql");
-}
-
-function isQ(uri: Uri | undefined) {
-  return uri && uri.path.endsWith(".q");
-}
-
-function isNotebook(uri: Uri | undefined) {
-  return uri && uri.path.endsWith(".kxnb");
 }
 
 function isPython(uri: Uri | undefined) {
@@ -462,7 +684,14 @@ function isPython(uri: Uri | undefined) {
 }
 
 function isWorkbook(uri: Uri | undefined) {
-  return uri && (uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py"));
+  /* c8 ignore start */
+  return (
+    uri &&
+    (uri.path.endsWith(".kdb.q") ||
+      uri.path.endsWith(".kdb.py") ||
+      uri.path.endsWith(".kdb.sql"))
+  );
+  /* c8 ignore stop */
 }
 
 function isDataSource(uri: Uri | undefined) {
@@ -476,6 +705,10 @@ function isKxFolder(uri: Uri | undefined) {
 export async function startRepl() {
   const instance = await ReplConnection.getOrCreateInstance();
   instance.start();
+  notify("REPL started.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Repl.Start",
+  });
 }
 
 export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
@@ -510,7 +743,7 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
       repl.show();
       return repl.executeQuery(
         isPython(uri)
-          ? getPythonWrapper(text)
+          ? getPythonWrapper(text, "serialized")
           : isSql(uri)
             ? getSQLWrapper(text)
             : text,
@@ -532,8 +765,21 @@ export async function runActiveEditor(type?: ExecutionTypes) {
   /* c8 ignore start */
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
-    if (getServerForUri(uri) === ext.REPL) {
-      runOnRepl(ext.activeTextEditor, type);
+    let server = getServerForUri(uri);
+    if (server === ext.REPL) {
+      server = undefined;
+      await setServerForUri(uri, undefined);
+    }
+    if (server === undefined) {
+      await runOnRepl(ext.activeTextEditor, type);
+      notifyExecution(
+        RunFlag.Run |
+          RunFlag.Repl |
+          (isWorkbook(uri) ? RunFlag.Workbook : 0) |
+          (isPython(uri) ? RunFlag.Python : 0) |
+          (isSql(uri) ? RunFlag.Sql : 0) |
+          (isQuke(uri) ? RunFlag.Quke : 0),
+      );
       return;
     }
     const conn = await findConnection(uri);
@@ -544,16 +790,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     const isInsights = conn instanceof InsightsConnection;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
     const target = isInsights ? getTargetForUri(uri) : undefined;
-    const isSql = executorName.endsWith(".sql");
-
-    if (isSql && !isInsights) {
-      notify(
-        `SQL execution is not supported on ${conn.connLabel}.`,
-        MessageKind.ERROR,
-        { logger },
-      );
-      return;
-    }
+    const timeout = isInsights ? getTimeoutForUri(uri).value : undefined;
 
     if (type === ExecutionTypes.PopulateScratchpad && !isInsights) {
       notify(
@@ -573,13 +810,45 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           : type,
         conn.connLabel,
         executorName,
-        !isPython(uri),
+        !!isWorkbook(uri),
         undefined,
         target,
-        isSql,
-        conn instanceof InsightsConnection,
+        !!isSql(uri),
+        isInsights,
+        timeout,
+        () => {
+          if (isInsights) {
+            if (target) {
+              notify(
+                `Cancel request sent for ${conn.connLabel}, however, the query will continue running on the database until it finishes or times out`,
+                MessageKind.INFO,
+                { logger },
+              );
+            } else {
+              conn.cancelScratchpad(isPython(uri));
+            }
+          }
+        },
+      );
+      notifyExecution(
+        (type === ExecutionTypes.PopulateScratchpad ? 0 : RunFlag.Run) |
+          (isInsights ? RunFlag.Insights : 0) |
+          (target ? RunFlag.Dap : 0) |
+          (isQuickAlias(conn.connLabel) ? RunFlag.Quick : 0) |
+          (isWorkbook(uri) ? RunFlag.Workbook : 0) |
+          (isPython(uri) ? RunFlag.Python : 0) |
+          (isSql(uri) ? RunFlag.Sql : 0) |
+          (isQuke(uri) ? RunFlag.Quke : 0),
       );
     } catch (error) {
+      // don't show message if execution was cancelled
+      if (
+        error instanceof Error &&
+        error.message.substring(0, 8) === "Canceled"
+      ) {
+        return;
+      }
+
       notify(
         `Executing ${executorName} on ${conn.connLabel} failed.`,
         MessageKind.ERROR,
@@ -628,14 +897,12 @@ export class ConnectionLensProvider implements CodeLensProvider {
       title: server ? `Run on ${server}` : "Choose Connection",
     });
 
-    const target = getTargetForUri(document.uri);
-
     if (server) {
       const conn = await getConnectionForServer(server);
       if (!isSql(document.uri) && conn instanceof InsightsNode) {
         const pickTarget = new CodeLens(top, {
           command: "kdb.file.pickTarget",
-          title: target || "scratchpad",
+          title: getTargetForUri(document.uri) || "scratchpad",
         });
         return [pickConnection, pickTarget];
       }
@@ -653,6 +920,16 @@ export function connectWorkspaceCommands() {
   ext.runScratchpadItem.command = <Command>{
     title: "Choose Connection",
     command: "kdb.file.pickConnection",
+    arguments: [],
+  };
+
+  ext.pickTimeoutItem = window.createStatusBarItem(
+    StatusBarAlignment.Right,
+    10000,
+  );
+  ext.pickTimeoutItem.command = <Command>{
+    title: "Choose Timeout",
+    command: "kdb.file.pickTimeout",
     arguments: [],
   };
 
@@ -679,6 +956,12 @@ export function connectWorkspaceCommands() {
       await setServerForUri(oldUri, undefined);
       await setTargetForUri(newUri, getTargetForUri(oldUri));
       await setTargetForUri(oldUri, undefined);
+
+      const timeout = getTimeoutForUri(oldUri);
+      if (timeout.source === "uri") {
+        await setTimeoutForUri(newUri, timeout.value);
+        await setTimeoutForUri(oldUri, undefined);
+      }
     }
     /* c8 ignore stop */
   });
@@ -691,10 +974,6 @@ export function connectWorkspaceCommands() {
   });
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   activeEditorChanged(window.activeTextEditor);
-}
-
-export function checkOldDatasourceFiles() {
-  ext.oldDSformatExists = oldFilesExists();
 }
 
 export async function importOldDSFiles() {
@@ -727,31 +1006,29 @@ export async function importOldDSFiles() {
 
 export async function findConnection(uri: Uri) {
   /* c8 ignore start */
-  const connMngService = new ConnectionManagementService();
-
   let conn: InsightsConnection | LocalConnection | undefined;
   let server = getServerForUri(uri) ?? "";
 
   if (server) {
+    if (isQuick(server)) server = await ensureQuickConnection(server);
     const node = await getConnectionForServer(server);
     if (node) {
+      const connMngService = new ConnectionManagementService();
       server = node.label;
       conn = connMngService.retrieveConnectedConnection(server);
       if (conn === undefined) {
-        offerConnectAction(server);
-        return;
+        const res = await offerConnectAction(server);
+        if (res) {
+          conn = connMngService.retrieveConnectedConnection(server);
+        }
       }
     } else {
       notify(`Connection ${server} not found.`, MessageKind.ERROR, {
         logger,
       });
-      return;
     }
-  } else if (ext.activeConnection) {
-    conn = ext.activeConnection;
   } else {
-    offerConnectAction();
-    return;
+    await offerConnectAction();
   }
   return conn;
   /* c8 ignore stop */

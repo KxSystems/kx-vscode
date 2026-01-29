@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -46,79 +46,85 @@ describe("KdbDataSourceView", () => {
   }
 
   function createMessageEvent(isInsights: boolean) {
-    return <MessageEvent<DataSourceMessage2>>{
-      data: {
-        command: DataSourceCommand.Update,
-        servers: ["server"],
-        selectedServer: "server",
-        isInsights,
-        insightsMeta: <MetaObjectPayload>{
-          dap: [
-            {
-              assembly: "test-assembly",
-              instance: "instance1",
-              dap: "dap1",
+    const eventData: DataSourceMessage2 = {
+      command: DataSourceCommand.Update,
+      servers: ["server"],
+      selectedServer: "server",
+      selectedServerVersion: 0,
+      timeoutDefault: true,
+      timeoutValue: 0,
+      timeoutUnit: "Seconds",
+      isInsights,
+      insightsMeta: <MetaObjectPayload>{
+        dap: [
+          {
+            assembly: "test-assembly",
+            instance: "instance1",
+            dap: "dap1",
+          },
+        ],
+        api: [{ api: "getData" }],
+        assembly: [{ assembly: "test-assembly", tbls: ["table1"] }],
+        schema: [
+          {
+            table: "table1",
+            columns: [{ column: "column1" }],
+            assembly: "test-assembly",
+            type: "type",
+          },
+        ],
+      },
+      UDAs: [],
+      dataSourceFile: {
+        dataSource: {
+          selectedType: DataSourceTypes.API,
+          api: {
+            selectedApi: "getData",
+            table: "table1",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+            optional: {
+              filled: false,
+              temporal: false,
+              rowLimit: false,
+              filters: [createFilter()],
+              labels: [createLabel()],
+              sorts: [createSort()],
+              aggs: [createAgg()],
+              groups: [createGroup()],
             },
-          ],
-          api: [{ api: "getData" }],
-          assembly: [{ assembly: "test-assembly", tbls: ["table1"] }],
-          schema: [
-            {
-              table: "table1",
-              columns: [{ column: "column1" }],
-              assembly: "test-assembly",
-              type: "type",
-            },
-          ],
-        },
-        UDAs: [],
-        dataSourceFile: {
-          dataSource: {
-            selectedType: DataSourceTypes.API,
-            api: {
-              selectedApi: "getData",
-              table: "table1",
-              startTS: "",
-              endTS: "",
-              fill: "zero",
-              temporality: "snapshot",
-              filter: [],
-              groupBy: [],
-              agg: [],
-              sortCols: [],
-              slice: [],
-              labels: [],
-              optional: {
-                filled: false,
-                temporal: false,
-                rowLimit: false,
-                filters: [createFilter()],
-                labels: [createLabel()],
-                sorts: [createSort()],
-                aggs: [createAgg()],
-                groups: [createGroup()],
-              },
-            },
-            qsql: {
-              query: "",
-              selectedTarget: "",
-            },
-            sql: {
-              query: "",
-            },
-            uda: {
-              name: "test",
-              description: "test description",
-              params: [],
-              return: {
-                type: ["99"],
-                description: "test return description",
-              },
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: "",
+          },
+          uda: {
+            name: "test",
+            description: "test description",
+            params: [],
+            return: {
+              type: ["99"],
+              description: "test return description",
             },
           },
         },
       },
     };
+
+    return new MessageEvent<DataSourceMessage2>("message", {
+      data: eventData,
+    });
   }
 
   function testEventHandlers(result: TemplateResult) {
@@ -993,6 +999,39 @@ describe("KdbDataSourceView", () => {
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.requestServerChange(createValueEvent("server"));
       assert.ok(result);
+    });
+  });
+
+  describe("requestTimeoutChange", () => {
+    it("should send the correct message for default change", () => {
+      let timeoutDefault = false;
+      sinon
+        .stub(view, "postMessage")
+        .value((val: any) => (timeoutDefault = val.timeoutDefault));
+      view.requestTimeoutDefaultChange((<unknown>{
+        target: <HTMLInputElement>{
+          checked: true,
+        },
+      }) as Event);
+      assert.equal(timeoutDefault, true);
+    });
+
+    it("should send the correct message for unit change", () => {
+      let timeoutUnit = "Seconds";
+      sinon
+        .stub(view, "postMessage")
+        .value((val: any) => (timeoutUnit = val.timeoutUnit));
+      view.requestTimeoutUnitChange(createValueEvent("Minutes"));
+      assert.equal(timeoutUnit, "Minutes");
+    });
+
+    it("should send the correct message for value change", () => {
+      let timeoutValue = 123;
+      sinon
+        .stub(view, "postMessage")
+        .value((val: any) => (timeoutValue = val.timeoutValue));
+      view.requestTimeoutValueChange(createValueEvent("45"));
+      assert.equal(timeoutValue, 45);
     });
   });
 

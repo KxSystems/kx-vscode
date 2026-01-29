@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -15,6 +15,7 @@ import {
   ExtensionContext,
   extensions,
   languages,
+  LogOutputChannel,
   OutputChannel,
   StatusBarItem,
   TextEditor,
@@ -49,7 +50,7 @@ export namespace ext {
   export const REPL = "REPL";
   export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
-  export let outputChannel: OutputChannel;
+  export let outputChannel: LogOutputChannel;
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
@@ -58,6 +59,7 @@ export namespace ext {
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
   export let dataSourceTreeProvider: WorkspaceTreeProvider;
   export let runScratchpadItem: StatusBarItem;
+  export let pickTimeoutItem: StatusBarItem;
   export const activeScratchPadList: Array<ScratchpadFile> = [];
   export const connectedScratchPadList: Array<ScratchpadFile> = [];
   export const activeDatasourceList: Array<DataSourceFiles> = [];

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -162,7 +162,12 @@ describe("ResultsPanelProvider", () => {
           { index: 2, prop1: "value3", prop2: "value4" },
         ],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           {
             field: "prop1",
             headerName: "prop1 [type1]",
@@ -205,7 +210,12 @@ describe("ResultsPanelProvider", () => {
           { index: 2, prop1: "value2", prop2: "value4" },
         ],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           {
             field: "prop1",
             headerName: "prop1 [type1]",
@@ -236,7 +246,12 @@ describe("ResultsPanelProvider", () => {
       const expectedOutput = JSON.stringify({
         rowData: [],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           {
             field: "prop1",
             headerName: "prop1 [type1]",
@@ -272,7 +287,12 @@ describe("ResultsPanelProvider", () => {
           { index: 3, sym: "c", val: 3 },
         ],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           { field: "sym", headerName: "sym [type1]", cellDataType: "text" },
           { field: "val", headerName: "val [type2]", cellDataType: "text" },
         ],
@@ -290,7 +310,12 @@ describe("ResultsPanelProvider", () => {
       const expectedOutput = JSON.stringify({
         rowData: [{ index: 1, value: "1,2,3" }],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           {
             field: "value",
             headerName: "value [type1]",
@@ -375,7 +400,7 @@ describe("ResultsPanelProvider", () => {
         { a: "2", b: "2" },
         { a: "3", b: "3" },
       ];
-      const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
+      const expectedOutput = ['"a","b"', '"1","1"', '"2","2"', '"3","3"'];
       const actualOutput = renderer.convertToCsv(inputQueryResult);
       assert.deepStrictEqual(actualOutput, expectedOutput);
     });
@@ -505,12 +530,6 @@ describe("ResultsPanelProvider", () => {
     beforeEach(() => {
       resultsPanel = new KdbResultsViewProvider(uriTest);
       resultsPanel["_view"] = view;
-    });
-
-    it("should render the results tab", () => {
-      const expectedOutput = ` id="results" class="results-view-container"`;
-      const actualOutput = resultsPanel["_getWebviewContent"]();
-      assert.ok(actualOutput.includes(expectedOutput));
     });
   });
 

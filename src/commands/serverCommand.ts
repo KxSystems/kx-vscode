@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -23,7 +23,6 @@ import {
   window,
   workspace,
   env,
-  ProgressLocation,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -79,6 +78,7 @@ import {
   formatScratchpadStacktrace,
   resultToBase64,
   needsScratchpad,
+  getSQLWrapper,
 } from "../utils/queryUtils";
 import { openUrl } from "../utils/uriUtils";
 import {
@@ -173,7 +173,7 @@ export async function addInsightsConnection(
       ext.serverProvider.refreshInsights(newInsights);
       notify("Created Insights connection.", MessageKind.DEBUG, {
         logger,
-        telemetry: "Connection.Created.Insights",
+        telemetry: "Connection.Create.ie",
       });
     }
 
@@ -274,7 +274,7 @@ export async function editInsightsConnection(
           ext.serverProvider.refreshInsights(newInsights);
           notify("Edited Insights connection.", MessageKind.DEBUG, {
             logger,
-            telemetry: "Connection.Edited.Insights",
+            telemetry: "Connection.Edit.ie",
           });
           if (isConnectedConn) {
             offerReconnectionAfterEdit(insightsData.alias);
@@ -480,7 +480,7 @@ export async function addKdbConnection(
       }
       notify("Created kdb connection.", MessageKind.DEBUG, {
         logger,
-        telemetry: "Connection.Created.QProcess",
+        telemetry: "Connection.Create.kdb",
       });
       ext.serverProvider.refresh(newServers);
     }
@@ -603,7 +603,7 @@ export async function editKdbConnection(
           ext.serverProvider.refresh(newServers);
           notify("Edited kdb connection.", MessageKind.DEBUG, {
             logger,
-            telemetry: "Connection.Edited.KDB",
+            telemetry: "Connection.Edit.kdb",
           });
           const connLabelToReconn = `${kdbData.serverName}:${kdbData.serverPort} [${kdbData.serverAlias}]`;
           if (isConnectedConn) {
@@ -883,6 +883,7 @@ export async function executeQuery(
   isWorkbook: boolean,
   isFromConnTree?: boolean,
   token?: CancellationToken,
+  timeout?: number,
 ): Promise<any> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
@@ -904,16 +905,10 @@ export async function executeQuery(
   const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
   const isInsights = selectedConn instanceof InsightsConnection;
   const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
-  const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
-  notify("Query execution.", MessageKind.DEBUG, {
-    logger,
-    telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType,
-  });
+
   if (query.length === 0) {
     notify("Empty query.", MessageKind.DEBUG, {
       logger,
-      telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
     });
     queryConsole.appendQueryError(
       query,
@@ -939,6 +934,7 @@ export async function executeQuery(
     context,
     isStringfy,
     isPython,
+    timeout,
   );
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
@@ -948,7 +944,7 @@ export async function executeQuery(
   }
 
   // set context for root nodes
-  if (selectedConn instanceof InsightsConnection) {
+  if (isInsights) {
     const res = await writeScratchpadResult(
       results,
       query,
@@ -971,7 +967,10 @@ export async function executeQuery(
       if (data) {
         notify("GG Plot displayed", MessageKind.DEBUG, {
           logger,
-          telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
+          telemetry:
+            "Results.Graphics.Displayed" +
+            (isInsights ? ".ie" : ".kdb") +
+            (isPython ? ".py" : ".q"),
         });
         const active = ext.activeTextEditor;
         if (active) {
@@ -1081,6 +1080,8 @@ export async function runQuery(
   target?: string,
   isSql?: boolean,
   isInsights?: boolean,
+  timeout?: number,
+  cancel?: () => void,
 ) {
   const editor = ext.activeTextEditor;
   if (!editor) {
@@ -1127,18 +1128,31 @@ export async function runQuery(
     variable = await inputVariable();
   }
 
+  if (isSql && !isInsights) {
+    query = getSQLWrapper(query);
+  }
+
   const runner = Runner.create((_, token) => {
-    return target || isSql
+    if (cancel) {
+      token.onCancellationRequested(cancel);
+    }
+
+    return target || (isSql && isInsights)
       ? variable
         ? populateScratchpad(
             getPartialDatasourceFile(query, target, isSql, isPython),
             connLabel,
             variable,
+            undefined,
+            token,
+            timeout,
           )
         : runDataSource(
             getPartialDatasourceFile(query, target, isSql, isPython),
             connLabel,
             executorName,
+            token,
+            timeout,
           )
       : executeQuery(
           query,
@@ -1149,12 +1163,10 @@ export async function runQuery(
           isWorkbook,
           false,
           token,
+          timeout,
         );
   });
 
-  if (isInsights) {
-    runner.location = ProgressLocation.Notification;
-  }
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
 
   return !isInsights || ((target || isSql) && !variable)
@@ -1343,18 +1355,11 @@ export async function writeQueryResultsToView(
     isPython,
   );
   let isSuccess = true;
-  const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = type === "WORKBOOK" ? "Workbook" : "Scratchpad";
 
   if (!checkIfIsDatasource(type)) {
     if (typeof result === "string") {
       const res = decodeQUTF(result);
       if (res.startsWith(queryConstants.error)) {
-        notify("Telemetry", MessageKind.DEBUG, {
-          logger,
-          telemetry:
-            telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-        });
         isSuccess = false;
       }
     }
@@ -1384,17 +1389,10 @@ export async function writeScratchpadResult(
   duration: string,
   connVersion: number,
 ): Promise<any> {
-  const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
   let errorMsg;
 
   if (result.error) {
     errorMsg = "Error: " + result.errorMsg;
-
-    notify("Scratchpad query returned error", MessageKind.DEBUG, {
-      logger,
-      telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-    });
 
     if (result.stacktrace) {
       errorMsg =
@@ -1444,4 +1442,86 @@ function isValidExportedConnections(data: any): data is ExportedConnections {
     Array.isArray(data.connections.Insights) &&
     Array.isArray(data.connections.KDB)
   );
+}
+
+const quickConnections: ServerDetails[] = [];
+
+function getQuickLabel(conn: ServerDetails) {
+  return `${conn.serverAlias} [${conn.serverName}:${conn.serverPort}]`;
+}
+
+function getQuickDetail(host: string, port: string, user: string) {
+  return quickConnections.find(
+    (conn) =>
+      conn.serverName === host &&
+      conn.serverPort === port &&
+      conn.username === user,
+  );
+}
+
+async function removeQuickDetail(conn: ServerDetails) {
+  quickConnections.splice(quickConnections.indexOf(conn), 1);
+  const label = getQuickLabel(conn);
+  ext.connectedConnectionList
+    .find((conn) => conn.connLabel === label)
+    ?.disconnect();
+  await refreshQuickProvider();
+}
+
+async function refreshQuickProvider() {
+  const servers = getServers();
+  quickConnections.forEach((conn) => (servers[conn.serverAlias] = conn));
+  await commands.executeCommand(
+    "setContext",
+    "kdb.kdbQuickNodes",
+    quickConnections.map((conn) => getQuickLabel(conn)),
+  );
+  ext.serverProvider.refresh(servers);
+}
+
+export async function setQuickPassword(
+  host: string,
+  port: string,
+  user: string,
+  pass: string,
+) {
+  const conn = getQuickDetail(host, port, user);
+  if (conn) await removeQuickDetail(conn);
+  await ext.secretSettings.storeAuthData(
+    `${host}:${port}:${user}`,
+    `${user}:${pass}`,
+  );
+}
+
+export async function ensureQuickConnection(server: string) {
+  const [host, port, user] = server.split(":");
+
+  let connection = getQuickDetail(host, port, user);
+  if (!connection) {
+    const serverAlias = "(Connection " + (quickConnections.length + 1) + ")";
+    if (user) {
+      let auth = await ext.secretSettings.getAuthData(server);
+      if (!auth) {
+        const password = await window.showInputBox({
+          password: true,
+          prompt: `Enter password for ${server}`,
+        });
+        auth = `${user}:${password ?? ""}`;
+        await ext.secretSettings.storeAuthData(server, auth);
+      }
+      await ext.secretSettings.storeAuthData(serverAlias, auth);
+    }
+    connection = {
+      serverAlias,
+      serverName: host,
+      serverPort: port,
+      username: user,
+      auth: !!user,
+      tls: false,
+    };
+    quickConnections.push(connection);
+    await refreshQuickProvider();
+  }
+
+  return connection.serverAlias;
 }

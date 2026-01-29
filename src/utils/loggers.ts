@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -20,12 +20,35 @@ export function kdbOutputLog(
   type: string,
   supressDialog?: boolean,
 ): void {
-  const dateNow = new Date().toLocaleDateString();
-  const timeNow = new Date().toLocaleTimeString();
-  ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
+  /* c8 ignore start */
+  switch (type) {
+    case "DEBUG":
+      ext.outputChannel.debug(message);
+      break;
+    case "INFO":
+      ext.outputChannel.info(message);
+      break;
+    case "WARNING":
+      ext.outputChannel.warn(message);
+      break;
+    case "ERROR":
+      ext.outputChannel.error(message);
+      break;
+    default:
+      ext.outputChannel.trace(message);
+      break;
+  }
   if (type === "ERROR" && !supressDialog) {
-    vscode.window.showErrorMessage(
-      `Error occured, check kdb output channel for details.`,
-    );
+    vscode.window
+      .showErrorMessage(
+        `Error occured, check kdb output log for details.`,
+        "Check",
+      )
+      .then((res) => {
+        if (res === "Check") {
+          ext.outputChannel.show(true);
+        }
+      });
+    /* c8 ignore stop */
   }
 }

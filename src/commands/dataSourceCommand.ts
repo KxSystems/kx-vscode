@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,7 +13,7 @@
 
 import * as fs from "fs";
 import path from "path";
-import { InputBoxOptions, window } from "vscode";
+import { CancellationToken, InputBoxOptions, window } from "vscode";
 
 import { ext } from "../extensionVariables";
 import {
@@ -43,11 +43,13 @@ import {
 import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
+  convertRows,
   getQSQLWrapper,
   handleScratchpadTableRes,
   handleWSError,
   handleWSResults,
 } from "../utils/queryUtils";
+import { updatedExtractRowData } from "../utils/resultsRenderer";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
@@ -75,7 +77,7 @@ export async function addDataSource(): Promise<void> {
   notify(
     `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
     MessageKind.INFO,
-    { logger, telemetry: "Datasource.Created" },
+    { logger },
   );
 }
 
@@ -84,6 +86,8 @@ export async function populateScratchpad(
   connLabel: string,
   outputVariable?: string,
   silent?: boolean,
+  token?: CancellationToken,
+  timeout?: number,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
 
@@ -110,6 +114,8 @@ export async function populateScratchpad(
       outputVariable,
       dataSourceForm,
       silent,
+      token,
+      timeout,
     );
   } else {
     notify(
@@ -124,6 +130,8 @@ export async function runDataSource(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
   executorName: string,
+  token?: CancellationToken,
+  timeout?: number,
 ): Promise<any> {
   if (DataSourcesPanel.running) {
     return;
@@ -157,24 +165,24 @@ export async function runDataSource(
 
     notify(`Running ${fileContent.name} datasource...`, MessageKind.DEBUG, {
       logger,
-      telemetry: "Datasource." + selectedType + ".Run",
     });
 
     const isNotebook = executorName.endsWith(".kxnb");
 
     switch (selectedType) {
       case "API":
-        res = await runApiDataSource(fileContent, selectedConnection);
+        res = await runApiDataSource(fileContent, selectedConnection, timeout);
         break;
       case "QSQL":
         res = await runQsqlDataSource(
           fileContent,
           selectedConnection,
           isNotebook || undefined,
+          timeout,
         );
         break;
       case "UDA":
-        res = await runUDADataSource(fileContent, selectedConnection);
+        res = await runUDADataSource(fileContent, selectedConnection, timeout);
         break;
       case "SQL":
       default:
@@ -182,12 +190,13 @@ export async function runDataSource(
           fileContent,
           selectedConnection,
           isNotebook || undefined,
+          timeout,
         );
         break;
     }
 
     ext.isDatasourceExecution = false;
-    if (res) {
+    if (res && !token?.isCancellationRequested) {
       const success = !res.error;
       const query = getQuery(fileContent, selectedType);
 
@@ -195,12 +204,16 @@ export async function runDataSource(
         notify("Query execution failed.", MessageKind.DEBUG, {
           logger,
           params: res.error,
-          telemetry: "Datasource." + selectedType + ".Run.Error",
         });
       }
       if (isNotebook || ext.isResultsTabVisible) {
         if (success) {
-          const resultCount = typeof res === "string" ? "0" : res.rows.length;
+          const resultCount =
+            typeof res === "string"
+              ? "0"
+              : res.rows
+                ? res.rows.length
+                : res.columns?.[0]?.values?.length || 0;
           notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
             logger,
           });
@@ -231,8 +244,12 @@ export async function runDataSource(
           res = res.errorMsg ? res.errorMsg : res.error;
         }
 
+        const rowData = res.columns
+          ? convertRows(updatedExtractRowData(res))
+          : res;
+
         await writeQueryResultsToConsole(
-          res,
+          rowData,
           query,
           connLabel,
           executorName,
@@ -291,6 +308,7 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
 export async function runApiDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
+  timeout?: number,
 ): Promise<any> {
   const isTimeCorrect = checkIfTimeParamIsCorrect(
     fileContent.dataSource.api.startTS,
@@ -307,11 +325,14 @@ export async function runApiDataSource(
   const apiBody = getApiBody(fileContent);
   const apiCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.API,
-    JSON.stringify(apiBody),
+    apiBody,
+    timeout,
   );
 
   if (apiCall?.error) {
     return parseError(apiCall.error);
+  } else if (apiCall?.results) {
+    return apiCall.results;
   } else if (apiCall?.arrayBuffer) {
     const results = handleWSResults(apiCall.arrayBuffer);
     return handleScratchpadTableRes(results);
@@ -409,6 +430,7 @@ export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
   isTableView?: boolean,
+  timeout?: number,
 ): Promise<any> {
   const qsqlBody = selectedConn.generateQSqlBody(
     fileContent.dataSource.qsql.query,
@@ -418,11 +440,14 @@ export async function runQsqlDataSource(
 
   const qsqlCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.QSQL,
-    JSON.stringify(qsqlBody),
+    qsqlBody,
+    timeout,
   );
 
   if (qsqlCall?.error) {
     return parseError(qsqlCall.error);
+  } else if (qsqlCall?.results) {
+    return qsqlCall.results;
   } else if (qsqlCall?.arrayBuffer) {
     const results = handleWSResults(qsqlCall.arrayBuffer, isTableView);
     return handleScratchpadTableRes(results);
@@ -435,17 +460,21 @@ export async function runSqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
   isTableView?: boolean,
+  timeout?: number,
 ): Promise<any> {
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
   };
   const sqlCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.SQL,
-    JSON.stringify(sqlBody),
+    sqlBody,
+    timeout,
   );
 
   if (sqlCall?.error) {
     return parseError(sqlCall.error);
+  } else if (sqlCall?.results) {
+    return sqlCall.results;
   } else if (sqlCall?.arrayBuffer) {
     const results = handleWSResults(sqlCall.arrayBuffer, isTableView);
     return handleScratchpadTableRes(results);
@@ -457,6 +486,7 @@ export async function runSqlDataSource(
 export async function runUDADataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
+  timeout?: number,
 ): Promise<any> {
   const uda = fileContent.dataSource.uda;
 
@@ -470,20 +500,24 @@ export async function runUDADataSource(
     return udaReqBody;
   }
 
-  return await executeUDARequest(selectedConn, udaReqBody);
+  return await executeUDARequest(selectedConn, udaReqBody, timeout);
 }
 
 export async function executeUDARequest(
   selectedConn: InsightsConnection,
   udaReqBody: UDARequestBody,
+  timeout?: number,
 ): Promise<any> {
   const udaCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.UDA,
     udaReqBody,
+    timeout,
   );
 
   if (udaCall?.error) {
     return parseError(udaCall.error);
+  } else if (udaCall?.results) {
+    return udaCall.results;
   } else if (udaCall?.arrayBuffer) {
     const results = handleWSResults(udaCall.arrayBuffer);
     return handleScratchpadTableRes(results);
@@ -540,7 +574,10 @@ export function getPartialDatasourceFile(
     : <DataSourceFiles>{
         dataSource: {
           selectedType: "QSQL",
-          qsql: { query: getQSQLWrapper(query, isPython), selectedTarget },
+          qsql: {
+            query: getQSQLWrapper(query, "serialized", isPython),
+            selectedTarget,
+          },
           source: query,
         },
       };

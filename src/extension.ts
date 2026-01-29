@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -21,7 +21,6 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 
-import { ReplConnection } from "./classes/replConnection";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
@@ -46,14 +45,14 @@ import {
   rerunQuery,
   resetScratchpad,
 } from "./commands/serverCommand";
-import { installKdbX, showWelcome } from "./commands/setupTools";
+import { installKdbX, showWelcome } from "./commands/setupCommand";
 import {
   ConnectionLensProvider,
-  checkOldDatasourceFiles,
   connectWorkspaceCommands,
   importOldDSFiles,
   pickConnection,
   pickTarget,
+  pickTimeout,
   resetScratchpadFromEditor,
   runActiveEditor,
   setServerForUri,
@@ -108,7 +107,6 @@ import {
 import {
   checkLocalInstall,
   checkOpenSslInstalled,
-  fixUnnamedAlias,
   getInsights,
   getServers,
   hasWorkspaceOrShowOption,
@@ -127,7 +125,7 @@ let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
   ext.context = context;
-  ext.outputChannel = vscode.window.createOutputChannel("kdb");
+  ext.outputChannel = vscode.window.createOutputChannel("kdb", { log: true });
   ext.openSslVersion = await checkOpenSslInstalled();
 
   getWorkspaceLabelsConnMap();
@@ -148,15 +146,13 @@ export async function activate(context: vscode.ExtensionContext) {
     ext.context.extensionUri,
   );
   ext.scratchpadTreeProvider = new WorkspaceTreeProvider(
-    "**/*.kdb.{q,py}",
+    "**/*.kdb.{q,py,sql}",
     "scratchpad",
   );
   ext.dataSourceTreeProvider = new WorkspaceTreeProvider(
     "**/*.kdb.json",
     "datasource",
   );
-
-  fixUnnamedAlias();
 
   vscode.commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
@@ -197,7 +193,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(
-      { pattern: "**/*.{q,py,sql}" },
+      { pattern: "**/*.{q,quke,py,sql}" },
       new ConnectionLensProvider(),
     ),
 
@@ -219,8 +215,6 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
   );
-
-  checkOldDatasourceFiles();
 
   const lastResult: QueryResult | undefined = undefined;
   const resultSchema = "vscode-kdb-q";
@@ -266,9 +260,6 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
   );
 
-  connectWorkspaceCommands();
-  await connectBuildTools();
-
   //q language server
   const serverModule = path.join(context.extensionPath, "out", "server.js");
   const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] };
@@ -308,13 +299,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     client.onNotification("notify", (params) =>
-      notify(params.message, params.kind, params.options, params.telemetry),
+      notify(params.message, params.kind, params.options),
     ),
   );
 
   await client.start();
-
   connectClientCommands(context, client);
+  await connectBuildTools();
 
   const yamlExtension = vscode.extensions.getExtension("redhat.vscode-yaml");
   if (yamlExtension) {
@@ -350,7 +341,7 @@ export async function activate(context: vscode.ExtensionContext) {
     if ("auth" in api) {
       notify("Custom authentication activated.", MessageKind.DEBUG, {
         logger,
-        telemetry: "CustomAuth.Extension.Actived",
+        telemetry: "Extension.CustomAuth.Activated",
       });
       ext.customAuth = api;
     }
@@ -390,7 +381,7 @@ function registerHelpCommands(): CommandRegistration[] {
           .then(undefined, () => {
             notify("Help&Feedback documentation selected.", MessageKind.DEBUG, {
               logger,
-              telemetry: "Help&Feedback.Open.ExtensionDocumentation",
+              telemetry: "Help.Open.Documentation",
             });
             vscode.commands.executeCommand("extension.open", "KX.kdb");
           });
@@ -401,7 +392,7 @@ function registerHelpCommands(): CommandRegistration[] {
       callback: () => {
         notify("Help&Feedback suggest a feature selected.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Help&Feedback.Open.SuggestFeature",
+          telemetry: "Help.Open.SuggestFeature",
         });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.suggestFeature));
       },
@@ -411,7 +402,7 @@ function registerHelpCommands(): CommandRegistration[] {
       callback: () => {
         notify("Help&Feedback survey selected.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Help&Feedback.Open.Survey",
+          telemetry: "Help.Open.Survey",
         });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.survey));
       },
@@ -421,7 +412,7 @@ function registerHelpCommands(): CommandRegistration[] {
       callback: () => {
         notify("Help&Feedback report a bug selected.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Help&Feedback.Open.ReportBug",
+          telemetry: "Help.Open.ReportBug",
         });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.reportBug));
       },
@@ -572,6 +563,25 @@ function registerScratchpadCommands(): CommandRegistration[] {
       },
     },
     {
+      command: "kdb.scratchpad.sql.create",
+      callback: async (item: FileTreeItem) => {
+        if (hasWorkspaceOrShowOption("adding workbooks")) {
+          const uri = await addWorkspaceFile(
+            item ? item.resourceUri : undefined,
+            "workbook",
+            ".kdb.sql",
+          );
+          await vscode.workspace.openTextDocument(uri);
+          await vscode.window.showTextDocument(uri);
+          await vscode.commands.executeCommand(
+            "workbench.action.files.save",
+            uri,
+          );
+          await setServerForUri(uri, undefined);
+        }
+      },
+    },
+    {
       command: "kdb.scratchpad.explorer.refresh",
       callback: () => {
         ext.scratchpadTreeProvider.reload();
@@ -679,7 +689,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
       callback: () => {
         notify("Export all conections.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Connections.Export.All",
+          telemetry: "Connection.Export.All",
         });
         exportConnections();
       },
@@ -689,7 +699,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
       callback: async (viewItem: KdbNode | InsightsNode) => {
         notify("Export single conection.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Connections.Export.Single",
+          telemetry: "Connection.Export.Single",
         });
         exportConnections(viewItem.label);
       },
@@ -699,7 +709,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
       callback: async () => {
         notify("Import conections.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Connections.Import",
+          telemetry: "Connection.Import",
         });
         await importConnections();
       },
@@ -923,6 +933,15 @@ function registerFileCommands(): CommandRegistration[] {
       },
     },
     {
+      command: "kdb.file.pickTimeout",
+      callback: async () => {
+        const editor = ext.activeTextEditor;
+        if (editor) {
+          await pickTimeout(editor.document.uri);
+        }
+      },
+    },
+    {
       command: "kdb.file.inputVariable",
       callback: async (cell: vscode.NotebookCell) => {
         await inputVariable(cell);
@@ -1014,15 +1033,13 @@ function registerAllExtensionCommands(): void {
       vscode.commands.registerCommand(command.command, command.callback),
     );
   });
+  connectWorkspaceCommands();
 }
 
 export async function deactivate(): Promise<void> {
-  ReplConnection.dispose();
-
   await Telemetry.dispose();
 
-  if (!ext.client) {
-    return undefined;
+  if (ext.client) {
+    return ext.client.stop();
   }
-  return ext.client.stop();
 }

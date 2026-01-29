@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -27,10 +27,7 @@ import {
   ServerDetails,
   ServerType,
 } from "../../../src/models/connectionsModels";
-import {
-  createDefaultDataSourceFile,
-  DataSourceTypes,
-} from "../../../src/models/dataSource";
+import { DataSourceTypes } from "../../../src/models/dataSource";
 import { ExecutionTypes } from "../../../src/models/execution";
 import { QueryHistory } from "../../../src/models/queryHistory";
 import { ScratchpadResult } from "../../../src/models/scratchpadResult";
@@ -49,6 +46,7 @@ import { ExecutionConsole } from "../../../src/utils/executionConsole";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
 import * as kdbValidators from "../../../src/validators/kdbValidator";
+import { createMockDatasource } from "../../fixtures/config/datasource";
 
 describe("serverCommand", () => {
   const servers = {
@@ -1085,7 +1083,7 @@ describe("serverCommand", () => {
     });
 
     it("should run datasource for datasource query", async function () {
-      const ds = createDefaultDataSourceFile();
+      const ds = createMockDatasource();
       const rerunQueryElement: QueryHistory = {
         executorName: "test",
         isDatasource: true,
@@ -1510,7 +1508,7 @@ describe("serverCommand", () => {
     });
 
     it("should not copy query to clipboard if query is not string", async () => {
-      const dummyDsFiles = createDefaultDataSourceFile();
+      const dummyDsFiles = createMockDatasource();
       const queryHistory: QueryHistory = {
         executorName: "test",
         connectionName: "conn",
@@ -1557,8 +1555,44 @@ describe("serverCommand", () => {
         success: true,
         isDatasource: true,
       };
+
       await serverCommand.copyQuery(queryHistory);
       sinon.assert.called(showInfoStub);
+    });
+  });
+
+  describe("ensureQuickConnection", () => {
+    let secretSettings: any;
+    let setAuthDataLabel: any;
+    let setAuthDataAuth: any;
+    beforeEach(() => {
+      secretSettings = ext.secretSettings;
+      ext.secretSettings = <any>{
+        getAuthData() {
+          return "test:1234";
+        },
+        storeAuthData(label: any, auth: any) {
+          setAuthDataLabel = label;
+          setAuthDataAuth = auth;
+        },
+      };
+    });
+    afterEach(() => {
+      ext.secretSettings = secretSettings;
+      secretSettings = undefined;
+      setAuthDataAuth = undefined;
+      setAuthDataLabel = undefined;
+    });
+    afterEach(() => {});
+    it("should create quick connection", async () => {
+      const label = await serverCommand.ensureQuickConnection("local:1234");
+      assert.strictEqual(label, "(Connection 1)");
+    });
+    it("should create quick connection with auth", async () => {
+      const label =
+        await serverCommand.ensureQuickConnection("local:1234:test");
+      assert.strictEqual(setAuthDataLabel, label);
+      assert.strictEqual(setAuthDataAuth, "test:1234");
     });
   });
 });

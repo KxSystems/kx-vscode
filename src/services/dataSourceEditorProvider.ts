@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -38,14 +38,22 @@ import {
   getConnectionForServer,
   getInsightsServers,
   getServerForUri,
+  getTimeoutForUri,
   setServerForUri,
+  setTimeoutForUri,
 } from "../commands/workspaceCommand";
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 import { MetaObjectPayload } from "../models/meta";
 import { UDA } from "../models/uda";
-import { getBasename, offerConnectAction } from "../utils/core";
+import {
+  calculateSeconds,
+  deconstructSeconds,
+  getBasename,
+  offerConnectAction,
+} from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { MessageKind, Runner, notify } from "../utils/notifications";
+import { RunFlag, notifyExecution } from "../utils/queryUtils";
 import { parseUDAList } from "../utils/uda";
 import { getUri } from "../utils/uriUtils";
 
@@ -120,6 +128,8 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     const updateWebview = async () => {
       if (changing === 0) {
         const selectedServer = getServerForUri(document.uri) || "";
+        const timeout = getTimeoutForUri(document.uri);
+        const timeoutParts = deconstructSeconds(timeout.value);
         const selectedServerVersion =
           await connMngService.retrieveInsightsConnVersion(selectedServer);
         await getConnectionForServer(selectedServer);
@@ -128,6 +138,9 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         webview.postMessage(<DataSourceMessage2>{
           command: DataSourceCommand.Update,
           selectedServer,
+          timeoutUnit: timeoutParts.unit,
+          timeoutDefault: timeout.source === "workspace",
+          timeoutValue: timeoutParts.value,
           servers: getInsightsServers(),
           selectedServerVersion,
           dataSourceFile: this.getDocumentAsJson(document),
@@ -168,10 +181,23 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       /* c8 ignore start */
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
-
+      let runner: any;
       switch (msg.command) {
         case DataSourceCommand.Server: {
           await setServerForUri(document.uri, msg.selectedServer);
+          updateWebview();
+          break;
+        }
+        case DataSourceCommand.Timeout: {
+          if (msg.timeoutDefault) {
+            await setTimeoutForUri(document.uri, undefined);
+          } else {
+            await setTimeoutForUri(
+              document.uri,
+              calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
+            );
+          }
+
           updateWebview();
           break;
         }
@@ -196,47 +222,101 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         }
         case DataSourceCommand.Refresh: {
-          if (connected) {
-            const runner = Runner.create(async () => {
-              await connMngService.refreshGetMeta(selectedServer);
-              this.cache.delete(selectedServer);
-              updateWebview();
-            });
-            runner.location = ProgressLocation.Notification;
-            runner.title = `Refreshing meta data for ${selectedServer}.`;
+          runner = Runner.create(async () => {
+            await connMngService.refreshGetMeta(selectedServer);
+            this.cache.delete(selectedServer);
+            updateWebview();
+          });
+          runner.location = ProgressLocation.Notification;
+          runner.title = `Refreshing meta data for ${selectedServer}.`;
+          if (connected) await runner.execute();
+          else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
-          }
           break;
         }
         case DataSourceCommand.Run: {
-          if (connected) {
-            const runner = Runner.create(() =>
-              runDataSource(
-                msg.dataSourceFile,
-                msg.selectedServer,
-                this.filenname,
-              ),
-            );
-            runner.location = ProgressLocation.Notification;
-            runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
+          runner = Runner.create(async (_, token) => {
+            const cancellation = new Promise((_, reject) => {
+              token.onCancellationRequested(() =>
+                reject(new Error("Cancelled")),
+              );
+            });
+
+            try {
+              return await Promise.race([
+                runDataSource(
+                  msg.dataSourceFile,
+                  msg.selectedServer,
+                  this.filenname,
+                  token,
+                  calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
+                ),
+                cancellation,
+              ]);
+            } catch (err) {
+              if (err instanceof Error && err.message === "Cancelled") {
+                // user cancelled
+                notify(
+                  `Cancel request sent for ${msg.selectedServer}, however, the query will continue running on the database until it finishes or times out`,
+                  MessageKind.INFO,
+                  { logger },
+                );
+                return;
+              }
+
+              throw err;
+            }
+          });
+          runner.location = ProgressLocation.Notification;
+          runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
+          if (connected) await runner.execute();
+          else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
-          }
+          notifyExecution(
+            RunFlag.Run,
+            msg.dataSourceFile.dataSource.selectedType,
+          );
           break;
         }
         case DataSourceCommand.Populate: {
-          if (connected) {
-            const runner = Runner.create(() =>
-              populateScratchpad(msg.dataSourceFile, msg.selectedServer),
-            );
-            runner.title = "Populating scratchpad.";
+          runner = Runner.create(async (_, token) => {
+            const cancellation = new Promise((_, reject) => {
+              token.onCancellationRequested(() =>
+                reject(new Error("Cancelled")),
+              );
+            });
+
+            try {
+              return await Promise.race([
+                populateScratchpad(
+                  msg.dataSourceFile,
+                  msg.selectedServer,
+                  undefined,
+                  undefined,
+                  token,
+                  calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
+                ),
+                cancellation,
+              ]);
+            } catch (err) {
+              if (err instanceof Error && err.message === "Cancelled") {
+                // user cancelled
+                notify(
+                  `Scratchpad cancel request sent for ${msg.selectedServer}`,
+                  MessageKind.INFO,
+                  { logger, telemetry: "Connection.Cancel.ie.sp" },
+                );
+                return;
+              }
+
+              throw err;
+            }
+          });
+          runner.title = "Populating scratchpad.";
+          if (connected) await runner.execute();
+          else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
-          }
+          notifyExecution(0, msg.dataSourceFile.dataSource.selectedType);
           break;
         }
       }

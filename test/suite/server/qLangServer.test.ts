@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -533,12 +533,13 @@ describe("qLangServer", () => {
   describe("notify", () => {
     it("", () => {
       const stub = sinon.stub(connection, "sendNotification");
-      server["notify"]("test", <any>"DEBUG", {}, true);
+      server["notify"]("test", <any>"DEBUG", { telemetry: true });
       sinon.assert.calledOnceWithExactly(stub, "notify", <any>{
         message: "test",
         kind: "DEBUG",
-        options: {},
-        telemetry: true,
+        options: {
+          telemetry: true,
+        },
       });
     });
   });

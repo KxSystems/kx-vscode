@@ -1,8 +1,19 @@
 {
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": "never"
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "never"
+    },
+    "editor.formatOnSave": true
   },
-  "terminal.integrated.scrollback": 4000
+  "launcher.mappings": [
+    {
+      "name": "Test Selected File",
+      "pattern": "kx-vscode.*/test/suite/.+\\.test\\.ts$"
+    },
+    {
+      "name": "UI Test Selected File",
+      "pattern": "kx-vscode.*/test/ui/.+\\.test\\.ts$"
+    }
+  ]
 }

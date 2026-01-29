@@ -5,15 +5,24 @@
       "type": "npm",
       "script": "watch",
       "group": "build",
-      "problemMatcher": "$esbuild-watch",
       "isBackground": true,
-      "label": "npm: watch"
+      "label": "npm: watch",
+      "problemMatcher": {
+        "base": "$eslint-stylish",
+        "background": {
+          "beginsPattern": {
+            "regexp": "^esbuild:started$"
+          },
+          "endsPattern": {
+            "regexp": "^esbuild:watching$"
+          }
+        }
+      }
     },
     {
       "type": "npm",
       "script": "build",
       "group": "build",
-      "problemMatcher": "$esbuild",
       "label": "npm: build"
     }
   ]

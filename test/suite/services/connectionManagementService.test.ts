@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -15,7 +15,6 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { dummyMeta } from "./services.utils.test";
 import { InsightsConnection } from "../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../src/classes/localConnection";
 import { ext } from "../../../src/extensionVariables";
@@ -29,7 +28,7 @@ import {
 } from "../../../src/services/kdbTreeProvider";
 import * as loggers from "../../../src/utils/loggers";
 import AuthSettings from "../../../src/utils/secretStorage";
-import { Telemetry } from "../../../src/utils/telemetryClient";
+import { getMetaResponse } from "../../fixtures/api/getMeta";
 
 describe("ConnectionManagementService", () => {
   const connectionManagerService = new ConnectionManagementService();
@@ -346,7 +345,6 @@ describe("ConnectionManagementService", () => {
         vscode.window,
         "showErrorMessage",
       );
-      const sendEventStub = sinon.stub(Telemetry, "sendEvent");
       const testLabel = "testLabel";
 
       connectionManagerService.connectFailBehaviour(testLabel);
@@ -354,7 +352,6 @@ describe("ConnectionManagementService", () => {
         showErrorMessageStub,
         `Connection to ${testLabel} failed.`,
       );
-      sinon.assert.calledWith(sendEventStub, "Connection.Failed.KDB+");
     });
 
     it("disconnectBehaviour", () => {
@@ -602,7 +599,7 @@ describe("ConnectionManagementService", () => {
     });
 
     it("should return meta object for valid input", () => {
-      insightsConn.meta = dummyMeta;
+      insightsConn.meta = getMetaResponse;
       sandbox
         .stub(connectionManagerService, "getMetaInfoType")
         .returns(MetaInfoType.META);
@@ -614,7 +611,7 @@ describe("ConnectionManagementService", () => {
           insightsConn.connLabel,
           "meta",
         ),
-        JSON.stringify(dummyMeta.payload),
+        JSON.stringify(getMetaResponse.payload),
       );
     });
   });

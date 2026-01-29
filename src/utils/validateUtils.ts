@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -16,7 +16,7 @@ export namespace validateUtils {
   export function isValidLength(
     value: string,
     lower?: number,
-    upper?: number
+    upper?: number,
   ): boolean {
     const maxInteger = 2147483647;
 

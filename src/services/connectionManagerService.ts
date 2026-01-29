@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -32,6 +32,7 @@ import {
   getServers,
   updateInsights,
   updateServers,
+  isQuickAlias,
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
@@ -146,28 +147,18 @@ export class ConnectionManagementService {
           authCredentials ? authCredentials.split(":") : undefined,
           connection.details.tls,
         );
-        await localConnection.connect((err, conn) => {
-          if (err) {
-            this.connectFailBehaviour(connLabel, err);
-            return;
-          }
-          if (conn) {
-            notify(
-              `Connection established successfully to: ${connLabel}`,
-              MessageKind.DEBUG,
-              {
-                logger,
-                telemetry:
-                  "Connection.Connected" +
-                  this.getTelemetryConnectionType(connLabel),
-              },
-            );
+        const conn = await localConnection.connect();
+        if (conn) {
+          notify(
+            `Connection established successfully to: ${connLabel}`,
+            MessageKind.DEBUG,
+            { logger },
+          );
 
-            ext.connectedConnectionList.push(localConnection);
+          ext.connectedConnectionList.push(localConnection);
 
-            this.connectSuccessBehaviour(connection);
-          }
-        });
+          this.connectSuccessBehaviour(connection);
+        }
       } else {
         ext.context.secrets.delete(connection.details.alias);
         const insightsConn: InsightsConnection = new InsightsConnection(
@@ -182,9 +173,6 @@ export class ConnectionManagementService {
             {
               logger,
               params: { insightsVersion: insightsConn.insightsVersion },
-              telemetry:
-                "Connection.Connected" +
-                this.getTelemetryConnectionType(connLabel),
             },
           );
           ext.connectedConnectionList.push(insightsConn);
@@ -208,26 +196,9 @@ export class ConnectionManagementService {
     commands.executeCommand("setContext", "kdb.connected.active", [
       `${node.label}`,
     ]);
-    notify("Connection activated.", MessageKind.DEBUG, {
-      logger,
-      telemetry: "Connection.Connected.Active",
-    });
+    notify("Connection activated.", MessageKind.DEBUG, { logger });
+    commands.executeCommand("setContext", "kdb.pythonEnabled", true);
     ext.activeConnection = connection;
-
-    if (node instanceof InsightsNode) {
-      commands.executeCommand("setContext", "kdb.pythonEnabled", true);
-    } else if (connection instanceof LocalConnection) {
-      // check if pykx namespace is defined
-      connection
-        .execute("`pykx in key`")
-        .then((res) => {
-          commands.executeCommand("setContext", "kdb.pythonEnabled", !!res);
-        })
-        .catch(() => {
-          commands.executeCommand("setContext", "kdb.pythonEnabled", false);
-        });
-    }
-
     ext.connectionNode = node;
     ext.serverProvider.reload();
   }
@@ -250,6 +221,7 @@ export class ConnectionManagementService {
       this.removeConnectionFromContextString(connNode.label);
       this.disconnect(connNode.label);
     }
+    let kind = ".kdb";
     if (connNode instanceof InsightsNode) {
       const insights = getInsights();
       const key = getKeyForServerName(connNode.details.alias);
@@ -265,6 +237,8 @@ export class ConnectionManagementService {
 
         await updateInsights(updatedInsights);
         ext.serverProvider.refreshInsights(updatedInsights);
+
+        kind = ".ie";
       }
     } else {
       const servers: Server | undefined = getServers();
@@ -284,6 +258,10 @@ export class ConnectionManagementService {
         ext.serverProvider.refresh(updatedServers);
       }
     }
+    notify(`Connection ${connNode.label} removed`, MessageKind.DEBUG, {
+      logger,
+      telemetry: "Connection.Delete" + kind,
+    });
   }
 
   public connectSuccessBehaviour(connNode: KdbNode | InsightsNode): void {
@@ -304,8 +282,6 @@ export class ConnectionManagementService {
     notify(`Connection to ${connLabel} failed.`, MessageKind.ERROR, {
       logger,
       params: error,
-      telemetry:
-        "Connection.Failed" + this.getTelemetryConnectionType(connLabel),
     });
   }
 
@@ -334,7 +310,6 @@ export class ConnectionManagementService {
     }
     notify(`Connection closed: ${connection.connLabel}`, MessageKind.DEBUG, {
       logger,
-      telemetry: "Connection.Disconnected." + connType,
     });
     ext.serverProvider.reload();
   }
@@ -345,6 +320,7 @@ export class ConnectionManagementService {
     context?: string,
     stringify?: boolean,
     isPython?: boolean,
+    timeout?: number,
   ): Promise<any> {
     let selectedConn;
     if (connLabel) {
@@ -372,6 +348,7 @@ export class ConnectionManagementService {
         context,
         isPython,
         !stringify,
+        timeout,
       );
     }
   }
@@ -551,14 +528,16 @@ export class ConnectionManagementService {
         return "";
       }
       if (connection instanceof KdbNode) {
-        exportedContent.connections.KDB.push(connection.details);
+        if (!isQuickAlias(connection.details.serverAlias))
+          exportedContent.connections.KDB.push(connection.details);
       } else {
         exportedContent.connections.Insights.push(connection.details);
       }
     } else {
       ext.connectionsList.forEach((connection) => {
         if (connection instanceof KdbNode) {
-          exportedContent.connections.KDB.push(connection.details);
+          if (!isQuickAlias(connection.details.serverAlias))
+            exportedContent.connections.KDB.push(connection.details);
         } else {
           exportedContent.connections.Insights.push(connection.details);
         }
@@ -588,18 +567,5 @@ export class ConnectionManagementService {
       exportedContent.connections.KDB.length === 0
       ? ""
       : JSON.stringify(exportedContent, null, 2);
-  }
-
-  public getTelemetryConnectionType(connLabel: string): string {
-    const connection = this.retrieveConnection(connLabel);
-
-    if (connection instanceof InsightsNode) {
-      return ".Insights";
-    }
-    const isCustom = ext.customAuth ? ".CustomAuth" : "";
-    if (connLabel === "local") {
-      return isCustom + ".KDB+.Local";
-    }
-    return isCustom + ".KDB+";
   }
 }

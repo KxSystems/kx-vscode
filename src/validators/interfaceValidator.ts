@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,7 +14,7 @@
 import { validateUtils } from "../utils/validateUtils";
 
 export function validateScratchpadOutputVariableName(
-  input: string | undefined
+  input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
     if (!validateUtils.isValidLength(input, 1, 64)) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -10,6 +10,8 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
+
+import { StructuredTextResults } from "./queryResult";
 
 export type GetDataError = string | { buffer: ArrayBuffer };
 
@@ -22,6 +24,7 @@ export type GetDataObjectPayload = {
     columns: string[];
     rows: any;
   };
+  results?: StructuredTextResults;
   arrayBuffer?: ArrayBuffer;
 };
 

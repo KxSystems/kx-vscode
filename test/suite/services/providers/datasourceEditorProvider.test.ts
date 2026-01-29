@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 KX Systems Inc.
+ * Copyright (c) 1998-2026 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -19,11 +19,14 @@ import { createPanel } from "./provider.utils.test";
 import { InsightsConnection } from "../../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../../src/classes/localConnection";
 import { ext } from "../../../../src/extensionVariables";
-import { MetaObject } from "../../../../src/models/meta";
 import { ConnectionManagementService } from "../../../../src/services/connectionManagerService";
 import { DataSourceEditorProvider } from "../../../../src/services/dataSourceEditorProvider";
 import { InsightsNode } from "../../../../src/services/kdbTreeProvider";
 import * as utils from "../../../../src/utils/uriUtils";
+import {
+  getMetaNoAssemblyResponse,
+  getMetaResponse,
+} from "../../../fixtures/api/getMeta";
 
 describe("dataSourceEditorProvider", () => {
   let context: vscode.ExtensionContext;
@@ -65,113 +68,6 @@ describe("dataSourceEditorProvider", () => {
     });
 
     describe("getMeta", () => {
-      const dummyMeta: MetaObject = {
-        header: {
-          ac: "0",
-          agg: ":127.0.0.1:5070",
-          ai: "",
-          api: ".kxi.getMeta",
-          client: ":127.0.0.1:5050",
-          corr: "CorrHash",
-          http: "json",
-          logCorr: "logCorrHash",
-          protocol: "gw",
-          rc: "0",
-          rcvTS: "2099-05-22T11:06:33.650000000",
-          retryCount: "0",
-          to: "2099-05-22T11:07:33.650000000",
-          userID: "dummyID",
-          userName: "testUser",
-        },
-        payload: {
-          rc: [
-            {
-              api: 3,
-              agg: 1,
-              assembly: 1,
-              schema: 1,
-              rc: "dummy-rc",
-              labels: [{ kxname: "dummy-assembly" }],
-              started: "2023-10-04T17:20:57.659088747",
-            },
-          ],
-          dap: [],
-          api: [],
-          agg: [
-            {
-              aggFn: ".sgagg.aggFnDflt",
-              custom: false,
-              full: true,
-              metadata: {
-                description: "dummy desc.",
-                params: [{ description: "dummy desc." }],
-                return: { description: "dummy desc." },
-                misc: {},
-              },
-              procs: [],
-            },
-          ],
-          assembly: [
-            {
-              assembly: "dummy-assembly",
-              kxname: "dummy-assembly",
-              tbls: ["dummyTbl"],
-            },
-          ],
-          schema: [],
-        },
-      };
-
-      const dummyMetaNoAssembly: MetaObject = {
-        header: {
-          ac: "0",
-          agg: ":127.0.0.1:5070",
-          ai: "",
-          api: ".kxi.getMeta",
-          client: ":127.0.0.1:5050",
-          corr: "CorrHash",
-          http: "json",
-          logCorr: "logCorrHash",
-          protocol: "gw",
-          rc: "0",
-          rcvTS: "2099-05-22T11:06:33.650000000",
-          retryCount: "0",
-          to: "2099-05-22T11:07:33.650000000",
-          userID: "dummyID",
-          userName: "testUser",
-        },
-        payload: {
-          rc: [
-            {
-              api: 3,
-              agg: 1,
-              assembly: 1,
-              schema: 1,
-              rc: "dummy-rc",
-              labels: [{ kxname: "dummy-assembly" }],
-              started: "2023-10-04T17:20:57.659088747",
-            },
-          ],
-          dap: [],
-          api: [],
-          agg: [
-            {
-              aggFn: ".sgagg.aggFnDflt",
-              custom: false,
-              full: true,
-              metadata: {
-                description: "dummy desc.",
-                params: [{ description: "dummy desc." }],
-                return: { description: "dummy desc." },
-                misc: {},
-              },
-              procs: [],
-            },
-          ],
-          assembly: [],
-          schema: [],
-        },
-      };
       const insightsNode = new InsightsNode(
         [],
         "insightsnode1",
@@ -188,7 +84,8 @@ describe("dataSourceEditorProvider", () => {
       );
       const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
       const connMngService = new ConnectionManagementService();
-      let isConnetedStub, _retrieveConnectedConnectionStub: sinon.SinonStub;
+      let isConnetedStub: sinon.SinonStub;
+      let _retrieveConnectedConnectionStub: sinon.SinonStub;
       beforeEach(() => {
         isConnetedStub = sinon.stub(connMngService, "isConnected");
         _retrieveConnectedConnectionStub = sinon.stub(
@@ -236,7 +133,7 @@ describe("dataSourceEditorProvider", () => {
         ext.connectedContextStrings.push(insightsConn.connLabel);
         ext.connectedConnectionList.push(insightsConn);
         isConnetedStub.resolves(true);
-        insightsConn.meta = dummyMetaNoAssembly;
+        insightsConn.meta = getMetaNoAssemblyResponse;
         const provider = new DataSourceEditorProvider(context);
         const result = await provider.getMeta(insightsConn.connLabel);
         assert.deepStrictEqual(result, {});
@@ -245,10 +142,10 @@ describe("dataSourceEditorProvider", () => {
         ext.connectedContextStrings.push(insightsConn.connLabel);
         ext.connectedConnectionList.push(insightsConn);
         isConnetedStub.resolves(true);
-        insightsConn.meta = dummyMeta;
+        insightsConn.meta = getMetaResponse;
         const provider = new DataSourceEditorProvider(context);
         const result = await provider.getMeta(insightsConn.connLabel);
-        assert.deepStrictEqual(result, dummyMeta.payload);
+        assert.deepStrictEqual(result, getMetaResponse.payload);
       });
     });
   });
