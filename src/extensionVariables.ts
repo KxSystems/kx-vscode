@@ -13,7 +13,6 @@
 
 import {
   ExtensionContext,
-  extensions,
   languages,
   LogOutputChannel,
   OutputChannel,
@@ -41,12 +40,10 @@ import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
 import AuthSettings from "./utils/secretStorage";
+import { ExtensionTelemetry } from "./utils/telemetryClient";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
-  export const EXTENSION_VERSION =
-    extensions.getExtension("KX.kdb")?.packageJSON.version || "unknown";
-  export const isRCExtension = EXTENSION_VERSION.includes("rc");
   export const REPL = "REPL";
   export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
@@ -68,6 +65,7 @@ export namespace ext {
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
   export let isDatasourceExecution: boolean;
+  export let telemetry: ExtensionTelemetry;
   export const rowLimit = 150000000;
 
   export let activeConnection: LocalConnection | InsightsConnection | undefined;
@@ -135,10 +133,6 @@ export namespace ext {
     "https://downloads.kx.com/dl/index.php/9OeP-W7XAT7WtsH-I9lzPDKWiHw_oA8fK90mHgvuprPYhwcapsU1LNfQSoHOFinKpsgQ3VM5PWf7KjCpNgP9EqL_HvnorJxm0-ihvNzk2_rREPf8R1S1-Dt_Lz5uwxOhEWEcEO3PlFgY0dqsqt0Yd1cLLKhbKykjxKTR82XF1W6_ODzkJ0k3SNW4vt6xUkpdetckxbLdD1sUVYz1M0cMsAWsUWodLUpXcEi7ssuWfvvO-p8O2M-c-rAy9e8kz1ylEmh7OsWmX5-Zz8N1cvUyMQF54x3LEEFTpaJi96ZvmnjRMOSfkREHYVYsfzHM6XBALxVxxljdcmk6ttxqPEDuZUXQf6gdpjEeN5XPqrcv-zqKZhJ6A-PO6A1beCh5qlfJ3EyJFpdPBm0xnh8vCCENZ9BMGjAXUs8HQ7fukxWVRKX_sKLFeFFFKVsUJUJrgqop518iojQnKlx7QZnvArd0KA";
 
   export let client: LanguageClient;
-
-  const extensionId = "kx.kdb";
-  const packageJSON = extensions.getExtension(extensionId)!.packageJSON;
-  export const extAIConnString = packageJSON.aiConnString;
 
   export const localhost = "127.0.0.1";
   export const networkProtocols = {

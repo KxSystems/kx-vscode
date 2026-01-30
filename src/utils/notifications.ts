@@ -16,7 +16,6 @@ import * as vscode from "vscode";
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./loggers";
 import { stripUnprintableChars } from "./shared";
-import { Telemetry } from "./telemetryClient";
 
 const logger = "notifications";
 
@@ -132,11 +131,11 @@ export function notify<T extends string>(
 
   if (options.telemetry) {
     if (typeof options.telemetry === "boolean") {
-      Telemetry.sendError(new Error(message));
+      ext.telemetry.sendError(new Error(message));
     } else if (options.telemetry instanceof Error) {
-      Telemetry.sendError(options.telemetry);
+      ext.telemetry.sendError(options.telemetry);
     } else {
-      Telemetry.sendEvent(
+      ext.telemetry.sendEvent(
         options.telemetry,
         options.properties,
         options.measurements,

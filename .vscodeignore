@@ -8,6 +8,11 @@ src
 .yarnrc
 tsconfig.json
 node_modules
+!node_modules/@vscode/extension-telemetry/**
+!node_modules/@microsoft/applicationinsights-web-basic/**
+!node_modules/@microsoft/applicationinsights-common/**
+!node_modules/@microsoft/applicationinsights-core-js/**
+!node_modules/@microsoft/1ds-core-js/**
 server
 test/
 img/

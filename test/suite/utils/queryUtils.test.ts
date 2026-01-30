@@ -25,6 +25,7 @@ import * as QTable from "../../../src/ipc/QTable";
 import { ServerType } from "../../../src/models/connectionsModels";
 import { DataSourceTypes } from "../../../src/models/dataSource";
 import * as queryUtils from "../../../src/utils/queryUtils";
+import { ExtensionTelemetry } from "../../../src/utils/telemetryClient";
 
 describe("queryUtils", () => {
   it("sanitizeQuery", () => {
@@ -673,6 +674,12 @@ describe("queryUtils", () => {
   });
 
   describe("notifyExecution", () => {
+    beforeEach(() => {
+      ext.telemetry = {
+        sendEvent: sinon.stub(),
+      } as any;
+    });
+
     describe("repl", () => {
       describe("File", () => {
         it("should return telemetry for q", () => {

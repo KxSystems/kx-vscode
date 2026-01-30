@@ -1,4 +1,7 @@
 import { context, build } from "esbuild";
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { dependencies } = require('./package.json');
 
 const minify = process.argv.includes("--minify");
 const sourcemap = process.argv.includes("--sourcemap");
@@ -45,7 +48,7 @@ const extensionConfig = {
   outfile: "./out/extension.js",
   format: "cjs",
   platform: "node",
-  external: ["vscode"],
+  external: ["vscode", ...Object.keys(dependencies || {})],
 };
 
 if (watch) {
