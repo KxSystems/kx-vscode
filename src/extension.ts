@@ -135,9 +135,8 @@ export async function activate(context: vscode.ExtensionContext) {
   const isRCExtension = extensionVersion.includes("rc");
   const enableTelemetry = isRCExtension
     ? false
-    : vscode.workspace.getConfiguration("telemetry").get("enableTelemetry")
-      ? true
-      : false;
+    : vscode.workspace.getConfiguration("telemetry").get("telemetryLevel") !==
+      "off";
 
   ext.telemetry = new ExtensionTelemetry(aiConnString, enableTelemetry);
 

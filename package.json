@@ -1218,7 +1218,7 @@
     "esbuild-base": "rimraf out && node ./esbuild.mjs",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "build": "npm run -S esbuild-base -- --sourcemap",
-    "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
+    "vscode:prepublish": "npm run -S esbuild-base -- --minify",
     "package": "vsce package",
     "publish": "vsce publish",
     "pretest": "rimraf out-test && tsc --outdir out-test --strict false",
@@ -1232,9 +1232,6 @@
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
     "q-test": "arch -x86_64 q $AXLIBRARIES_HOME/ws/qcumber.q_ -color -src ./test/q/main.q -test ./test/q/tests"
   },
-    "dependencies": {
-    "@vscode/extension-telemetry": "^1.4.0"
-  },
   "devDependencies": {
     "@eslint/js": "9.39.2",
     "@shoelace-style/shoelace": "2.20.1",
@@ -1245,7 +1242,8 @@
     "@types/semver": "7.7.1",
     "@types/sinon": "21.0.0",
     "@types/vscode": "1.101.0",
-    "@types/vscode-webview": "1.57.5",    
+    "@types/vscode-webview": "1.57.5",
+    "@vscode/extension-telemetry": "^1.4.0",
     "@vscode/python-extension": "1.0.6",
     "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.7.1",
