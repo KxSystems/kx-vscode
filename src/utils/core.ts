@@ -140,8 +140,16 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
       const [key, value] = trimmed.split("=");
       if (key && value !== undefined) {
         env[key.trim()] = value
+          // Normalize
           .replace(/["']/gs, "")
-          .replace(/(?:\$HOME|~)/gs, homedir())
+          // Variable expansion
+          .replace(
+            /\$([A-Za-z_]+[A-Za-z0-9_]*)|\${([A-Za-z0-9_]*)}|%([A-Za-z_]+[A-Za-z0-9_]*)%/g,
+            (match, a, b, c) => {
+              const v = a ?? b ?? c;
+              return env[v] ?? process.env[v] ?? match;
+            },
+          )
           .trim();
       }
     }
