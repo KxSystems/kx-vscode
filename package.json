@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.17.0",
+  "version": "1.17.1",
   "icon": "resources/images/kx-logo-vs.png",
   "repository": {
     "type": "git",
@@ -1218,7 +1218,7 @@
     "esbuild-base": "rimraf out && node ./esbuild.mjs",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "build": "npm run -S esbuild-base -- --sourcemap",
-    "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
+    "vscode:prepublish": "npm run -S esbuild-base -- --minify",
     "package": "vsce package",
     "publish": "vsce publish",
     "pretest": "rimraf out-test && tsc --outdir out-test --strict false",
@@ -1243,11 +1243,11 @@
     "@types/sinon": "21.0.0",
     "@types/vscode": "1.101.0",
     "@types/vscode-webview": "1.57.5",
-    "@vscode/extension-telemetry": "1.0.0",
+    "@vscode/extension-telemetry": "^1.4.0",
     "@vscode/python-extension": "1.0.6",
     "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.7.1",
-    "axios": "1.13.2",
+    "axios": "1.13.4",
     "c8": "10.1.3",
     "chevrotain": "10.5.0",
     "cross-env": "10.1.0",
@@ -1260,7 +1260,7 @@
     "extract-zip": "2.0.1",
     "fs-extra": "11.3.3",
     "glob": "13.0.0",
-    "jsdom": "27.2.0",
+    "jsdom": "27.4.0",
     "jwt-decode": "4.0.0",
     "kill-sync": "1.0.3",
     "lit": "3.3.2",
@@ -1272,7 +1272,7 @@
     "moment-duration-format": "2.3.2",
     "moment-timezone": "0.6.0",
     "node-q": "2.7.0",
-    "npm-check-updates": "19.3.1",
+    "npm-check-updates": "19.3.2",
     "pick-port": "2.2.0",
     "prettier": "3.6.2",
     "rimraf": "6.1.2",
@@ -1285,5 +1285,10 @@
     "vscode-languageserver": "9.0.1",
     "vscode-languageserver-textdocument": "1.0.12",
     "vscode-uri": "3.1.0"
+  },
+  "overrides": {
+    "chevrotain": {
+      "lodash": ">=4.17.23"
+    }
   }
 }

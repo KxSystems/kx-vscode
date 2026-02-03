@@ -673,6 +673,12 @@ describe("queryUtils", () => {
   });
 
   describe("notifyExecution", () => {
+    beforeEach(() => {
+      ext.telemetry = {
+        sendEvent: sinon.stub(),
+      } as any;
+    });
+
     describe("repl", () => {
       describe("File", () => {
         it("should return telemetry for q", () => {

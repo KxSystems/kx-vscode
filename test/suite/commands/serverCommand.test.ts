@@ -206,6 +206,10 @@ describe("serverCommand", () => {
       validationHostnameStub,
       validationPortStub: sinon.SinonStub;
     beforeEach(() => {
+      ext.telemetry = {
+        sendEvent: sinon.stub(),
+      } as any;
+
       kdbData = {
         serverName: "testServer",
         serverAlias: "testServerAlias",
