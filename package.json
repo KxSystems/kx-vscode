@@ -1218,7 +1218,7 @@
     "esbuild-base": "rimraf out && node ./esbuild.mjs",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "build": "npm run -S esbuild-base -- --sourcemap",
-    "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
+    "vscode:prepublish": "npm run -S esbuild-base -- --minify",
     "package": "vsce package",
     "publish": "vsce publish",
     "pretest": "rimraf out-test && tsc --outdir out-test --strict false",
@@ -1243,7 +1243,7 @@
     "@types/sinon": "21.0.0",
     "@types/vscode": "1.101.0",
     "@types/vscode-webview": "1.57.5",
-    "@vscode/extension-telemetry": "1.0.0",
+    "@vscode/extension-telemetry": "^1.4.0",
     "@vscode/python-extension": "1.0.6",
     "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.7.1",
@@ -1285,5 +1285,10 @@
     "vscode-languageserver": "9.0.1",
     "vscode-languageserver-textdocument": "1.0.12",
     "vscode-uri": "3.1.0"
+  },
+  "overrides": {
+    "chevrotain": {
+      "lodash": ">=4.17.23"
+    }
   }
 }

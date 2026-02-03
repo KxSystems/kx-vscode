@@ -116,7 +116,7 @@ import { getIconPath } from "./utils/iconsUtils";
 import { MessageKind, notify, Runner } from "./utils/notifications";
 import { showRegistrationNotification } from "./utils/registration";
 import AuthSettings from "./utils/secretStorage";
-import { Telemetry } from "./utils/telemetryClient";
+import { ExtensionTelemetry } from "./utils/telemetryClient";
 import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
 
 const logger = "extension";
@@ -127,6 +127,18 @@ export async function activate(context: vscode.ExtensionContext) {
   ext.context = context;
   ext.outputChannel = vscode.window.createOutputChannel("kdb", { log: true });
   ext.openSslVersion = await checkOpenSslInstalled();
+
+  const extensionPackage = context.extension.packageJSON;
+  const extensionVersion = extensionPackage.version || "unknown";
+  const aiConnString = extensionPackage.aiConnString;
+
+  const isRCExtension = extensionVersion.includes("rc");
+  const enableTelemetry = isRCExtension
+    ? false
+    : vscode.workspace.getConfiguration("telemetry").get("telemetryLevel") !==
+      "off";
+
+  ext.telemetry = new ExtensionTelemetry(aiConnString, enableTelemetry);
 
   getWorkspaceLabelsConnMap();
   getWorkspaceLabels();
@@ -1037,7 +1049,7 @@ function registerAllExtensionCommands(): void {
 }
 
 export async function deactivate(): Promise<void> {
-  await Telemetry.dispose();
+  await ext.telemetry.dispose();
 
   if (ext.client) {
     return ext.client.stop();

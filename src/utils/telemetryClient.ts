@@ -12,35 +12,23 @@
  */
 
 import { TelemetryReporter } from "@vscode/extension-telemetry";
-import * as crypto from "crypto";
-import * as os from "os";
-import { OutputChannel, window, workspace } from "vscode";
+import { OutputChannel, window } from "vscode";
 
-import { ext } from "../extensionVariables";
-
-class ExtensionTelemetry {
+export class ExtensionTelemetry {
   private readonly output?: OutputChannel;
   private readonly reporter?: TelemetryReporter;
 
   private readonly defaultProperties: { [key: string]: any } = {};
 
-  constructor() {
-    const isEnableTelemetry = ext.isRCExtension
-      ? false
-      : (workspace.getConfiguration("telemetry").get("enableTelemetry") ??
-        true);
+  constructor(aiConnString: string, enableTelemetry = true) {
     const isTestRun = process.env.CODE_TEST || false;
 
-    if (isEnableTelemetry) {
+    if (enableTelemetry) {
       if (isTestRun) {
         this.output = window.createOutputChannel("telemetry-client-test");
       } else {
         try {
-          this.reporter = new TelemetryReporter(ext.extAIConnString);
-          this.defaultProperties["common.vscodemachineid"] =
-            generateMachineId();
-          this.defaultProperties["common.vscodesessionid"] =
-            generateSessionId();
+          this.reporter = new TelemetryReporter(aiConnString);
         } catch (error) {
           console.log(error);
         }
@@ -88,10 +76,6 @@ class ExtensionTelemetry {
     }
   }
 
-  public obfuscate(data: string): string {
-    return crypto.createHash("sha256").update(data).digest("base64");
-  }
-
   public async dispose(): Promise<void> {
     if (this.reporter) {
       await this.reporter.dispose();
@@ -102,13 +86,3 @@ class ExtensionTelemetry {
     }
   }
 }
-
-function generateMachineId(): string {
-  return crypto.createHash("sha256").update(os.hostname()).digest("base64");
-}
-
-function generateSessionId(): string {
-  return crypto.randomBytes(16).toString("hex");
-}
-
-export const Telemetry = new ExtensionTelemetry();
