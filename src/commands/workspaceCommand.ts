@@ -842,10 +842,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       );
     } catch (error) {
       // don't show message if execution was cancelled
-      if (
-        error instanceof Error &&
-        error.message.substring(0, 8) === "Canceled"
-      ) {
+      if (error instanceof Error && error.message.startsWith("Canceled")) {
         return;
       }
 

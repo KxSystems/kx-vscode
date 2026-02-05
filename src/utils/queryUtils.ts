@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { readFileSync } from "fs";
+import * as realFs from "fs";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
@@ -34,12 +34,23 @@ export function sanitizeQuery(query: string): string {
   return query;
 }
 
-export function queryWrapper(isPython: boolean): string {
-  const filename = isPython ? "evaluatePy.q" : "evaluate.q";
+export function queryWrapper(
+  isPython: boolean,
+  useApi: boolean,
+  filesystem = realFs,
+  context = ext.context,
+): string {
+  if (useApi) {
+    return isPython ? ".vscode.evaluatePy" : ".vscode.evaluateQ";
+  }
 
-  return readFileSync(
-    ext.context.asAbsolutePath(join("resources", filename)),
-  ).toString();
+  return filesystem
+    .readFileSync(
+      context.asAbsolutePath(
+        join("resources", "q", isPython ? "evaluatePy.q" : "evaluateQ.q"),
+      ),
+    )
+    .toString();
 }
 
 export function addIndexKey(input: any) {
@@ -175,7 +186,7 @@ export function getPythonWrapper(
   query: string,
   returnFormat: "serialized" | "text" | "structuredText",
 ): string {
-  const wrapper = normalizeQSQLQuery(queryWrapper(true));
+  const wrapper = normalizeQSQLQuery(queryWrapper(true, false));
   const args = {
     returnFormat,
     code: normalizePyQuery(query),

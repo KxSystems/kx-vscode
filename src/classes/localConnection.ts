@@ -31,6 +31,7 @@ export class LocalConnection {
   public labels: string[];
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
+  private useApi: boolean;
 
   constructor(
     connectionString: string,
@@ -71,6 +72,7 @@ export class LocalConnection {
     this.labels = labels;
     this.options = options;
     this.connected = false;
+    this.useApi = false;
   }
 
   public getConnection(): nodeq.Connection | undefined {
@@ -98,7 +100,35 @@ export class LocalConnection {
         });
         this.connection = conn;
         this.connected = true;
-        this.update();
+
+        this.connection?.k(".vscode.getManifest", (err, result) => {
+          if (err) {
+            notify("Failed to check security settings", MessageKind.ERROR, {
+              logger,
+              params: err,
+            });
+            return;
+          }
+
+          if (result) {
+            this.useApi = true;
+          }
+
+          this.update();
+
+          notify(
+            (result
+              ? ".vscode namespace found, using functions"
+              : ".vscode namespace not found, using lambdas") +
+              ` on ${this.connLabel}`,
+            MessageKind.DEBUG,
+            {
+              logger,
+              params: err,
+            },
+          );
+        });
+
         resolve(conn);
       });
     });
@@ -126,7 +156,7 @@ export class LocalConnection {
     return new Promise((resolve, reject) => {
       if (this.connection) {
         const args: any[] = [];
-        const wrapper = queryWrapper(!!isPython);
+        const wrapper = queryWrapper(!!isPython, this.useApi);
         if (isPython) {
           args.push(
             stringify ? "text" : "structuredText",
@@ -142,26 +172,34 @@ export class LocalConnection {
             stringify ? "text" : "structuredText",
           );
         }
-        this.connection.k(wrapper, ...args, (err: Error, res: QueryResult) => {
-          if (err) {
-            reject(handleQueryResults(err.toString(), QueryResultType.Error));
-          } else if (res.error) {
-            resolve(
-              handleQueryResults(
-                res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
-                QueryResultType.Error,
-              ),
-            );
-          } else {
-            const result = res.data === null ? "" : res.data;
-            if (stringify) {
-              resolve(result);
+        this.connection.k(
+          wrapper,
+          {
+            ctx: context ?? ".",
+            code: command,
+            returnFormat: stringify ? "text" : "structuredText",
+          },
+          (err: Error, res: QueryResult) => {
+            if (err) {
+              reject(handleQueryResults(err.toString(), QueryResultType.Error));
+            } else if (res.errored) {
+              resolve(
+                handleQueryResults(
+                  res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+                  QueryResultType.Error,
+                ),
+              );
             } else {
-              resolve(JSON.parse(result));
+              const result = res.data === null ? "" : res.data;
+              if (stringify) {
+                resolve(result);
+              } else {
+                resolve(JSON.parse(result));
+              }
             }
-          }
-          this.updateGlobal();
-        });
+            this.updateGlobal();
+          },
+        );
       } else reject(new Error("Not connected."));
     });
   }
@@ -185,11 +223,20 @@ export class LocalConnection {
       );
       return new Array<ServerObject>();
     }
-    const script = readFileSync(
-      ext.context.asAbsolutePath(join("resources", "list_mem.q")),
-    ).toString();
-    const cc = "\n" + script + "(::)";
+
+    let cc;
+
+    if (this.useApi) {
+      cc = ".vscode.listMem[]";
+    } else {
+      const script = readFileSync(
+        ext.context.asAbsolutePath(join("resources", "q", "listMem.q")),
+      ).toString();
+      cc = "\n" + script + "(::)";
+    }
+
     const result = await this.executeQueryRaw(cc);
+
     if (result !== undefined) {
       const result2: ServerObject[] = (0, eval)(result);
       const result3: ServerObject[] = result2.filter((item) => {
@@ -202,8 +249,12 @@ export class LocalConnection {
   }
 
   private updateGlobal() {
-    const globalQuery =
-      '{[q] t:system"T";tm:@[{$[x>0;[system"T ",string x;1b];0b]};0;{0b}];r:$[tm;@[0;(q;::);{[tm; t; msgs] if[tm;system"T ",string t];\'msgs}[tm;t]];@[q;::;{\'x}]];if[tm;system"T ",string t];r}{do[1000;2+2];{@[{.z.ide.ns.r1:x;:.z.ide.ns.r1};x;{r:y;:r}[;x]]}({:x!{![sv[`;] each x cross `Tables`Functions`Variables; system each "afv" cross enlist[" "] cross enlist string x]} each x} [{raze x,.z.s\'[{x where{@[{1#get x};x;`]~1#.q}\'[x]}` sv\'x,\'key x]}`]),(enlist `.z)!flip (`.z.Tables`.z.Functions`.z.Variables)!(enlist 0#`;enlist `ac`bm`exit`pc`pd`pg`ph`pi`pm`po`pp`ps`pw`vs`ts`s`wc`wo`ws;enlist `a`b`e`f`h`i`k`K`l`o`q`u`w`W`x`X`n`N`p`P`z`Z`t`T`d`D`c`zd)}';
+    const globalQuery = this.useApi
+      ? ".vscode.listMem[]"
+      : readFileSync(
+          ext.context.asAbsolutePath(join("resources", "q", "listMem.q")),
+        ).toString();
+
     this.connection?.k(globalQuery, (err, result) => {
       if (err) {
         notify("Failed to retrieve kdb+ global variables.", MessageKind.ERROR, {
@@ -217,32 +268,33 @@ export class LocalConnection {
     });
   }
 
-  private updateGlobals(result: any): void {
-    const globals = result;
-    const entries: [string, any][] = Object.entries(globals);
-
+  private updateGlobals(
+    globals: {
+      id: number;
+      pid: number;
+      name: string;
+      fname: string;
+      typeNum: number;
+      namespace: string;
+      context: string;
+      isNs: number;
+    }[],
+  ): void {
     ext.functions.length = 0;
     ext.tables.length = 0;
     ext.variables.length = 0;
 
-    entries.forEach(([key, value]) => {
-      key = key === "null" ? "." : key + ".";
-      const f = value[key + "Functions"];
-      const t = value[key + "Tables"];
-      let v = value[key + "Variables"];
-      key = key === "." || key === ".q." ? "" : key;
+    globals.forEach(({ fname, typeNum, name, namespace, isNs }) => {
+      if (!isNs && namespace !== ".vscode") {
+        const fullName = namespace === ".q" ? name : fname;
 
-      if (f instanceof Array) {
-        f.forEach((obj: any) => ext.functions.push(`${key}${obj}`));
-      }
-
-      if (t instanceof Array) {
-        t.forEach((obj: any) => ext.tables.push(`${key}${obj}`));
-      }
-
-      if (v instanceof Array) {
-        v = v.filter((x: any) => !t.includes(x));
-        v.forEach((obj: any) => ext.variables.push(`${key}${obj}`));
+        if (typeNum === 100) {
+          ext.functions.push(fullName);
+        } else if (typeNum === 98 || typeNum === 99) {
+          ext.tables.push(fullName);
+        } else if (typeNum < 98) {
+          ext.variables.push(fullName);
+        }
       }
     });
   }

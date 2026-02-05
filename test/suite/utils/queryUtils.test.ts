@@ -12,6 +12,8 @@
  */
 
 import * as assert from "assert";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as sinon from "sinon";
 
 import { ext } from "../../../src/extensionVariables";
@@ -398,6 +400,67 @@ describe("queryUtils", () => {
     it("should return Structured Text headers with timeout", () => {
       const res = queryUtils.getHeaders(30, "struct-text");
       assert.deepStrictEqual(res, { ...structTextHeaders, timeout: "30" });
+    });
+  });
+
+  describe("queryWrapper", () => {
+    let fakeFs: any;
+    let fakeContext: any;
+
+    beforeEach(() => {
+      fakeFs = {
+        readFileSync: sinon.stub(),
+      };
+      fakeContext = {
+        asAbsolutePath: sinon.stub(),
+      };
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return evaluatePy string when useApi and isPython are true", () => {
+      const result = queryUtils.queryWrapper(true, true);
+      assert.strictEqual(result, ".vscode.evaluatePy");
+      sinon.assert.notCalled(fakeFs.readFileSync);
+    });
+
+    it("should return evaluateQ string when useApi is true and isPython is false", () => {
+      const result = queryUtils.queryWrapper(false, true);
+      assert.strictEqual(result, ".vscode.evaluateQ");
+      sinon.assert.notCalled(fakeFs.readFileSync);
+    });
+
+    it("should read evaluatePy.q from disk when useApi is false and isPython is true", () => {
+      const mockPath = "/mock/path/evaluatePy.q";
+      const mockContent = "python_code";
+
+      fakeContext.asAbsolutePath.returns(mockPath);
+      fakeFs.readFileSync.withArgs(mockPath).returns(Buffer.from(mockContent));
+
+      const result = queryUtils.queryWrapper(false, false, fakeFs, fakeContext);
+
+      assert.strictEqual(result, mockContent);
+      sinon.assert.calledOnce(fakeFs.readFileSync);
+      sinon.assert.calledWith(fakeFs.readFileSync, mockPath);
+    });
+
+    it("should read evaluateQ.q from disk when both flags are false", () => {
+      const mockPath = "/mock/path/evaluateQ.q";
+      const mockContent = "q_code";
+
+      fakeContext.asAbsolutePath.returns(mockPath);
+      fakeFs.readFileSync.withArgs(mockPath).returns(Buffer.from(mockContent));
+
+      const result = queryUtils.queryWrapper(false, false, fakeFs, fakeContext);
+
+      assert.strictEqual(result, mockContent);
+      sinon.assert.calledOnce(fakeFs.readFileSync);
+      sinon.assert.calledWith(
+        fakeContext.asAbsolutePath,
+        path.join("resources", "q", "evaluateQ.q"),
+      );
     });
   });
 

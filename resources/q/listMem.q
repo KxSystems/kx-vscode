@@ -1,22 +1,22 @@
-// @overview
-// Build a tree of all items in memory.
-//
-// TODO this currently doesn't enumerate dictionary keys or table columns
-// TODO may want to mark views as special in some way?
-//
-// @param blacklist  {symbols} A list of namespaces to skip.
-//                             Good idea to provide at a minimum `.q`.Q`.h`.z`.o`.j`.m
-// @return {table (
-//  id        : int;
-//  pid       : int;
-//  name      : symbol;
-//  fname     : symbol;
-//  typeNum   : short;
-//  namespace : symbol;
-//  context   : symbol;
-//  isNs      : boolean
-//  )}
 {[blacklist]
+    // @overview
+    // Build a tree of all items in memory.
+    //
+    // TODO this currently doesn't enumerate dictionary keys or table columns
+    // TODO may want to mark views as special in some way?
+    //
+    // @param blacklist  {symbols} A list of namespaces to skip.
+    //                             Good idea to provide at a minimum `.q`.Q`.h`.z`.o`.j`.m
+    // @return {table (
+    //  id        : int;
+    //  pid       : int;
+    //  name      : symbol;
+    //  fname     : symbol;
+    //  typeNum   : short;
+    //  namespace : symbol;
+    //  context   : symbol;
+    //  isNs      : boolean
+    //  )}
     blacklist: raze blacklist;
     isNs: {[ns]
         chk: {[ns] $[` in key ns; $[(::)~ns `; 11h ~ type key ns; 0b]; 0b] };
