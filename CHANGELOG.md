@@ -2,6 +2,17 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.17.1
+
+### Fixes
+
+- Resolved an issue with telemetry reporting.
+- Added variable expansion for `.env` files.
+
+### Internal Improvements
+
+- Updated dependencies to address identified security vulnerabilities.
+
 # v1.17.0
 
 ### Enhancements
