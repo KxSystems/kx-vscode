@@ -26,6 +26,9 @@ export type QueryResult = {
     text: string;
     index: number;
   }[];
+
+  errorMsg?: string;
+  stacktrace?: string;
 };
 
 export enum QueryResultType {

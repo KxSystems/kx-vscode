@@ -500,7 +500,7 @@ export async function convertBase64License(
 }
 
 export function isTable(result: QueryResult): boolean {
-  if (!result.result || !result.meta || result.meta.length === 0) {
+  if (!result.data || !result.meta || result.meta.length === 0) {
     return false;
   }
   return true;

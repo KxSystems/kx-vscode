@@ -138,21 +138,22 @@ export class LocalConnection {
           args.push(
             context ?? ".",
             command,
+            null,
             stringify ? "text" : "structuredText",
           );
         }
         this.connection.k(wrapper, ...args, (err: Error, res: QueryResult) => {
           if (err) {
             reject(handleQueryResults(err.toString(), QueryResultType.Error));
-          } else if (res.errored) {
+          } else if (res.error) {
             resolve(
               handleQueryResults(
-                res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+                res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
                 QueryResultType.Error,
               ),
             );
           } else {
-            const result = res.result === null ? "" : res.result;
+            const result = res.data === null ? "" : res.data;
             if (stringify) {
               resolve(result);
             } else {
