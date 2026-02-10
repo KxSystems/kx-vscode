@@ -42,11 +42,7 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import {
-  getHeaders,
-  handleScratchpadTableRes,
-  handleWSResults,
-} from "../utils/queryUtils";
+import { getHeaders } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
@@ -779,15 +775,6 @@ export class InsightsConnection {
                 response.data = JSON.parse(
                   response.data.data,
                 ) as StructuredTextResults;
-              } else {
-                const buffer = new Uint8Array(
-                  response.data.data.map((x: string) => parseInt(x, 16)),
-                ).buffer;
-
-                response.data.data = handleWSResults(buffer, isTableView);
-                response.data.data = handleScratchpadTableRes(
-                  response.data.data,
-                );
               }
             }
             return response.data;

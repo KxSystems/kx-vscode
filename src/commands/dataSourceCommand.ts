@@ -45,9 +45,6 @@ import {
   addQueryHistory,
   convertRows,
   getQSQLWrapper,
-  handleScratchpadTableRes,
-  handleWSError,
-  handleWSResults,
 } from "../utils/queryUtils";
 import { updatedExtractRowData } from "../utils/resultsRenderer";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
@@ -333,9 +330,6 @@ export async function runApiDataSource(
     return parseError(apiCall.error);
   } else if (apiCall?.results) {
     return apiCall.results;
-  } else if (apiCall?.arrayBuffer) {
-    const results = handleWSResults(apiCall.arrayBuffer);
-    return handleScratchpadTableRes(results);
   } else {
     return { error: "Datasource API call failed" };
   }
@@ -448,9 +442,6 @@ export async function runQsqlDataSource(
     return parseError(qsqlCall.error);
   } else if (qsqlCall?.results) {
     return qsqlCall.results;
-  } else if (qsqlCall?.arrayBuffer) {
-    const results = handleWSResults(qsqlCall.arrayBuffer, isTableView);
-    return handleScratchpadTableRes(results);
   } else {
     return { error: "Datasource QSQL call failed" };
   }
@@ -475,9 +466,6 @@ export async function runSqlDataSource(
     return parseError(sqlCall.error);
   } else if (sqlCall?.results) {
     return sqlCall.results;
-  } else if (sqlCall?.arrayBuffer) {
-    const results = handleWSResults(sqlCall.arrayBuffer, isTableView);
-    return handleScratchpadTableRes(results);
   } else {
     return { error: "Datasource SQL call failed" };
   }
@@ -518,9 +506,6 @@ export async function executeUDARequest(
     return parseError(udaCall.error);
   } else if (udaCall?.results) {
     return udaCall.results;
-  } else if (udaCall?.arrayBuffer) {
-    const results = handleWSResults(udaCall.arrayBuffer);
-    return handleScratchpadTableRes(results);
   } else {
     return { error: "UDA call failed" };
   }
@@ -544,17 +529,13 @@ export function getQuery(
 }
 
 export function parseError(error: GetDataError) {
-  if (error instanceof Object && error.buffer) {
-    return handleWSError(error.buffer);
-  } else {
-    notify(`Datasource error.`, MessageKind.DEBUG, {
-      logger,
-      params: error,
-    });
-    return {
-      error,
-    };
-  }
+  notify(`Datasource error.`, MessageKind.DEBUG, {
+    logger,
+    params: error,
+  });
+  return {
+    error,
+  };
 }
 
 export function getPartialDatasourceFile(
