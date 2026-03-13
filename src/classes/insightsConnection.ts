@@ -15,6 +15,7 @@ import axios, { AxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
 import { CancellationToken } from "vscode-languageclient";
+import { WebSocket } from "ws";
 
 import { ext } from "../extensionVariables";
 import {
@@ -41,6 +42,7 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
+import { ExecutionConsole } from "../utils/executionConsole";
 import { MessageKind, notify } from "../utils/notifications";
 import { getHeaders } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
@@ -57,6 +59,7 @@ export class InsightsConnection {
   public apiConfig?: InsightsApiConfig;
   public insightsVersion?: number;
   public connEndpoints?: InsightsEndpoints;
+  public ws: WebSocket | null = null;
 
   constructor(connLabel: string, node: InsightsNode) {
     this.connected = false;
@@ -76,10 +79,74 @@ export class InsightsConnection {
     return this.connected;
   }
 
+  closeWebsocket(): void {
+    if (this.ws) {
+      this.ws?.close();
+      this.ws = null;
+    }
+  }
+
+  private connectWebsocket(token: IToken) {
+    if (this.connEndpoints) {
+      const wsUrl = new url.URL(
+        this.connEndpoints.scratchpad.websocket,
+        this.node.details.server.replace(/^http(s?):\/\//, "ws$1://"),
+      );
+
+      if (wsUrl && (!this.ws || this.ws.CLOSED)) {
+        this.ws = new WebSocket(wsUrl.toString(), {
+          headers: {
+            Authorization: `Bearer ${token.accessToken}`,
+          },
+        });
+
+        this.ws.onerror = (data) => {
+          notify(`Websocket error: ${data.message}`, MessageKind.ERROR, {
+            logger,
+          });
+        };
+
+        this.ws.onmessage = ({ data }) => {
+          const queryConsole = ExecutionConsole.start();
+
+          const msgString = data.toString();
+          const msg = JSON.parse(msgString);
+
+          msg.data.forEach(
+            ({
+              handle,
+              value,
+            }: {
+              handle: "STDERR" | "STDOUT";
+              value: string;
+            }) => {
+              if (handle === "STDERR") {
+                queryConsole.appendStdErr(value);
+              } else if (handle === "STDOUT") {
+                queryConsole.appendStdOut(value);
+              }
+            },
+          );
+        };
+      }
+    }
+  }
+
   public disconnect(): boolean {
     ext.context.secrets.delete(this.node.details.alias);
     this.connected = false;
     return this.connected;
+  }
+
+  public async setActive() {
+    const token = await this.getTokens();
+    if (token) {
+      this.connectWebsocket(token);
+    }
+  }
+
+  public setInactive() {
+    this.closeWebsocket();
   }
 
   public update() {
@@ -288,6 +355,7 @@ export class InsightsConnection {
       importUDA: "scratchpadmanager/scratchpad/import/uda",
       cancel: "scratchpadmanager/scratchpad/cancel",
       reset: "scratchpadmanager/reset",
+      websocket: "scratchpadmanager/websocket",
     };
 
     const getVersionGroup = (): string => {
