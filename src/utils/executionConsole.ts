@@ -211,10 +211,12 @@ export class ExecutionConsole {
   }
 
   public appendStdErr(message: string): void {
-    this._console.appendLine("STDERR: " + message);
+    this._console.appendLine("❌");
+    this._console.appendLine(message);
   }
 
   public appendStdOut(message: string): void {
-    this._console.appendLine("STDOUT: " + message);
+    this._console.appendLine("ℹ️");
+    this._console.appendLine(message);
   }
 }

@@ -230,7 +230,8 @@ describe("executionConsole", () => {
 
         queryConsole.appendStdErr(testMsg);
 
-        assert.ok(appendLineSpy.calledWith("STDERR: " + testMsg));
+        assert.ok(appendLineSpy.calledWith("❌"));
+        assert.ok(appendLineSpy.calledWith(testMsg));
         appendLineSpy.restore();
       });
     });
@@ -242,7 +243,8 @@ describe("executionConsole", () => {
 
         queryConsole.appendStdOut(testMsg);
 
-        assert.ok(appendLineSpy.calledWith("STDOUT: " + testMsg));
+        assert.ok(appendLineSpy.calledWith("ℹ️"));
+        assert.ok(appendLineSpy.calledWith(testMsg));
         appendLineSpy.restore();
       });
     });
