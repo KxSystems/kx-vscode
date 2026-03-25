@@ -1,6 +1,6 @@
 feature removeExtraIndents
     before
-        .test.src: "\n" sv read0 `:resources/evaluatePy.q;
+        .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
             0i (.test.src; isString; code; "first"; 10000)
             };
@@ -79,7 +79,7 @@ feature removeExtraIndents
 feature evaluatePy 1
     // These are the tests from the scratchpad repo
     before
-        .test.src: "\n" sv read0 `:resources/evaluatePy.q;
+        .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
             0i (.test.src; isString; code; "first"; 10000)
             };
@@ -234,7 +234,7 @@ feature evaluatePy 1
 feature evaluatePy 2
     // These are the tests specific to the VS Code extension
     before
-        .test.src: "\n" sv read0 `:resources/evaluatePy.q;
+        .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
             0i (.test.src; isString; code; "first"; 10000)
             };
@@ -296,7 +296,7 @@ feature python toStructuredText
         .pykx.pyexec "from datetime import datetime";
         .pykx.pyexec "from collections import namedtuple";
         .pykx.pyexec "import traceback";
-        .test.src: "\n" sv read0 `:resources/evaluatePy.q;
+        .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
             0i (.test.src; isString; code; "first"; 10000)
             };

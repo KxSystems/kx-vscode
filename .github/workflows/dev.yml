@@ -69,6 +69,8 @@ jobs:
   q-api:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
     - run: node build-api.js
     - uses: actions/upload-artifact@v4
       with:
