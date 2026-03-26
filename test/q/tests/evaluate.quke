@@ -1,6 +1,6 @@
 feature EDI
     before
-        .test.src: "\n" sv read0 `:resources/q/evaluate.q;
+        .test.src: "\n" sv read0 `:resources/q/evaluateQ.q;
         .test.evaluate: {[ctx; code; sampleFn; returnFormat]
             0i (.test.src; ctx; code; sampleFn; returnFormat)
             };
@@ -168,7 +168,7 @@ feature EDI
 
 feature toStructuredText
     before
-        .test.src: "\n" sv read0 `:resources/q/evaluate.q;
+        .test.src: "\n" sv read0 `:resources/q/evaluateQ.q;
         .test.evaluate: {[ctx; code; sampleFn; returnFormat]
             0i (.test.src; ctx; code; sampleFn; returnFormat)
             };
