@@ -209,4 +209,14 @@ export class ExecutionConsole {
   public appendQueryDebug(msg: string) {
     this._console.appendLine(msg);
   }
+
+  public appendStdErr(message: string): void {
+    this._console.appendLine("❌");
+    this._console.appendLine(message);
+  }
+
+  public appendStdOut(message: string): void {
+    this._console.appendLine("ℹ️");
+    this._console.appendLine(message);
+  }
 }
