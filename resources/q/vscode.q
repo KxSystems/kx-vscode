@@ -25,4 +25,4 @@ evaluateQ: {[args]
         .vscode.customQEvaluator;
         {[args] .vscode.i.formatQ[args] .vscode.i.evaluateQ args}];
     evaluator args
-}s
+}
