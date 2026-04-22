@@ -101,9 +101,13 @@ export class LocalConnection {
         this.connection = conn;
         this.connected = true;
 
-        this.connection?.k(".vscode.getManifest", (err, result) => {
-          this.setUseApi(err, !!result);
+        this.connection?.k("123", (err, result) => {
+          this.setUseApi(err, !result);
         });
+
+        // this.connection?.k(".vscode.getManifest", (err, result) => {
+        //   this.setUseApi(err, !!result);
+        // });
 
         resolve(conn);
       });
@@ -253,12 +257,12 @@ export class LocalConnection {
 
   private updateGlobal() {
     const globalQuery = this.useApi
-      ? ".vscode.listMem[]"
+      ? ".vscode.listMem"
       : readFileSync(
           ext.context.asAbsolutePath(join("resources", "q", "listMem.q")),
         ).toString();
 
-    this.connection?.k(globalQuery, (err, result) => {
+    this.connection?.k(globalQuery, null, (err, result) => {
       if (err) {
         notify("Failed to retrieve kdb+ global variables.", MessageKind.ERROR, {
           logger,
