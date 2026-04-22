@@ -101,13 +101,23 @@ export class LocalConnection {
         this.connection = conn;
         this.connected = true;
 
+        // Test if arbitrary strings can be executed
         this.connection?.k("123", (err, result) => {
-          this.setUseApi(err, !result);
+          if (!err) {
+            this.setUseApi(err, false);
+          } else {
+            this.connection?.k(".vscode.getManifest", null, (err, result) => {
+              if (!err) {
+                this.setUseApi(err, true);
+              } else {
+                notify("Failed to check security settings", MessageKind.ERROR, {
+                  logger,
+                  params: err,
+                });
+              }
+            });
+          }
         });
-
-        // this.connection?.k(".vscode.getManifest", (err, result) => {
-        //   this.setUseApi(err, !!result);
-        // });
 
         resolve(conn);
       });
@@ -115,14 +125,6 @@ export class LocalConnection {
   }
 
   public setUseApi(err: Error | undefined, result: boolean): void {
-    if (err) {
-      notify("Failed to check security settings", MessageKind.ERROR, {
-        logger,
-        params: err,
-      });
-      return;
-    }
-
     if (result) {
       this.useApi = true;
     }
