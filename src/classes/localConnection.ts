@@ -102,36 +102,39 @@ export class LocalConnection {
         this.connected = true;
 
         this.connection?.k(".vscode.getManifest", (err, result) => {
-          if (err) {
-            notify("Failed to check security settings", MessageKind.ERROR, {
-              logger,
-              params: err,
-            });
-            return;
-          }
-
-          if (result) {
-            this.useApi = true;
-          }
-
-          this.update();
-
-          notify(
-            (result
-              ? ".vscode namespace found, using functions"
-              : ".vscode namespace not found, using lambdas") +
-              ` on ${this.connLabel}`,
-            MessageKind.DEBUG,
-            {
-              logger,
-              params: err,
-            },
-          );
+          this.setUseApi(err, !!result);
         });
 
         resolve(conn);
       });
     });
+  }
+
+  public setUseApi(err: Error | undefined, result: boolean): void {
+    if (err) {
+      notify("Failed to check security settings", MessageKind.ERROR, {
+        logger,
+        params: err,
+      });
+      return;
+    }
+
+    if (result) {
+      this.useApi = true;
+    }
+
+    this.update();
+
+    notify(
+      (result
+        ? ".vscode namespace found, using functions"
+        : ".vscode namespace not found, using lambdas") +
+        ` on ${this.connLabel}`,
+      MessageKind.DEBUG,
+      {
+        logger,
+      },
+    );
   }
 
   public disconnect(): void {
