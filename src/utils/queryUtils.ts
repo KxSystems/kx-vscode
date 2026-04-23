@@ -41,16 +41,31 @@ export function queryWrapper(
   context = ext.context,
 ): string {
   if (useAPI) {
-    return isPython ? ".vscode.evaluatePy" : ".vscode.evaluateQ";
+    return isPython ? ".vscode.runPyQuery" : ".vscode.runQQuery";
   }
 
-  return filesystem
-    .readFileSync(
-      context.asAbsolutePath(
-        join("resources", "q", isPython ? "evaluatePy.q" : "evaluateQ.q"),
-      ),
-    )
+  if (isPython) {
+    return filesystem
+      .readFileSync(
+        context.asAbsolutePath(join("resources", "q", "evaluatePy.q")),
+      )
+      .toString();
+  }
+
+  const evaluateQ = filesystem
+    .readFileSync(context.asAbsolutePath(join("resources", "q", "evaluateQ.q")))
     .toString();
+
+  const formatQ = filesystem
+    .readFileSync(context.asAbsolutePath(join("resources", "q", "formatQ.q")))
+    .toString();
+
+  // NOTE - There needs to be a space before the semicolon, since these files end in newlines
+  return `{[args]
+    evaluateQ: ${evaluateQ} ;
+    formatQ: ${formatQ} ;
+    formatQ[args; evaluateQ args]
+    }`;
 }
 
 export function addIndexKey(input: any) {

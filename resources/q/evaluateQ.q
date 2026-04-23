@@ -1,7 +1,6 @@
 {[args]
   ctx:args`ctx;
   code:args`code;
-  returnFormat:args`returnFormat;
 
   if [`histogram in key `.qp;
   if [not `display2 in key `.qp; 
