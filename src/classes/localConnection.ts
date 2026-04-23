@@ -29,9 +29,13 @@ export class LocalConnection {
   public connected: boolean;
   public connLabel: string;
   public labels: string[];
+
+  // When useAPI is false, the remote q process supports running any arbitrary q string.
+  // When useAPI is true, the remote q process only supports calls to named functions,
+  // and the extension can only rely on calling those functions predefined in the vscode.q library
+  public useAPI: boolean;
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
-  private useApi: boolean;
 
   constructor(
     connectionString: string,
@@ -72,7 +76,7 @@ export class LocalConnection {
     this.labels = labels;
     this.options = options;
     this.connected = false;
-    this.useApi = false;
+    this.useAPI = false;
   }
 
   public getConnection(): nodeq.Connection | undefined {
@@ -104,11 +108,11 @@ export class LocalConnection {
         // Test if arbitrary strings can be executed
         this.connection?.k("123", (err, result) => {
           if (!err) {
-            this.setUseApi(err, false);
+            this.setUseAPI(err, false);
           } else {
             this.connection?.k(".vscode.getManifest", null, (err, result) => {
               if (!err) {
-                this.setUseApi(err, true);
+                this.setUseAPI(err, true);
               } else {
                 notify("Failed to check security settings", MessageKind.ERROR, {
                   logger,
@@ -124,9 +128,9 @@ export class LocalConnection {
     });
   }
 
-  public setUseApi(err: Error | undefined, result: boolean): void {
+  public setUseAPI(err: Error | undefined, result: boolean): void {
     if (result) {
-      this.useApi = true;
+      this.useAPI = true;
     }
 
     this.update();
@@ -165,7 +169,7 @@ export class LocalConnection {
     return new Promise((resolve, reject) => {
       if (this.connection) {
         const args: any[] = [];
-        const wrapper = queryWrapper(!!isPython, this.useApi);
+        const wrapper = queryWrapper(!!isPython, this.useAPI);
         if (isPython) {
           args.push(
             stringify ? "text" : "structuredText",
@@ -235,7 +239,7 @@ export class LocalConnection {
 
     let code;
 
-    if (this.useApi) {
+    if (this.useAPI) {
       code = ".vscode.listMem";
     } else {
       const script = readFileSync(
@@ -259,7 +263,7 @@ export class LocalConnection {
   }
 
   private updateGlobal() {
-    const globalQuery = this.useApi
+    const globalQuery = this.useAPI
       ? ".vscode.listMem"
       : readFileSync(
           ext.context.asAbsolutePath(join("resources", "q", "listMem.q")),
@@ -310,7 +314,7 @@ export class LocalConnection {
   }
 
   private updateReservedKeywords() {
-    const reservedQuery = this.useApi ? ".vscode.reservedWords" : "{.Q.res}";
+    const reservedQuery = this.useAPI ? ".vscode.reservedWords" : "{.Q.res}";
     this.connection?.k(reservedQuery, null, (err, result) => {
       if (err) {
         notify(

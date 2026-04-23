@@ -11,7 +11,7 @@
 // "1+2"
 // ({x+y}; 1; 2)
 
-allowedNames: (".vscode.getManifest"; ".vscode.listMem"; ".vscode.evaluateQ"; ".vscode.reservedWords");
+allowedNames: ".vscode.",/:string key[.vscode] except ``i;
 
 isVariable: {(first[x] in .Q.a,.Q.n,".") and (all 1 _ x in .Q.an,".") and not x ~ enlist "."};
 

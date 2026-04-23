@@ -36,11 +36,11 @@ export function sanitizeQuery(query: string): string {
 
 export function queryWrapper(
   isPython: boolean,
-  useApi: boolean,
+  useAPI: boolean,
   filesystem = realFs,
   context = ext.context,
 ): string {
-  if (useApi) {
+  if (useAPI) {
     return isPython ? ".vscode.evaluatePy" : ".vscode.evaluateQ";
   }
 

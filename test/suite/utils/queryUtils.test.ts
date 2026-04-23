@@ -420,19 +420,19 @@ describe("queryUtils", () => {
       sinon.restore();
     });
 
-    it("should return evaluatePy string when useApi and isPython are true", () => {
+    it("should return evaluatePy string when useAPI and isPython are true", () => {
       const result = queryUtils.queryWrapper(true, true);
       assert.strictEqual(result, ".vscode.evaluatePy");
       sinon.assert.notCalled(fakeFs.readFileSync);
     });
 
-    it("should return evaluateQ string when useApi is true and isPython is false", () => {
+    it("should return evaluateQ string when useAPI is true and isPython is false", () => {
       const result = queryUtils.queryWrapper(false, true);
       assert.strictEqual(result, ".vscode.evaluateQ");
       sinon.assert.notCalled(fakeFs.readFileSync);
     });
 
-    it("should read evaluatePy.q from disk when useApi is false and isPython is true", () => {
+    it("should read evaluatePy.q from disk when useAPI is false and isPython is true", () => {
       const mockPath = "/mock/path/evaluatePy.q";
       const mockContent = "python_code";
 

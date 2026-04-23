@@ -103,7 +103,7 @@ export class KdbTreeService {
   }
 
   static async loadViews(conn: LocalConnection): Promise<string[]> {
-    const code = this.useApi ? ".vscode.getViews" : "views";
+    const code = conn.useAPI ? ".vscode.getViews" : "views";
     const rawViewArray = await conn.executeQueryRaw(code, [null]);
     const views = rawViewArray?.filter((item: any) => {
       return item !== "s#" && item !== "" && item !== ",";
