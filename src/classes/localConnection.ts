@@ -309,8 +309,8 @@ export class LocalConnection {
   }
 
   private updateReservedKeywords() {
-    const reservedQuery = ".Q.res";
-    this.connection?.k(reservedQuery, (err, result) => {
+    const reservedQuery = this.useApi ? ".vscode.reservedWords" : "{.Q.res}";
+    this.connection?.k(reservedQuery, null, (err, result) => {
       if (err) {
         notify(
           "Failed to retrieve kdb+ reserved keywords.",
