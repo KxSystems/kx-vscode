@@ -194,10 +194,10 @@ export class LocalConnection {
         (err: Error, res: QueryResult) => {
           if (err) {
             reject(handleQueryResults(err.toString(), QueryResultType.Error));
-          } else if (res.errored) {
+          } else if (res.error) {
             resolve(
               handleQueryResults(
-                res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+                res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
                 QueryResultType.Error,
               ),
             );
