@@ -213,10 +213,10 @@ export class LocalConnection {
     });
   }
 
-  public async executeQueryRaw(command: string): Promise<any> {
+  public async executeQueryRaw(code: string, args: any[]): Promise<any> {
     return new Promise((resolve, reject) => {
       if (this.connection) {
-        this.connection.k(command, (err: Error, res: any) => {
+        this.connection.k(code, ...args, (err: Error, res: any) => {
           if (err) reject(err);
           else resolve(res || "");
         });
@@ -233,18 +233,19 @@ export class LocalConnection {
       return new Array<ServerObject>();
     }
 
-    let cc;
+    let code;
 
     if (this.useApi) {
-      cc = ".vscode.listMem[]";
+      code = ".vscode.listMem";
     } else {
       const script = readFileSync(
         ext.context.asAbsolutePath(join("resources", "q", "listMem.q")),
       ).toString();
-      cc = "\n" + script + "(::)";
+      // TODO why is this newline added?
+      code = "\n" + script;
     }
 
-    const result = await this.executeQueryRaw(cc);
+    const result = await this.executeQueryRaw(code, [null]);
 
     if (result !== undefined) {
       const result2: ServerObject[] = (0, eval)(result);
