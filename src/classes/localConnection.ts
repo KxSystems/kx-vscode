@@ -91,9 +91,9 @@ export class LocalConnection {
           ext.serverProvider.reload();
           this.connection = undefined;
           this.connected = false;
-          reject(err);
-          return;
+          return reject(err);
         }
+
         conn.addListener("close", () => {
           commands.executeCommand("kdb.connections.disconnect", this.connLabel);
           notify(
@@ -102,28 +102,32 @@ export class LocalConnection {
             { logger },
           );
         });
+
         this.connection = conn;
         this.connected = true;
 
         // Test if arbitrary strings can be executed
+        // TODO remove result from these functions, and err from setUseAPI
         this.connection?.k("123", (err, result) => {
           if (!err) {
             this.setUseAPI(err, false);
-          } else {
-            this.connection?.k(".vscode.getManifest", null, (err, result) => {
-              if (!err) {
-                this.setUseAPI(err, true);
-              } else {
-                notify("Failed to check security settings", MessageKind.ERROR, {
-                  logger,
-                  params: err,
-                });
-              }
-            });
+            return resolve(conn);
           }
-        });
 
-        resolve(conn);
+          // Test if vscode library functions are present and can be called
+          this.connection?.k(".vscode.getManifest", null, (err, result) => {
+            if (!err) {
+              this.setUseAPI(err, true);
+            } else {
+              notify("Failed to check security settings", MessageKind.ERROR, {
+                logger,
+                params: err,
+              });
+            }
+
+            resolve(conn);
+          });
+        });
       });
     });
   }
@@ -167,64 +171,60 @@ export class LocalConnection {
     isPython?: boolean,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
-      if (this.connection) {
-        const args: any[] = [];
-        const wrapper = queryWrapper(!!isPython, this.useAPI);
-        if (isPython) {
-          args.push(
-            stringify ? "text" : "structuredText",
-            command,
-            "first",
-            10000,
-          );
-        } else {
-          args.push(
-            context ?? ".",
-            command,
-            null,
-            stringify ? "text" : "structuredText",
-          );
-        }
-        this.connection.k(
-          wrapper,
-          {
-            ctx: context ?? ".",
-            code: command,
-            returnFormat: stringify ? "text" : "structuredText",
-          },
-          (err: Error, res: QueryResult) => {
-            if (err) {
-              reject(handleQueryResults(err.toString(), QueryResultType.Error));
-            } else if (res.errored) {
-              resolve(
-                handleQueryResults(
-                  res.error + (res.backtrace ? "\n" + res.backtrace : ""),
-                  QueryResultType.Error,
-                ),
-              );
+      if (!this.connection) {
+        return reject(new Error("Not connected."));
+      }
+
+      const args: any[] = [];
+      const wrapper = queryWrapper(!!isPython, this.useAPI);
+      const returnType = stringify ? "text" : "structuredText";
+      if (isPython) {
+        args.push(returnType, command, "first", 10000);
+      } else {
+        args.push(context ?? ".", command, null, returnType);
+      }
+
+      this.connection.k(
+        wrapper,
+        {
+          ctx: context ?? ".",
+          code: command,
+          returnFormat: stringify ? "text" : "structuredText",
+        },
+        (err: Error, res: QueryResult) => {
+          if (err) {
+            reject(handleQueryResults(err.toString(), QueryResultType.Error));
+          } else if (res.errored) {
+            resolve(
+              handleQueryResults(
+                res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+                QueryResultType.Error,
+              ),
+            );
+          } else {
+            const result = res.data === null ? "" : res.data;
+            if (stringify) {
+              resolve(result);
             } else {
-              const result = res.data === null ? "" : res.data;
-              if (stringify) {
-                resolve(result);
-              } else {
-                resolve(JSON.parse(result));
-              }
+              resolve(JSON.parse(result));
             }
-            this.updateGlobal();
-          },
-        );
-      } else reject(new Error("Not connected."));
+          }
+          this.updateGlobal();
+        },
+      );
     });
   }
 
   public async executeQueryRaw(code: string, args: any[]): Promise<any> {
     return new Promise((resolve, reject) => {
-      if (this.connection) {
-        this.connection.k(code, ...args, (err: Error, res: any) => {
-          if (err) reject(err);
-          else resolve(res || "");
-        });
-      } else reject(new Error("Not connected."));
+      if (!this.connection) {
+        return reject(new Error("Not connected."));
+      }
+
+      this.connection.k(code, ...args, (err: Error, res: any) => {
+        if (err) reject(err);
+        else resolve(res || "");
+      });
     });
   }
 
