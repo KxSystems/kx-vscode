@@ -1294,6 +1294,7 @@
     "@microsoft/applicationinsights-channel-js": "3.3.11",
     "@microsoft/applicationinsights-common": "3.3.11",
     "@microsoft/applicationinsights-web-basic": "3.3.11",
-    "lodash-es": ">=4.18.0"
+    "lodash-es": ">=4.18.0",
+    "serialize-javascript": ">=7.0.5"
   }
 }
