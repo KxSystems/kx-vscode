@@ -159,6 +159,14 @@ export class LocalConnection {
     }
   }
 
+  public async setActive() {
+    // noop
+  }
+
+  public setInactive() {
+    // noop
+  }
+
   public update(): void {
     this.updateGlobal();
     this.updateReservedKeywords();

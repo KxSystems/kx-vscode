@@ -17,6 +17,7 @@ import * as url from "url";
 import { CancellationToken } from "vscode-languageclient";
 
 import { ext } from "../extensionVariables";
+import { ScratchpadLogger } from "./scratchpadLogger";
 import {
   InsightsApiConfig,
   InsightsConfig,
@@ -57,6 +58,7 @@ export class InsightsConnection {
   public apiConfig?: InsightsApiConfig;
   public insightsVersion?: number;
   public connEndpoints?: InsightsEndpoints;
+  private scratchpadLogger?: ScratchpadLogger;
 
   constructor(connLabel: string, node: InsightsNode) {
     this.connected = false;
@@ -80,6 +82,25 @@ export class InsightsConnection {
     ext.context.secrets.delete(this.node.details.alias);
     this.connected = false;
     return this.connected;
+  }
+
+  public async setActive() {
+    if (
+      this.insightsVersion &&
+      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.18)
+    ) {
+      if (!this.scratchpadLogger) {
+        this.scratchpadLogger = new ScratchpadLogger(this.node.details);
+      }
+
+      this.scratchpadLogger.connect();
+    }
+  }
+
+  public setInactive() {
+    if (this.scratchpadLogger) {
+      this.scratchpadLogger.disconnect();
+    }
   }
 
   public update() {
@@ -288,6 +309,7 @@ export class InsightsConnection {
       importUDA: "scratchpadmanager/scratchpad/import/uda",
       cancel: "scratchpadmanager/scratchpad/cancel",
       reset: "scratchpadmanager/reset",
+      websocket: "scratchpadmanager/websocket",
     };
 
     const getVersionGroup = (): string => {

@@ -198,9 +198,16 @@ export class ConnectionManagementService {
     ]);
     notify("Connection activated.", MessageKind.DEBUG, { logger });
     commands.executeCommand("setContext", "kdb.pythonEnabled", true);
+
+    if (ext.activeConnection) {
+      ext.activeConnection.setInactive();
+    }
+
     ext.activeConnection = connection;
     ext.connectionNode = node;
     ext.serverProvider.reload();
+
+    ext.activeConnection.setActive();
   }
 
   public disconnect(connLabel: string): void {
@@ -303,6 +310,7 @@ export class ConnectionManagementService {
       ext.connectedContextStrings,
     );
     if (ext.activeConnection === connection) {
+      ext.activeConnection.setInactive();
       ext.activeConnection = undefined;
       ext.connectionNode = undefined;
       commands.executeCommand("setContext", "kdb.connected.active", false);
