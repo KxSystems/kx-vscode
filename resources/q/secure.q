@@ -1,5 +1,7 @@
-// A file to mimic a locked-down process
-\l resources/q/vscode.q
+// A file to mimic a locked-down process.
+// This is for testing only, and is not sufficient to secure a production process
+
+// \l resources/q/vscode.q
 
 \d .secure
 
@@ -11,11 +13,13 @@
 // "1+2"
 // ({x+y}; 1; 2)
 
-allowedNames: ".vscode.",/:string key[.vscode] except ``i;
+allowedNames: $[`vscode in key `;
+    ".vscode.",/:string key[.vscode] except ``i;
+    ()];
 
 isVariable: {(first[x] in .Q.a,.Q.n,".") and (all 1 _ x in .Q.an,".") and not x ~ enlist "."};
 
-handleIPC:{[request]
+handleIPC: {[request]
     if [type[request] <> 0h;
         ' "Only calls to named functions are allowed"];
     

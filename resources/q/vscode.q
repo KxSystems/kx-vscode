@@ -1,18 +1,13 @@
-// The default q IPC handler is value, so a remote process can be passed strings, symbols, function calls
-// 0i "two: 1 + 1"
-// 0i `two
-// 0i (`add; 1; 2)
-// or other types, as covered here https://code.kx.com/q/ref/value/#value
-
-// To secure remote processes, inputs should be limited to function calls, such as 0i (`add; 1; 2)
+// To secure remote processes, IPC calls are often limited to calls to named functions, e.g. 0i (`add; 1; 2)
 // where the function and arguments can be validated before execution.
 
-// Since the VS Code extension allows user to execute arbitrary strings,
-// there needs to be a function to execute the expression and format the results,
-// while allowing the remote process owner to limit which expressions can be run.
+// This extension will normally send requests over as a lambda and its arguments,
+// but to support connecting to processes which only allow calls to named functions,
+// these functions must already exist in that process. This file defines all the functions required by the extension.
 
-// .vscode.evaluateQ and .vscode.evaluatePy evaluate q and Python respsectively.
-// These can be modified by the process owner to enforce any restrictions.
+// Since the VS Code extension allows user to execute arbitrary strings,
+// there exists a hook .vscode.customQEvaluator which can be defined to take over execution of requests from the extension,
+// allowing requests to be rejected, modified, or to allow processing of the result.
 
 // The public API that must be allowed for IPC calls is any function in .vscode, except those under .vscode.i
 \d .vscode
@@ -33,7 +28,7 @@ i.evaluateQ: //{{resources/q/evaluateQ.q}}
 i.formatQ: //{{resources/q/formatQ.q}}
 
 i.evaluatePy: {[args]
-    // TBD This is going to me more complicated, since the result formatting is tightly integrated with the Python code evaluation
+    // TBD
     }
 i.formatPy: {[args]
     // TBD
