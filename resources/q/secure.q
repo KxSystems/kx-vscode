@@ -16,10 +16,10 @@ allowedNames: ".vscode.",/:string key[.vscode] except ``i;
 isVariable: {(first[x] in .Q.a,.Q.n,".") and (all 1 _ x in .Q.an,".") and not x ~ enlist "."};
 
 handleIPC:{[request]
-    // Rule: Expressions (e.g. "1+1" or `$"func[]"), either as strings or symbols, are Administrator only
     if [type[request] <> 0h;
         ' "Only calls to named functions are allowed"];
     
+    // Normalize function names to strings
     funcName: first request;
     if [type[first request] ~ -11h;
         funcName: string funcName];
@@ -36,6 +36,4 @@ handleIPC:{[request]
     : value request;
     }
 
-
-// TODO: We must make it clear that to use this feature, if they have their own .z.ps and .z.pg, they need to have it call .vscode.handleIncoming
 .z.pg: .z.ps: .secure.handleIPC;

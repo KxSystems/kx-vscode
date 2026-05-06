@@ -43,12 +43,12 @@ listMem: //{{resources/q/listMem.q}}
 
 // entrypoint for IPC calls
 // This is the function that the remote process owner needs to mark as allowed
-evaluateQ: {[args]
+runQQuery: {[args]
     // TODO document the properties of args, so people know how to write customQEvaluator functions
     // args contains `ctx and `code, and non-public properties for formatting the results
     
     cachedContext: string system "d";
-    system "d " , args`context;
+    system "d " , args`ctx;
 
     evaluator: $[`customQEvaluator in key .vscode;
         {@[.vscode.customQEvaluator; x; {`data`error`errorMsg!(::; 1b; x)}]};
@@ -60,7 +60,7 @@ evaluateQ: {[args]
 
     result
     }
-1
+
 // Here's an example of a .vscode.customQEvaluator function
 // args contains `ctx and `code, and non-public properties for formatting the results
 // .vscode.customQEvaluator: {[args]
