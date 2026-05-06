@@ -56,8 +56,10 @@ runQQuery: {[args]
     result
     }
 
-// Here's an example of a .vscode.customQEvaluator function
-// args contains `ctx and `code, and non-public properties for formatting the results
+// Here's an example of a .vscode.customQEvaluator function that rejects invalid queries, and filters the results.
+// It is not intended as an example of how to write a secure .vscode.customQEvaluator.
+// secure-processes.md has more details.
+//
 // .vscode.customQEvaluator: {[args]
 //     tree: parse args`expression;
 //

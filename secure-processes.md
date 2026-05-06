@@ -71,4 +71,5 @@ The context will already be set, using the context in args`context
      }
 ```
 
-It's the responsibility of the process owner to ensure .vscode.customQEvaluator prevents overwriting .z.pg, .z.pg, or .vscode.customQEvaluator
+It's the responsibility of the process owner to ensure .vscode.customQEvaluator is secured,
+e.g. prevents overwriting .z.pg, .z.pg, or .vscode.customQEvaluator
