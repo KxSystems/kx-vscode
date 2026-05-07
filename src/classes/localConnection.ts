@@ -108,14 +108,14 @@ export class LocalConnection {
 
         // Test if arbitrary strings can be executed
         // TODO remove result from these functions, and err from setUseAPI
-        this.connection?.k("123", (err, result) => {
+        this.connection?.k("123", (err) => {
           if (!err) {
             this.setUseAPI(err, false);
             return resolve(conn);
           }
 
           // Test if vscode library functions are present and can be called
-          this.connection?.k(".vscode.getManifest", null, (err, result) => {
+          this.connection?.k(".vscode.getManifest", null, (err) => {
             if (!err) {
               this.setUseAPI(err, true);
             } else {
@@ -183,14 +183,7 @@ export class LocalConnection {
         return reject(new Error("Not connected."));
       }
 
-      const args: any[] = [];
       const wrapper = queryWrapper(!!isPython, this.useAPI);
-      const returnType = stringify ? "text" : "structuredText";
-      if (isPython) {
-        args.push(returnType, command, "first", 10000);
-      } else {
-        args.push(context ?? ".", command, null, returnType);
-      }
 
       this.connection.k(
         wrapper,
@@ -198,6 +191,9 @@ export class LocalConnection {
           ctx: context ?? ".",
           code: command,
           returnFormat: stringify ? "text" : "structuredText",
+          // TODO why are these null when evaluating q?
+          sampleFn: isPython ? "first" : null,
+          sampleSize: isPython ? 10000 : null,
         },
         (err: Error, res: QueryResult) => {
           if (err) {
