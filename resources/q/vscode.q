@@ -46,7 +46,10 @@ runQQuery: {[args]
     system "d " , args`ctx;
 
     evaluator: $[`customQEvaluator in key .vscode;
-        {@[.vscode.customQEvaluator; x; {`data`error`errorMsg!(::; 1b; x)}]};
+        {[args]
+            @[  {[args] `data`error`errorMsg!(.vscode.customQEvaluator args; 0b; "")};
+                args;
+                {[err] `data`error`errorMsg!(::; 1b; err)}]};
         i.evaluateQ];
     
     result: .vscode.i.formatQ[args] evaluator args;
@@ -61,19 +64,8 @@ runQQuery: {[args]
 // secure-processes.md has more details.
 //
 // .vscode.customQEvaluator: {[args]
-//     tree: parse args`expression;
+//     if [not args[`code] like "select *";
+//         ' "Only select statements are allowed"];  
 //
-//     if [type[tree] <> -11h;
-//         ' "Only variable names are permitted"];
-//  
-//     // Don't let the user see the secret table
-//     if [tree ~ `secretTable;
-//         ' "The secret table is off-limits!"];
-//
-//     result: reval parse tree;
-//
-//     // Don't let the user see the secret rows
-//     result[`data]: delete from result`data where isSecret;
-//
-//     result
+//     reval parse args`code;
 //     }

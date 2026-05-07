@@ -1,7 +1,7 @@
 Consider a secured process that only allows IPC calls to named functions, and only to those functions in a pre-approved list.
 To allow the KX extension to connect to this process, the process
 - must have loaded vscode.q, to define the endpoints required by the functions
-- must allow these functions to be executed
+- must allow functions in the .vscode namespace (excluding the nested internal .vscode.i) to be called
 
 The following gives an simplified version of such a process.
 Note that this example is a demonstration only, and not intended to provide robust security.
