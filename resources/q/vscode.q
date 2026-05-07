@@ -36,6 +36,10 @@ i.formatPy: {[args]
 
 listMem: //{{resources/q/listMem.q}}
 
+runPyQuery: {[args]
+    `data`error`errorMsg!(::; 1b; "Running Python code in secured processes is not yet supported")
+    }
+
 // entrypoint for IPC calls
 // This is the function that the remote process owner needs to mark as allowed
 runQQuery: {[args]
