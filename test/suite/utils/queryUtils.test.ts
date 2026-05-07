@@ -420,47 +420,56 @@ describe("queryUtils", () => {
       sinon.restore();
     });
 
-    it("should return evaluatePy string when useAPI and isPython are true", () => {
+    function mockFile(mockPath: string, mockContent: string) {
+      fakeContext.asAbsolutePath
+        .withArgs(path.join("resources", "q", path.basename(mockPath)))
+        .returns(mockPath);
+      fakeFs.readFileSync.withArgs(mockPath).returns(Buffer.from(mockContent));
+    }
+
+    it("should return evaluatePy string when isPython and useAPI are true", () => {
       const result = queryUtils.queryWrapper(true, true);
-      assert.strictEqual(result, ".vscode.evaluatePy");
+      assert.strictEqual(result, ".vscode.runPyQuery");
       sinon.assert.notCalled(fakeFs.readFileSync);
     });
 
-    it("should return evaluateQ string when useAPI is true and isPython is false", () => {
+    it("should return evaluateQ string when isPython is false and useAPI is true", () => {
       const result = queryUtils.queryWrapper(false, true);
-      assert.strictEqual(result, ".vscode.evaluateQ");
+      assert.strictEqual(result, ".vscode.runQQuery");
       sinon.assert.notCalled(fakeFs.readFileSync);
     });
 
-    it("should read evaluatePy.q from disk when useAPI is false and isPython is true", () => {
+    it("should read evaluatePy.q from disk when isPython is true and useAPI is false", () => {
       const mockPath = "/mock/path/evaluatePy.q";
       const mockContent = "python_code";
 
-      fakeContext.asAbsolutePath.returns(mockPath);
-      fakeFs.readFileSync.withArgs(mockPath).returns(Buffer.from(mockContent));
+      mockFile(mockPath, mockContent);
 
-      const result = queryUtils.queryWrapper(false, false, fakeFs, fakeContext);
+      const result = queryUtils.queryWrapper(true, false, fakeFs, fakeContext);
 
       assert.strictEqual(result, mockContent);
       sinon.assert.calledOnce(fakeFs.readFileSync);
       sinon.assert.calledWith(fakeFs.readFileSync, mockPath);
     });
 
-    it("should read evaluateQ.q from disk when both flags are false", () => {
-      const mockPath = "/mock/path/evaluateQ.q";
-      const mockContent = "q_code";
-
-      fakeContext.asAbsolutePath.returns(mockPath);
-      fakeFs.readFileSync.withArgs(mockPath).returns(Buffer.from(mockContent));
+    it("should read evaluateQ.q and formatQ.q from disk when isPython is false and useAPI is false", () => {
+      mockFile("/mock/path/evaluateQ.q", "evaluateQ_code");
+      mockFile("/mock/path/formatQ.q", "formatQ_code");
 
       const result = queryUtils.queryWrapper(false, false, fakeFs, fakeContext);
 
-      assert.strictEqual(result, mockContent);
-      sinon.assert.calledOnce(fakeFs.readFileSync);
-      sinon.assert.calledWith(
-        fakeContext.asAbsolutePath,
-        path.join("resources", "q", "evaluateQ.q"),
-      );
+      const expected = [
+        "{[args]",
+        "    evaluateQ: evaluateQ_code ;",
+        "    formatQ: formatQ_code ;",
+        "    formatQ[args; evaluateQ args]",
+        "    }",
+      ].join("\n");
+
+      assert.strictEqual(result, expected);
+      sinon.assert.calledTwice(fakeFs.readFileSync);
+      sinon.assert.calledWith(fakeFs.readFileSync, "/mock/path/evaluateQ.q");
+      sinon.assert.calledWith(fakeFs.readFileSync, "/mock/path/formatQ.q");
     });
   });
 
