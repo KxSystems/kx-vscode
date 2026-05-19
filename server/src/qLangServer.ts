@@ -339,15 +339,10 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: CompletionParams): Promise<CompletionItem[]> {
-    this.notify("onCompletion", MessageKind.DEBUG, {
-      logger,
-      telemetry: "Language.Completion",
-    });
-
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
-    return (await this.getSources(uri))
+    const res = (await this.getSources(uri))
       .map((source) =>
         source.references
           .filter(
@@ -366,6 +361,15 @@ export default class QLangServer {
           }),
       )
       .flat();
+
+    if (res.length > 0) {
+      this.notify("onCompletion", MessageKind.DEBUG, {
+        logger,
+        telemetry: "Language.Completion",
+      });
+    }
+
+    return res;
   }
 
   public async onExpressionRange({
