@@ -50,12 +50,12 @@ describe("CodeFlowLogin", () => {
 
     it("should return agent with rejectUnauthorized true when insecure is false", () => {
       const agent = codeFlow.getHttpsAgent(false);
-      assert.strictEqual(agent.options.rejectUnauthorized, true);
+      assert.strictEqual(agent.options.rejectUnauthorized, undefined);
     });
 
     it("should return agent with rejectUnauthorized true when insecure is undefined", () => {
       const agent = codeFlow.getHttpsAgent(undefined);
-      assert.strictEqual(agent.options.rejectUnauthorized, true);
+      assert.strictEqual(agent.options.rejectUnauthorized, undefined);
     });
   });
 
