@@ -17,7 +17,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 - Updated dependencies to address identified security vulnerabilities.
 - Updated q unit tests.
-- Removed reduntant IPC library.
+- Removed redundant IPC library.
 
 # v1.17.1
 
