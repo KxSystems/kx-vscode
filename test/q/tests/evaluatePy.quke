@@ -283,7 +283,7 @@ feature evaluatePy 2
                     (`error; 1b);
                     (`errorMsg; ".pykx is not defined: please load pykx"))]
 
-    should test the structured text functionality in python
+    should confirm the pykx version
         expect pykx version set to 2.5 for code compatibility
             .pykx.pyexec "import pykx as kx";
             like[string .pykx.qeval "kx.__version__";"2.5.?"]

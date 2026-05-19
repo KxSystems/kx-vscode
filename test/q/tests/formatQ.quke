@@ -1,9 +1,9 @@
 feature toStructuredText
     before
-        .test.src: "\n" sv read0 `:resources/q/formatQ.q;
+        .test.src: value "\n" sv read0 `:resources/q/formatQ.q;
         .test.evalSrc: "\n" sv read0 `:resources/q/evaluateQ.q;
         .test.formatQ: {[args; result]
-            0i (.test.src; args; result)
+            .test.src[args; result]
             };
         .test.evaluateQ: {[args]
             0i (.test.evalSrc; args)
