@@ -2,8 +2,9 @@ feature removeExtraIndents
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
-            0i (.test.src; isString; code; "first"; 10000)
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
             };
+
     should handle unmatched dedents
         expect both expressions to be moved to column 0
             x:  "  a = 1 + 2\n",
@@ -81,7 +82,7 @@ feature evaluatePy 1
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
-            0i (.test.src; isString; code; "first"; 10000)
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
             };
         .test.wrap: {`error`errorMsg`data!(0b; "None"; x)}
         
@@ -236,7 +237,7 @@ feature evaluatePy 2
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
-            0i (.test.src; isString; code; "first"; 10000)
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
             };
 
     should define nothing in the global namespace except when explicitly the result of user code
@@ -298,7 +299,7 @@ feature python toStructuredText
         .pykx.pyexec "import traceback";
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
         .test.evaluatePy: {[isString; code]
-            0i (.test.src; isString; code; "first"; 10000)
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
             };
 
     should test the structured text functionality in python
