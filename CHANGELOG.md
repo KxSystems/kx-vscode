@@ -2,6 +2,23 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.17.2
+
+### Enhancements
+
+- Added scratchpad logging over websockets.
+
+### Fixes
+
+- Updated q and Python query wrappers.
+- Apply timeout to notebook queries.
+
+### Internal Improvements
+
+- Updated dependencies to address identified security vulnerabilities.
+- Updated q unit tests.
+- Removed reduntant IPC library.
+
 # v1.17.1
 
 ### Fixes
