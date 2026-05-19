@@ -71,5 +71,5 @@ runQQuery: {[args]
 //     if [not args[`code] like "select *";
 //         ' "Only select statements are allowed"];  
 //
-//     reval parse args`code;
+//     reval parse args`code
 //     }
