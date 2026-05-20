@@ -6,7 +6,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
-- Added scratchpad logging over websockets.
+- Added scratchpad logging over websockets for active connection.
 
 ### Fixes
 
