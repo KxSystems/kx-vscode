@@ -10,16 +10,16 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Fixes
 
-- Updated q and Python query wrappers.
 - Apply timeout to notebook queries.
 - Fixed how self-signed certificates are accepted for Insights connections.
 
 ### Internal Improvements
 
-- Updated dependencies to address identified security vulnerabilities.
+- Updated q and Python query wrappers.
 - Updated q unit tests.
 - Removed redundant IPC library.
 - Fixed completion telemetry.
+- Updated dependencies to address identified security vulnerabilities.
 
 # v1.17.1
 
