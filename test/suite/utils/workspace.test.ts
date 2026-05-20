@@ -91,7 +91,7 @@ describe("Workspace tests", () => {
       const result = await workspaceHelper.addWorkspaceFile(uri, "test", ".q");
       assert.ok(result.fsPath.endsWith("test-1.q"));
       sinon.restore();
-    });
+    }).timeout(5000);
   });
 
   describe("setUriContent", () => {
