@@ -7,6 +7,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Enhancements
 
 - Added scratchpad logging over websockets for active connection.
+- Aligned q and Python query results with the Insights web UI.
 
 ### Fixes
 
@@ -15,7 +16,6 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Internal Improvements
 
-- Updated q and Python query wrappers.
 - Updated q unit tests.
 - Removed redundant IPC library.
 - Fixed completion telemetry.
