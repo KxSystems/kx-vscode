@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { readFileSync } from "fs";
+import * as realFs from "fs";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
@@ -34,12 +34,38 @@ export function sanitizeQuery(query: string): string {
   return query;
 }
 
-export function queryWrapper(isPython: boolean): string {
-  const filename = isPython ? "evaluatePy.q" : "evaluate.q";
+export function queryWrapper(
+  isPython: boolean,
+  useAPI: boolean,
+  filesystem = realFs,
+  context = ext.context,
+): string {
+  if (useAPI) {
+    return isPython ? ".vscode.runPyQuery" : ".vscode.runQQuery";
+  }
 
-  return readFileSync(
-    ext.context.asAbsolutePath(join("resources", filename)),
-  ).toString();
+  if (isPython) {
+    return filesystem
+      .readFileSync(
+        context.asAbsolutePath(join("resources", "q", "evaluatePy.q")),
+      )
+      .toString();
+  }
+
+  const evaluateQ = filesystem
+    .readFileSync(context.asAbsolutePath(join("resources", "q", "evaluateQ.q")))
+    .toString();
+
+  const formatQ = filesystem
+    .readFileSync(context.asAbsolutePath(join("resources", "q", "formatQ.q")))
+    .toString();
+
+  // NOTE - There needs to be a space before the semicolon, since these files end in newlines
+  return `{[args]
+    evaluateQ: ${evaluateQ} ;
+    formatQ: ${formatQ} ;
+    formatQ[args; evaluateQ args]
+    }`;
 }
 
 export function addIndexKey(input: any) {
@@ -175,7 +201,7 @@ export function getPythonWrapper(
   query: string,
   returnFormat: "serialized" | "text" | "structuredText",
 ): string {
-  const wrapper = normalizeQSQLQuery(queryWrapper(true));
+  const wrapper = normalizeQSQLQuery(queryWrapper(true, false));
   const args = {
     returnFormat,
     code: normalizePyQuery(query),
