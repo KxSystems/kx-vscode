@@ -16,10 +16,6 @@ import { join } from "path";
 
 import { ext } from "../extensionVariables";
 import { MessageKind, notify, Runner } from "./notifications";
-import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
-import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
-import { Parse } from "../ipc/parse.qlist";
-import { TypeBase } from "../ipc/typeBase";
 import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
@@ -44,128 +40,6 @@ export function queryWrapper(isPython: boolean): string {
   return readFileSync(
     ext.context.asAbsolutePath(join("resources", filename)),
   ).toString();
-}
-
-export function handleWSError(ab: ArrayBuffer): any {
-  let errorString;
-
-  try {
-    // error for: qe/sql & gateway/data
-    const errorHeader = Parse.reshape(deserialize(ab).values[0], ab)
-      .toLegacy()
-      .rows?.reduce((o: any, k: any) => {
-        o[k.Property] = k.Value;
-        return o;
-      }, {});
-
-    errorString = errorHeader.ai;
-  } catch {
-    // error for: qe/qsql
-    // deserializer didn't recognize the format
-    const raw = new Uint8Array(ab);
-    if (
-      raw.byteLength >= 10 &&
-      // header?
-      raw.subarray(0, 4).toString() === "1,2,0,0" &&
-      // last char is string terminator
-      raw[raw.byteLength - 1] === 0 &&
-      // error message size, message can be clipped (always less than 256 chars)
-      raw[5] * 256 + raw[4] === raw.byteLength
-      // TODO: need to check if this is needed
-      // &&
-      // // 128 - start of string/error ?
-      // raw.subarray(6, 9).toString() === "0,0,128"
-    ) {
-      // eslint-disable-next-line prefer-spread
-      const translated = String.fromCharCode
-        .apply(
-          String,
-          raw.subarray(9, raw.byteLength - 1) as unknown as number[],
-        )
-        .split("\n")
-        .slice(-1);
-      errorString = translated.join("").trim();
-
-      // TODO: need to check if this is needed
-      // errorString = {
-      //   // eslint-disable-next-line prefer-spread
-      //   ipc: String.fromCharCode.apply(
-      //     String,
-      //     raw.subarray(9, raw.byteLength - 1) as unknown as number[],
-      //   ),
-      // };
-    } else {
-      errorString = "Query error";
-    }
-  }
-
-  notify(`Error : ${errorString}`, MessageKind.DEBUG, { logger });
-
-  return { error: errorString };
-}
-
-export function handleWSResults(ab: ArrayBuffer, isTableView?: boolean): any {
-  if (isTableView === undefined) {
-    isTableView = ext.isResultsTabVisible;
-  }
-  let res: any;
-  try {
-    if (isCompressed(ab)) {
-      ab = uncompress(ab);
-    }
-    let des = deserialize(ab);
-    if (des.qtype === 0 && des.values.length === 2) {
-      des = des.values[1];
-    }
-    res = Parse.reshape(des.dataSet || des, ab).toLegacy();
-
-    if (res.rows.length === 0 && res.columns.length === 0) {
-      return "No results found.";
-    }
-    if (isTableView) {
-      return getValueFromArray(res);
-    }
-    return convertRows(res.rows);
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-}
-
-export function handleScratchpadTableRes(results: DCDS | string): any {
-  if (typeof results === "string" || results?.rows === undefined) {
-    return results;
-  }
-  let scratchpadResponse = results.rows;
-  if (!Array.isArray(scratchpadResponse)) {
-    return results;
-  }
-  if (scratchpadResponse?.length !== 0) {
-    scratchpadResponse = addIndexKey(scratchpadResponse);
-  }
-  const result = [];
-  for (const row of scratchpadResponse) {
-    const newObj = {};
-    for (const key in row) {
-      row[key] = checkIfIsQDateTypes(row[key]);
-      if (typeof row[key] === "bigint") {
-        Object.assign(newObj, { [key]: Number(row[key]) });
-      } else if (
-        row[key] !== null &&
-        typeof row[key] === "number" &&
-        (row[key].toString() === "Infinity" ||
-          row[key].toString() === "-Infinity")
-      ) {
-        Object.assign(newObj, { [key]: row[key].toString() });
-      } else {
-        Object.assign(newObj, { [key]: row[key] });
-      }
-    }
-
-    result.push(newObj);
-  }
-  results.rows = result;
-  return results;
 }
 
 export function addIndexKey(input: any) {
@@ -198,17 +72,6 @@ export function addIndexKey(input: any) {
   }
 
   return arr;
-}
-
-export function getValueFromArray(results: DCDS): any {
-  const arr = results.rows;
-  if (arr !== undefined) {
-    if (arr.length === 1 && typeof arr[0] === "object" && arr[0] !== null) {
-      results.rows = [checkIfIsQDateTypes(arr[0])];
-    }
-  }
-  results.meta = generateQTypes(results.meta);
-  return results;
 }
 
 function queryLimitCheck(query: string): string {
@@ -319,7 +182,7 @@ export function getPythonWrapper(
     sample_fn: "first",
     sample_size: 10000,
   };
-  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`errored;res\`error;res\`result]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
+  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`error;res\`errorMsg;res\`data]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
 }
 
 export function getQSQLWrapper(
@@ -334,26 +197,6 @@ export function getQSQLWrapper(
 
 export function getSQLWrapper(query: string): string {
   return `s)${query.replace(/(?:\r\n|\n)/g, " ")}`;
-}
-
-export function generateQTypes(meta: { [key: string]: number }): any {
-  const newMeta: { [key: string]: string } = {};
-  for (const key in meta) {
-    const value = meta[key];
-    newMeta[key] = TypeBase.typeNames[value] ?? `Unknown type: ${value}`;
-  }
-  return newMeta;
-}
-
-export function checkIfIsQDateTypes(obj: any): any {
-  if (
-    obj?.Value instanceof DTimestampClass ||
-    obj?.Value instanceof DDateTimeClass ||
-    obj?.Value instanceof DDateClass
-  ) {
-    return obj.Value.toString();
-  }
-  return obj;
 }
 
 export function convertRows(rows: any[]): any {

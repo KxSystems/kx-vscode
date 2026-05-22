@@ -222,5 +222,31 @@ describe("executionConsole", () => {
         ServerType.undefined,
       );
     });
+
+    describe("appendStdErr", () => {
+      it("should append message with STDERR prefix", () => {
+        const appendLineSpy = sinon.spy(queryConsole["_console"], "appendLine");
+        const testMsg = "Table not found";
+
+        queryConsole.appendStdErr(testMsg);
+
+        assert.ok(appendLineSpy.calledWith("❌"));
+        assert.ok(appendLineSpy.calledWith(testMsg));
+        appendLineSpy.restore();
+      });
+    });
+
+    describe("appendStdOut", () => {
+      it("should append message with STDOUT prefix", () => {
+        const appendLineSpy = sinon.spy(queryConsole["_console"], "appendLine");
+        const testMsg = "Query executed successfully";
+
+        queryConsole.appendStdOut(testMsg);
+
+        assert.ok(appendLineSpy.calledWith("ℹ️"));
+        assert.ok(appendLineSpy.calledWith(testMsg));
+        appendLineSpy.restore();
+      });
+    });
   });
 });

@@ -219,6 +219,17 @@ describe("ConnectionManagementService", () => {
       connectionManagerService.setActiveConnection(kdbNode);
       assert.strictEqual(ext.activeConnection, localConn);
     });
+
+    it("Should set the previous connection as inactive", () => {
+      ext.activeConnection = localConn;
+      sinon
+        .stub(connectionManagerService, "retrieveConnectedConnection")
+        .returns(localConn);
+
+      const connSpy = sinon.spy(localConn, "setInactive");
+      connectionManagerService.setActiveConnection(insightNode);
+      sinon.assert.calledOnce(connSpy);
+    });
   });
 
   describe("disconnect", () => {

@@ -36,6 +36,7 @@ export type InsightsEndpoints = {
     importUDA: string;
     cancel: string;
     reset: string;
+    websocket: string;
   };
   serviceGateway: {
     meta: string;

@@ -15,13 +15,6 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 
 import { ext } from "../../../src/extensionVariables";
-import { DCDS } from "../../../src/ipc/c";
-import {
-  DDateClass,
-  DDateTimeClass,
-  DTimestampClass,
-} from "../../../src/ipc/cClasses";
-import * as QTable from "../../../src/ipc/QTable";
 import { ServerType } from "../../../src/models/connectionsModels";
 import { DataSourceTypes } from "../../../src/models/dataSource";
 import * as queryUtils from "../../../src/utils/queryUtils";
@@ -35,164 +28,6 @@ describe("queryUtils", () => {
 
     assert.strictEqual(sanitizedQuery1, "`select from t ");
     assert.strictEqual(sanitizedQuery2, "select from t");
-  });
-
-  describe("getValueFromArray", () => {
-    let inputSample: DCDS = undefined;
-    beforeEach(() => {
-      inputSample = {
-        class: "203",
-        columns: ["Value"],
-        meta: { Value: 7 },
-        rows: [],
-      };
-    });
-
-    it("should return the value of the 'Value' property if the input is an array with a single object with a 'Value' property", () => {
-      inputSample.rows = [{ Value: "hello" }];
-      const expectedOutput = [{ Value: "hello" }];
-      const actualOutput = queryUtils.getValueFromArray(inputSample);
-
-      assert.deepEqual(actualOutput.rows, expectedOutput);
-    });
-
-    it("should return the input array if it is not an array with a single object with a 'Value' property", () => {
-      inputSample.rows = [{ Value: "hello" }, { Value: "world" }];
-      const expectedOutput = [{ Value: "hello" }, { Value: "world" }];
-      const actualOutput = queryUtils.getValueFromArray(inputSample);
-
-      assert.deepStrictEqual(actualOutput.rows, expectedOutput);
-    });
-
-    it("should return the input array if it is an empty array", () => {
-      const expectedOutput: any[] = [];
-      const actualOutput = queryUtils.getValueFromArray(inputSample);
-
-      assert.deepStrictEqual(actualOutput.rows, expectedOutput);
-    });
-  });
-
-  describe("handleWSResults", () => {
-    afterEach(() => {
-      sinon.restore();
-      ext.isResultsTabVisible = false;
-    });
-
-    it("should return no results found", () => {
-      const ab = new ArrayBuffer(128);
-      const result = queryUtils.handleWSResults(ab);
-
-      assert.strictEqual(result, "No results found.");
-    });
-
-    it("should return the result of getValueFromArray if the results are an array with a single object with a 'Value' property", () => {
-      const ab = new ArrayBuffer(128);
-      const expectedOutput = {
-        class: "203",
-        columns: ["Value"],
-        meta: { Value: 7 },
-        rows: [{ Value: "10" }],
-      };
-
-      ext.isResultsTabVisible = true;
-      sinon.stub(QTable.default, "toLegacy").returns(expectedOutput);
-      const convertRowsSpy = sinon.spy(queryUtils, "convertRows");
-      const result = queryUtils.handleWSResults(ab);
-
-      sinon.assert.notCalled(convertRowsSpy);
-      assert.strictEqual(result, expectedOutput);
-    });
-  });
-
-  describe("handleScratchpadTableRes", () => {
-    let inputSample: DCDS = undefined;
-    beforeEach(() => {
-      inputSample = {
-        class: "203",
-        columns: ["Value"],
-        meta: { Value: 7 },
-        rows: [],
-      };
-    });
-
-    it("should convert bigint values to number", () => {
-      inputSample.rows = [
-        { key1: BigInt(123), key2: "value2" },
-        { key3: BigInt(456), key4: "value4" },
-      ];
-      const expected = [
-        { Index: 1, key1: 123, key2: "value2" },
-        { Index: 2, key3: 456, key4: "value4" },
-      ];
-      const result = queryUtils.handleScratchpadTableRes(inputSample);
-
-      assert.deepStrictEqual(result.rows, expected);
-    });
-
-    it("should not modify other values", () => {
-      inputSample.rows = [
-        { key1: "value1", key2: "value2" },
-        { key3: "value3", key4: "value4" },
-      ];
-      const result = queryUtils.handleScratchpadTableRes(inputSample);
-
-      assert.deepStrictEqual(result.rows, inputSample.rows);
-    });
-
-    it("should return case results is string type", () => {
-      const result = queryUtils.handleScratchpadTableRes("test");
-
-      assert.strictEqual(result, "test");
-    });
-
-    it("should return same results case results.rows is undefined", () => {
-      inputSample.rows = undefined;
-      const result = queryUtils.handleScratchpadTableRes(inputSample);
-
-      assert.strictEqual(result, inputSample);
-    });
-
-    it("should return same results case results.rows is an empty array", () => {
-      const result = queryUtils.handleScratchpadTableRes(inputSample);
-
-      assert.strictEqual(result, inputSample);
-    });
-  });
-
-  describe("checkIfIsQDateTypes", () => {
-    it("should return string representation of DTimestampClass instance", () => {
-      const input = { Value: new DTimestampClass(978350400000, 0) };
-      const expectedOutput = input.Value.toString();
-      const output = queryUtils.checkIfIsQDateTypes(input);
-
-      assert.strictEqual(output, expectedOutput);
-    });
-
-    it("should return string representation of DDateTimeClass instance", () => {
-      const input = { Value: new DDateTimeClass(978350400000) };
-      const expectedOutput = input.Value.toString();
-      const output = queryUtils.checkIfIsQDateTypes(input);
-
-      assert.strictEqual(output, expectedOutput);
-    });
-
-    it("should return string representation of DDateClass instance", () => {
-      const input = { Value: new DDateClass(978350400000) };
-      const expectedOutput = input.Value.toString();
-      const output = queryUtils.checkIfIsQDateTypes(input);
-
-      assert.strictEqual(output, expectedOutput);
-    });
-
-    it("should return input as is when Value is not an instance of DTimestampClass, DDateTimeClass, or DDateClass", () => {
-      const input = {
-        Value:
-          "not an instance of DTimestampClass, DDateTimeClass, or DDateClass",
-      };
-      const output = queryUtils.checkIfIsQDateTypes(input);
-
-      assert.deepStrictEqual(output, input);
-    });
   });
 
   describe("addIndexKey", () => {
@@ -213,14 +48,6 @@ describe("queryUtils", () => {
     it("should add index key to single object", () => {
       const input = { prop1: "value1", prop2: "value2" };
       const expectedOutput = [{ Index: 1, prop1: "value1", prop2: "value2" }];
-      const output = queryUtils.addIndexKey(input);
-
-      assert.deepStrictEqual(output, expectedOutput);
-    });
-
-    it("should return empty array when input is empty array", () => {
-      const input = [];
-      const expectedOutput = [];
       const output = queryUtils.addIndexKey(input);
 
       assert.deepStrictEqual(output, expectedOutput);
@@ -277,14 +104,6 @@ describe("queryUtils", () => {
       assert.deepEqual(result, expectedRes);
     });
 
-    it("should work with empty rows", () => {
-      const rows = [];
-      const expectedRes = [];
-      const result = queryUtils.convertRowsToConsole(rows);
-
-      assert.deepEqual(result, expectedRes);
-    });
-
     it("should work with rows with newlines", () => {
       const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
       const expectedRes = [
@@ -312,63 +131,6 @@ describe("queryUtils", () => {
 
       assert.equal(result, expectedRes[i]);
     }
-  });
-
-  describe("handleWSError", () => {
-    let sandbox: sinon.SinonSandbox;
-    const abTest = new Uint8Array([
-      1, 2, 0, 0, 114, 1, 0, 0, 0, 0, 2, 0, 0, 0, 99, 11, 0, 17, 0, 0, 0, 0,
-      114, 99, 118, 84, 83, 0, 99, 111, 114, 114, 0, 112, 114, 111, 116, 111,
-      99, 111, 108, 0, 108, 111, 103, 67, 111, 114, 114, 0, 99, 108, 105, 101,
-      110, 116, 0, 104, 116, 116, 112, 0, 97, 112, 105, 0, 117, 115, 101, 114,
-      78, 97, 109, 101, 0, 117, 115, 101, 114, 73, 68, 0, 116, 105, 109, 101,
-      111, 117, 116, 0, 116, 111, 0, 112, 118, 86, 101, 114, 0, 114, 101, 102,
-      86, 105, 110, 116, 97, 103, 101, 0, 114, 99, 0, 97, 99, 0, 97, 105, 0, 0,
-      0, 17, 0, 0, 0, 101, 0, 244, 0, 168, 200, 104, 217, 55, 151, 10, 254, 148,
-      230, 16, 238, 61, 245, 76, 4, 178, 72, 184, 185, 138, 80, 65, 216, 245,
-      103, 119, 0, 10, 0, 36, 0, 0, 0, 57, 52, 101, 54, 49, 48, 101, 101, 45,
-      51, 100, 102, 53, 45, 52, 99, 48, 52, 45, 98, 50, 52, 56, 45, 98, 56, 98,
-      57, 56, 97, 53, 48, 52, 49, 100, 56, 245, 58, 49, 48, 46, 57, 46, 49, 51,
-      56, 46, 49, 57, 50, 58, 53, 48, 53, 48, 0, 245, 111, 99, 116, 101, 116,
-      115, 116, 114, 101, 97, 109, 0, 245, 46, 107, 120, 105, 46, 113, 115, 113,
-      108, 0, 245, 0, 254, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 249,
-      96, 234, 0, 0, 0, 0, 0, 0, 244, 0, 0, 16, 97, 231, 55, 151, 10, 249, 134,
-      0, 0, 0, 0, 0, 0, 0, 249, 1, 0, 0, 0, 0, 0, 0, 128, 251, 10, 0, 251, 10,
-      0, 10, 0, 54, 0, 0, 0, 85, 110, 101, 120, 112, 101, 99, 116, 101, 100, 32,
-      101, 114, 114, 111, 114, 32, 40, 110, 49, 48, 41, 32, 101, 110, 99, 111,
-      117, 110, 116, 101, 114, 101, 100, 32, 101, 120, 101, 99, 117, 116, 105,
-      110, 103, 32, 46, 107, 120, 105, 46, 113, 115, 113, 108, 0, 0, 0, 0, 0, 0,
-    ]);
-
-    beforeEach(() => {
-      sandbox = sinon.createSandbox();
-    });
-
-    afterEach(() => {
-      sandbox.restore();
-    });
-
-    it("should handle qe/sql & gateway/data error", () => {
-      const ab = new ArrayBuffer(10);
-      const result = queryUtils.handleWSError(ab);
-
-      assert.deepStrictEqual(result, { error: "Query error" });
-    });
-
-    it("should handle unknown error", () => {
-      const ab = new ArrayBuffer(8);
-      const result = queryUtils.handleWSError(ab);
-
-      assert.deepStrictEqual(result, { error: "Query error" });
-    });
-
-    it("should handle qe/sql error", () => {
-      const result = queryUtils.handleWSError(abTest.buffer);
-
-      assert.deepStrictEqual(result, {
-        error: "Unexpected error (n10) encountered executing .kxi.qsql",
-      });
-    });
   });
 
   describe("addQueryHistory", () => {

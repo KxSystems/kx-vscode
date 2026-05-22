@@ -30,7 +30,6 @@ import { InsightsNode } from "../../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../../src/services/resultsPanelProvider";
 import * as dataSourceUtils from "../../../src/utils/dataSource";
 import * as loggers from "../../../src/utils/loggers";
-import * as queryUtils from "../../../src/utils/queryUtils";
 import {
   getDataIntResponse,
   getDataResponse,
@@ -283,8 +282,6 @@ describe("dataSourceCommand", () => {
     let getApiBodyStub: sinon.SinonStub;
     let checkIfTimeParamIsCorrectStub: sinon.SinonStub;
     let getDataInsightsStub: sinon.SinonStub;
-    let handleWSResultsStub: sinon.SinonStub;
-    let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
       getApiBodyStub = sinon.stub(dataSourceCommand, "getApiBody");
@@ -293,11 +290,6 @@ describe("dataSourceCommand", () => {
         "checkIfTimeParamIsCorrect",
       );
       getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
-      handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
-      handleScratchpadTableRes = sinon.stub(
-        queryUtils,
-        "handleScratchpadTableRes",
-      );
     });
 
     afterEach(() => {
@@ -325,18 +317,12 @@ describe("dataSourceCommand", () => {
       );
       sinon.assert.notCalled(getApiBodyStub);
       sinon.assert.notCalled(getDataInsightsStub);
-      sinon.assert.notCalled(handleWSResultsStub);
     });
 
     it("should call the API and handle the results if the time parameters are correct", async () => {
       checkIfTimeParamIsCorrectStub.returns(true);
       getApiBodyStub.returns({ table: "myTable" });
       getDataInsightsStub.resolves({ results: {} });
-      handleScratchpadTableRes.resolves([
-        { a: "2", b: "3" },
-        { a: "4", b: "6" },
-        { a: "6", b: "9" },
-      ]);
 
       await dataSourceCommand.runApiDataSource(
         createMockDatasource(),

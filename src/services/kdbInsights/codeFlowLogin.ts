@@ -91,7 +91,12 @@ export interface IToken {
 }
 
 export function getHttpsAgent(insecure: boolean | undefined) {
-  return new https.Agent({ rejectUnauthorized: !insecure });
+  if (insecure === true)
+    return new https.Agent({
+      requestCert: true,
+      rejectUnauthorized: false,
+    });
+  else return new https.Agent({});
 }
 
 const defaultTimeout = 3 * 60 * 1000; // 3 min

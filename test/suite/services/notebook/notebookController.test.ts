@@ -19,6 +19,7 @@ import * as notebookTestUtils from "./notebookTest.utils.test";
 import { InsightsConnection } from "../../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../../src/classes/localConnection";
 import { ReplConnection } from "../../../../src/classes/replConnection";
+import * as dataSourceCommand from "../../../../src/commands/dataSourceCommand";
 import * as serverCommand from "../../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
 import { ConnectionManagementService } from "../../../../src/services/connectionManagerService";
@@ -176,6 +177,38 @@ describe("Controller", () => {
               createController(),
             );
             assert.strictEqual(success, true);
+          });
+        });
+
+        describe("Populate Scratchpad", () => {
+          let populateScratchpadStub: sinon.SinonStub;
+
+          beforeEach(() => {
+            sinon
+              .stub(workspaceCommand, "findConnection")
+              .resolves(sinon.createStubInstance(InsightsConnection));
+
+            populateScratchpadStub = sinon.stub(
+              dataSourceCommand,
+              "populateScratchpad",
+            );
+
+            createInstance();
+          });
+
+          it("should call populate scratchpad if variable is set", async () => {
+            await instance.execute(
+              [
+                notebookTestUtils.createCell("q", {
+                  target: "test-target",
+                  variable: "test-variable",
+                }),
+              ],
+              notebookTestUtils.createNotebook(),
+              createController(),
+            );
+            assert.strictEqual(success, true);
+            sinon.assert.calledOnce(populateScratchpadStub);
           });
         });
       });

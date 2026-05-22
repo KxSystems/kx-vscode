@@ -26,6 +26,7 @@ import { executeQuery } from "../commands/serverCommand";
 import {
   findConnection,
   getServerForUri,
+  getTimeoutForUri,
   setServerForUri,
 } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
@@ -260,7 +261,13 @@ export class KxNotebookController {
     target?: string,
     variable?: string,
   ): Promise<any> {
-    const executorName = getBasename(cell.notebook.uri);
+    const uri = cell.notebook.uri;
+    const executorName = getBasename(uri);
+
+    const timeout =
+      conn instanceof InsightsConnection
+        ? getTimeoutForUri(uri).value
+        : undefined;
 
     if (
       target ||
@@ -272,9 +279,23 @@ export class KxNotebookController {
         kind === CellKind.SQL,
         kind === CellKind.PYTHON,
       );
+
       return variable
-        ? populateScratchpad(params, conn.connLabel, variable, true)
-        : runDataSource(params, conn.connLabel, executorName);
+        ? populateScratchpad(
+            params,
+            conn.connLabel,
+            variable,
+            true,
+            execution.token,
+            timeout,
+          )
+        : runDataSource(
+            params,
+            conn.connLabel,
+            executorName,
+            execution.token,
+            timeout,
+          );
     } else {
       return executeQuery(
         kind === CellKind.SQL
@@ -287,6 +308,7 @@ export class KxNotebookController {
         false,
         false,
         execution.token,
+        timeout,
       );
     }
   }
