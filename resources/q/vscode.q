@@ -22,8 +22,7 @@ reservedWords: {.Q.res}
 
 getViews: {views[]}
 
-// Note: This file is built using templates. If these function definitions are just file paths,
-// run `node build-api.js` to generate `out/vscode.q`
+// Note: These functions are created from templates by running `node build-api.js` to generate `out/vscode.q`
 i.evaluateQ: //{{resources/q/evaluateQ.q}}
 
 i.formatQ: //{{resources/q/formatQ.q}}
