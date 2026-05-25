@@ -6,8 +6,13 @@ To allow the KX extension to connect to this process, the process
 The following gives an simplified version of such a process.
 Note that this example is a demonstration only, and not intended to provide robust security.
 
+First, generate out/vs-code.q by running
+```
+$ node build-api.js
+```
+
 ```q
-\l resources/q/vscode.q
+\l out/vscode.q
 
 \d .secure
 
