@@ -185,37 +185,43 @@ export class LocalConnection {
 
       const wrapper = queryWrapper(!!isPython, this.useAPI);
 
-      this.connection.k(
-        wrapper,
-        {
-          ctx: context ?? ".",
-          code: command,
-          returnFormat: stringify ? "text" : "structuredText",
-          // TODO why are these null when evaluating q?
-          sampleFn: isPython ? "first" : null,
-          sampleSize: isPython ? 10000 : null,
-        },
-        (err: Error, res: QueryResult) => {
-          if (err) {
-            reject(handleQueryResults(err.toString(), QueryResultType.Error));
-          } else if (res.error) {
-            resolve(
-              handleQueryResults(
-                res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
-                QueryResultType.Error,
-              ),
-            );
-          } else {
-            const result = res.data === null ? "" : res.data;
-            if (stringify) {
-              resolve(result);
-            } else {
-              resolve(JSON.parse(result));
-            }
+      // Different objects are needed because of the difference between snake_case and camelCase
+      // for sampleFn/sampleSize and sample_fn/sample_size
+      const args = isPython
+        ? {
+            code: command,
+            returnFormat: stringify ? "text" : "structuredText",
+            sample_fn: "first",
+            sample_size: 10000,
           }
-          this.updateGlobal();
-        },
-      );
+        : {
+            ctx: context ?? ".",
+            code: command,
+            returnFormat: stringify ? "text" : "structuredText",
+            sampleFn: null,
+            sampleSize: null,
+          };
+
+      this.connection.k(wrapper, args, (err: Error, res: QueryResult) => {
+        if (err) {
+          reject(handleQueryResults(err.toString(), QueryResultType.Error));
+        } else if (res.error) {
+          resolve(
+            handleQueryResults(
+              res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
+              QueryResultType.Error,
+            ),
+          );
+        } else {
+          const result = res.data === null ? "" : res.data;
+          if (stringify) {
+            resolve(result);
+          } else {
+            resolve(JSON.parse(result));
+          }
+        }
+        this.updateGlobal();
+      });
     });
   }
 
