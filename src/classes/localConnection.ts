@@ -106,33 +106,41 @@ export class LocalConnection {
         this.connection = conn;
         this.connected = true;
 
-        // Test if arbitrary strings can be executed
-        // TODO remove result from these functions, and err from setUseAPI
-        this.connection?.k("123", (err) => {
-          if (!err) {
-            this.setUseAPI(err, false);
-            return resolve(conn);
-          }
-
-          // Test if vscode library functions are present and can be called
-          this.connection?.k(".vscode.getManifest", null, (err) => {
-            if (!err) {
-              this.setUseAPI(err, true);
-            } else {
-              notify("Failed to check security settings", MessageKind.ERROR, {
-                logger,
-                params: err,
-              });
-            }
-
-            resolve(conn);
-          });
-        });
+        // Sets useAPI to true if this is a secured process with .vscode defined
+        this.checkCapabilities(conn, resolve);
       });
     });
   }
 
-  public setUseAPI(err: Error | undefined, result: boolean): void {
+  private checkCapabilities(
+    conn: nodeq.Connection,
+    resolve: (conn: nodeq.Connection) => void,
+  ) {
+    // This checks if an arbitrary string can be executed,
+    // which means we can send the wrapper functions over with each request
+    // instead of relying on the .vscode namespace to be defined
+    this.connection?.k("123", (err) => {
+      if (!err) {
+        this.setUseAPI(false);
+        return resolve(conn);
+      }
+
+      // Test if vscode library functions are present and can be called
+      this.connection?.k(".vscode.getManifest", null, (err) => {
+        if (!err) {
+          this.setUseAPI(true);
+        } else {
+          notify("Failed to check security settings", MessageKind.ERROR, {
+            logger,
+            params: err,
+          });
+        }
+        resolve(conn);
+      });
+    });
+  }
+
+  public setUseAPI(result: boolean): void {
     if (result) {
       this.useAPI = true;
     }
