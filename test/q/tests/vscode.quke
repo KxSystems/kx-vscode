@@ -1,0 +1,76 @@
+feature .vscode.runPyQuery
+    before
+        system "l out/vscode.q"
+    
+    should run python code
+        expect a message that this isn't implemented yet
+            .qu.compare[
+                .vscode.runPyQuery ([code: "1+2"; returnFormat: "text"; sample_fn: (::); sample_size: (::)]);
+                ([data: (::); error: 1b; errorMsg: "Running Python code in secured processes is not yet supported"])]
+
+feature .vscode.runQQuery
+    before
+        system "l out/vscode.q"
+
+    should handle multiple return formats
+        expect "text" responses to be the stringified q
+            .qu.compare[
+                .vscode.runQQuery ([code: "1+2"; ctx:"."; returnFormat: "text"; sampleFn: (::); sampleSize: (::)]);
+                ([data: "3\n"; error: 0b; errorMsg: ""; stacktrace: ()])]
+        expect "structuredText" to be JSON
+            .qu.compare[
+                .vscode.runQQuery ([code: "1 2 3"; ctx:"."; returnFormat: "structuredText"; sampleFn: (::); sampleSize: (::)]);
+                ([data: "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"1\",\"2\",\"3\"],\"order\":[0,1,2]}],\"warnings\":[]}"; error: 0b; errorMsg: ""; stacktrace: ()])]
+
+        xexpect sampleFn and sampleSize to be applied
+            // This seems to be running `"last" 1 2 3` instead of `last 1 2 3`
+            .qu.compare[
+                .vscode.runQQuery ([code: "1 2 3"; ctx:"."; returnFormat: "structuredText"; sampleFn: "last"; sampleSize: 1]);
+                ([data: "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"3\"],\"order\":[0]}],\"warnings\":[]}"; error: 0b; errorMsg: ""; stacktrace: ()])]
+
+    should handle contexts
+        expect the query to be run in the specified context 
+            result: .vscode.runQQuery ([code: "\\d"; ctx:".foo"; returnFormat: "text"; sampleFn: (::); sampleSize: (::)]);
+            .qu.compare[result`data; "`.foo\n"]
+        expect the context to have been restored
+            .qu.compare[system "d"; `.]
+
+    should show errors with stack traces
+        expect stack traces to be returned when using customQEvaluators
+            // NOTE: This will fail when you run it line-by-line from vscode,
+            // since the stack trace formatter is looking for the first .Q.trp in the call stack,
+            // and remote execution adds another .Q.trp before the one it's looking for.
+            // You'd need to run the call to .vscode.runQQuery from the q terminal
+            .test.foo:{.test.bar x};
+            .test.bar:{1 + x};
+            .vscode.customQEvaluator: {value x`code};
+            result: .vscode.runQQuery ([code: ".test.foo `"; ctx:"."; returnFormat: "text"; sampleFn: (::); sampleSize: (::)]);
+            .qu.compare[result; (!) . flip (
+                (`data;       ::);
+                (`error;      1b);
+                (`errorMsg;   "type");
+                (`stacktrace; "\n" sv (
+                    "  [3]  .test.bar:{1 + x}";
+                    "                    ^";
+                    "  [2]  .test.foo:{.test.bar x}";
+                    "                  ^";
+                    "  [1]  .test.foo `";
+                    "       ^\n")))]
+
+        expect stack traces to be returned when not using customQEvaluator
+            // NOTE: This will fail when you run it line-by-line from vscode, see the previous test
+            delete customQEvaluator from `.vscode;    
+            foo:: {bar x};
+            bar:: {' "some error"};
+            result: .vscode.runQQuery ([code: "foo `"; ctx:"."; returnFormat: "text"; sampleFn: (::); sampleSize: (::)]);
+            .qu.compare[result; (!) . flip (
+                (`data;       ::);
+                (`error;      1b);
+                (`errorMsg;   "some error");
+                (`stacktrace; "\n" sv (
+                    "  [3]  bar:{' \"some error\"}";
+                    "            ^";
+                    "  [2]  foo:{bar x}";
+                    "            ^";
+                    "  [1]  foo `";
+                    "       ^\n")))]
