@@ -29,6 +29,11 @@ export class LocalConnection {
   public connected: boolean;
   public connLabel: string;
   public labels: string[];
+
+  // When useAPI is false, the remote q process supports running any arbitrary q string.
+  // When useAPI is true, the remote q process only supports calls to named functions,
+  // and the extension can only rely on calling those functions predefined in the vscode.q library
+  public useAPI: boolean;
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
 
@@ -71,6 +76,7 @@ export class LocalConnection {
     this.labels = labels;
     this.options = options;
     this.connected = false;
+    this.useAPI = false;
   }
 
   public getConnection(): nodeq.Connection | undefined {
@@ -85,9 +91,9 @@ export class LocalConnection {
           ext.serverProvider.reload();
           this.connection = undefined;
           this.connected = false;
-          reject(err);
-          return;
+          return reject(err);
         }
+
         conn.addListener("close", () => {
           commands.executeCommand("kdb.connections.disconnect", this.connLabel);
           notify(
@@ -96,12 +102,61 @@ export class LocalConnection {
             { logger },
           );
         });
+
         this.connection = conn;
         this.connected = true;
-        this.update();
+
+        // Sets useAPI to true if this is a secured process with .vscode defined
+        this.checkCapabilities(conn, resolve);
+      });
+    });
+  }
+
+  private checkCapabilities(
+    conn: nodeq.Connection,
+    resolve: (conn: nodeq.Connection) => void,
+  ) {
+    // This checks if an arbitrary string can be executed,
+    // which means we can send the wrapper functions over with each request
+    // instead of relying on the .vscode namespace to be defined
+    this.connection?.k("123", (err) => {
+      if (!err) {
+        this.setUseAPI(false);
+        return resolve(conn);
+      }
+
+      // Test if vscode library functions are present and can be called
+      this.connection?.k(".vscode.getManifest", null, (err) => {
+        if (!err) {
+          this.setUseAPI(true);
+        } else {
+          notify("Failed to check security settings", MessageKind.ERROR, {
+            logger,
+            params: err,
+          });
+        }
         resolve(conn);
       });
     });
+  }
+
+  public setUseAPI(result: boolean): void {
+    if (result) {
+      this.useAPI = true;
+    }
+
+    this.update();
+
+    notify(
+      (result
+        ? ".vscode namespace found, using functions"
+        : ".vscode namespace not found, using lambdas") +
+        ` on ${this.connLabel}`,
+      MessageKind.DEBUG,
+      {
+        logger,
+      },
+    );
   }
 
   public disconnect(): void {
@@ -132,56 +187,62 @@ export class LocalConnection {
     isPython?: boolean,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
-      if (this.connection) {
-        const args: any[] = [];
-        const wrapper = queryWrapper(!!isPython);
-        if (isPython) {
-          args.push(
-            stringify ? "text" : "structuredText",
-            command,
-            "first",
-            10000,
+      if (!this.connection) {
+        return reject(new Error("Not connected."));
+      }
+
+      const wrapper = queryWrapper(!!isPython, this.useAPI);
+
+      // Different objects are needed because of the difference between snake_case and camelCase
+      // for sampleFn/sampleSize and sample_fn/sample_size
+      const args = isPython
+        ? {
+            code: command,
+            returnFormat: stringify ? "text" : "structuredText",
+            sample_fn: "first",
+            sample_size: 10000,
+          }
+        : {
+            ctx: context ?? ".",
+            code: command,
+            returnFormat: stringify ? "text" : "structuredText",
+            sampleFn: null,
+            sampleSize: null,
+          };
+
+      this.connection.k(wrapper, args, (err: Error, res: QueryResult) => {
+        if (err) {
+          reject(handleQueryResults(err.toString(), QueryResultType.Error));
+        } else if (res.error) {
+          resolve(
+            handleQueryResults(
+              res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
+              QueryResultType.Error,
+            ),
           );
         } else {
-          args.push(
-            context ?? ".",
-            command,
-            null,
-            stringify ? "text" : "structuredText",
-          );
-        }
-        this.connection.k(wrapper, ...args, (err: Error, res: QueryResult) => {
-          if (err) {
-            reject(handleQueryResults(err.toString(), QueryResultType.Error));
-          } else if (res.error) {
-            resolve(
-              handleQueryResults(
-                res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
-                QueryResultType.Error,
-              ),
-            );
+          const result = res.data === null ? "" : res.data;
+          if (stringify) {
+            resolve(result);
           } else {
-            const result = res.data === null ? "" : res.data;
-            if (stringify) {
-              resolve(result);
-            } else {
-              resolve(JSON.parse(result));
-            }
+            resolve(JSON.parse(result));
           }
-          this.updateGlobal();
-        });
-      } else reject(new Error("Not connected."));
+        }
+        this.updateGlobal();
+      });
     });
   }
 
-  public async executeQueryRaw(command: string): Promise<any> {
+  public async executeQueryRaw(code: string, args: any[]): Promise<any> {
     return new Promise((resolve, reject) => {
-      if (this.connection) {
-        this.connection.k(command, (err: Error, res: any) => {
-          if (err) reject(err);
-          else resolve(res || "");
-        });
-      } else reject(new Error("Not connected."));
+      if (!this.connection) {
+        return reject(new Error("Not connected."));
+      }
+
+      this.connection.k(code, ...args, (err: Error, res: any) => {
+        if (err) reject(err);
+        else resolve(res || "");
+      });
     });
   }
 
@@ -193,11 +254,21 @@ export class LocalConnection {
       );
       return new Array<ServerObject>();
     }
-    const script = readFileSync(
-      ext.context.asAbsolutePath(join("resources", "list_mem.q")),
-    ).toString();
-    const cc = "\n" + script + "(::)";
-    const result = await this.executeQueryRaw(cc);
+
+    let code;
+
+    if (this.useAPI) {
+      code = ".vscode.listMem";
+    } else {
+      const script = readFileSync(
+        ext.context.asAbsolutePath(join("resources", "q", "listMem.q")),
+      ).toString();
+      // TODO why is this newline added?
+      code = "\n" + script;
+    }
+
+    const result = await this.executeQueryRaw(code, [null]);
+
     if (result !== undefined) {
       const result2: ServerObject[] = (0, eval)(result);
       const result3: ServerObject[] = result2.filter((item) => {
@@ -210,9 +281,13 @@ export class LocalConnection {
   }
 
   private updateGlobal() {
-    const globalQuery =
-      '{[q] t:system"T";tm:@[{$[x>0;[system"T ",string x;1b];0b]};0;{0b}];r:$[tm;@[0;(q;::);{[tm; t; msgs] if[tm;system"T ",string t];\'msgs}[tm;t]];@[q;::;{\'x}]];if[tm;system"T ",string t];r}{do[1000;2+2];{@[{.z.ide.ns.r1:x;:.z.ide.ns.r1};x;{r:y;:r}[;x]]}({:x!{![sv[`;] each x cross `Tables`Functions`Variables; system each "afv" cross enlist[" "] cross enlist string x]} each x} [{raze x,.z.s\'[{x where{@[{1#get x};x;`]~1#.q}\'[x]}` sv\'x,\'key x]}`]),(enlist `.z)!flip (`.z.Tables`.z.Functions`.z.Variables)!(enlist 0#`;enlist `ac`bm`exit`pc`pd`pg`ph`pi`pm`po`pp`ps`pw`vs`ts`s`wc`wo`ws;enlist `a`b`e`f`h`i`k`K`l`o`q`u`w`W`x`X`n`N`p`P`z`Z`t`T`d`D`c`zd)}';
-    this.connection?.k(globalQuery, (err, result) => {
+    const globalQuery = this.useAPI
+      ? ".vscode.listMem"
+      : readFileSync(
+          ext.context.asAbsolutePath(join("resources", "q", "listMem.q")),
+        ).toString();
+
+    this.connection?.k(globalQuery, null, (err, result) => {
       if (err) {
         notify("Failed to retrieve kdb+ global variables.", MessageKind.ERROR, {
           logger,
@@ -225,39 +300,40 @@ export class LocalConnection {
     });
   }
 
-  private updateGlobals(result: any): void {
-    const globals = result;
-    const entries: [string, any][] = Object.entries(globals);
-
+  private updateGlobals(
+    globals: {
+      id: number;
+      pid: number;
+      name: string;
+      fname: string;
+      typeNum: number;
+      namespace: string;
+      context: string;
+      isNs: number;
+    }[],
+  ): void {
     ext.functions.length = 0;
     ext.tables.length = 0;
     ext.variables.length = 0;
 
-    entries.forEach(([key, value]) => {
-      key = key === "null" ? "." : key + ".";
-      const f = value[key + "Functions"];
-      const t = value[key + "Tables"];
-      let v = value[key + "Variables"];
-      key = key === "." || key === ".q." ? "" : key;
+    globals.forEach(({ fname, typeNum, name, namespace, isNs }) => {
+      if (!isNs && namespace !== ".vscode") {
+        const fullName = namespace === ".q" ? name : fname;
 
-      if (f instanceof Array) {
-        f.forEach((obj: any) => ext.functions.push(`${key}${obj}`));
-      }
-
-      if (t instanceof Array) {
-        t.forEach((obj: any) => ext.tables.push(`${key}${obj}`));
-      }
-
-      if (v instanceof Array) {
-        v = v.filter((x: any) => !t.includes(x));
-        v.forEach((obj: any) => ext.variables.push(`${key}${obj}`));
+        if (typeNum === 100) {
+          ext.functions.push(fullName);
+        } else if (typeNum === 98 || typeNum === 99) {
+          ext.tables.push(fullName);
+        } else if (typeNum < 98) {
+          ext.variables.push(fullName);
+        }
       }
     });
   }
 
   private updateReservedKeywords() {
-    const reservedQuery = ".Q.res";
-    this.connection?.k(reservedQuery, (err, result) => {
+    const reservedQuery = this.useAPI ? ".vscode.reservedWords" : "{.Q.res}";
+    this.connection?.k(reservedQuery, null, (err, result) => {
       if (err) {
         notify(
           "Failed to retrieve kdb+ reserved keywords.",

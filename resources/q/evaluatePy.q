@@ -1,4 +1,9 @@
-{[returnFormat;code;sample_fn;sample_size]
+{[args]
+ returnFormat:args`returnFormat;
+ code:args`code;
+ sample_fn:args`sample_fn;
+ sample_size:args`sample_size;
+ 
  if [`histogram in key `.qp;
  if [not `display2 in key `.qp; 
  .qp.display2: (')[{x[`output][`bytes]}; .qp.display]
