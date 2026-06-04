@@ -2,6 +2,16 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.18.0
+
+### Enhancements
+
+- Provide option for VS Code to not use anonymous lambdas.
+
+### Internal Improvements
+
+- Updated dependencies to address identified security vulnerabilities.
+
 # v1.17.2
 
 ### Enhancements
