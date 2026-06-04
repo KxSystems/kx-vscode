@@ -60,13 +60,13 @@ Note that this example is a demonstration only, and not intended to provide secu
 
 ```q
 // @param args        {dict}
-// @desc args.ctx     {string} The context to evaluate the code in
-// @desc args.code    {string} The code to run, which may be one expression, or multiple expressions, as a single string
-// @desc returnFormat {string} The format of the results
+// @desc args.ctx     {string} The context to evaluate code in. This will already be set by the parent function.
+// @desc args.code    {string} The code to run, which may be one expression, or multiple expressions, as a single string.
+// @desc returnFormat {string} The result format requested by the extension. Formatting is handled by the parent function.
 //  "text" will return the stringified value
 //  "structuredText" will return stringified values in a tabular format, with metadata
 //  "serialized" will return the result as a q value
-// @returns {any} The result of the code, formatted according to returnFormat
+// @returns {any} The result of the code
 .vscode.customQEvaluator: {[args]
     tree: parse args`code;
 
