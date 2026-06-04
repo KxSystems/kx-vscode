@@ -54,7 +54,9 @@ isVariable: {(first[x] in .Q.a,.Q.n,".") and (all 1 _ x in .Q.an,".") and not x 
 
 If the process owner wanted to restrict which expressions could be run from VSCode, such as only allowing "select" expressions,
 they can define a .vscode.customQEvaluator function which will be called to evaluate each request.
-The context will already be set, using the context in args`context
+The context will already be set, using the context in args`ctx
+
+Note that this example is a demonstration only, and not intended to provide security.
 
 ```q
 // @param args        {dict}
@@ -77,4 +79,4 @@ The context will already be set, using the context in args`context
 ```
 
 It's the responsibility of the process owner to ensure .vscode.customQEvaluator is secured,
-e.g. prevents overwriting .z.pg, .z.pg, or .vscode.customQEvaluator
+e.g. that it prevents overwriting .z.ps, .z.pg, or .vscode.customQEvaluator
