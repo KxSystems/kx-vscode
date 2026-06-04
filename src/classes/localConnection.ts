@@ -106,29 +106,36 @@ export class LocalConnection {
         this.connection = conn;
         this.connected = true;
 
-        // This checks if an arbitrary string can be executed,
-        // which means we can send the functions over with each request
-        // instead of relying on the .vscode namespace to be defined
-        this.connection?.k("123", (err) => {
-          if (!err) {
-            this.setUseAPI(false);
-            return resolve(conn);
-          }
+        // Sets useAPI to true if this is a secured process with .vscode defined
+        this.checkCapabilities(conn, resolve);
+      });
+    });
+  }
 
-          // Test if vscode library functions are present and can be called
-          this.connection?.k(".vscode.getManifest", null, (err) => {
-            if (!err) {
-              this.setUseAPI(true);
-            } else {
-              notify("Failed to check security settings", MessageKind.ERROR, {
-                logger,
-                params: err,
-              });
-            }
+  private checkCapabilities(
+    conn: nodeq.Connection,
+    resolve: (conn: nodeq.Connection) => void,
+  ) {
+    // This checks if an arbitrary string can be executed,
+    // which means we can send the wrapper functions over with each request
+    // instead of relying on the .vscode namespace to be defined
+    this.connection?.k("123", (err) => {
+      if (!err) {
+        this.setUseAPI(false);
+        return resolve(conn);
+      }
 
-            resolve(conn);
+      // Test if vscode library functions are present and can be called
+      this.connection?.k(".vscode.getManifest", null, (err) => {
+        if (!err) {
+          this.setUseAPI(true);
+        } else {
+          notify("Failed to check security settings", MessageKind.ERROR, {
+            logger,
+            params: err,
           });
-        });
+        }
+        resolve(conn);
       });
     });
   }
@@ -186,37 +193,43 @@ export class LocalConnection {
 
       const wrapper = queryWrapper(!!isPython, this.useAPI);
 
-      this.connection.k(
-        wrapper,
-        {
-          ctx: context ?? ".",
-          code: command,
-          returnFormat: stringify ? "text" : "structuredText",
-          // TODO why are these null when evaluating q?
-          sampleFn: isPython ? "first" : null,
-          sampleSize: isPython ? 10000 : null,
-        },
-        (err: Error, res: QueryResult) => {
-          if (err) {
-            reject(handleQueryResults(err.toString(), QueryResultType.Error));
-          } else if (res.error) {
-            resolve(
-              handleQueryResults(
-                res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
-                QueryResultType.Error,
-              ),
-            );
-          } else {
-            const result = res.data === null ? "" : res.data;
-            if (stringify) {
-              resolve(result);
-            } else {
-              resolve(JSON.parse(result));
-            }
+      // Different objects are needed because of the difference between snake_case and camelCase
+      // for sampleFn/sampleSize and sample_fn/sample_size
+      const args = isPython
+        ? {
+            code: command,
+            returnFormat: stringify ? "text" : "structuredText",
+            sample_fn: "first",
+            sample_size: 10000,
           }
-          this.updateGlobal();
-        },
-      );
+        : {
+            ctx: context ?? ".",
+            code: command,
+            returnFormat: stringify ? "text" : "structuredText",
+            sampleFn: null,
+            sampleSize: null,
+          };
+
+      this.connection.k(wrapper, args, (err: Error, res: QueryResult) => {
+        if (err) {
+          reject(handleQueryResults(err.toString(), QueryResultType.Error));
+        } else if (res.error) {
+          resolve(
+            handleQueryResults(
+              res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
+              QueryResultType.Error,
+            ),
+          );
+        } else {
+          const result = res.data === null ? "" : res.data;
+          if (stringify) {
+            resolve(result);
+          } else {
+            resolve(JSON.parse(result));
+          }
+        }
+        this.updateGlobal();
+      });
     });
   }
 
