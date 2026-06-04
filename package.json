@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.18.0",
+  "version": "1.19.0-rc",
   "icon": "resources/images/kx-logo-vs.png",
   "repository": {
     "type": "git",
