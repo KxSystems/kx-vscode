@@ -6,11 +6,11 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
-- Provide option for VS Code to not use anonymous lambdas.
+- Added an option for VS Code to generate named functions instead of using anonymous lambdas.
 
 ### Internal Improvements
 
-- Updated dependencies to address identified security vulnerabilities.
+- Updated dependencies to address known security vulnerabilities.
 
 # v1.17.2
 
