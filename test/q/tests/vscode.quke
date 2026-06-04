@@ -74,3 +74,40 @@ feature .vscode.runQQuery
                     "            ^";
                     "  [1]  foo `";
                     "       ^\n")))]
+
+feature .vscode remaining functions
+    before
+        system "l out/vscode.q"
+    
+    should declare available functionality
+        expect the version to be defined in a global
+            all .vscode.version in .Q.n , "."
+
+        expect the manifest to include the version number
+            manifest: .vscode.getManifest[];
+            .qu.compare[
+                manifest`version;
+                .vscode.version]
+
+        expect evaluateQ and listMem to be available
+            manifest: .vscode.getManifest[];
+            .qu.compare[
+                manifest`features;
+                `evaluateQ`listMem]
+    
+    should return information about the process
+        expect a list of reserved words to be returned
+            all `if`min`max`select in .vscode.reservedWords[]
+
+        expect a list of views to be returned
+            value "foo: 1; bar: 2;";
+            value "myView:: foo + bar";
+            result: .vscode.getViews[];
+            (`myView in result) and not `foo in result
+
+        expect a table of variables
+            variables: .vscode.listMem[];
+            all (
+                `id`pid`name`fname`typeNum`namespace`context`isNs ~ cols variables;
+                all `runQQuery`foo`myView in variables`name
+                )
