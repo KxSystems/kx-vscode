@@ -43,17 +43,26 @@ runPyQuery: {[args]
 // entrypoint for IPC calls
 // This is the function that the remote process owner needs to mark as allowed
 runQQuery: {[args]
-    // TODO document the properties of args, so people know how to write customQEvaluator functions
-    // args contains `ctx and `code, and non-public properties for formatting the results
-    
     cachedContext: string system "d";
     system "d " , args`ctx;
 
     evaluator: $[`customQEvaluator in key .vscode;
         {[args]
-            @[  {[args] `data`error`errorMsg!(.vscode.customQEvaluator args; 0b; "")};
+            .Q.trp[{[args] `data`error`errorMsg!(.vscode.customQEvaluator args; 0b; "")};
                 args;
-                {[err] `data`error`errorMsg!(::; 1b; err)}]};
+                {[err; stacktrace]
+                    if [err ~ enlist " "; err: "syntax error"];
+                    // The stack trace returned to the user should only contain user code,
+                    // not the code in .vscode.customQEvaluator
+                    userCode: (-2 + last where (.Q.trp ~ first first @) each stacktrace) # stacktrace;
+                    userCode[;3]: reverse 1 + til count userCode;
+                    (!) . flip (
+                        (`data;       ::);
+                        (`error;      1b);
+                        (`errorMsg;   err);
+                        (`stacktrace; .Q.sbt userCode))
+                    }]
+                };
         i.evaluateQ];
     
     result: .vscode.i.formatQ[args] evaluator args;
