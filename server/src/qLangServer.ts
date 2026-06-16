@@ -341,26 +341,30 @@ export default class QLangServer {
   }: CompletionParams): Promise<CompletionItem[]> {
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
+    const scope = Scope(target);
 
-    const res = (await this.getSources(uri))
-      .map((source) =>
-        source.references
-          .filter(
-            (token) =>
-              token.scope === Scope(target) && Name(token) === Name(target),
-          )
-          .map((token) => {
-            return {
-              label: token.image,
-              labelDetails: {
-                detail: ` .${Namespace(token)}`,
-              },
-              kind: CompletionItemKind.Variable,
-              insertText: Relative(token, target),
-            };
-          }),
-      )
-      .flat();
+    const items = new Map<string, CompletionItem>();
+
+    for (const source of await this.getSources(uri)) {
+      for (const token of source.references) {
+        if (Scope(token) && Scope(token) !== scope) {
+          continue;
+        }
+        const name = Name(token);
+        if (!items.has(name)) {
+          items.set(name, {
+            label: token.image,
+            labelDetails: {
+              detail: ` .${Namespace(token)}`,
+            },
+            kind: CompletionItemKind.Variable,
+            insertText: Relative(token, target),
+          });
+        }
+      }
+    }
+
+    const res = [...items.values()];
 
     if (res.length > 0) {
       this.notify("onCompletion", MessageKind.DEBUG, {
