@@ -21,6 +21,7 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 
+import { QDebugSession } from "./classes/qDebugSession";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
@@ -358,6 +359,16 @@ export async function activate(context: vscode.ExtensionContext) {
       ext.customAuth = api;
     }
   }
+
+  context.subscriptions.push(
+    vscode.debug.registerDebugAdapterDescriptorFactory("q", {
+      createDebugAdapterDescriptor(): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+        return new vscode.DebugAdapterInlineImplementation(
+          new QDebugSession(context.extensionPath),
+        );
+      },
+    }),
+  );
 
   setTimeout(() => {
     checkLocalInstall();

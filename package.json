@@ -540,6 +540,63 @@
         "path": "snippets/qsnip.json"
       }
     ],
+    "breakpoints": [
+      {
+        "language": "q"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "q",
+        "label": "q Debug",
+        "languages": [
+          "q"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to the .q file to debug.",
+                "default": "${file}"
+              },
+              "qBinPath": {
+                "type": "string",
+                "description": "Path to the q executable. Defaults to the extension setting."
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Stop on first line of the program.",
+                "default": false
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "q",
+            "request": "launch",
+            "name": "Debug q File",
+            "program": "${file}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "q: Debug File",
+            "description": "Debug the currently open .q file",
+            "body": {
+              "type": "q",
+              "request": "launch",
+              "name": "Debug q File",
+              "program": "^\"\\${file}\""
+            }
+          }
+        ]
+      }
+    ],
     "languages": [
       {
         "id": "q",
@@ -1244,6 +1301,8 @@
     "@types/vscode": "1.103.0",
     "@types/vscode-webview": "1.57.5",
     "@types/ws": "8.18.1",
+    "@vscode/debugadapter": "1.68.0",
+    "@vscode/debugprotocol": "1.68.0",
     "@vscode/extension-telemetry": "1.4.0",
     "@vscode/python-extension": "1.0.6",
     "@vscode/test-electron": "2.5.2",
