@@ -11,8 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { readFile } from "fs/promises";
-import { fileURLToPath } from "url";
+import { readFile, stat } from "fs/promises";
+import { delimiter, join, sep } from "path";
+import { fileURLToPath, pathToFileURL } from "url";
 import {
   CallHierarchyIncomingCall,
   CallHierarchyIncomingCallsParams,
@@ -91,6 +92,7 @@ export default class QLangServer {
   declare private params: InitializeParams;
   declare private opened: Set<string>;
   declare private cached: Map<string, Source>;
+  declare private modules: Map<string, string | undefined>;
   declare public documents: TextDocuments<TextDocument>;
   declare public notebooks: NotebookDocuments<TextDocument>;
 
@@ -99,6 +101,7 @@ export default class QLangServer {
     this.params = params;
     this.opened = new Set();
     this.cached = new Map();
+    this.modules = new Map();
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
     this.documents.onDidOpen(this.onDidOpen.bind(this));
@@ -193,6 +196,18 @@ export default class QLangServer {
     return res ?? {};
   }
 
+  private async getQHome(uri: string): Promise<string | undefined> {
+    const workspace = await this.connection.workspace.getConfiguration({
+      scopeUri: uri,
+      section: "kdb.qHomeDirectoryWorkspace",
+    });
+    const global = await this.connection.workspace.getConfiguration({
+      scopeUri: uri,
+      section: "kdb.qHomeDirectory",
+    });
+    return workspace || global || process.env.QHOME || undefined;
+  }
+
   private notify(
     message: string,
     kind: MessageKind,
@@ -211,7 +226,16 @@ export default class QLangServer {
 
   public onDidChangeWatchedFiles({ changes }: DidChangeWatchedFilesParams) {
     for (const change of changes) {
-      this.cached.delete(change.uri);
+      this.invalidate(change.uri);
+    }
+    this.modules.clear();
+  }
+
+  private invalidate(uri: string) {
+    for (const key of this.cached.keys()) {
+      if (key === uri || key.startsWith(uri + "\0")) {
+        this.cached.delete(key);
+      }
     }
   }
 
@@ -225,7 +249,7 @@ export default class QLangServer {
     const uri = document.uri;
 
     if (this.opened.has(uri)) this.opened.delete(uri);
-    else this.cached.delete(uri);
+    else this.invalidate(uri);
 
     if (await this.getLinting(uri)) {
       const source = await this.getSource(uri);
@@ -625,7 +649,93 @@ export default class QLangServer {
     return result;
   }
 
-  private async related(uri: string): Promise<string[]> {
+  private async related(
+    uri: string,
+  ): Promise<{ uri: string; alias?: string }[]> {
+    const res: { uri: string; alias?: string }[] = [];
+
+    for (const file of await this.relatedFiles(uri)) {
+      res.push({ uri: file });
+    }
+    for (const { alias, file } of await this.relatedModules(uri)) {
+      res.push({ uri: file, alias });
+    }
+
+    return res;
+  }
+
+  private async relatedModules(
+    uri: string,
+  ): Promise<{ alias: string; file: string }[]> {
+    const source = await this.getSource(uri);
+    const res: { alias: string; file: string }[] = [];
+
+    for (const { alias, module } of source.imports) {
+      const file = await this.resolveModule(module, uri);
+      if (file) {
+        res.push({ alias, file });
+      }
+    }
+
+    return res;
+  }
+
+  private async resolveModule(
+    module: string,
+    uri: string,
+  ): Promise<string | undefined> {
+    if (this.modules.has(module)) {
+      return this.modules.get(module);
+    }
+
+    const roots: string[] = [];
+
+    if (process.env.QPATH) {
+      roots.push(...process.env.QPATH.split(delimiter).filter(Boolean));
+    }
+
+    const folders = await this.connection.workspace.getWorkspaceFolders();
+    if (folders) {
+      for (const folder of folders) {
+        const dir = fileURLToPath(folder.uri);
+        roots.push(dir, join(dir, "mod"));
+      }
+    }
+
+    const qHome = await this.getQHome(uri);
+    if (qHome) {
+      roots.push(join(qHome, "mod"));
+    }
+
+    const name = module.split(".").join(sep);
+    const candidates = [
+      `${name}.q`,
+      `${name}.q_`,
+      join(name, "init.q"),
+      join(name, "init.q_"),
+    ];
+
+    let resolved: string | undefined;
+
+    outer: for (const root of roots) {
+      for (const candidate of candidates) {
+        const file = join(root, candidate);
+        try {
+          if ((await stat(file)).isFile()) {
+            resolved = pathToFileURL(file).href;
+            break outer;
+          }
+        } catch {
+          // not present in this root; try the next candidate
+        }
+      }
+    }
+
+    this.modules.set(module, resolved);
+    return resolved;
+  }
+
+  private async relatedFiles(uri: string): Promise<string[]> {
     const res = [uri];
 
     if (uri.startsWith("vscode-notebook-cell:")) {
@@ -690,8 +800,9 @@ export default class QLangServer {
     return res;
   }
 
-  private async getSource(uri: string): Promise<Source> {
-    let source = this.cached.get(uri);
+  private async getSource(uri: string, alias?: string): Promise<Source> {
+    const key = alias ? uri + "\0" + alias : uri;
+    let source = this.cached.get(key);
     if (!source) {
       const document = this.documents.get(uri);
       let text = "";
@@ -709,8 +820,8 @@ export default class QLangServer {
           text = "";
         }
       }
-      source = Source.create(uri, text);
-      this.cached.set(uri, source);
+      source = Source.create(uri, text, alias);
+      this.cached.set(key, source);
     }
     return source;
   }
@@ -720,8 +831,8 @@ export default class QLangServer {
 
     switch (await this.getRefactoring(uri)) {
       case "Workspace":
-        for (const target of await this.related(uri)) {
-          res.push(await this.getSource(target));
+        for (const { uri: target, alias } of await this.related(uri)) {
+          res.push(await this.getSource(target, alias));
         }
         break;
       case "Window":
