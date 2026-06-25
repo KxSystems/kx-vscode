@@ -2,6 +2,12 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.18.1
+
+### Enhancements
+
+- VS Code endpoint detection now proactively checks for `.vscode.getManifest` availability rather than falling back to `vscode.q` only after `123` execution fails.
+
 # v1.18.0
 
 ### Enhancements
