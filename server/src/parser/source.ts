@@ -245,19 +245,27 @@ export class Source {
       }
       const symbol = sig[i + 1];
       const colon = sig[i - 1];
-      const alias = sig[i - 2];
+      const target = sig[i - 2];
       if (
-        symbol &&
-        Type(symbol) === SymbolLiteral &&
-        colon &&
-        Type(colon) === Colon &&
-        alias &&
-        Type(alias) === Identifier
+        !symbol ||
+        Type(symbol) !== SymbolLiteral ||
+        !colon ||
+        Type(colon) !== Colon ||
+        !target
       ) {
-        const module = symbol.image.slice(1);
-        if (module) {
-          this.imports.push({ alias: alias.image, module });
-        }
+        continue;
+      }
+      const module = symbol.image.slice(1);
+      if (!module) {
+        continue;
+      }
+      if (Type(target) === Identifier) {
+        // `alias: use `module` — members are surfaced under the alias namespace
+        this.imports.push({ alias: target.image, module });
+      } else if (Type(target) === RParen || Type(target) === RBracket) {
+        // `([a;b]): use `module` — destructured members are bound bare, so
+        // import with no alias and let them resolve in the default namespace
+        this.imports.push({ alias: "", module });
       }
     }
   }

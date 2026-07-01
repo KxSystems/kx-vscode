@@ -615,8 +615,61 @@ describe("qLangServer", () => {
     it("should complete module members under the alias", async () => {
       const params = createMain("bar:use`bar\nbar.");
       const result = await server.onCompletion(params);
-      assert.ok(result.some((item) => item.insertText === "bar.f"));
-      assert.ok(result.some((item) => item.insertText === "bar.g"));
+      assert.ok(result.some((item) => item.textEdit?.newText === "bar.f"));
+      assert.ok(result.some((item) => item.textEdit?.newText === "bar.g"));
+    });
+
+    it("should label module members with the qualified name so they filter under `bar.`", async () => {
+      const params = createMain("bar:use`bar\nbar.");
+      const result = await server.onCompletion(params);
+      // Labels must be qualified (bar.f/bar.g/bar.h), otherwise a bare label
+      // like `h` is filtered out by VS Code against the typed `bar.` prefix.
+      for (const name of ["bar.f", "bar.g", "bar.h"]) {
+        assert.ok(
+          result.some((item) => item.label === name),
+          `expected a completion labelled ${name}`,
+        );
+      }
+    });
+
+    it("should resolve a nested submodule via the `:` selector", async () => {
+      // `kx.fusion:pcre2` -> mod/kx/fusion/pcre2.q (dots and colon are separators)
+      createMain("pcre2:use`kx.fusion:pcre2");
+      const file = await server["resolveModule"](
+        "kx.fusion:pcre2",
+        pathToFileURL(join(folder, "main.q")).toString(),
+      );
+      assert.strictEqual(
+        file,
+        pathToFileURL(join(folder, "mod/kx/fusion/pcre2.q")).toString(),
+      );
+    });
+
+    it("should complete submodule members under the alias", async () => {
+      const params = createMain("pcre2:use`kx.fusion:pcre2\npcre2.");
+      const result = await server.onCompletion(params);
+      assert.ok(result.some((item) => item.textEdit?.newText === "pcre2.match"));
+      assert.ok(
+        result.some((item) => item.textEdit?.newText === "pcre2.replace"),
+      );
+    });
+
+    it("should jump to a member destructured from a module", async () => {
+      // `([match]):use`... binds `match` bare; cursor on the `match` usage
+      const params = createMain("([match]):use`kx.fusion:pcre2\nmatch");
+      const result = await server.onDefinition(params);
+      assert.ok(
+        result.some((location) =>
+          location.uri.endsWith("mod/kx/fusion/pcre2.q"),
+        ),
+      );
+    });
+
+    it("should complete members destructured from a module", async () => {
+      const params = createMain("([match]):use`kx.fusion:pcre2\n");
+      const result = await server.onCompletion(params);
+      assert.ok(result.some((item) => item.textEdit?.newText === "match"));
+      assert.ok(result.some((item) => item.textEdit?.newText === "replace"));
     });
   });
 });

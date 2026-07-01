@@ -148,7 +148,7 @@ export default class QLangServer {
       referencesProvider: true,
       definitionProvider: true,
       renameProvider: true,
-      completionProvider: { resolveProvider: false },
+      completionProvider: { resolveProvider: false, triggerCharacters: ["."] },
       selectionRangeProvider: true,
       callHierarchyProvider: true,
       semanticTokensProvider: {
@@ -367,6 +367,24 @@ export default class QLangServer {
     const target = source.tokenAt(position);
     const scope = Scope(target);
 
+    // Range of the (possibly dotted) word already typed before the cursor. A
+    // member completion must replace this whole prefix via a textEdit; relying
+    // on VS Code's default range appends after `bar.` and yields `bar.bar.f`
+    // (the q wordPattern excludes the trailing dot from the current word).
+    const prefix =
+      this.documents
+        .get(uri)
+        ?.getText(
+          Range.create(position.line, 0, position.line, position.character),
+        )
+        .match(/[.\w]*$/)?.[0] ?? "";
+    const range = Range.create(
+      position.line,
+      position.character - prefix.length,
+      position.line,
+      position.character,
+    );
+
     const items = new Map<string, CompletionItem>();
 
     for (const source of await this.getSources(uri)) {
@@ -377,12 +395,16 @@ export default class QLangServer {
         const name = Name(token);
         if (!items.has(name)) {
           items.set(name, {
-            label: token.image,
+            // Use the qualified name (e.g. `bar.h`) so members show and filter
+            // correctly under a dotted prefix like `bar.`; the raw image would
+            // be the bare `h`, which VS Code filters out against `bar.`.
+            label: name,
             labelDetails: {
               detail: ` .${Namespace(token)}`,
             },
             kind: CompletionItemKind.Variable,
-            insertText: Relative(token, target),
+            filterText: name,
+            textEdit: TextEdit.replace(range, name),
           });
         }
       }
@@ -707,12 +729,12 @@ export default class QLangServer {
       roots.push(join(qHome, "mod"));
     }
 
-    const name = module.split(".").join(sep);
+    const name = module.split(/[.:]/).join(sep);
     const candidates = [
+      `${name}.k`,
       `${name}.q`,
-      `${name}.q_`,
+      join(name, "init.k"),
       join(name, "init.q"),
-      join(name, "init.q_"),
     ];
 
     let resolved: string | undefined;
