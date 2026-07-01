@@ -566,9 +566,14 @@ describe("qLangServer", () => {
   });
 
   describe("modules", () => {
-    // Workspace folder hosting fixtures/mod/bar.q, resolved from project root
-    // (fixtures are not copied into out-test, so use a cwd-relative path).
-    const folder = join(process.cwd(), "test/suite/server/fixtures");
+    // Workspace folder hosting fixtures/mod/bar.q. Anchor to this compiled test
+    // file (out-test/test/suite/server) rather than process.cwd(), which is not
+    // the repo root on all platforms (e.g. the .vscode-test dir on Windows).
+    // Fixtures are not copied into out-test, so point back at the source tree.
+    const folder = join(
+      __dirname,
+      "../../../../test/suite/server/fixtures",
+    );
     const moduleUri = pathToFileURL(join(folder, "mod/bar.q")).toString();
 
     function createMain(content: string, offset?: number) {

@@ -831,11 +831,12 @@ export default class QLangServer {
       if (document) {
         text = document.getText();
       } else if (uri.startsWith("file:")) {
-        const file = fileURLToPath(uri);
         try {
-          text = await readFile(file, { encoding: "utf8" });
+          // fileURLToPath throws on Windows for a non-absolute URL (no drive
+          // letter), so keep it inside the guard alongside the read.
+          text = await readFile(fileURLToPath(uri), { encoding: "utf8" });
         } catch (error) {
-          this.notify(`Unable to read '${file}'.`, MessageKind.DEBUG, {
+          this.notify(`Unable to read '${uri}'.`, MessageKind.DEBUG, {
             logger,
             params: `${error}`,
           });
