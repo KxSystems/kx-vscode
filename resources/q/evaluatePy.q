@@ -1,14 +1,16 @@
 {[args]
+    // args: `returnFormat`code`sample_fn`sample_size!("text"; "range(0,10)"; "first"; 10000);
     returnFormat:args`returnFormat;
     code:args`code;
-    sample_fn:args`sample_fn;
-    sample_size:args`sample_size;
+    sampleFn:args`sample_fn;
+    sampleSize:args`sample_size;
 
     if [`histogram in key `.qp;
         if [not `display2 in key `.qp;
             .qp.display2: (')[{x[`output][`bytes]}; .qp.display]]];
-    if [()~key`.pykx;
-        :(!). flip(
+    
+    if [() ~ key`.pykx;
+        : (!) . flip (
             (`data;::);
             (`error;1b);
             (`errorMsg;".pykx is not defined: please load pykx"))];
@@ -38,7 +40,16 @@
         code[0]=code[0][range[0][1]:]
         return code
 
-    def pystruct_run(payload, as_string):
+    def pystruct_format_exception():
+        type, error, tb = sys.exc_info()
+        stacktrace = traceback.extract_tb(tb)
+        offset = -1 * (len(stacktrace) - 3)
+        formatted_tb = traceback.format_exception(type, error, tb, offset)
+        formatted_tb = ''.join(formatted_tb)
+        # encode('UTF-8') is to return a string, to avoid polluting the symbol table.
+        return formatted_tb.rstrip().encode('UTF-8')
+
+    def pystruct_run(payload):
         payload = payload.py().decode('utf-8')
         payload += '\\n\\n'
         # Get the start of each expression/statement
@@ -53,8 +64,7 @@
 
 
         if len(starts) == 0:
-            # encode('UTF-8') is to return a string, to avoid polluting the symbol table.
-            return str(None).encode('UTF-8') if as_string else None
+            return None
 
         # Since ast.parse only returns the start of each expression,
         # the ranges must be made by joining consecutive pairs.
@@ -76,30 +86,27 @@
         global pystruct_last_query
         pystruct_last_query = result
 
-        # encode('UTF-8') is to return a string, to avoid polluting the symbol table.
-        return repr(result).encode('UTF-8') if as_string else result
+        return result
 
 
-    def pystruct_run_wrapped(code, as_string):
+    def pystruct_run_wrapped(code):
         try:
             return{
                 'error': False,
                 'errorMsg': str(None).encode('UTF-8'),
-                'data': pystruct_run(code, as_string)
+                'data': pystruct_run(code)
             }
         except Exception as e:
-            type, error, tb = sys.exc_info()
-            stacktrace = traceback.extract_tb(tb)
-            offset = -1 * (len(stacktrace) - 3)
-            formatted_tb = traceback.format_exception(type, error, tb, offset)
-            formatted_tb = ''.join(formatted_tb)
-            formatted_tb = formatted_tb.rstrip()
             return{
                 'error': True,
                 'errorMsg': str(e.args).encode('UTF-8'),
                 'data': None,
-                'stacktrace': formatted_tb
+                'stacktrace': pystruct_format_exception()
             }
+
+    def pystruct_to_text(data):
+        # encode('UTF-8') is to return a string, to avoid polluting the symbol table.
+        return repr(data).encode('UTF-8')
 
     def pystruct_find_strings (code):
         from io import BytesIO as pystruct_BytesIO
@@ -111,7 +118,9 @@
     return{
         'pystruct_run_wrapped':pystruct_run_wrapped,
         'pystruct_run':pystruct_run,
-        'pystruct_find_strings':pystruct_find_strings
+        'pystruct_find_strings':pystruct_find_strings,
+        'pystruct_to_text':pystruct_to_text,
+        'pystruct_format_exception':pystruct_format_exception
     }";
     .pykx.pyexec"_kx_execution_context=_kx_execution_context()";
 
@@ -337,91 +346,95 @@
 
         return data";
 
-    .pykx.pyexec "def pystruct_to_structured_text_wrapper(code, sample_fn, sample_size):
-    try:
-        result = _kx_execution_context['pystruct_run'](code, False)
-    except Exception as e:
-        type, error, tb = sys.exc_info()
-        stacktrace = traceback.extract_tb(tb)
-        offset = -1 * (len(stacktrace) - 3)
-        formatted_tb = traceback.format_exception(type, error, tb, offset)
-        formatted_tb = ''.join(formatted_tb)
-        formatted_tb = formatted_tb.rstrip()
-        return {
-            'error': True,
-            'errorMsg': str(e.args).encode('UTF-8'),
-            'data': None,
-            'stacktrace': str(formatted_tb).encode('UTF-8')
-        }
-
-
+    .pykx.pyexec "def pystruct_format_structured_text(data, sample_fn, sample_size):
     # If length is not possible (e.g. functions) then assign length to 1
     try:
-        length = len(result)
+        length = len(data)
     except:
         length = 1
 
     # Sampling can be a destructive operation, so only do it when necessary
     # e.g. When sampling a named tuple, the type of the result will be a regular tuple
     if sample_size < length or (sample_fn == 'random'):
-        result = pystruct_sample(result, str(sample_fn), int(sample_size))
+        data = pystruct_sample(data, str(sample_fn), int(sample_size))
 
     try:
         return{
-            'data': pystruct_to_structured_text(result, length),
+            'data': pystruct_to_structured_text(data, length),
             'error': False,
             'errorMsg':str(None).encode('UTF-8')
         }
     except Exception as e:
-        type,error,tb=sys.exc_info()
-        stacktrace=traceback.extract_tb(tb)
-        offset=-1*(len(stacktrace)-3)
-        tb2=traceback.format_exception(type,error,tb,offset)
-        tb2=''.join(tb2)
-        tb2=tb2.rstrip()
         return{
-            'data':None,
-            'error':True,
-            'errorMsg':str(e).encode('UTF-8'),
-            'backtrace':tb2
+            'error': True,
+            'errorMsg': str(e).encode('UTF-8'),
+            'data': None,
+            'stacktrace': _kx_execution_context['pystruct_format_exception']()
         }";
 
-    run:{[returnResult;asString;code;sample_fn;sample_size]
-        removeExtraIndents:{[code]
-            if[1 ~ count code; code: enlist code];
-            inStrings:$[(count ss[code;"'''"])or count ss[code;"\"\"\""];
-                1+raze{x+til y-x}./:.pykx.qeval["_kx_execution_context['pystruct_find_strings']"]code;
-                ()];
-            lines:"\n" vs code;
-            skippedLines:all each lines in " \t";
-            skippedLines[inStrings]:1b;
-            ii:where not skippedLines;
-            extraWS:&\[{(x in" \t")?0b}each lines ii];
-            lines[ii]:extraWS _'lines ii;
-            "\n" sv lines
+    removeExtraIndents:{[code]
+        if[1 ~ count code; code: enlist code];
+        inStrings:$[(count ss[code;"'''"])or count ss[code;"\"\"\""];
+            1+raze{x+til y-x}./:.pykx.qeval["_kx_execution_context['pystruct_find_strings']"]code;
+            ()];
+        lines:"\n" vs code;
+        skippedLines:all each lines in " \t";
+        skippedLines[inStrings]:1b;
+        ii:where not skippedLines;
+        extraWS:&\[{(x in" \t")?0b}each lines ii];
+        lines[ii]:extraWS _'lines ii;
+        "\n" sv lines
         };
-        code:removeExtraIndents code;
-        defaultConv:.pykx.util.defaultConv;
-        .pykx.util.defaultConv:"k";
 
-        result:$[asString ~ "text"; .pykx.qeval["_kx_execution_context['pystruct_run_wrapped']"][code;1b];
-            asString ~ "serialized"; .pykx.qeval["_kx_execution_context['pystruct_run_wrapped']"][code;0b];
-            asString ~ "structuredText"; .pykx.qeval["pystruct_to_structured_text_wrapper"][code;sample_fn;sample_size];
-            `error`errorMsg`data!(1b; "Invalid returnFormat specified"; ::)
-            ];
-        .pykx.util.defaultConv:defaultConv;
-        result[`data]:$[result[`error];
-            ::;
-            $[asString ~ "text";
-                result[`data]:{[text]
-                    maxSize:250000;
-                    $[count[text]>maxSize;
-                        sublist[maxSize;text],$["\n" in text;"\n..";".."];
-                        text],"\n"
-                }(),result`data;
-                result`data]];
-        if[asString  ~ "structuredText"; result[`data] : .j.j result[`data]];
-        result
-    };
-    run[1b;returnFormat;code;sample_fn;sample_size]
+    // Runs the code and returns `data`error`errorMsg (with `stacktrace appended on error).
+    // data is left in Python as a wrapped pykx object, so nothing is converted
+    // (or interned into the symbol table) until the formatter decides how to render it.
+    evaluate:{[code]
+        result: .pykx.eval["_kx_execution_context['pystruct_run_wrapped']"][code];
+        errorMsg:.pykx.qeval["lambda r: r['errorMsg']"]result;
+        $[.pykx.qeval["lambda r: r['error']"]result;
+            (!). flip(
+                (`error;1b);
+                (`errorMsg;errorMsg);
+                (`data;::);
+                (`stacktrace;.pykx.qeval["lambda r: r['stacktrace']"]result));
+            (!). flip(
+                (`error;0b);
+                (`errorMsg;errorMsg);
+                (`data;.pykx.eval["lambda r: r['data']"]result))]
+        };
+
+    // text and serialized results return the stacktrace as a symbol, structuredText as a string
+    format:{[returnFormat; sampleFn; sampleSize; result]
+        if [returnFormat ~ "text";
+            result[`data]: {[text]
+                $[  count[text]>maxSize:250000;
+                    sublist[maxSize;text],$["\n" in text;"\n..";".."];
+                    text],"\n"
+                }(),.pykx.qeval["_kx_execution_context['pystruct_to_text']"]result`data;
+            :result];
+        
+        if [returnFormat ~ "serialized";
+            result[`data]: result[`data]`;
+            :result];
+    
+        if [returnFormat ~ "structuredText";
+            result:.pykx.qeval["pystruct_format_structured_text"][result`data;sampleFn;sampleSize];
+            result[`data]:.j.j result`data;
+            :result];
+        
+        // Unrecognized return format
+        : `error`errorMsg`data!(1b; "Invalid returnFormat specified"; ::)
+        };
+    
+    code:removeExtraIndents code;
+    defaultConv:.pykx.util.defaultConv;
+    .pykx.util.defaultConv:"k";
+    result: evaluate code;
+    response: $[result`error;
+        result;
+        format[returnFormat; sampleFn; sampleSize; result]];
+    
+    .pykx.util.defaultConv:defaultConv;
+    response
     }
