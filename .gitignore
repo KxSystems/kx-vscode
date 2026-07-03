@@ -20,3 +20,5 @@ out-test/
 /bin
 /lib
 /venv
+
+scripts/mock-insights-server/certs/
