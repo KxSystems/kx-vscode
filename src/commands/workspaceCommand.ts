@@ -16,6 +16,7 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
+  FileType,
   NotebookCell,
   QuickPickItem,
   QuickPickItemKind,
@@ -708,6 +709,27 @@ export async function startRepl() {
   notify("REPL started.", MessageKind.DEBUG, {
     logger,
     telemetry: "Repl.Start",
+  });
+}
+
+export async function startReplInFolder(uri?: Uri) {
+  if (!uri) {
+    return startRepl();
+  }
+  let base = uri;
+  try {
+    const stat = await workspace.fs.stat(uri);
+    if (!(stat.type & FileType.Directory)) {
+      base = Uri.file(Path.dirname(uri.fsPath));
+    }
+  } catch {
+    // Unable to stat the resource; fall back to using it as the base directory.
+  }
+  const instance = await ReplConnection.openInFolder(base);
+  instance.start();
+  notify("REPL started.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Repl.StartFolder",
   });
 }
 

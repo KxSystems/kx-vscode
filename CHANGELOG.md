@@ -6,6 +6,8 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
+- Added a **KX: Start REPL Here** file-explorer context command that starts a REPL based in the selected folder (or a file's parent directory). Executing a file routes to the most specific REPL whose base directory contains it, falling back to the workspace REPL. The base directory's `mod` folder is added to the module search path (`QPATH`) so the KX modules system resolves project-local modules with ``use`…``.
+
 - Added REPL keyboard shortcuts:
 
   | Shortcut                                                              | Action                       |

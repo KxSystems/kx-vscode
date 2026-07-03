@@ -12,6 +12,9 @@
  */
 
 import * as assert from "assert";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
@@ -389,6 +392,64 @@ describe("workspaceCommand", () => {
 
         beforeEach(() => {
           sinon.stub(ReplConnection, "getOrCreateInstance").resolves(conn);
+        });
+
+        it("should start the workspace REPL", async () => {
+          const startSpy = sinon.stub(conn, "start");
+          await workspaceCommand.startRepl();
+          sinon.assert.calledOnce(startSpy);
+        });
+      });
+
+      describe("startReplInFolder", () => {
+        const conn = <ReplConnection>{ start() {} };
+        let openInFolder: sinon.SinonStub;
+        let startSpy: sinon.SinonStub;
+        let tmpDir: string;
+        let tmpFile: string;
+
+        before(() => {
+          tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "kxrepl-"));
+          tmpFile = path.join(tmpDir, "main.q");
+          fs.writeFileSync(tmpFile, "");
+        });
+
+        after(() => {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        });
+
+        beforeEach(() => {
+          startSpy = sinon.stub(conn, "start");
+          openInFolder = sinon
+            .stub(ReplConnection, "openInFolder")
+            .resolves(conn);
+        });
+
+        it("should start a REPL based in the selected folder", async () => {
+          const folder = vscode.Uri.file(tmpDir);
+          await workspaceCommand.startReplInFolder(folder);
+          assert.strictEqual(
+            (openInFolder.firstCall.args[0] as vscode.Uri).fsPath,
+            folder.fsPath,
+          );
+          sinon.assert.calledOnce(startSpy);
+        });
+
+        it("should base the REPL in a file's parent directory", async () => {
+          await workspaceCommand.startReplInFolder(vscode.Uri.file(tmpFile));
+          assert.strictEqual(
+            (openInFolder.firstCall.args[0] as vscode.Uri).fsPath,
+            vscode.Uri.file(tmpDir).fsPath,
+          );
+        });
+
+        it("should fall back to the workspace REPL when no uri is given", async () => {
+          const getOrCreate = sinon
+            .stub(ReplConnection, "getOrCreateInstance")
+            .resolves(conn);
+          await workspaceCommand.startReplInFolder();
+          sinon.assert.notCalled(openInFolder);
+          sinon.assert.calledOnce(getOrCreate);
         });
       });
     });

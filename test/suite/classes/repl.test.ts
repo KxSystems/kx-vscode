@@ -160,4 +160,30 @@ describe("REPL", () => {
       sinon.assert.notCalled(showStub);
     });
   });
+
+  describe("folder scoped instances", () => {
+    const repls = () =>
+      repl.ReplConnection["repls"] as Map<string, repl.ReplConnection>;
+
+    it("should route a contained file to the most specific folder REPL", async () => {
+      const folder = vscode.Uri.file("/ws/sub");
+      const folderRepl = await repl.ReplConnection.openInFolder(folder);
+      try {
+        const chosen = await repl.ReplConnection.getOrCreateInstance(
+          vscode.Uri.file("/ws/sub/child/x.q"),
+        );
+        assert.strictEqual(chosen, folderRepl);
+      } finally {
+        folderRepl["close"]();
+      }
+    });
+
+    it("should remove the instance from the cache on close, by key", async () => {
+      const folder = vscode.Uri.file("/ws/sub2");
+      const folderRepl = await repl.ReplConnection.openInFolder(folder);
+      assert.ok(repls().has(folder.toString()));
+      folderRepl["close"]();
+      assert.ok(!repls().has(folder.toString()));
+    });
+  });
 });

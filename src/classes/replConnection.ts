@@ -30,6 +30,7 @@ import {
   Runner,
 } from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
+import { moduleSearchPath, selectRepl } from "../utils/replPath";
 import { errorMessage } from "../utils/shared";
 import { pickWorkspace } from "../utils/workspace";
 
@@ -197,6 +198,7 @@ export class ReplConnection {
   private constructor(
     private readonly workspace?: vscode.WorkspaceFolder,
     private readonly venv?: ResolvedEnvironment,
+    private readonly baseUri?: vscode.Uri,
   ) {
     this.onDidWrite = new vscode.EventEmitter<string>();
     this.decoder = new TextDecoder("utf8");
@@ -244,6 +246,24 @@ export class ReplConnection {
     this.updateMaxInputIndex();
   }
 
+  private get key() {
+    return this.baseUri?.toString() ?? CONF.DEFAULT;
+  }
+
+  private terminalLabel() {
+    if (this.workspace) {
+      if (
+        !this.baseUri ||
+        this.baseUri.toString() === this.workspace.uri.toString()
+      ) {
+        return this.workspace.name;
+      }
+      const rel = path.relative(this.workspace.uri.fsPath, this.baseUri.fsPath);
+      return `${this.workspace.name}/${rel.split(path.sep).join("/")}`;
+    }
+    return this.baseUri ? path.basename(this.baseUri.fsPath) : CONF.DEFAULT;
+  }
+
   private createTerminal() {
     return vscode.window.createTerminal({
       pty: {
@@ -253,7 +273,7 @@ export class ReplConnection {
         handleInput: this.handleInput.bind(this),
         onDidWrite: this.onDidWrite.event,
       },
-      name: `${CONF.TITLE} (${this.workspace ? this.workspace.name : CONF.DEFAULT})`,
+      name: `${CONF.TITLE} (${this.terminalLabel()})`,
       isTransient: true,
     });
   }
@@ -281,11 +301,17 @@ export class ReplConnection {
     this.env = getEnvironment(this.workspace);
     if (!this.env.qBinPath) showSetupError(this.workspace);
 
+    // Only KDB-X has a module system; classic kdb+ ignores QPATH.
+    const base = this.baseUri?.fsPath;
+    if (base && this.env.qBinKdbX) {
+      this.env.QPATH = moduleSearchPath(base, this.env.QPATH, this.env.QHOME);
+    }
+
     return spawn(
       `${this.activate ? this.activate + " && " : ""}"${this.env.qBinPath}"`,
       {
         env: this.env,
-        cwd: this.workspace?.uri.fsPath,
+        cwd: this.baseUri?.fsPath ?? this.workspace?.uri.fsPath,
         windowsHide: true,
         shell: this.win32 ? "cmd.exe" : "bash",
       },
@@ -558,9 +584,8 @@ export class ReplConnection {
   }
 
   private close() {
-    const key = this.workspace?.uri.toString() ?? CONF.DEFAULT;
-    if (ReplConnection.repls.get(key) === this) {
-      ReplConnection.repls.delete(key);
+    if (ReplConnection.repls.get(this.key) === this) {
+      ReplConnection.repls.delete(this.key);
     }
     this.exited = true;
     this.cancel();
@@ -785,27 +810,55 @@ export class ReplConnection {
   private static readonly history = new History();
   private static readonly repls = new Map<string, ReplConnection>();
 
+  private static async create(
+    workspace?: vscode.WorkspaceFolder,
+    baseUri?: vscode.Uri,
+  ) {
+    let venv: ResolvedEnvironment | undefined;
+    try {
+      const pythonApi = await PythonExtension.api();
+      const envp = pythonApi.environments.getActiveEnvironmentPath(workspace);
+      venv = await pythonApi.environments.resolveEnvironment(envp);
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
+    }
+    const repl = new ReplConnection(workspace, venv, baseUri);
+    this.repls.set(repl.key, repl);
+    return repl;
+  }
+
   static async getOrCreateInstance(resource?: vscode.Uri) {
+    if (resource) {
+      const match = selectRepl(
+        resource.fsPath,
+        [...this.repls.values()].map((repl) => ({
+          baseFsPath: repl.baseUri?.fsPath,
+          exited: repl.exited,
+          repl,
+        })),
+      );
+      if (match) {
+        return match.repl;
+      }
+    }
+
     const workspace =
       (resource && vscode.workspace.getWorkspaceFolder(resource)) ||
       (await pickWorkspace());
 
     const key = workspace?.uri.toString() ?? CONF.DEFAULT;
-
-    let repl = this.repls.get(key);
-    if (!repl || repl.exited) {
-      let venv: ResolvedEnvironment | undefined;
-      try {
-        const pythonApi = await PythonExtension.api();
-        const envp = pythonApi.environments.getActiveEnvironmentPath(workspace);
-        venv = await pythonApi.environments.resolveEnvironment(envp);
-      } catch (error) {
-        notify(errorMessage(error), MessageKind.DEBUG, { logger });
-      }
-      repl = new ReplConnection(workspace, venv);
-      this.repls.set(key, repl);
+    const existing = this.repls.get(key);
+    if (existing && !existing.exited) {
+      return existing;
     }
+    return this.create(workspace, workspace?.uri);
+  }
 
-    return repl;
+  static async openInFolder(base: vscode.Uri) {
+    const existing = this.repls.get(base.toString());
+    if (existing && !existing.exited) {
+      return existing;
+    }
+    return this.create(vscode.workspace.getWorkspaceFolder(base), base);
   }
 }
