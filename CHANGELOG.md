@@ -16,6 +16,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Fixes
 
 - Fixed the REPL treating a solitary `/` as a single line rather than the start of a multiline comment when it is not closed by a `\`.
+- Fixed the REPL mangling the repeat count of timing system commands such as `\ts:1000 exp` and `\t:100 exp`.
 
 # v1.18.0
 

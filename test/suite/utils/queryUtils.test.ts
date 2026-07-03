@@ -266,6 +266,25 @@ describe("queryUtils", () => {
       res = queryUtils.normalizeQSQLQuery('a:"a\r\n\r\n b"');
       assert.strictEqual(res, 'a:"a\r\n\r\n b"');
     });
+
+    it("should convert system commands", () => {
+      assert.strictEqual(
+        queryUtils.normalizeQSQLQuery("\\l foo.q"),
+        'system"l foo.q"',
+      );
+      assert.strictEqual(queryUtils.normalizeQSQLQuery("\\\\"), 'system"\\\\"');
+    });
+
+    it("should preserve the repeat count of timing system commands", () => {
+      assert.strictEqual(
+        queryUtils.normalizeQSQLQuery("\\ts:1000 1+2"),
+        'system"ts:1000 1+2"',
+      );
+      assert.strictEqual(
+        queryUtils.normalizeQSQLQuery("\\t:100 sum til 100"),
+        'system"t:100 sum til 100"',
+      );
+    });
   });
 
   describe("resultToBase64", () => {
@@ -383,6 +402,17 @@ describe("queryUtils", () => {
     it("should remove closed block comment", () => {
       const res = queryUtils.normalizeQuery("1\n/\n2\n\\\n3");
       assert.strictEqual(res, "1\r\n3");
+    });
+
+    it("should preserve the repeat count of timing system commands", () => {
+      assert.strictEqual(
+        queryUtils.normalizeQuery("\\ts:1000 1+2"),
+        'system"ts:1000 1+2"',
+      );
+      assert.strictEqual(
+        queryUtils.normalizeQuery("\\ts 1+2"),
+        'system"ts 1+2"',
+      );
     });
   });
 
