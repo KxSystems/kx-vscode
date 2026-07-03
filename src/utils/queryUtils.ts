@@ -110,8 +110,8 @@ function queryLimitCheck(query: string): string {
 export function normalizeQuery(query: string): string {
   return (
     queryLimitCheck(query)
-      // Remove block comments
-      .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
+      // Remove block comments (closed by a solitary \ or running to end of input)
+      .replace(/^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm, "")
       // Remove terminate comments
       .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments
@@ -141,8 +141,8 @@ export function normalizeQuery(query: string): string {
 export function normalizeQSQLQuery(query: string): string {
   return (
     queryLimitCheck(query)
-      // Remove block comments
-      .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
+      // Remove block comments (closed by a solitary \ or running to end of input)
+      .replace(/^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm, "")
       // Remove terminate comments
       .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments

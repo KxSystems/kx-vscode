@@ -228,6 +228,13 @@ describe("queryUtils", () => {
       assert.strictEqual(res, "a:1");
     });
 
+    it("should remove unclosed block comment to end of input", () => {
+      let res = queryUtils.normalizeQSQLQuery("a:1\n/\na:2\na:3");
+      assert.strictEqual(res, "a:1");
+      res = queryUtils.normalizeQSQLQuery("a:1\r\n/\r\na:2\r\na:3");
+      assert.strictEqual(res, "a:1");
+    });
+
     it("should remove single line comment", () => {
       let res = queryUtils.normalizeQSQLQuery("/ single line comment\na:1");
       assert.strictEqual(res, "a:1");
@@ -364,6 +371,18 @@ describe("queryUtils", () => {
       const query = "1234567890".repeat(25000) + "1";
 
       assert.throws(() => queryUtils.normalizeQuery(query));
+    });
+
+    it("should remove unclosed block comment to end of input", () => {
+      let res = queryUtils.normalizeQuery("1\n/\n2\n3");
+      assert.strictEqual(res, "1\r\n");
+      res = queryUtils.normalizeQuery("1\r\n/\r\n2\r\n3");
+      assert.strictEqual(res, "1\r\n");
+    });
+
+    it("should remove closed block comment", () => {
+      const res = queryUtils.normalizeQuery("1\n/\n2\n\\\n3");
+      assert.strictEqual(res, "1\r\n3");
     });
   });
 

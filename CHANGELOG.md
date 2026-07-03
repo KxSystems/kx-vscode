@@ -2,6 +2,21 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.19.0
+
+### Enhancements
+
+- Added REPL keyboard shortcuts:
+
+  | Shortcut                                                              | Action                       |
+  | --------------------------------------------------------------------- | ---------------------------- |
+  | Ctrl+Left / Ctrl+Right (Windows, Linux), Alt+Left / Alt+Right (macOS) | Jump to previous / next word |
+  | Ctrl+L                                                                | Clear the REPL               |
+
+### Fixes
+
+- Fixed the REPL treating a solitary `/` as a single line rather than the start of a multiline comment when it is not closed by a `\`.
+
 # v1.18.0
 
 ### Enhancements

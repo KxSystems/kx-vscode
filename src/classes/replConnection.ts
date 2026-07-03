@@ -47,6 +47,7 @@ const ANSI = {
   SAVE: "\x1b[s",
   RESTORE: "\x1b[u",
   ERASETOEND: "\x1b[0J",
+  CLEAR: "\x1b[2J\x1b[3J\x1b[H",
   LINESTART: "\x1b[0G",
   FAINTON: "\x1b[2m",
   FAINTOFF: "\x1b[22m",
@@ -56,6 +57,7 @@ const KEY = {
   CR: "\r",
   CTRLC: "\x03",
   CTRLD: "\x04",
+  CTRLL: "\x0c",
   BS: "\b",
   BSMAC: "\x7f",
   DEL: "\x1b[3~",
@@ -73,6 +75,12 @@ const KEY = {
   SHIFTDOWN: "\x1b[1;2B",
   SHIFTLEFT: "\x1b[1;2D",
   SHIFTRIGHT: "\x1b[1;2C",
+  CTRLLEFT: "\x1b[1;5D",
+  CTRLRIGHT: "\x1b[1;5C",
+  ALTLEFT: "\x1b[1;3D",
+  ALTRIGHT: "\x1b[1;3C",
+  METALEFT: "\x1bb",
+  METARIGHT: "\x1bf",
 };
 
 const CTX = {
@@ -422,6 +430,31 @@ export class ReplConnection {
     );
   }
 
+  private isWordChar(index: number) {
+    const char = this.input[index];
+    return char !== undefined && /\w/.test(char);
+  }
+
+  private wordLeft() {
+    let index = this.inputIndex;
+    while (index > 0 && !this.isWordChar(index - 1)) index--;
+    while (index > 0 && this.isWordChar(index - 1)) index--;
+    return index;
+  }
+
+  private wordRight() {
+    const max = this.visibleInputIndex;
+    let index = this.inputIndex;
+    while (index < max && !this.isWordChar(index)) index++;
+    while (index < max && this.isWordChar(index)) index++;
+    return index;
+  }
+
+  private clear() {
+    this.sendToTerminal(ANSI.CLEAR);
+    if (!this.executing) this.showPrompt(true);
+  }
+
   private recall(history?: HistoryItem) {
     const input = history?.input ?? ANSI.EMPTY;
     this.input = [...input];
@@ -588,6 +621,9 @@ export class ReplConnection {
       case KEY.CTRLD:
         this.stopProcess(true);
         break;
+      case KEY.CTRLL:
+        this.clear();
+        break;
       case KEY.BS:
       case KEY.BSMAC:
         if (this.inputIndex > 0 && this.input.splice(this.inputIndex - 1, 1)) {
@@ -640,6 +676,26 @@ export class ReplConnection {
           this.showPrompt();
         }
         break;
+      case KEY.CTRLLEFT:
+      case KEY.ALTLEFT:
+      case KEY.METALEFT: {
+        const index = this.wordLeft();
+        if (index !== this.inputIndex) {
+          this.inputIndex = index;
+          this.showPrompt();
+        }
+        break;
+      }
+      case KEY.CTRLRIGHT:
+      case KEY.ALTRIGHT:
+      case KEY.METARIGHT: {
+        const index = this.wordRight();
+        if (index !== this.inputIndex) {
+          this.inputIndex = index;
+          this.showPrompt();
+        }
+        break;
+      }
       case KEY.DOWN:
         this.recall(ReplConnection.history.prev);
         break;
