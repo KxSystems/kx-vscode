@@ -1210,7 +1210,8 @@
   "homepage": "https://kx.com",
   "prettier": {
     "printWidth": 80,
-    "bracketSameLine": true
+    "bracketSameLine": true,
+    "proseWrap": "always"
   },
   "c8": {
     "exclude": [
