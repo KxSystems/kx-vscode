@@ -14,6 +14,7 @@
 /* eslint @typescript-eslint/no-empty-function: 0 */
 
 import * as assert from "assert";
+import { join } from "path";
 import * as sinon from "sinon";
 import { pathToFileURL } from "url";
 import {
@@ -561,6 +562,119 @@ describe("qLangServer", () => {
         .stub(connection.workspace, "getWorkspaceFolders")
         .resolves(<any>[{ uri: "file:///test" }]);
       await server["related"]("file:///test/test.q");
+    });
+  });
+
+  describe("modules", () => {
+    // Workspace folder hosting fixtures/mod/bar.q. Anchor to this compiled test
+    // file (out-test/test/suite/server) rather than process.cwd(), which is not
+    // the repo root on all platforms (e.g. the .vscode-test dir on Windows).
+    // Fixtures are not copied into out-test, so point back at the source tree.
+    const folder = join(
+      __dirname,
+      "../../../../test/suite/server/fixtures",
+    );
+    const moduleUri = pathToFileURL(join(folder, "mod/bar.q")).toString();
+
+    function createMain(content: string, offset?: number) {
+      content = content.trim();
+      const uri = pathToFileURL(join(folder, "main.q")).toString();
+      const document = TextDocument.create(uri, "q", 1, content);
+      const position = document.positionAt(offset ?? content.length);
+      // Only the in-memory main document is open; the module is read from disk.
+      sinon
+        .stub(server.documents, "get")
+        .value((u: string) => (u === uri ? document : undefined));
+      sinon.stub(server.documents, "all").value(() => [document]);
+      sinon
+        .stub(connection.workspace, "getWorkspaceFolders")
+        .resolves(<any>[{ uri: pathToFileURL(folder).toString() }]);
+      return { textDocument: TextDocumentIdentifier.create(uri), position };
+    }
+
+    it("should resolve an imported module to its file", async () => {
+      createMain("bar:use`bar");
+      const file = await server["resolveModule"](
+        "bar",
+        pathToFileURL(join(folder, "main.q")).toString(),
+      );
+      assert.strictEqual(file, moduleUri);
+    });
+
+    it("should jump to a module member definition", async () => {
+      // cursor on `bar.f`
+      const params = createMain("bar:use`bar\nbar.f", undefined);
+      const result = await server.onDefinition(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].uri, moduleUri);
+    });
+
+    it("should find references to a module member across files", async () => {
+      const params = createMain("bar:use`bar\nbar.f");
+      const result = await server.onReferences({ ...params, context });
+      // usage in main.q, plus bar.q's definition site and its export-list use
+      assert.strictEqual(result.length, 3);
+      assert.ok(result.some((location) => location.uri === moduleUri));
+    });
+
+    it("should complete module members under the alias", async () => {
+      const params = createMain("bar:use`bar\nbar.");
+      const result = await server.onCompletion(params);
+      assert.ok(result.some((item) => item.textEdit?.newText === "bar.f"));
+      assert.ok(result.some((item) => item.textEdit?.newText === "bar.g"));
+    });
+
+    it("should label module members with the qualified name so they filter under `bar.`", async () => {
+      const params = createMain("bar:use`bar\nbar.");
+      const result = await server.onCompletion(params);
+      // Labels must be qualified (bar.f/bar.g/bar.h), otherwise a bare label
+      // like `h` is filtered out by VS Code against the typed `bar.` prefix.
+      for (const name of ["bar.f", "bar.g", "bar.h"]) {
+        assert.ok(
+          result.some((item) => item.label === name),
+          `expected a completion labelled ${name}`,
+        );
+      }
+    });
+
+    it("should resolve a nested submodule via the `:` selector", async () => {
+      // `kx.fusion:pcre2` -> mod/kx/fusion/pcre2.q (dots and colon are separators)
+      createMain("pcre2:use`kx.fusion:pcre2");
+      const file = await server["resolveModule"](
+        "kx.fusion:pcre2",
+        pathToFileURL(join(folder, "main.q")).toString(),
+      );
+      assert.strictEqual(
+        file,
+        pathToFileURL(join(folder, "mod/kx/fusion/pcre2.q")).toString(),
+      );
+    });
+
+    it("should complete submodule members under the alias", async () => {
+      const params = createMain("pcre2:use`kx.fusion:pcre2\npcre2.");
+      const result = await server.onCompletion(params);
+      assert.ok(result.some((item) => item.textEdit?.newText === "pcre2.match"));
+      assert.ok(
+        result.some((item) => item.textEdit?.newText === "pcre2.replace"),
+      );
+    });
+
+    it("should jump to a member destructured from a module", async () => {
+      // `([match]):use`... binds `match` bare; cursor on the `match` usage
+      const params = createMain("([match]):use`kx.fusion:pcre2\nmatch");
+      const result = await server.onDefinition(params);
+      assert.ok(
+        result.some((location) =>
+          location.uri.endsWith("mod/kx/fusion/pcre2.q"),
+        ),
+      );
+    });
+
+    it("should complete members destructured from a module", async () => {
+      const params = createMain("([match]):use`kx.fusion:pcre2\n");
+      const result = await server.onCompletion(params);
+      assert.ok(result.some((item) => item.textEdit?.newText === "match"));
+      assert.ok(result.some((item) => item.textEdit?.newText === "replace"));
     });
   });
 });

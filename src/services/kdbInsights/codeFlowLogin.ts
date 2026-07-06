@@ -37,6 +37,7 @@ const prefixMap = new Map<string, string>([
 async function getAuthPrefix(
   insightsUrl: string,
   realm: string,
+  insecure: boolean,
 ): Promise<string> {
   let prefix = prefixMap.get(insightsUrl);
   if (prefix === undefined) {
@@ -51,6 +52,7 @@ async function getAuthPrefix(
         validateStatus: () => true,
         transformResponse: (res) => res,
         responseType: "json",
+        httpsAgent: getHttpsAgent(insecure),
       },
     );
     prefix = res.status === 200 ? "" : "auth/";
@@ -60,24 +62,36 @@ async function getAuthPrefix(
   return prefix;
 }
 
-async function getAuthUrl(insightsUrl: string, realm: string) {
-  const auth = await getAuthPrefix(insightsUrl, realm);
+async function getAuthUrl(
+  insightsUrl: string,
+  realm: string,
+  insecure: boolean,
+) {
+  const auth = await getAuthPrefix(insightsUrl, realm, insecure);
   return new url.URL(
     `${auth}realms/${realm}/protocol/openid-connect/auth`,
     insightsUrl,
   );
 }
 
-async function getTokenUrl(insightsUrl: string, realm: string) {
-  const auth = await getAuthPrefix(insightsUrl, realm);
+async function getTokenUrl(
+  insightsUrl: string,
+  realm: string,
+  insecure: boolean,
+) {
+  const auth = await getAuthPrefix(insightsUrl, realm, insecure);
   return new url.URL(
     `${auth}realms/${realm}/protocol/openid-connect/token`,
     insightsUrl,
   );
 }
 
-async function getRevokeUrl(insightsUrl: string, realm: string) {
-  const auth = await getAuthPrefix(insightsUrl, realm);
+async function getRevokeUrl(
+  insightsUrl: string,
+  realm: string,
+  insecure: boolean,
+) {
+  const auth = await getAuthPrefix(insightsUrl, realm, insecure);
   return new url.URL(
     `${auth}realms/${realm}/protocol/openid-connect/revoke`,
     insightsUrl,
@@ -123,7 +137,7 @@ export async function signIn(
       state: crypto.randomBytes(20).toString("hex"),
     };
 
-    const authorizationUrl = await getAuthUrl(insightsUrl, realm);
+    const authorizationUrl = await getAuthUrl(insightsUrl, realm, insecure);
 
     authorizationUrl.search = queryString(authParams);
 
@@ -154,7 +168,7 @@ export async function signOut(
     httpsAgent: getHttpsAgent(insecure),
   };
 
-  const requestUrl = await getRevokeUrl(insightsUrl, realm);
+  const requestUrl = await getRevokeUrl(insightsUrl, realm, insecure);
 
   await axios.post(requestUrl.toString(), body, headers).then((res) => {
     return res.data;
@@ -243,7 +257,7 @@ async function tokenRequest(
     httpsAgent: getHttpsAgent(insecure),
   };
 
-  const requestUrl = await getTokenUrl(insightsUrl, realm);
+  const requestUrl = await getTokenUrl(insightsUrl, realm, insecure);
 
   let response;
   if (params.grant_type === "refresh_token") {

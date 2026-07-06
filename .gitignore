@@ -11,6 +11,7 @@ node_modules
 
 out/
 out-cov/
+coverage/
 coverage-reports/
 coverage/
 
@@ -21,3 +22,5 @@ out-test/
 /bin
 /lib
 /venv
+
+scripts/mock-insights-server/certs/
