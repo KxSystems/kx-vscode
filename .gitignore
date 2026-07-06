@@ -11,6 +11,7 @@ node_modules
 
 out/
 out-cov/
+coverage/
 coverage-reports/
 
 out-test/
