@@ -6,7 +6,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
-- Added a **KX: Start REPL Here** file-explorer context command that starts a REPL based in the selected folder (or a file's parent directory). Executing a file routes to the most specific REPL whose base directory contains it, falling back to the workspace REPL. The base directory's `mod` folder is added to the module search path (`QPATH`) so the KX modules system resolves project-local modules with ``use`…``.
+- Added a **KX: Start REPL Here** context menu command in the file explorer. Right-click a folder (or a file, to use its parent directory) to start a REPL rooted there. Executing a file routes to the most specific REPL whose base directory contains it, falling back to the workspace REPL. The base directory's `mod` folder is added to the module search path (`QPATH`) so the KX modules system resolves project-local modules with ``use`…``.
 
 - Added REPL keyboard shortcuts:
 
@@ -17,8 +17,8 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Fixes
 
-- Fixed the REPL treating a solitary `/` as a single line rather than the start of a multiline comment when it is not closed by a `\`.
-- Fixed the REPL mangling the repeat count of timing system commands such as `\ts:1000 exp` and `\t:100 exp`.
+- Fixed an issue where the REPL treated a solitary `/` as a single-line comment instead of the start of a multiline comment when it was not closed by a `\`.
+- Fixed an issue where the REPL mangled the repeat count of timing system commands such as `\ts:1000 exp` and `\t:100 exp`.
 
 # v1.18.0
 
