@@ -13,9 +13,16 @@
 
 import path from "node:path";
 
-// Case-fold only where the filesystem is case-insensitive.
-function canonical(target: string): string {
-  return process.platform === "win32" ? target.toLowerCase() : target;
+// Case-fold only where the filesystem is case-insensitive. We compare segments
+// ourselves rather than leaning on `path.relative`, which is inherently
+// case-insensitive on the win32 `path` module regardless of `process.platform`.
+function segments(fsPath: string): string[] {
+  const fold = process.platform === "win32";
+  return path
+    .normalize(fsPath)
+    .split(/[\\/]+/)
+    .filter(Boolean)
+    .map((seg) => (fold ? seg.toLowerCase() : seg));
 }
 
 /**
@@ -26,8 +33,12 @@ export function pathContains(
   baseFsPath: string,
   targetFsPath: string,
 ): boolean {
-  const rel = path.relative(canonical(baseFsPath), canonical(targetFsPath));
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+  const base = segments(baseFsPath);
+  const target = segments(targetFsPath);
+  if (target.length < base.length) {
+    return false;
+  }
+  return base.every((seg, i) => seg === target[i]);
 }
 
 /**
