@@ -82,6 +82,11 @@ const KEY = {
   ALTRIGHT: "\x1b[1;3C",
   METALEFT: "\x1bb",
   METARIGHT: "\x1bf",
+  DELWORDLEFT: "\x17",
+  DELWORDLEFTMETA: "\x1b\x7f",
+  DELWORDRIGHT: "\x1bd",
+  DELWORDRIGHTCTRL: "\x1b[3;5~",
+  DELWORDRIGHTALT: "\x1b[3;3~",
 };
 
 const CTX = {
@@ -476,6 +481,23 @@ export class ReplConnection {
     return index;
   }
 
+  private deleteWordLeft() {
+    const index = this.wordLeft();
+    if (index < this.inputIndex) {
+      this.input.splice(index, this.inputIndex - index);
+      this.inputIndex = index;
+      this.showPrompt();
+    }
+  }
+
+  private deleteWordRight() {
+    const index = this.wordRight();
+    if (index > this.inputIndex) {
+      this.input.splice(this.inputIndex, index - this.inputIndex);
+      this.showPrompt();
+    }
+  }
+
   private clear() {
     this.sendToTerminal(ANSI.CLEAR);
     if (!this.executing) this.showPrompt(true);
@@ -577,6 +599,7 @@ export class ReplConnection {
       return;
     }
     this.exited = true;
+    if (ReplConnection.active === this) ReplConnection.active = undefined;
     this.sendToTerminal(
       `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`,
     );
@@ -587,6 +610,7 @@ export class ReplConnection {
     if (ReplConnection.repls.get(this.key) === this) {
       ReplConnection.repls.delete(this.key);
     }
+    if (ReplConnection.active === this) ReplConnection.active = undefined;
     this.exited = true;
     this.cancel();
     this.stopProcess();
@@ -660,6 +684,15 @@ export class ReplConnection {
         if (this.input.splice(this.inputIndex, 1)) {
           this.showPrompt();
         }
+        break;
+      case KEY.DELWORDLEFT:
+      case KEY.DELWORDLEFTMETA:
+        this.deleteWordLeft();
+        break;
+      case KEY.DELWORDRIGHT:
+      case KEY.DELWORDRIGHTCTRL:
+      case KEY.DELWORDRIGHTALT:
+        this.deleteWordRight();
         break;
       case KEY.HOME:
       case KEY.HOMEMAC:
@@ -754,6 +787,7 @@ export class ReplConnection {
   }
 
   start() {
+    ReplConnection.active = this;
     this.terminal.show();
   }
 
@@ -810,10 +844,31 @@ export class ReplConnection {
   private static readonly history = new History();
   private static readonly repls = new Map<string, ReplConnection>();
 
+  // The REPL the user is actively working in, tracked from terminal focus.
+  // Used to route "orphan" files (those not owned by any folder REPL) to the
+  // REPL the user is looking at instead of spawning a new one.
+  private static active?: ReplConnection;
+  private static focusListener?: vscode.Disposable;
+
+  private static trackActiveTerminal() {
+    if (this.focusListener) return;
+    this.focusListener = vscode.window.onDidChangeActiveTerminal((terminal) => {
+      if (!terminal) return;
+      for (const repl of this.repls.values()) {
+        if (repl.terminal === terminal && !repl.exited) {
+          this.active = repl;
+          return;
+        }
+      }
+      // A non-REPL terminal was focused; keep the current active REPL.
+    });
+  }
+
   private static async create(
     workspace?: vscode.WorkspaceFolder,
     baseUri?: vscode.Uri,
   ) {
+    this.trackActiveTerminal();
     let venv: ResolvedEnvironment | undefined;
     try {
       const pythonApi = await PythonExtension.api();
@@ -829,6 +884,13 @@ export class ReplConnection {
 
   static async getOrCreateInstance(resource?: vscode.Uri) {
     if (resource) {
+      // Executions always target the active REPL (the one the user last
+      // started or focused) when it is live.
+      if (this.active && !this.active.exited) {
+        return this.active;
+      }
+      // No active REPL: fall back to the most-specific folder REPL that owns
+      // the file, if any.
       const match = selectRepl(
         resource.fsPath,
         [...this.repls.values()].map((repl) => ({

@@ -107,16 +107,25 @@ function queryLimitCheck(query: string): string {
   return query;
 }
 
-export function normalizeQuery(query: string): string {
+// Comment/system-command handling shared by normalizeQuery and normalizeQSQLQuery.
+// The two diverge after this point because q and QSQL need different statement
+// separators: q reads one statement per line, QSQL is sent as a single `;`
+// joined expression (see the tail of each function below).
+function stripCommentsAndSystemCommands(query: string): string {
   return (
-    queryLimitCheck(query)
+    query
       // Remove block comments (closed by a solitary \ or running to end of input)
       .replace(/^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm, "")
       // Remove terminate comments
       .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments
       .replace(/^\/.+/gm, "")
-      // Replace system commands
+      // Rewrite \ prefixed commands, e.g. `\ts:1000 myFunc[]`, to system calls,
+      // e.g. `system"ts:1000 myFunc[]"`. This is necessary because \ prefixed
+      // commands must start in the first column and can't be combined with
+      // other expressions, so they can't survive being joined onto one line.
+      // The optional `(?::\d+)?` keeps a repeat count like `:1000` attached to
+      // the command name instead of it being parsed as part of the arguments.
       .replace(
         /^\\([a-zA-Z_1-2\\]+(?::\d+)?)[\t ]*(.*)/gm,
         (matched, command, args) =>
@@ -124,6 +133,12 @@ export function normalizeQuery(query: string): string {
             ? 'system"\\\\"'
             : `system"${command} ${args.trim().replace(/"/gs, '\\"')}"`,
       )
+  );
+}
+
+export function normalizeQuery(query: string): string {
+  return (
+    stripCommentsAndSystemCommands(queryLimitCheck(query))
       // Remove line comments
       .replace(
         /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
@@ -135,28 +150,16 @@ export function normalizeQuery(query: string): string {
       )
       // Remove none end of statement new lines
       .replace(/(?:\r\n|[\r\n])+(?=[\t ])/gs, "")
-      // Normalize new lines
-      .replace(/(?:\r\n|[\r\n])+/gs, "\r\n")
+      // Comments and blank lines removed above can leave runs of consecutive
+      // newlines; collapse each run to a single CRLF so the q process still
+      // sees one statement per line.
+      .replace(/(?:\r\n|[\r\n])+/g, "\r\n")
   );
 }
 
 export function normalizeQSQLQuery(query: string): string {
   return (
-    queryLimitCheck(query)
-      // Remove block comments (closed by a solitary \ or running to end of input)
-      .replace(/^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm, "")
-      // Remove terminate comments
-      .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
-      // Remove single line comments
-      .replace(/^\/.+/gm, "")
-      // Replace system commands
-      .replace(
-        /^\\([a-zA-Z_1-2\\]+(?::\d+)?)[\t ]*(.*)/gm,
-        (matched, command, args) =>
-          matched === "\\\\"
-            ? 'system"\\\\"'
-            : `system"${command} ${args.trim().replace(/"/gs, '\\"')}"`,
-      )
+    stripCommentsAndSystemCommands(queryLimitCheck(query))
       // Trim white space
       .trim()
       // Replace end of statements

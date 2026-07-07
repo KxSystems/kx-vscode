@@ -124,4 +124,10 @@ execution target via the `kdb.connectionMap`/`kdb.targetMap` workspace settings.
 - **Dependencies**: pin every package to an absolute version (no `^`/`~` ranges)
   and commit the updated `package-lock.json`.
 - **Branching**: PRs target `dev` (the default branch), not `main`.
+- **Commit messages**: a single line, no body/newlines. Lead with the affected
+  area, then a comma-separated summary of what changed, e.g.
+  `REPL: add word nav/delete keys, route orphan files to active REPL, dedupe query normalization`.
+- **Squashing**: interactive rebase isn't available here — squash with a soft
+  reset instead, then re-commit in the style above, e.g.
+  `git reset --soft HEAD~4 && git commit -m "REPL: add word nav/delete keys, route orphan files to active REPL, dedupe query normalization"`.
 - Versions containing `rc` (e.g. `1.19.0-rc`) disable telemetry automatically.

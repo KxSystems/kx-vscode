@@ -1164,8 +1164,7 @@
         },
         {
           "command": "kdb.repl.openFolder",
-          "group": "q@3",
-          "when": "explorerResourceIsFolder || resourceExtname == .q || resourceExtname == .py"
+          "group": "q@3"
         }
       ]
     },

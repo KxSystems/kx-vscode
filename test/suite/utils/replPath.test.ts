@@ -67,6 +67,25 @@ describe("replPath", () => {
         assert.strictEqual(pathContains(p("A"), p("a", "x.q")), true);
       });
     });
+
+    describe("on a case-sensitive (non-win32) filesystem", () => {
+      const original = Object.getOwnPropertyDescriptor(process, "platform")!;
+
+      beforeEach(() => {
+        Object.defineProperty(process, "platform", {
+          value: "linux",
+          configurable: true,
+        });
+      });
+
+      afterEach(() => {
+        Object.defineProperty(process, "platform", original);
+      });
+
+      it("should not match when case differs", () => {
+        assert.strictEqual(pathContains(p("A"), p("a", "x.q")), false);
+      });
+    });
   });
 
   describe("selectRepl", () => {

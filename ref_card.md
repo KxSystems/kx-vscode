@@ -24,16 +24,19 @@
 
 ### REPL
 
-| Shortcut    | Action                 | Shortcut       | Action                            |
-| :---------- | :--------------------- | :------------- | :-------------------------------- |
-| `RETURN`    | Execute command line   | `END`          | Move cursor to end                |
-| `BACKSPACE` | Delete left of cursor  | `shift`+`←`    | Move cursor left                  |
-| `DEL`       | Delete right of cursor | `shift`+`→`    | Move cursor right                 |
-| `←`         | Move cursor left       | `shift`+`↑`    | Move cursor up                    |
-| `→`         | Move cursor right      | `shift`+`↓`    | Move cursor down                  |
-| `↑`         | History                | `ctrl`/`⌘`+`v` | Paste code                        |
-| `↓`         | History                | `ctrl`+`c`     | Stop execution (Reset on Windows) |
-| `HOME`      | Move cursor to start   | `ctrl`+`d`     | Reset                             |
+| Shortcut        | Action                 | Shortcut       | Action                            |
+| :-------------- | :--------------------- | :------------- | :-------------------------------- |
+| `RETURN`        | Execute command line   | `END`          | Move cursor to end                |
+| `BACKSPACE`     | Delete left of cursor  | `shift`+`←`    | Move cursor left                  |
+| `DEL`(`fn`+`⌫`) | Delete right of cursor | `shift`+`→`    | Move cursor right                 |
+| `←`             | Move cursor left       | `shift`+`↑`    | Move cursor up                    |
+| `→`             | Move cursor right      | `shift`+`↓`    | Move cursor down                  |
+| `↑`             | History                | `ctrl`/`⌘`+`v` | Paste code                        |
+| `↓`             | History                | `ctrl`+`c`     | Stop execution (Reset on Windows) |
+| `HOME`          | Move cursor to start   | `ctrl`+`d`     | Reset                             |
+| `ctrl`/`⌥`+`←`  | Jump to previous word  | `ctrl`/`⌥`+`→` | Jump to next word                 |
+| `ctrl`/`⌥`+`⌫`  | Delete previous word   | `ctrl`/`⌥`+`⌦` | Delete next word                  |
+| `ctrl`+`l`      | Clear the REPL         |                |                                   |
 
 ## Settings
 
@@ -73,7 +76,9 @@
 | Notebook Cell `sql` |  ✓   |  ✓   |       |    ✓     |        |        |       ✓        |
 | Datasource          |      |      |       |    ✓     |   ✓    |   ✓    |       ✓        |
 
-`REPL` and `My q` requires [PyKX](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) for Python support.
+`REPL` and `My q` requires
+[PyKX](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) for
+Python support.
 
 ## Telemetry
 
