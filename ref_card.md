@@ -7,7 +7,7 @@
 | KX: Start REPL         | KX: New Workbook (q)      | KX: Focus on Workbooks view         |
 | KX: Import Connections | KX: New Workbook (Python) | KX: Focus on Query History view     |
 | KX: Export Connections | KX: New Workbook (SQL)    | KX: Focus on Help and Feedback view |
-|                        | KX: New Datasource        |                                     |
+|                        | KX: New Datasource        | KX: Focus on KDB Results view       |
 
 ## Keybindings
 
@@ -92,6 +92,7 @@ Python support.
 | Install.kdbx.workspace            |              | src/commands/setupCommand.ts             |
 | Install.kdbx.win32.fail           |              | src/commands/setupCommand.ts             |
 | Repl.Start                        |              | src/commands/workspaceCommand.ts         |
+| Repl.StartFolder                  |              | src/commands/workspaceCommand.ts         |
 | ¦                                 |              |                                          |
 | Connection.Create.kdb             |              | src/commands/serverCommand.ts            |
 | Connection.Edit.kdb               |              | src/commands/serverCommand.ts            |
@@ -169,15 +170,15 @@ Python support.
 | Populate.Datasource.sql           |              | src/utils/queryUtils.ts                  |
 | Populate.Datasource.uda           |              | src/utils/queryUtils.ts                  |
 | ¦                                 |              |                                          |
-| Populate.Workbook.q               |              | src/utils/queryUtils.ts                  |
-| Populate.Workbook.py              |              | src/utils/queryUtils.ts                  |
-| Populate.Workbook.sql             |              | src/utils/queryUtils.ts                  |
-| Populate.File.q                   |              | src/utils/queryUtils.ts                  |
-| Populate.File.py                  |              | src/utils/queryUtils.ts                  |
-| Populate.File.sql                 |              | src/utils/queryUtils.ts                  |
-| Populate.Cell.q                   |              | src/utils/queryUtils.ts                  |
-| Populate.Cell.py                  |              | src/utils/queryUtils.ts                  |
-| Populate.Cell.sql                 |              | src/utils/queryUtils.ts                  |
+| Populate.Workbook.ie.q            |              | src/utils/queryUtils.ts                  |
+| Populate.Workbook.ie.py           |              | src/utils/queryUtils.ts                  |
+| Populate.Workbook.ie.sql          |              | src/utils/queryUtils.ts                  |
+| Populate.File.ie.q                |              | src/utils/queryUtils.ts                  |
+| Populate.File.ie.py               |              | src/utils/queryUtils.ts                  |
+| Populate.File.ie.sql              |              | src/utils/queryUtils.ts                  |
+| Populate.Cell.ie.q                |              | src/utils/queryUtils.ts                  |
+| Populate.Cell.ie.py               |              | src/utils/queryUtils.ts                  |
+| Populate.Cell.ie.sql              |              | src/utils/queryUtils.ts                  |
 | ¦                                 |              |                                          |
 | Results.Table.Displayed           |              | src/services/resultsPanelProvider.ts     |
 | Results.Export.csv                |              | src/services/resultsPanelProvider.ts     |
@@ -192,11 +193,6 @@ Python support.
 | Language.RenameRequest            |              | server/src/qLangServer.ts                |
 | Language.ParameterCache           |              | server/src/qLangServer.ts                |
 | Language.CallHierarchy            |              | server/src/qLangServer.ts                |
-| ¦                                 |              |                                          |
-| Debugger.Run                      |              |                                          |
-| Debugger.Resume                   |              |                                          |
-| Debugger.StepOver                 |              |                                          |
-| Debugger.SetBreakPoint            |              |                                          |
 | ¦                                 |              |                                          |
 | Help.Open.Documentation           |              | src/extension.ts                         |
 | Help.Open.ReportBug               |              | src/extension.ts                         |
