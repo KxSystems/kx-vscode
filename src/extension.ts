@@ -442,7 +442,7 @@ function registerResultsPanelCommands(): CommandRegistration[] {
       callback: (
         results: any,
         isInsights: boolean,
-        connVersion?: number,
+        connVersion?: string,
         isPython?: boolean,
       ) => {
         ext.resultsViewProvider.updateResults(
