@@ -393,6 +393,10 @@
         "title": "Start REPL"
       },
       {
+        "command": "kdb.repl.openFolder",
+        "title": "KX: Start REPL Here"
+      },
+      {
         "command": "kdb.execute.selectedQuery",
         "title": "KX: Execute Current Selection",
         "icon": "$(run-above)"
@@ -667,6 +671,10 @@
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "kdb.repl.openFolder",
+          "when": "false"
+        },
         {
           "command": "kdb.show.welcome",
           "when": "true"
@@ -1146,13 +1154,17 @@
       "explorer/context": [
         {
           "command": "kdb.execute.fileQuery",
-          "group": "q",
+          "group": "q@1",
           "when": "resourceExtname == .q"
         },
         {
           "command": "kdb.scratchpad.python.run.file",
-          "group": "q",
+          "group": "q@2",
           "when": "resourceExtname == .py"
+        },
+        {
+          "command": "kdb.repl.openFolder",
+          "group": "q@3"
         }
       ]
     },
@@ -1197,7 +1209,8 @@
   "homepage": "https://kx.com",
   "prettier": {
     "printWidth": 80,
-    "bracketSameLine": true
+    "bracketSameLine": true,
+    "proseWrap": "always"
   },
   "c8": {
     "exclude": [

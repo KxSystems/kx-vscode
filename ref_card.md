@@ -7,33 +7,44 @@
 | KX: Start REPL         | KX: New Workbook (q)      | KX: Focus on Workbooks view         |
 | KX: Import Connections | KX: New Workbook (Python) | KX: Focus on Query History view     |
 | KX: Export Connections | KX: New Workbook (SQL)    | KX: Focus on Help and Feedback view |
-|                        | KX: New Datasource        |                                     |
+|                        | KX: New Datasource        | KX: Focus on KDB Results view       |
 
 ## Keybindings
 
-| Command                       | When                  | Shortcut                     |
-| :---------------------------- | :-------------------- | :--------------------------- |
-| KX: Execute Entire File       | `q` `py` `sql`        | `ctrl`/`⌘` +`shift`+`d`      |
-| KX: Execute Current Selection | `q` `py` `sql`        | `ctrl`/`⌘`+`d`               |
-| KX: Execute Current Block     | `q`                   | `ctrl`/`⌘`+`shift`+`e`       |
-| KX: Populate Scratchpad       | `q` `py` `sql`        | `ctrl`/`⌘`+`shift`+`alt`+`p` |
-| KX: Reset Scratchpad          | `q` `py` `sql` `kxnb` | `ctrl`/`⌘`+`shift`+`delete`  |
-| KX: Choose Connection         | `q` `py` `sql` `kxnb` |                              |
-| KX: Choose Execution Target   | `q` `py` `sql`        | `ctrl`/`⌘`+`alt`+`t`         |
-| KX: Toggle Parameter Cache    | `q`                   | `ctrl`/`⌘`+`shift`+`y`       |
+| Command                       | When                  | Windows / Linux          | macOS            |
+| :---------------------------- | :-------------------- | :----------------------- | :--------------- |
+| KX: Execute Entire File       | `q` `py` `sql`        | `ctrl`+`shift`+`d`       | `⌘`+`⇧`+`d`      |
+| KX: Execute Current Selection | `q` `py` `sql`        | `ctrl`+`d`               | `⌘`+`d`          |
+| KX: Execute Current Block     | `q`                   | `ctrl`+`shift`+`e`       | `⌘`+`⇧`+`e`      |
+| KX: Populate Scratchpad       | `q` `py` `sql`        | `ctrl`+`shift`+`alt`+`p` | `⌘`+`⇧`+`⌥`+`p`  |
+| KX: Reset Scratchpad          | `q` `py` `sql` `kxnb` | `ctrl`+`shift`+`delete`  | `⌘`+`⇧`+`fn`+`⌫` |
+| KX: Choose Connection         | `q` `py` `sql` `kxnb` |                          |                  |
+| KX: Choose Execution Target   | `q` `py` `sql`        | `ctrl`+`alt`+`t`         | `⌘`+`⌥`+`t`      |
+| KX: Toggle Parameter Cache    | `q`                   | `ctrl`+`shift`+`y`       | `⌘`+`⇧`+`y`      |
 
 ### REPL
 
-| Shortcut    | Action                 | Shortcut       | Action                            |
-| :---------- | :--------------------- | :------------- | :-------------------------------- |
-| `RETURN`    | Execute command line   | `END`          | Move cursor to end                |
-| `BACKSPACE` | Delete left of cursor  | `shift`+`←`    | Move cursor left                  |
-| `DEL`       | Delete right of cursor | `shift`+`→`    | Move cursor right                 |
-| `←`         | Move cursor left       | `shift`+`↑`    | Move cursor up                    |
-| `→`         | Move cursor right      | `shift`+`↓`    | Move cursor down                  |
-| `↑`         | History                | `ctrl`/`⌘`+`v` | Paste code                        |
-| `↓`         | History                | `ctrl`+`c`     | Stop execution (Reset on Windows) |
-| `HOME`      | Move cursor to start   | `ctrl`+`d`     | Reset                             |
+| Action                              | Windows / Linux   | macOS                  |
+| :---------------------------------- | :---------------- | :--------------------- |
+| Execute command line                | `RETURN`          | `RETURN`               |
+| Delete left of cursor               | `BACKSPACE`       | `⌫`                    |
+| Delete right of cursor              | `DEL`             | `fn`+`⌫`               |
+| Move cursor left                    | `←` / `shift`+`←` | `←` / `⇧`+`←`          |
+| Move cursor right                   | `→` / `shift`+`→` | `→` / `⇧`+`→`          |
+| Recall previous history entry       | `↑`               | `↑`                    |
+| Recall next history entry           | `↓`               | `↓`                    |
+| Move cursor to start of line        | `HOME`            | `HOME` / `⌘`+`←`       |
+| Move cursor to end of line          | `END`             | `END` / `⌘`+`→`        |
+| Move cursor up (multi-line input)   | `shift`+`↑`       | `⇧`+`↑`                |
+| Move cursor down (multi-line input) | `shift`+`↓`       | `⇧`+`↓`                |
+| Jump to previous word               | `ctrl`+`←`        | `⌥`+`←`                |
+| Jump to next word                   | `ctrl`+`→`        | `⌥`+`→`                |
+| Delete previous word                | `ctrl`+`⌫`        | `⌥`+`⌫`                |
+| Delete next word                    | `ctrl`+`delete`   | `⌥`+`d` (`fn`+`⌥`+`⌫`) |
+| Paste code                          | `ctrl`+`v`        | `⌘`+`v`                |
+| Stop execution (Reset on Windows)   | `ctrl`+`c`        | `⌃`+`c`                |
+| Reset                               | `ctrl`+`d`        | `⌃`+`d`                |
+| Clear the REPL                      | `ctrl`+`l`        | `⌃`+`l`                |
 
 ## Settings
 
@@ -73,7 +84,9 @@
 | Notebook Cell `sql` |  ✓   |  ✓   |       |    ✓     |        |        |       ✓        |
 | Datasource          |      |      |       |    ✓     |   ✓    |   ✓    |       ✓        |
 
-`REPL` and `My q` requires [PyKX](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) for Python support.
+`REPL` and `My q` requires
+[PyKX](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) for
+Python support.
 
 ## Telemetry
 
@@ -87,6 +100,7 @@
 | Install.kdbx.workspace            |              | src/commands/setupCommand.ts             |
 | Install.kdbx.win32.fail           |              | src/commands/setupCommand.ts             |
 | Repl.Start                        |              | src/commands/workspaceCommand.ts         |
+| Repl.StartFolder                  |              | src/commands/workspaceCommand.ts         |
 | ¦                                 |              |                                          |
 | Connection.Create.kdb             |              | src/commands/serverCommand.ts            |
 | Connection.Edit.kdb               |              | src/commands/serverCommand.ts            |
@@ -164,15 +178,15 @@
 | Populate.Datasource.sql           |              | src/utils/queryUtils.ts                  |
 | Populate.Datasource.uda           |              | src/utils/queryUtils.ts                  |
 | ¦                                 |              |                                          |
-| Populate.Workbook.q               |              | src/utils/queryUtils.ts                  |
-| Populate.Workbook.py              |              | src/utils/queryUtils.ts                  |
-| Populate.Workbook.sql             |              | src/utils/queryUtils.ts                  |
-| Populate.File.q                   |              | src/utils/queryUtils.ts                  |
-| Populate.File.py                  |              | src/utils/queryUtils.ts                  |
-| Populate.File.sql                 |              | src/utils/queryUtils.ts                  |
-| Populate.Cell.q                   |              | src/utils/queryUtils.ts                  |
-| Populate.Cell.py                  |              | src/utils/queryUtils.ts                  |
-| Populate.Cell.sql                 |              | src/utils/queryUtils.ts                  |
+| Populate.Workbook.ie.q            |              | src/utils/queryUtils.ts                  |
+| Populate.Workbook.ie.py           |              | src/utils/queryUtils.ts                  |
+| Populate.Workbook.ie.sql          |              | src/utils/queryUtils.ts                  |
+| Populate.File.ie.q                |              | src/utils/queryUtils.ts                  |
+| Populate.File.ie.py               |              | src/utils/queryUtils.ts                  |
+| Populate.File.ie.sql              |              | src/utils/queryUtils.ts                  |
+| Populate.Cell.ie.q                |              | src/utils/queryUtils.ts                  |
+| Populate.Cell.ie.py               |              | src/utils/queryUtils.ts                  |
+| Populate.Cell.ie.sql              |              | src/utils/queryUtils.ts                  |
 | ¦                                 |              |                                          |
 | Results.Table.Displayed           |              | src/services/resultsPanelProvider.ts     |
 | Results.Export.csv                |              | src/services/resultsPanelProvider.ts     |
@@ -187,11 +201,6 @@
 | Language.RenameRequest            |              | server/src/qLangServer.ts                |
 | Language.ParameterCache           |              | server/src/qLangServer.ts                |
 | Language.CallHierarchy            |              | server/src/qLangServer.ts                |
-| ¦                                 |              |                                          |
-| Debugger.Run                      |              |                                          |
-| Debugger.Resume                   |              |                                          |
-| Debugger.StepOver                 |              |                                          |
-| Debugger.SetBreakPoint            |              |                                          |
 | ¦                                 |              |                                          |
 | Help.Open.Documentation           |              | src/extension.ts                         |
 | Help.Open.ReportBug               |              | src/extension.ts                         |

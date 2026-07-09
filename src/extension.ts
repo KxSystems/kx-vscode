@@ -57,6 +57,7 @@ import {
   runActiveEditor,
   setServerForUri,
   startRepl,
+  startReplInFolder,
 } from "./commands/workspaceCommand";
 import { ext } from "./extensionVariables";
 import { CommandRegistration } from "./models/commandRegistration";
@@ -1017,6 +1018,12 @@ function registerReplCommands(): CommandRegistration[] {
       command: "kdb.repl.start",
       callback: () => {
         startRepl();
+      },
+    },
+    {
+      command: "kdb.repl.openFolder",
+      callback: (uri?: vscode.Uri) => {
+        startReplInFolder(uri);
       },
     },
   ];
