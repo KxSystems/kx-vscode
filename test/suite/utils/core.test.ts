@@ -987,11 +987,11 @@ describe("core", () => {
 
     it("should compare single-digit minor versions correctly", () => {
       assert.strictEqual(
-        coreUtils.isBaseVersionGreaterOrEqual("1.13", "1.13"),
+        coreUtils.isBaseVersionGreaterOrEqual("1.3", "1.3"),
         true,
       );
       assert.strictEqual(
-        coreUtils.isBaseVersionGreaterOrEqual("1.11", "1.13"),
+        coreUtils.isBaseVersionGreaterOrEqual("1.1", "1.3"),
         false,
       );
     });
