@@ -124,14 +124,14 @@ function stripCommentsAndSystemCommands(query: string): string {
       // e.g. `system"ts:1000 myFunc[]"`. This is necessary because \ prefixed
       // commands must start in the first column and can't be combined with
       // other expressions, so they can't survive being joined onto one line.
-      // The optional `(?::\d+)?` keeps a repeat count like `:1000` attached to
-      // the command name instead of it being parsed as part of the arguments.
-      .replace(
-        /^\\([a-zA-Z_1-2\\]+(?::\d+)?)[\t ]*(.*)/gm,
-        (matched, command, args) =>
-          matched === "\\\\"
-            ? 'system"\\\\"'
-            : `system"${command} ${args.trim().replace(/"/gs, '\\"')}"`,
+      // The command text is re-quoted as-is, so its own backslashes must be
+      // escaped before its quotes (in that order) so a literal `\` (e.g. in
+      // `\someCommand "\t"`) survives rather than being consumed by the outer
+      // string's escape processing.
+      .replace(/^\\(.+)$/gm, (matched, command) =>
+        command === "\\"
+          ? 'system"\\\\"'
+          : `system"${command.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`,
       )
   );
 }

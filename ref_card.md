@@ -11,32 +11,40 @@
 
 ## Keybindings
 
-| Command                       | When                  | Shortcut                     |
-| :---------------------------- | :-------------------- | :--------------------------- |
-| KX: Execute Entire File       | `q` `py` `sql`        | `ctrl`/`⌘` +`shift`+`d`      |
-| KX: Execute Current Selection | `q` `py` `sql`        | `ctrl`/`⌘`+`d`               |
-| KX: Execute Current Block     | `q`                   | `ctrl`/`⌘`+`shift`+`e`       |
-| KX: Populate Scratchpad       | `q` `py` `sql`        | `ctrl`/`⌘`+`shift`+`alt`+`p` |
-| KX: Reset Scratchpad          | `q` `py` `sql` `kxnb` | `ctrl`/`⌘`+`shift`+`delete`  |
-| KX: Choose Connection         | `q` `py` `sql` `kxnb` |                              |
-| KX: Choose Execution Target   | `q` `py` `sql`        | `ctrl`/`⌘`+`alt`+`t`         |
-| KX: Toggle Parameter Cache    | `q`                   | `ctrl`/`⌘`+`shift`+`y`       |
+| Command                       | When                  | Windows / Linux          | macOS            |
+| :---------------------------- | :-------------------- | :----------------------- | :--------------- |
+| KX: Execute Entire File       | `q` `py` `sql`        | `ctrl`+`shift`+`d`       | `⌘`+`⇧`+`d`      |
+| KX: Execute Current Selection | `q` `py` `sql`        | `ctrl`+`d`               | `⌘`+`d`          |
+| KX: Execute Current Block     | `q`                   | `ctrl`+`shift`+`e`       | `⌘`+`⇧`+`e`      |
+| KX: Populate Scratchpad       | `q` `py` `sql`        | `ctrl`+`shift`+`alt`+`p` | `⌘`+`⇧`+`⌥`+`p`  |
+| KX: Reset Scratchpad          | `q` `py` `sql` `kxnb` | `ctrl`+`shift`+`delete`  | `⌘`+`⇧`+`fn`+`⌫` |
+| KX: Choose Connection         | `q` `py` `sql` `kxnb` |                          |                  |
+| KX: Choose Execution Target   | `q` `py` `sql`        | `ctrl`+`alt`+`t`         | `⌘`+`⌥`+`t`      |
+| KX: Toggle Parameter Cache    | `q`                   | `ctrl`+`shift`+`y`       | `⌘`+`⇧`+`y`      |
 
 ### REPL
 
-| Shortcut        | Action                 | Shortcut       | Action                            |
-| :-------------- | :--------------------- | :------------- | :-------------------------------- |
-| `RETURN`        | Execute command line   | `END`          | Move cursor to end                |
-| `BACKSPACE`     | Delete left of cursor  | `shift`+`←`    | Move cursor left                  |
-| `DEL`(`fn`+`⌫`) | Delete right of cursor | `shift`+`→`    | Move cursor right                 |
-| `←`             | Move cursor left       | `shift`+`↑`    | Move cursor up                    |
-| `→`             | Move cursor right      | `shift`+`↓`    | Move cursor down                  |
-| `↑`             | History                | `ctrl`/`⌘`+`v` | Paste code                        |
-| `↓`             | History                | `ctrl`+`c`     | Stop execution (Reset on Windows) |
-| `HOME`          | Move cursor to start   | `ctrl`+`d`     | Reset                             |
-| `ctrl`/`⌥`+`←`  | Jump to previous word  | `ctrl`/`⌥`+`→` | Jump to next word                 |
-| `ctrl`/`⌥`+`⌫`  | Delete previous word   | `ctrl`/`⌥`+`⌦` | Delete next word                  |
-| `ctrl`+`l`      | Clear the REPL         |                |                                   |
+| Action                              | Windows / Linux   | macOS                  |
+| :---------------------------------- | :---------------- | :--------------------- |
+| Execute command line                | `RETURN`          | `RETURN`               |
+| Delete left of cursor               | `BACKSPACE`       | `⌫`                    |
+| Delete right of cursor              | `DEL`             | `fn`+`⌫`               |
+| Move cursor left                    | `←` / `shift`+`←` | `←` / `⇧`+`←`          |
+| Move cursor right                   | `→` / `shift`+`→` | `→` / `⇧`+`→`          |
+| Recall previous history entry       | `↑`               | `↑`                    |
+| Recall next history entry           | `↓`               | `↓`                    |
+| Move cursor to start of line        | `HOME`            | `HOME` / `⌘`+`←`       |
+| Move cursor to end of line          | `END`             | `END` / `⌘`+`→`        |
+| Move cursor up (multi-line input)   | `shift`+`↑`       | `⇧`+`↑`                |
+| Move cursor down (multi-line input) | `shift`+`↓`       | `⇧`+`↓`                |
+| Jump to previous word               | `ctrl`+`←`        | `⌥`+`←`                |
+| Jump to next word                   | `ctrl`+`→`        | `⌥`+`→`                |
+| Delete previous word                | `ctrl`+`⌫`        | `⌥`+`⌫`                |
+| Delete next word                    | `ctrl`+`delete`   | `⌥`+`d` (`fn`+`⌥`+`⌫`) |
+| Paste code                          | `ctrl`+`v`        | `⌘`+`v`                |
+| Stop execution (Reset on Windows)   | `ctrl`+`c`        | `⌃`+`c`                |
+| Reset                               | `ctrl`+`d`        | `⌃`+`d`                |
+| Clear the REPL                      | `ctrl`+`l`        | `⌃`+`l`                |
 
 ## Settings
 

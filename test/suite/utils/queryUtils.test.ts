@@ -275,6 +275,13 @@ describe("queryUtils", () => {
       assert.strictEqual(queryUtils.normalizeQSQLQuery("\\\\"), 'system"\\\\"');
     });
 
+    it("should escape backslashes in system command arguments", () => {
+      assert.strictEqual(
+        queryUtils.normalizeQSQLQuery('\\someCommand "\\t"'),
+        'system"someCommand \\"\\\\t\\""',
+      );
+    });
+
     it("should preserve the repeat count of timing system commands", () => {
       assert.strictEqual(
         queryUtils.normalizeQSQLQuery("\\ts:1000 1+2"),
@@ -412,6 +419,13 @@ describe("queryUtils", () => {
       assert.strictEqual(
         queryUtils.normalizeQuery("\\ts 1+2"),
         'system"ts 1+2"',
+      );
+    });
+
+    it("should escape backslashes in system command arguments", () => {
+      assert.strictEqual(
+        queryUtils.normalizeQuery('\\someCommand "\\t"'),
+        'system"someCommand \\"\\\\t\\""',
       );
     });
   });

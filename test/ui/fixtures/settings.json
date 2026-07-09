@@ -1,6 +1,8 @@
 {
-  "files.simpleDialog.enable": true,
+  "window.nativeTabs": false,
   "window.dialogStyle": "custom",
+  "window.titleBarStyle": "custom",
+  "files.simpleDialog.enable": true,
   "git.openRepositoryInParentFolders": "never",
   "terminal.integrated.sendKeybindingsToShell": true,
   "workbench.remoteIndicator.showExtensionRecommendations": false,

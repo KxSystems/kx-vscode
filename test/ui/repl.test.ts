@@ -37,7 +37,9 @@ describe("REPL", () => {
       await new Workbench().executeCommand("KX: Start REPL");
       // The banner is emitted by the pseudo-terminal itself, so it is present
       // regardless of whether a q runtime is installed in the environment.
-      const text = await waitForTerminalText("KX REPL Copyright");
+      // Spawning the q process is slower than the local echo the default
+      // timeout is tuned for, so allow more time here.
+      const text = await waitForTerminalText("KX REPL Copyright", 5000);
       assert.ok(
         text.includes("KX REPL Copyright"),
         `expected the REPL banner in terminal text, got: ${text}`,
@@ -72,10 +74,10 @@ describe("REPL", () => {
       await clearReplInput();
     });
 
-    it("removes a word with Ctrl+W", async () => {
+    it("removes a word with ctrl/⌥+Backspace", async () => {
       await sendReplKeys("alpha beta");
       await waitForTerminalText("alpha beta");
-      await sendReplKeys(Key.chord(Key.CONTROL, "w"));
+      await sendReplKeys(Key.chord(Key.ALT, Key.BACK_SPACE));
       await waitForTerminalTextGone("beta");
       const text = await terminalText();
       assert.ok(text.includes("alpha"), `expected alpha, got: ${text}`);
@@ -84,7 +86,7 @@ describe("REPL", () => {
 
     it("clears the screen with Ctrl+L", async () => {
       // The startup banner stays on screen until something clears it.
-      await waitForTerminalText("KX REPL Copyright");
+      await waitForTerminalText("KX REPL Copyright", 5000);
       await sendReplKeys(Key.chord(Key.CONTROL, "l"));
       await waitForTerminalTextGone("Copyright");
     });
@@ -114,7 +116,7 @@ describe("REPL", () => {
   describe("Start REPL Here (multiple REPLs)", () => {
     it("opens a folder-scoped REPL from the explorer context menu", async () => {
       await startReplHere("A");
-      const text = await waitForTerminalText("KX REPL Copyright");
+      const text = await waitForTerminalText("KX REPL Copyright", 5000);
       assert.ok(
         text.includes("KX REPL Copyright"),
         `expected a REPL for folder A, got: ${text}`,
@@ -130,7 +132,7 @@ describe("REPL", () => {
       // Open a second REPL in folder B — a separate q process — and clear its
       // fresh banner so the read below only sees this REPL's own output.
       await startReplHere("B");
-      await waitForTerminalText("KX REPL Copyright");
+      await waitForTerminalText("KX REPL Copyright", 5000);
       await sendReplKeys(Key.chord(Key.CONTROL, "l"));
       await waitForTerminalTextGone("Copyright");
 

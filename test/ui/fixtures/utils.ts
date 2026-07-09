@@ -128,7 +128,10 @@ export async function acceptCompletion(
 // banner/output streams in asynchronously, so a single read can race ahead of
 // the content. (We read text rather than enumerate channel names because the
 // channel-selector combo is not populated for terminals in modern VS Code.)
-export async function waitForTerminalText(contains: string): Promise<string> {
+export async function waitForTerminalText(
+  contains: string,
+  timeout = 3000,
+): Promise<string> {
   const terminal = await new BottomBarPanel().openTerminalView();
   return VSBrowser.instance.driver.wait(
     async () => {
@@ -140,7 +143,7 @@ export async function waitForTerminalText(contains: string): Promise<string> {
         return undefined;
       }
     },
-    15000,
+    timeout,
     `terminal text: ${contains}`,
   );
 }
@@ -148,7 +151,10 @@ export async function waitForTerminalText(contains: string): Promise<string> {
 // Opens the terminal view and waits until the active terminal's text no longer
 // contains `absent` — used after keystrokes that remove content (Backspace,
 // word-delete, Ctrl+L clear) so assertions don't race the re-render.
-export async function waitForTerminalTextGone(absent: string): Promise<void> {
+export async function waitForTerminalTextGone(
+  absent: string,
+  timeout = 3000,
+): Promise<void> {
   const terminal = await new BottomBarPanel().openTerminalView();
   await VSBrowser.instance.driver.wait(
     async () => {
@@ -159,7 +165,7 @@ export async function waitForTerminalTextGone(absent: string): Promise<void> {
         return false;
       }
     },
-    15000,
+    timeout,
     `terminal text gone: ${absent}`,
   );
 }
