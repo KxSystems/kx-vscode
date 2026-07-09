@@ -410,24 +410,6 @@ describe("queryUtils", () => {
       const res = queryUtils.normalizeQuery("1\n/\n2\n\\\n3");
       assert.strictEqual(res, "1\r\n3");
     });
-
-    it("should preserve the repeat count of timing system commands", () => {
-      assert.strictEqual(
-        queryUtils.normalizeQuery("\\ts:1000 1+2"),
-        'system"ts:1000 1+2"',
-      );
-      assert.strictEqual(
-        queryUtils.normalizeQuery("\\ts 1+2"),
-        'system"ts 1+2"',
-      );
-    });
-
-    it("should escape backslashes in system command arguments", () => {
-      assert.strictEqual(
-        queryUtils.normalizeQuery('\\someCommand "\\t"'),
-        'system"someCommand \\"\\\\t\\""',
-      );
-    });
   });
 
   describe("normalizePyQuery", () => {

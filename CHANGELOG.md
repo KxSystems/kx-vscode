@@ -8,12 +8,12 @@ file.
 ### Enhancements
 
 - Added a **KX: Start REPL Here** context menu command in the file explorer.
-  Right-click a folder (or a file, to use its parent directory) to start a REPL
+  Right-click a folder, or a file to use its parent directory, to start a REPL
   rooted there. Executions always target the active REPL (the one last started
-  or focused); when none is active, they fall back to the most specific REPL
+  or focused). When no REPL is active, they fall back to the most specific REPL
   whose base directory contains the file, then to the workspace REPL. The base
-  directory's `mod` folder is added to the module search path (`QPATH`) so the
-  KX modules system resolves project-local modules with ``use`…``.
+  directory's `mod` folder is added to the module search path (`QPATH`) allowing
+  the KX modules system to resolve project-local modules with ``use`…``.
 
 - Added REPL keyboard shortcuts:
 
