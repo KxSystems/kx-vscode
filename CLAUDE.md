@@ -42,8 +42,21 @@ npm run test:file <path>          # Single test file (TEST_FILE env)
 npm run test:folder <path>        # A folder of tests (TEST_FOLDER env)
 npm run coverage                  # Same suite under c8 coverage
 npm run ui-test                   # End-to-end UI tests via vscode-extension-tester (test/ui/**)
-npm run q-test                    # q-language unit tests (requires a q runtime on PATH; uses qcumber.q)
+npm run q-test                    # q-language unit tests — runs in the qpbuild docker image (no local q needed)
 ```
+
+`q-test` wraps [qcumber.sh](qcumber.sh), which runs the tests inside the
+`qpbuild` image and sets up pykx via `test/q/preTest.sh`. The image lives in a
+private GitLab registry — if it isn't already local, the script pulls it. It
+logs in first when it can: from `GITLAB_TOKEN` (a GitLab PAT with the
+`read_registry` scope), or by prompting interactively; otherwise it relies on an
+existing `docker login` (this is how CI authenticates — a `docker/login-action`
+step runs before `qcumber.sh`). It also needs a kdb+ license
+passed to the container as `KDB_K4LICENSE_B64` (this is how CI passes it, from a
+secret). If that env var is unset, `qcumber.sh` base64-encodes a `k4.lic` file,
+looked up as `$QLIC/k4.lic`, `$QHOME/k4.lic`, then `~/.kx/k4.lic` — so if you
+already have `$QLIC`/`$QHOME` set there's nothing to configure. (A `kc.lic` will
+not work; the tests need a `k4.lic`.)
 
 Test framework is **Mocha** with **Sinon** for stubs and
 **proxyquire**/**mock-fs** for module and filesystem mocking. Tests mirror the
