@@ -1,0 +1,63 @@
+/*
+ * Copyright (c) 1998-2026 KX Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+import assert from "assert";
+
+import { extractInsightsRequestError } from "../../../src/classes/insightsConnection";
+
+describe("insightsConnection", () => {
+  describe("extractInsightsRequestError", () => {
+    it("should surface a plain-text 500 body (coordinator killed)", () => {
+      const error = {
+        response: {
+          status: 500,
+          statusText: "Internal Server Error",
+          data: "Coordinator connection has closed",
+        },
+      };
+      assert.strictEqual(
+        extractInsightsRequestError(error),
+        "Request failed with status 500: Coordinator connection has closed",
+      );
+    });
+
+    it("should fall back to statusText for an HTML 502 body (gateway killed)", () => {
+      const error = {
+        response: {
+          status: 502,
+          statusText: "Bad Gateway",
+          data: "<html><head><title>502 Bad Gateway</title></head></html>",
+        },
+      };
+      assert.strictEqual(
+        extractInsightsRequestError(error),
+        "Request failed with status 502: Bad Gateway",
+      );
+    });
+
+    it("should use the error message when there is no response (dropped socket)", () => {
+      const error = { message: "socket hang up" };
+      assert.strictEqual(
+        extractInsightsRequestError(error),
+        "socket hang up",
+      );
+    });
+
+    it("should stringify an unknown error with no message or response", () => {
+      assert.strictEqual(
+        extractInsightsRequestError("boom"),
+        "boom",
+      );
+    });
+  });
+});
