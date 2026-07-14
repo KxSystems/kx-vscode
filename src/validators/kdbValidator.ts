@@ -96,6 +96,18 @@ export function validateServerPassword(
   return undefined;
 }
 
+export function validateInsightsServerUrl(
+  input: string | undefined,
+): string | undefined {
+  if (input === undefined || input.trim() === "") {
+    return "Insights connection address is required.";
+  }
+  if (!/^https:\/\//i.exec(input.trim())) {
+    return "Insights connections require a secure https:// URL (for example, https://myinsights.example.com).";
+  }
+  return undefined;
+}
+
 export function validateTls(input: string | undefined): string | undefined {
   if (input !== undefined && input !== "") {
     if (!validateUtils.isBoolean(input)) {

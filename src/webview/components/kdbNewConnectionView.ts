@@ -231,7 +231,7 @@ export class KdbNewConnectionView extends LitElement {
           class="text-field larger option-title"
           placeholder="${serverType === ServerType.KDB
             ? "127.0.0.1 or localhost"
-            : `myinsights.clouddeploy.com`}"
+            : `https://myinsights.example.com`}"
           value="${live(
             serverType === ServerType.KDB
               ? this.kdbServer.serverName
