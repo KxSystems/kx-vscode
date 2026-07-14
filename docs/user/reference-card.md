@@ -1,3 +1,11 @@
+---
+type: Reference
+title: Reference Card
+description: Command palette entries, keybindings, settings, execution matrix and telemetry events for the kdb VS Code extension.
+tags: [kdb, vscode, reference, keybindings, settings, telemetry]
+timestamp: 2026-07-10
+---
+
 ## Command Palette
 
 | Command                | Command                   | Command                             |
@@ -48,25 +56,25 @@
 
 ## Settings
 
-| Setting                                                                                   | Scope    | Type      | Default       |
-| :---------------------------------------------------------------------------------------- | :------- | :-------- | :------------ |
-| [kdb.qHomeDirectory](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory)          | machine  | `string`  | `""`          |
-| kdb.servers                                                                               | machine  | `object`  | `{}`          |
-| kdb.insightsEnterpriseConnections                                                         | machine  | `object`  | `{}`          |
-| kdb.connectionLabels                                                                      | machine  | `array`   | `[]`          |
-| kdb.labelsConnectionMap                                                                   | machine  | `array`   | `[]`          |
-| kdb.hideSurvey                                                                            | machine  | `boolean` | `false`       |
-| kdb.hideSourceExpressions                                                                 | machine  | `boolean` | `true`        |
-| kdb.hideSubscribeRegistrationNotification                                                 | machine  | `boolean` | `false`       |
-| kdb.neverShowQInstallAgain                                                                | machine  | `boolean` | `false`       |
-| kdb.autoFocusOutputOnEntry                                                                | machine  | `boolean` | `true`        |
-| [kdb.qHomeDirectoryWorkspace](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) | resource | `string`  | `""`          |
-| kdb.connectionMap                                                                         | resource | `object`  | `{}`          |
-| kdb.targetMap                                                                             | resource | `object`  | `{}`          |
-| kdb.timeoutMap                                                                            | resource | `object`  | `{}`          |
-| kdb.defaultTimeout                                                                        | resource | `number`  | `30`          |
-| kdb.linting                                                                               | resource | `boolean` | `false`       |
-| kdb.refactoring                                                                           | resource | `string`  | `"Workspace"` |
+| Setting                                             | Scope    | Type      | Default       |
+| :-------------------------------------------------- | :------- | :-------- | :------------ |
+| [kdb.qHomeDirectory](q-home-directory.md)           | machine  | `string`  | `""`          |
+| kdb.servers                                         | machine  | `object`  | `{}`          |
+| kdb.insightsEnterpriseConnections                   | machine  | `object`  | `{}`          |
+| kdb.connectionLabels                                | machine  | `array`   | `[]`          |
+| kdb.labelsConnectionMap                             | machine  | `array`   | `[]`          |
+| kdb.hideSurvey                                      | machine  | `boolean` | `false`       |
+| kdb.hideSourceExpressions                           | machine  | `boolean` | `true`        |
+| kdb.hideSubscribeRegistrationNotification           | machine  | `boolean` | `false`       |
+| kdb.neverShowQInstallAgain                          | machine  | `boolean` | `false`       |
+| kdb.autoFocusOutputOnEntry                          | machine  | `boolean` | `true`        |
+| [kdb.qHomeDirectoryWorkspace](q-home-directory.md)  | resource | `string`  | `""`          |
+| kdb.connectionMap                                   | resource | `object`  | `{}`          |
+| kdb.targetMap                                       | resource | `object`  | `{}`          |
+| kdb.timeoutMap                                       | resource | `object`  | `{}`          |
+| kdb.defaultTimeout                                  | resource | `number`  | `30`          |
+| kdb.linting                                         | resource | `boolean` | `false`       |
+| kdb.refactoring                                     | resource | `string`  | `"Workspace"` |
 
 ## Execution
 
@@ -84,9 +92,7 @@
 | Notebook Cell `sql` |  ✓   |  ✓   |       |    ✓     |        |        |       ✓        |
 | Datasource          |      |      |       |    ✓     |   ✓    |   ✓    |       ✓        |
 
-`REPL` and `My q` requires
-[PyKX](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) for
-Python support.
+`REPL` and `My q` requires [PyKX](use-pykx-within-repl.md) for Python support.
 
 ## Telemetry
 

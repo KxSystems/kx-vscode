@@ -111,6 +111,26 @@ Custom file types the extension owns: `.kdb.json` (Datasource editor), `.plot`
 (Workbooks/scratchpads). Each workbook/datasource is mapped to a connection and
 execution target via the `kdb.connectionMap`/`kdb.targetMap` workspace settings.
 
+### Documentation (`docs/`)
+
+In-tree docs, ported from the (now-superseded) GitHub wiki and structured in the
+[Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/):
+plain markdown files with YAML frontmatter (`type` required; `title`,
+`description`, `tags`, `timestamp` optional), an `index.md` per folder for
+navigation, and relative markdown cross-links. Split into
+[docs/user/](docs/user/) (reference card, q home directory, PyKX-in-REPL, sample
+notebooks) and [docs/developer/](docs/developer/) (setup, notifications,
+execution flow, telemetry), with screenshots under `docs/images/`. The
+end-user product documentation is hosted separately at
+`https://gitlab.com/kxdev/documentation/vscode-docs/`.
+
+- [docs/user/reference-card.md](docs/user/reference-card.md) is the canonical
+  reference card (command palette, keybindings, settings, execution matrix,
+  telemetry events) — it replaced the former root `ref_card.md`. Keep it in sync
+  when commands, keybindings, settings, or telemetry events change.
+- When adding a page, give it OKF frontmatter and link it from the enclosing
+  `index.md`. Use relative links between pages, not `github.com/.../wiki/` URLs.
+
 ## Conventions
 
 - **License header**: every `.ts` file must start with the Apache 2.0 header
