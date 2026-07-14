@@ -709,7 +709,7 @@ describe("serverCommand", () => {
         false,
         true,
         "2",
-        0,
+        "0",
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
@@ -726,7 +726,7 @@ describe("serverCommand", () => {
         true,
         true,
         "2",
-        0,
+        "0",
       );
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
       sinon.assert.notCalled(queryConsoleErrorStub);
@@ -743,7 +743,7 @@ describe("serverCommand", () => {
         true,
         true,
         "2",
-        0,
+        "0",
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
     });

@@ -83,7 +83,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   public updateResults(
     queryResults: any,
     isInsights?: boolean,
-    connVersion?: number,
+    connVersion?: string,
     isPython?: boolean,
   ) {
     this.savedParamStates = { queryResults, isInsights, connVersion, isPython };
@@ -141,7 +141,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       : "";
   }
 
-  public updateWebView(queryResult: any, connVersion?: number) {
+  public updateWebView(queryResult: any, connVersion?: string) {
     ext.resultPanelCSV = "";
     this._results = queryResult;
     let result = "";

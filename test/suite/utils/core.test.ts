@@ -972,4 +972,28 @@ describe("core", () => {
       assert.strictEqual(coreUtils.formatSeconds(25200), "7h");
     });
   });
+
+  describe("isBaseVersionGreaterOrEqual", () => {
+    it("should treat two-digit minor versions correctly, not as a collapsed float", () => {
+      assert.strictEqual(
+        coreUtils.isBaseVersionGreaterOrEqual("1.20", "1.18"),
+        true,
+      );
+      assert.strictEqual(
+        coreUtils.isBaseVersionGreaterOrEqual("1.2", "1.18"),
+        false,
+      );
+    });
+
+    it("should compare single-digit minor versions correctly", () => {
+      assert.strictEqual(
+        coreUtils.isBaseVersionGreaterOrEqual("1.3", "1.3"),
+        true,
+      );
+      assert.strictEqual(
+        coreUtils.isBaseVersionGreaterOrEqual("1.1", "1.3"),
+        false,
+      );
+    });
+  });
 });

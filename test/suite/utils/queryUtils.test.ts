@@ -228,6 +228,13 @@ describe("queryUtils", () => {
       assert.strictEqual(res, "a:1");
     });
 
+    it("should remove unclosed block comment to end of input", () => {
+      let res = queryUtils.normalizeQSQLQuery("a:1\n/\na:2\na:3");
+      assert.strictEqual(res, "a:1");
+      res = queryUtils.normalizeQSQLQuery("a:1\r\n/\r\na:2\r\na:3");
+      assert.strictEqual(res, "a:1");
+    });
+
     it("should remove single line comment", () => {
       let res = queryUtils.normalizeQSQLQuery("/ single line comment\na:1");
       assert.strictEqual(res, "a:1");
@@ -258,6 +265,32 @@ describe("queryUtils", () => {
       assert.strictEqual(res, 'a:"a\n\n b"');
       res = queryUtils.normalizeQSQLQuery('a:"a\r\n\r\n b"');
       assert.strictEqual(res, 'a:"a\r\n\r\n b"');
+    });
+
+    it("should convert system commands", () => {
+      assert.strictEqual(
+        queryUtils.normalizeQSQLQuery("\\l foo.q"),
+        'system"l foo.q"',
+      );
+      assert.strictEqual(queryUtils.normalizeQSQLQuery("\\\\"), 'system"\\\\"');
+    });
+
+    it("should escape backslashes in system command arguments", () => {
+      assert.strictEqual(
+        queryUtils.normalizeQSQLQuery('\\someCommand "\\t"'),
+        'system"someCommand \\"\\\\t\\""',
+      );
+    });
+
+    it("should preserve the repeat count of timing system commands", () => {
+      assert.strictEqual(
+        queryUtils.normalizeQSQLQuery("\\ts:1000 1+2"),
+        'system"ts:1000 1+2"',
+      );
+      assert.strictEqual(
+        queryUtils.normalizeQSQLQuery("\\t:100 sum til 100"),
+        'system"t:100 sum til 100"',
+      );
     });
   });
 
@@ -364,6 +397,18 @@ describe("queryUtils", () => {
       const query = "1234567890".repeat(25000) + "1";
 
       assert.throws(() => queryUtils.normalizeQuery(query));
+    });
+
+    it("should remove unclosed block comment to end of input", () => {
+      let res = queryUtils.normalizeQuery("1\n/\n2\n3");
+      assert.strictEqual(res, "1\r\n");
+      res = queryUtils.normalizeQuery("1\r\n/\r\n2\r\n3");
+      assert.strictEqual(res, "1\r\n");
+    });
+
+    it("should remove closed block comment", () => {
+      const res = queryUtils.normalizeQuery("1\n/\n2\n\\\n3");
+      assert.strictEqual(res, "1\r\n3");
     });
   });
 

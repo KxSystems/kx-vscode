@@ -30,6 +30,7 @@ import {
   Runner,
 } from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
+import { moduleSearchPath, selectRepl } from "../utils/replPath";
 import { errorMessage } from "../utils/shared";
 import { pickWorkspace } from "../utils/workspace";
 
@@ -47,6 +48,7 @@ const ANSI = {
   SAVE: "\x1b[s",
   RESTORE: "\x1b[u",
   ERASETOEND: "\x1b[0J",
+  CLEAR: "\x1b[2J\x1b[3J\x1b[H",
   LINESTART: "\x1b[0G",
   FAINTON: "\x1b[2m",
   FAINTOFF: "\x1b[22m",
@@ -56,6 +58,7 @@ const KEY = {
   CR: "\r",
   CTRLC: "\x03",
   CTRLD: "\x04",
+  CTRLL: "\x0c",
   BS: "\b",
   BSMAC: "\x7f",
   DEL: "\x1b[3~",
@@ -73,6 +76,17 @@ const KEY = {
   SHIFTDOWN: "\x1b[1;2B",
   SHIFTLEFT: "\x1b[1;2D",
   SHIFTRIGHT: "\x1b[1;2C",
+  CTRLLEFT: "\x1b[1;5D",
+  CTRLRIGHT: "\x1b[1;5C",
+  ALTLEFT: "\x1b[1;3D",
+  ALTRIGHT: "\x1b[1;3C",
+  METALEFT: "\x1bb",
+  METARIGHT: "\x1bf",
+  DELWORDLEFT: "\x17",
+  DELWORDLEFTMETA: "\x1b\x7f",
+  DELWORDRIGHT: "\x1bd",
+  DELWORDRIGHTCTRL: "\x1b[3;5~",
+  DELWORDRIGHTALT: "\x1b[3;3~",
 };
 
 const CTX = {
@@ -189,6 +203,7 @@ export class ReplConnection {
   private constructor(
     private readonly workspace?: vscode.WorkspaceFolder,
     private readonly venv?: ResolvedEnvironment,
+    private readonly baseUri?: vscode.Uri,
   ) {
     this.onDidWrite = new vscode.EventEmitter<string>();
     this.decoder = new TextDecoder("utf8");
@@ -236,6 +251,24 @@ export class ReplConnection {
     this.updateMaxInputIndex();
   }
 
+  private get key() {
+    return this.baseUri?.toString() ?? CONF.DEFAULT;
+  }
+
+  private terminalLabel() {
+    if (this.workspace) {
+      if (
+        !this.baseUri ||
+        this.baseUri.toString() === this.workspace.uri.toString()
+      ) {
+        return this.workspace.name;
+      }
+      const rel = path.relative(this.workspace.uri.fsPath, this.baseUri.fsPath);
+      return `${this.workspace.name}/${rel.split(path.sep).join("/")}`;
+    }
+    return this.baseUri ? path.basename(this.baseUri.fsPath) : CONF.DEFAULT;
+  }
+
   private createTerminal() {
     return vscode.window.createTerminal({
       pty: {
@@ -245,7 +278,7 @@ export class ReplConnection {
         handleInput: this.handleInput.bind(this),
         onDidWrite: this.onDidWrite.event,
       },
-      name: `${CONF.TITLE} (${this.workspace ? this.workspace.name : CONF.DEFAULT})`,
+      name: `${CONF.TITLE} (${this.terminalLabel()})`,
       isTransient: true,
     });
   }
@@ -273,11 +306,17 @@ export class ReplConnection {
     this.env = getEnvironment(this.workspace);
     if (!this.env.qBinPath) showSetupError(this.workspace);
 
+    // Only KDB-X has a module system; classic kdb+ ignores QPATH.
+    const base = this.baseUri?.fsPath;
+    if (base && this.env.qBinKdbX) {
+      this.env.QPATH = moduleSearchPath(base, this.env.QPATH, this.env.QHOME);
+    }
+
     return spawn(
       `${this.activate ? this.activate + " && " : ""}"${this.env.qBinPath}"`,
       {
         env: this.env,
-        cwd: this.workspace?.uri.fsPath,
+        cwd: this.baseUri?.fsPath ?? this.workspace?.uri.fsPath,
         windowsHide: true,
         shell: this.win32 ? "cmd.exe" : "bash",
       },
@@ -422,6 +461,48 @@ export class ReplConnection {
     );
   }
 
+  private isWordChar(index: number) {
+    const char = this.input[index];
+    return char !== undefined && /\w/.test(char);
+  }
+
+  private wordLeft() {
+    let index = this.inputIndex;
+    while (index > 0 && !this.isWordChar(index - 1)) index--;
+    while (index > 0 && this.isWordChar(index - 1)) index--;
+    return index;
+  }
+
+  private wordRight() {
+    const max = this.visibleInputIndex;
+    let index = this.inputIndex;
+    while (index < max && !this.isWordChar(index)) index++;
+    while (index < max && this.isWordChar(index)) index++;
+    return index;
+  }
+
+  private deleteWordLeft() {
+    const index = this.wordLeft();
+    if (index < this.inputIndex) {
+      this.input.splice(index, this.inputIndex - index);
+      this.inputIndex = index;
+      this.showPrompt();
+    }
+  }
+
+  private deleteWordRight() {
+    const index = this.wordRight();
+    if (index > this.inputIndex) {
+      this.input.splice(this.inputIndex, index - this.inputIndex);
+      this.showPrompt();
+    }
+  }
+
+  private clear() {
+    this.sendToTerminal(ANSI.CLEAR);
+    if (!this.executing) this.showPrompt(true);
+  }
+
   private recall(history?: HistoryItem) {
     const input = history?.input ?? ANSI.EMPTY;
     this.input = [...input];
@@ -518,6 +599,7 @@ export class ReplConnection {
       return;
     }
     this.exited = true;
+    if (ReplConnection.active === this) ReplConnection.active = undefined;
     this.sendToTerminal(
       `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`,
     );
@@ -525,10 +607,10 @@ export class ReplConnection {
   }
 
   private close() {
-    const key = this.workspace?.uri.toString() ?? CONF.DEFAULT;
-    if (ReplConnection.repls.get(key) === this) {
-      ReplConnection.repls.delete(key);
+    if (ReplConnection.repls.get(this.key) === this) {
+      ReplConnection.repls.delete(this.key);
     }
+    if (ReplConnection.active === this) ReplConnection.active = undefined;
     this.exited = true;
     this.cancel();
     this.stopProcess();
@@ -588,6 +670,9 @@ export class ReplConnection {
       case KEY.CTRLD:
         this.stopProcess(true);
         break;
+      case KEY.CTRLL:
+        this.clear();
+        break;
       case KEY.BS:
       case KEY.BSMAC:
         if (this.inputIndex > 0 && this.input.splice(this.inputIndex - 1, 1)) {
@@ -599,6 +684,15 @@ export class ReplConnection {
         if (this.input.splice(this.inputIndex, 1)) {
           this.showPrompt();
         }
+        break;
+      case KEY.DELWORDLEFT:
+      case KEY.DELWORDLEFTMETA:
+        this.deleteWordLeft();
+        break;
+      case KEY.DELWORDRIGHT:
+      case KEY.DELWORDRIGHTCTRL:
+      case KEY.DELWORDRIGHTALT:
+        this.deleteWordRight();
         break;
       case KEY.HOME:
       case KEY.HOMEMAC:
@@ -640,6 +734,26 @@ export class ReplConnection {
           this.showPrompt();
         }
         break;
+      case KEY.CTRLLEFT:
+      case KEY.ALTLEFT:
+      case KEY.METALEFT: {
+        const index = this.wordLeft();
+        if (index !== this.inputIndex) {
+          this.inputIndex = index;
+          this.showPrompt();
+        }
+        break;
+      }
+      case KEY.CTRLRIGHT:
+      case KEY.ALTRIGHT:
+      case KEY.METARIGHT: {
+        const index = this.wordRight();
+        if (index !== this.inputIndex) {
+          this.inputIndex = index;
+          this.showPrompt();
+        }
+        break;
+      }
       case KEY.DOWN:
         this.recall(ReplConnection.history.prev);
         break;
@@ -673,6 +787,7 @@ export class ReplConnection {
   }
 
   start() {
+    ReplConnection.active = this;
     this.terminal.show();
   }
 
@@ -729,27 +844,83 @@ export class ReplConnection {
   private static readonly history = new History();
   private static readonly repls = new Map<string, ReplConnection>();
 
+  // The REPL the user is actively working in, tracked from terminal focus.
+  // Used to route "orphan" files (those not owned by any folder REPL) to the
+  // REPL the user is looking at instead of spawning a new one.
+  private static active?: ReplConnection;
+  private static focusListener?: vscode.Disposable;
+
+  private static trackActiveTerminal() {
+    if (this.focusListener) return;
+    this.focusListener = vscode.window.onDidChangeActiveTerminal((terminal) => {
+      if (!terminal) return;
+      for (const repl of this.repls.values()) {
+        if (repl.terminal === terminal && !repl.exited) {
+          this.active = repl;
+          return;
+        }
+      }
+      // A non-REPL terminal was focused; keep the current active REPL.
+    });
+  }
+
+  private static async create(
+    workspace?: vscode.WorkspaceFolder,
+    baseUri?: vscode.Uri,
+  ) {
+    this.trackActiveTerminal();
+    let venv: ResolvedEnvironment | undefined;
+    try {
+      const pythonApi = await PythonExtension.api();
+      const envp = pythonApi.environments.getActiveEnvironmentPath(workspace);
+      venv = await pythonApi.environments.resolveEnvironment(envp);
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
+    }
+    const repl = new ReplConnection(workspace, venv, baseUri);
+    this.repls.set(repl.key, repl);
+    return repl;
+  }
+
   static async getOrCreateInstance(resource?: vscode.Uri) {
+    if (resource) {
+      // Executions always target the active REPL (the one the user last
+      // started or focused) when it is live.
+      if (this.active && !this.active.exited) {
+        return this.active;
+      }
+      // No active REPL: fall back to the most-specific folder REPL that owns
+      // the file, if any.
+      const match = selectRepl(
+        resource.fsPath,
+        [...this.repls.values()].map((repl) => ({
+          baseFsPath: repl.baseUri?.fsPath,
+          exited: repl.exited,
+          repl,
+        })),
+      );
+      if (match) {
+        return match.repl;
+      }
+    }
+
     const workspace =
       (resource && vscode.workspace.getWorkspaceFolder(resource)) ||
       (await pickWorkspace());
 
     const key = workspace?.uri.toString() ?? CONF.DEFAULT;
-
-    let repl = this.repls.get(key);
-    if (!repl || repl.exited) {
-      let venv: ResolvedEnvironment | undefined;
-      try {
-        const pythonApi = await PythonExtension.api();
-        const envp = pythonApi.environments.getActiveEnvironmentPath(workspace);
-        venv = await pythonApi.environments.resolveEnvironment(envp);
-      } catch (error) {
-        notify(errorMessage(error), MessageKind.DEBUG, { logger });
-      }
-      repl = new ReplConnection(workspace, venv);
-      this.repls.set(key, repl);
+    const existing = this.repls.get(key);
+    if (existing && !existing.exited) {
+      return existing;
     }
+    return this.create(workspace, workspace?.uri);
+  }
 
-    return repl;
+  static async openInFolder(base: vscode.Uri) {
+    const existing = this.repls.get(base.toString());
+    if (existing && !existing.exited) {
+      return existing;
+    }
+    return this.create(vscode.workspace.getWorkspaceFolder(base), base);
   }
 }
