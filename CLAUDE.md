@@ -47,16 +47,16 @@ npm run q-test                    # q-language unit tests — runs in the qpbuil
 
 `q-test` wraps [qcumber.sh](qcumber.sh), which runs the tests inside the
 `qpbuild` image and sets up pykx via `test/q/preTest.sh`. The image lives in a
-private GitLab registry — if it isn't already local, the script pulls it. It
-logs in first when it can: from `GITLAB_TOKEN` (a GitLab PAT with the
-`read_registry` scope), or by prompting interactively; otherwise it relies on an
-existing `docker login` (this is how CI authenticates — a `docker/login-action`
-step runs before `qcumber.sh`). It also needs a kdb+ license
-passed to the container as `KDB_K4LICENSE_B64` (this is how CI passes it, from a
-secret). If that env var is unset, `qcumber.sh` base64-encodes a `k4.lic` file,
-looked up as `$QLIC/k4.lic`, `$QHOME/k4.lic`, then `~/.kx/k4.lic` — so if you
-already have `$QLIC`/`$QHOME` set there's nothing to configure. (A `kc.lic` will
-not work; the tests need a `k4.lic`.)
+private GitLab registry — if it isn't already local, the script pulls it,
+relying on whatever credentials docker already has (this is how CI authenticates
+— a `docker/login-action` step runs before `qcumber.sh`). Only if that pull
+fails does it authenticate itself — from `GITLAB_TOKEN` (a GitLab PAT with the
+`read_registry` scope) or an interactive prompt — and retry once. It also needs
+a kdb+ license passed to the container as `KDB_K4LICENSE_B64` (this is how CI
+passes it, from a secret). If that env var is unset, `qcumber.sh` base64-encodes
+a `k4.lic` file, looked up as `$QLIC/k4.lic`, `$QHOME/k4.lic`, then
+`~/.kx/k4.lic` — so if you already have `$QLIC`/`$QHOME` set there's nothing to
+configure. (A `kc.lic` will not work; the tests need a `k4.lic`.)
 
 Test framework is **Mocha** with **Sinon** for stubs and
 **proxyquire**/**mock-fs** for module and filesystem mocking. Tests mirror the
@@ -137,8 +137,9 @@ execution target via the `kdb.connectionMap`/`kdb.targetMap` workspace settings.
 - **Dependencies**: pin every package to an absolute version (no `^`/`~` ranges)
   and commit the updated `package-lock.json`.
 - **Branching**: PRs target `dev` (the default branch), not `main`.
-- **Commit messages**: a single line, no body/newlines. Lead with the affected
-  area, then a comma-separated summary of what changed, e.g.
+- **Commit messages**: a single line, no body/newlines and no `Co-Authored-By`
+  trailer. Lead with the affected area, then a comma-separated summary of what
+  changed, e.g.
   `REPL: add word nav/delete keys, route orphan files to active REPL, dedupe query normalization`.
 - **Squashing**: interactive rebase isn't available here — squash with a soft
   reset instead, then re-commit in the style above, e.g.
