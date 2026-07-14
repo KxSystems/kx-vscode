@@ -11,6 +11,11 @@ node_modules
 server
 test/
 img/
+docs/
+CLAUDE.md
+build-api.js
+qcumber.q
+secure-processes.md
 qcumber.sh 
 esbuild.mjs
 sonar-project.properties
