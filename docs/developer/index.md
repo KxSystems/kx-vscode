@@ -18,5 +18,6 @@ Architecture and contributor notes for the kdb VS Code extension. See also the
 - [Log, Telemetry and User Notifications](log-telemetry-and-user-notifications.md) — the single notification entry point.
 - [Progress Notifications](progress-notifications.md) — creating progress notifications.
 - [Query Execution Call Hierarchy](query-execution-call-hierarchy.md) — file types, actions and their entry points.
+- [q Debugger Internal API Usage](q-debugger-internal-api.md) — which q internal/debug API entrypoints the debug adapter uses, and which it avoids.
 - [Top Level Error Handling and User Notification Functions](top-level-error-handling.md) — where user-visible query notifications belong.
 - [Telemetry (Pre 1.17.0)](telemetry-pre-1.17.0.md) — the legacy telemetry event list.
