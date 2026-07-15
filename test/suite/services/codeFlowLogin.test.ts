@@ -13,7 +13,9 @@
 
 import * as assert from "assert";
 import axios from "axios";
+import * as http from "http";
 import sinon from "sinon";
+import { URL } from "url";
 import * as vscode from "vscode";
 
 import { ext } from "../../../src/extensionVariables";
@@ -309,9 +311,44 @@ describe("CodeFlowLogin", () => {
         },
       };
       axiosStub.resolves(mockResponse);
-      envStub.resolves();
 
-      assert.ok(typeof codeFlow.signIn === "function");
+      envStub.callsFake((uri: vscode.Uri) => {
+        const authorizationUrl = new URL(uri.toString(true));
+        const redirectUri = authorizationUrl.searchParams.get(
+          "redirect_uri",
+        ) as string;
+        const state = authorizationUrl.searchParams.get("state") as string;
+
+        const redirect = new URL(redirectUri);
+        redirect.searchParams.set("code", "auth_code_123");
+        redirect.searchParams.set("state", state);
+
+        return new Promise<void>((resolve, reject) => {
+          http
+            .get(redirect.toString(), (res) => {
+              res.resume();
+              res.on("end", resolve);
+            })
+            .on("error", reject);
+        });
+      });
+
+      const result = await codeFlow.signIn(
+        "https://insights.example.com",
+        "realm1",
+        false,
+      );
+
+      assert.strictEqual(result?.accessToken, "access_token_123");
+      assert.strictEqual(result?.refreshToken, "refresh_token_123");
+
+      const [tokenUrl, body] = axiosStub.getCall(0).args;
+      assert.strictEqual(
+        tokenUrl,
+        "https://insights.example.com/auth/realms/realm1/protocol/openid-connect/token",
+      );
+      assert.ok(body.includes("code=auth_code_123"));
+      assert.ok(body.includes("grant_type=authorization_code"));
     });
   });
 

@@ -683,8 +683,8 @@ function map(xs: any, f: any) {
 }
 
 export function isBaseVersionGreaterOrEqual(
-  baseVersion: number,
-  targetVersion: number,
+  baseVersion: string,
+  targetVersion: string,
 ): boolean {
   return semver.gte(`${baseVersion}.0`, `${targetVersion}.0`);
 }

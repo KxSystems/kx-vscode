@@ -904,7 +904,7 @@ export async function executeQuery(
 
   const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
   const isInsights = selectedConn instanceof InsightsConnection;
-  const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
+  const connVersion = isInsights ? (selectedConn.insightsVersion ?? "0") : "0";
 
   if (query.length === 0) {
     notify("Empty query.", MessageKind.DEBUG, {
@@ -1345,7 +1345,7 @@ export async function writeQueryResultsToView(
   isPython?: boolean,
   duration?: string,
   isFromConnTree?: boolean,
-  connVersion?: number,
+  connVersion?: string,
 ): Promise<void> {
   await commands.executeCommand(
     "kdb.resultsPanel.update",
@@ -1387,7 +1387,7 @@ export async function writeScratchpadResult(
   isPython: boolean,
   isWorkbook: boolean,
   duration: string,
-  connVersion: number,
+  connVersion: string,
 ): Promise<any> {
   let errorMsg;
 

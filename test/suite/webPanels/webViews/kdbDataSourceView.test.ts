@@ -50,7 +50,7 @@ describe("KdbDataSourceView", () => {
       command: DataSourceCommand.Update,
       servers: ["server"],
       selectedServer: "server",
-      selectedServerVersion: 0,
+      selectedServerVersion: "0",
       timeoutDefault: true,
       timeoutValue: 0,
       timeoutUnit: "Seconds",
@@ -1037,13 +1037,13 @@ describe("KdbDataSourceView", () => {
 
   describe("renderRowCountOptions", () => {
     it("should render row count options", () => {
-      view.selectedServerVersion = 1.11;
+      view.selectedServerVersion = "1.11";
       const result = view.renderRowCountOptions();
       assert.ok(result);
     });
 
     it("should not render row count options for older server version", () => {
-      view.selectedServerVersion = 1.1;
+      view.selectedServerVersion = "1.1";
       const result = view.renderRowCountOptions();
       assert.ok(!result);
     });
