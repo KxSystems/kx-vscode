@@ -221,10 +221,14 @@ export class QDebugSession extends LoggingDebugSession {
       const src =
         file !== undefined ? new Source(basename(file), file) : undefined;
       const frame = new StackFrame(f.index, frameName(f), src, f.line ?? 0);
-      // Mark the statement in the frame where execution is paused.
+      // Mark the statement in the frame where execution is paused. `marker.col` is
+      // a 0-based source index (setDebuggerColumnsStartAt1(false)); the debug
+      // adapter library does not auto-convert StackFrame columns, so convert to the
+      // client's 1-based convention explicitly — otherwise the marker lands one
+      // column to the left.
       const marker = this.currentMarker;
       if (f.current && marker && marker.line === f.line) {
-        frame.column = marker.col;
+        frame.column = this.convertDebuggerColumnToClient(marker.col);
       }
       frame.presentationHint = src ? "normal" : "subtle";
       return frame;
