@@ -12,9 +12,11 @@
  */
 
 import { parse } from "../../server/src/parser/parser";
+import { LCurly } from "../../server/src/parser/tokens";
 import {
   Token,
   assignable,
+  identifier,
   inLambda,
   lamdaDefinition,
 } from "../../server/src/parser/utils";
@@ -55,6 +57,99 @@ export function functionAt(
     }
   }
   return undefined;
+}
+
+/**
+ * Locates a source line within the lambda-nesting tree, for arming a native
+ * breakpoint on the (possibly nested) lambda that encloses it.
+ */
+export interface QLambdaPath {
+  /**
+   * Global name of the OUTERMOST enclosing function (e.g. `g`, `.ns.f`). It must
+   * be armable with `get`, so the outermost lambda has to be assigned at top
+   * level; a nested lambda is reached from it by {@link path}, not by name.
+   */
+  name: string;
+  /**
+   * Source-order child-lambda indices leading from {@link name} down to the
+   * innermost lambda enclosing the line (empty = the named function itself). q
+   * stores each nested lambda as a `type 100h` constant of its parent's `value`,
+   * in source order, so index `path[k]` selects the k-th descent. The debugger's
+   * `.dbg.nested` walks this path.
+   */
+  path: number[];
+  /** 1-based line of the innermost enclosing lambda's opening `{`. */
+  startLine: number;
+  /** 1-based line of the outermost (named) function's opening `{`. */
+  rootLine: number;
+}
+
+/**
+ * Resolve a 1-based source line to the chain of `{…}` lambdas enclosing it,
+ * expressed as a top-level function name plus a descent path of child-lambda
+ * indices. This generalises {@link functionAt} to lambdas nested to any depth,
+ * including anonymous or locally-named ones (which carry no global name of their
+ * own but are reachable as constants of the outermost function). Returns
+ * undefined when the line is not inside a lambda, or the outermost enclosing
+ * lambda is not assigned to a global name (so it cannot be armed).
+ */
+export function lambdaPathAt(
+  text: string,
+  line: number,
+): QLambdaPath | undefined {
+  let tokens: Token[];
+  try {
+    tokens = parse(text);
+  } catch {
+    return undefined;
+  }
+
+  const innermost = lambdaAtLine(tokens, line);
+  // Only plain `{…}` lambdas nest as `value` constants; a test block (qcumber)
+  // is not navigable this way, so it is not a supported breakpoint host.
+  if (!innermost || innermost.tokenType !== LCurly) return undefined;
+
+  // Enclosing-lambda chain, outermost first.
+  const chain: Token[] = [];
+  for (let cur: Token | undefined = innermost; cur; cur = enclosingLambda(cur)) {
+    if (cur.tokenType !== LCurly) return undefined;
+    chain.unshift(cur);
+  }
+  const root = chain[0];
+
+  const named = tokens.find(
+    (t) => assignable(t) && lamdaDefinition(t) === root,
+  );
+  if (!named) return undefined;
+
+  const path: number[] = [];
+  for (let i = 1; i < chain.length; i++) {
+    const idx = childLambdas(tokens, chain[i - 1]).indexOf(chain[i]);
+    if (idx === -1) return undefined; // defensive: chain child must be a child
+    path.push(idx);
+  }
+
+  return {
+    name: identifier(named),
+    path,
+    startLine: innermost.startLine ?? line,
+    rootLine: root.startLine ?? line,
+  };
+}
+
+/** The `{` lambda directly enclosing `lambda`, or undefined at the top level. */
+function enclosingLambda(lambda: Token): Token | undefined {
+  for (let scope = lambda.scope; scope; scope = scope.scope) {
+    if (scope.tokenType === LCurly) return scope;
+  }
+  return undefined;
+}
+
+/** Direct child `{` lambdas of `parent`, in source order. */
+function childLambdas(tokens: Token[], parent: Token): Token[] {
+  return tokens
+    .filter((t) => t.tokenType === LCurly && enclosingLambda(t) === parent)
+    .sort((a, b) => (a.startOffset ?? 0) - (b.startOffset ?? 0));
 }
 
 /** Innermost lambda enclosing any token on the given 1-based line. */

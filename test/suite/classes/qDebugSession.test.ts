@@ -21,8 +21,10 @@ import {
   isReadOnlyExpression,
   parseJsonDict,
   parseJsonNames,
+  qList,
   statementId,
   statementStart,
+  trapKey,
   unquoteQString,
 } from "../../../src/classes/qDebugSession";
 import { QFrame } from "../../../src/utils/qBacktrace";
@@ -273,21 +275,145 @@ describe("qDebugSession.syncBreakpoints", () => {
     // Nothing of the program has loaded yet: its own function is not armable,
     // but the helper file's is (its lines are unrelated to program progress).
     await session.syncBreakpoints(0);
-    assert.deepStrictEqual(calls, [".Q.bs[h;0]"]);
+    assert.deepStrictEqual(calls, [".dbg.bs[`h;()]"]);
 
     // Once the program's definition has loaded, its function arms too (and the
     // already-armed helper trap is not re-armed).
     await session.syncBreakpoints(1);
-    assert.deepStrictEqual(calls, [".Q.bs[h;0]", ".Q.bs[f;0]"]);
+    assert.deepStrictEqual(calls, [".dbg.bs[`h;()]", ".dbg.bs[`f;()]"]);
+  });
+
+  it("arms a breakpoint inside a nested lambda via its descent path", async () => {
+    const calls: string[] = [];
+    const session = stubbedSession(calls);
+    session.programPath = "/prog/main.q";
+    // f (lines 1-4) contains g (lines 2-3); the breakpoint on line 3 is g's body.
+    session.sourceCache.set(
+      "/prog/main.q",
+      "f:{[x]\n  g:{[y]\n    y+1 };\n  g x }",
+    );
+    session.requestedBreakpoints.set("/prog/main.q", [3]);
+
+    // g is the first child lambda of f, so its descent path is `enlist 0` → "0".
+    await session.syncBreakpoints(4);
+    assert.deepStrictEqual(calls, [".dbg.bs[`f;0]"]);
+    assert.strictEqual(session.armedTraps.size, 1);
+    assert.ok(
+      session.armedTraps.has(
+        trapKey({ name: "f", path: [0], startLine: 2, rootLine: 1 }),
+      ),
+    );
   });
 
   it("recovers traps whose breakpoints were all removed", async () => {
     const calls: string[] = [];
     const session = stubbedSession(calls);
-    session.armedTraps.set("h", { name: "h", index: 0 });
+    // A top-level trap (empty path) and a nested one (path [1,0]) both go stale.
+    const top = { name: "h", path: [], startLine: 1, rootLine: 1 };
+    const nested = { name: "f", path: [1, 0], startLine: 1, rootLine: 1 };
+    session.armedTraps.set(trapKey(top), { name: "h", path: [] });
+    session.armedTraps.set(trapKey(nested), { name: "f", path: [1, 0] });
 
     await session.syncBreakpoints(0);
-    assert.deepStrictEqual(calls, [".Q.bu[h;0]"]);
+    assert.deepStrictEqual(calls, [".dbg.bu[`h;()]", ".dbg.bu[`f;1 0]"]);
     assert.strictEqual(session.armedTraps.size, 0);
+  });
+});
+
+describe("qDebugSession.trapKey / qList", () => {
+  it("keys traps by name and descent path, distinguishing nested lambdas", () => {
+    const top = { name: "f", path: [], startLine: 1, rootLine: 1 };
+    const nested = { name: "f", path: [1, 0], startLine: 4, rootLine: 1 };
+    assert.notStrictEqual(trapKey(top), trapKey(nested));
+    assert.strictEqual(
+      trapKey({ name: "f", path: [1, 0], startLine: 9, rootLine: 1 }),
+      trapKey(nested),
+    );
+  });
+
+  it("renders a descent path as a q int-list literal", () => {
+    assert.strictEqual(qList([]), "()"); // the function itself
+    assert.strictEqual(qList([0]), "0"); // single index (q coerces to a list)
+    assert.strictEqual(qList([1, 0]), "1 0"); // multi-level descent
+  });
+});
+
+describe("qDebugSession.currentFunctionResumeLine", () => {
+  // f spans lines 1-4; f[1] is the top-level call.
+  const source = "f:{[x]\n  x+1\n  x+2\n  }\nf[1]";
+
+  function sessionAt(line: number, breakpoints: number[]) {
+    const session = new QDebugSession() as any;
+    session.programPath = "/prog/main.q";
+    session.sourceCache.set("/prog/main.q", source);
+    session.requestedBreakpoints.set("/prog/main.q", breakpoints);
+    session.driver = {
+      position: async () => ({ file: "/prog/main.q", line, col: 3 }),
+    };
+    return session;
+  }
+
+  it("returns the current line when the function has a further breakpoint", async () => {
+    // Two breakpoints (lines 2 and 3) inside f: resuming from line 2 must step
+    // to line 3 rather than run freely, so the resume line is returned.
+    assert.strictEqual(await sessionAt(2, [2, 3]).currentFunctionResumeLine(), 2);
+  });
+
+  it("returns undefined when the breakpoint is the function's only one", async () => {
+    // A lone breakpoint uses a free continue (once per call), so no resume line.
+    assert.strictEqual(
+      await sessionAt(2, [2]).currentFunctionResumeLine(),
+      undefined,
+    );
+  });
+});
+
+describe("qDebugSession.advanceToBreakpoint", () => {
+  it("steps off the resume line and stops at the next in-function breakpoint", async () => {
+    const session = new QDebugSession() as any;
+    session.programPath = "/prog/main.q";
+    session.requestedBreakpoints.set("/prog/main.q", [2, 4]);
+    // stepPosition() output: still on the resume line, then two lines forward.
+    const steps = [
+      { file: "/prog/main.q", line: 2, col: 3 },
+      { file: "/prog/main.q", line: 3, col: 3 },
+      { file: "/prog/main.q", line: 4, col: 3 },
+    ];
+    let i = 0;
+    session.driver = {
+      suspended: true,
+      stopReason: "breakpoint",
+      position: async () => ({ file: "/prog/main.q", line: 2, col: 3 }),
+      stepPosition: async () => steps[i++],
+    };
+
+    assert.strictEqual(await session.advanceToBreakpoint(2), "breakpoint");
+    // Stepped past the resume line (2), skipped the non-breakpoint line (3), and
+    // stopped at line 4.
+    assert.strictEqual(i, 3);
+  });
+
+  it("returns 'exited' when the function returns before another breakpoint", async () => {
+    const session = new QDebugSession() as any;
+    session.programPath = "/prog/main.q";
+    session.requestedBreakpoints.set("/prog/main.q", [2, 4]);
+    const steps: (object | undefined)[] = [
+      { file: "/prog/main.q", line: 3, col: 3 },
+      undefined, // the function returned; the process leaves the debugger.
+    ];
+    let i = 0;
+    const driver: any = {
+      suspended: true,
+      stopReason: "breakpoint",
+      position: async () => ({ file: "/prog/main.q", line: 2, col: 3 }),
+      stepPosition: async () => {
+        const pos = steps[i++];
+        if (i >= steps.length) driver.suspended = false;
+        return pos;
+      },
+    };
+    session.driver = driver;
+
+    assert.strictEqual(await session.advanceToBreakpoint(2), "exited");
   });
 });

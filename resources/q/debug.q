@@ -5,8 +5,29 @@
 / a multi-line comment block (ended only by a lone "\") and would swallow the rest.
 
 / (Breakpoint placement is done by the adapter: it traps the function entry with
-/ .Q.bs[f;0] and single-steps to the requested line using q's reported backtrace
+/ .dbg.bs and single-steps to the requested line using q's reported backtrace
 / line, so no static bytecode->line map is needed here.)
+
+/ Resolve a (possibly deeply nested) lambda from a globally-named function `nm`
+/ and a `path` of source-order child-lambda indices. A nested lambda is stored as
+/ a constant of its parent's `value` (the type-100h elements, in source order), so
+/ each path step selects the i-th such constant and recurses into it. An empty
+/ path yields the named function itself. Signals if `nm` is unset or the path is
+/ invalid (caller treats a signal as "not armable yet" and retries).
+/   nm   - the outermost function's name as a symbol (e.g. `g or `.ns.f)
+/   path - int list of child-lambda indices; () for the function itself
+.dbg.nested:{[nm;path]
+  {[f;i] c:value f; c (where 100h=type each c) i}/[get nm; (),path] };
+
+/ Arm an entry-trap (bytecode index 0) on the lambda at (nm;path). The trap is set
+/ on the function's embedded instance in place - q shares the nested-lambda
+/ constant by reference - so calling the outer function suspends inside the nested
+/ lambda with a correct nested backtrace frame.
+.dbg.bs:{[nm;path] .Q.bs[.dbg.nested[nm;path]; 0] };
+
+/ Recover the lambda at (nm;path): remove its entry-trap and restore the original
+/ bytecode (.Q.bd is unreliable on current KDB-X, so .Q.bu is used).
+.dbg.bu:{[nm;path] .Q.bu[.dbg.nested[nm;path]; 0] };
 
 / Parameter and local names of a lambda, as a JSON array of strings, for the
 / debugger's Locals scope. `value f` layout: index 1 is the params, index 2 the

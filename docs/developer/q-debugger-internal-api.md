@@ -3,7 +3,7 @@ type: Developer Note
 title: q Debugger Internal API Usage
 description: Which q internal/debug API entrypoints the debug adapter uses, what for, and which documented symbols are deliberately avoided or unused.
 tags: [kdb, vscode, debugger, q, dap]
-timestamp: 2026-07-15
+timestamp: 2026-07-16
 ---
 
 # q Debugger Internal API Usage
@@ -22,21 +22,35 @@ written to the process's stdin**.
   prompt.
 - [src/utils/qBacktrace.ts](../../src/utils/qBacktrace.ts) — parser for
   `.Q.bt[]` output.
-- [resources/q/debug.q](../../resources/q/debug.q) — the `.dbg.locals` helper
-  injected into the debuggee.
+- [resources/q/debug.q](../../resources/q/debug.q) — the `.dbg.*` helpers
+  (breakpoint placement + locals) injected into the debuggee.
 
 ## APIs the debugger uses
 
-### Breakpoints (`.Q` user API)
+### Breakpoints (`.Q` user API, via `.dbg` wrappers)
 
-- **`.Q.bs[f;0]`** — arms a trap at each target function's *entry* (bytecode
-  index 0). The adapter then single-steps from entry to reach the requested
-  source line.
-  [qDebugSession.ts:719](../../src/classes/qDebugSession.ts#L719)
-- **`.Q.bu[f;i]`** — recovers the original bytecode when a breakpoint is removed
-  or the session tears down. Used *instead of* `.Q.bd`.
-  [qDebugSession.ts:387](../../src/classes/qDebugSession.ts#L387),
-  [qDebugSession.ts:729](../../src/classes/qDebugSession.ts#L729)
+Traps are always set at a lambda's *entry* (bytecode index 0 — always a valid
+stop); the adapter then single-steps from entry to the requested source line.
+Crucially, `>` single-stepping does **not** descend into nested lambda calls, so
+a breakpoint inside a nested lambda needs its *own* entry trap on that lambda —
+not the outer function's. A nested lambda has no global name, but it is stored as
+a `type 100h` constant of its parent's `value` (in source order), so the adapter
+reaches it by descent path from the outermost function's name.
+
+- **`.dbg.nested[nm;path]`** — resolves the (possibly deeply nested) lambda from a
+  global function name `nm` and a `path` of source-order child-lambda indices
+  (empty `path` = the function itself). Trapping the returned value patches the
+  parent's embedded instance in place, because q shares the constant by
+  reference. [debug.q:19](../../resources/q/debug.q#L19)
+- **`.dbg.bs[nm;path]`** (→ `.Q.bs[…;0]`) — arms the entry trap. The static
+  line→(name,path) mapping is [`lambdaPathAt`](../../src/utils/qLocals.ts).
+  [debug.q:26](../../resources/q/debug.q#L26),
+  [qDebugSession.ts:836](../../src/classes/qDebugSession.ts#L836)
+- **`.dbg.bu[nm;path]`** (→ `.Q.bu[…;0]`) — recovers the original bytecode when a
+  breakpoint is removed or the session tears down. Used *instead of* `.Q.bd`.
+  [debug.q:30](../../resources/q/debug.q#L30),
+  [qDebugSession.ts:415](../../src/classes/qDebugSession.ts#L415),
+  [qDebugSession.ts:847](../../src/classes/qDebugSession.ts#L847)
 
 ### Stack / position (`.Q` api)
 
@@ -62,9 +76,11 @@ written to the process's stdin**.
   via `.j.j`, written to stdout with `neg[1]` so the payload is never elided at
   the console width (`\c` truncates displayed values, not handle writes).
   Injected into the debuggee before the user program and used to name locals in
-  the Scopes view, rather than dereferencing frames with `Lp`.
-  [debug.q:16](../../resources/q/debug.q#L16),
-  [qDebugSession.ts:755](../../src/classes/qDebugSession.ts#L755)
+  the Scopes view, rather than dereferencing frames with `Lp`. (Resolves by name,
+  so an anonymous nested-lambda frame — which has none — currently yields no
+  locals, though its call stack and in-frame evaluate/hover still work.)
+  [debug.q:40](../../resources/q/debug.q#L40),
+  [qDebugSession.ts:873](../../src/classes/qDebugSession.ts#L873)
 - **`.dbg.vals`** — renders a frame-locals dict as JSON the same way, replacing
   any value larger than `.dbg.cap` serialized bytes (`-22!`) with a type/count
   summary so a huge table or vector is never serialized in full.
@@ -83,7 +99,7 @@ A separate, non-DAP path reports query errors with a captured stack trace:
 
 - **`.Q.bd`** — its `.Q.BP` bookkeeping signals `'length` on current KDB-X
   builds, so `.Q.bu` is used to remove breakpoints instead. See the comment at
-  [qDebugSession.ts:382](../../src/classes/qDebugSession.ts#L382).
+  [debug.q:29](../../resources/q/debug.q#L29).
 
 ## Unused entirely
 

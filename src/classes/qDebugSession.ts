@@ -32,8 +32,9 @@ import * as vscode from "vscode";
 import { QCommandResult, QDebugDriver, QFrame } from "./qDebugDriver";
 import { ReplConnection } from "./replConnection";
 import {
+  QLambdaPath,
   QSeparator,
-  functionAt,
+  lambdaPathAt,
   lambdaStatementSeparators,
 } from "../utils/qLocals";
 import { splitTopLevelStatements, QStatement } from "../utils/qStatements";
@@ -85,14 +86,14 @@ export class QDebugSession extends LoggingDebugSession {
   /** Requested breakpoint lines, keyed by absolute source path. */
   private readonly requestedBreakpoints = new Map<string, number[]>();
   /**
-   * Native breakpoints currently set on the shared q process, keyed by function
-   * name. Tracked so they can be recovered (`.Q.bu`) when the session ends or the
-   * breakpoint is removed — leaving `0xff` traps in the REPL's functions would
-   * corrupt them.
+   * Native breakpoints currently set on the shared q process, keyed by
+   * {@link trapKey} (function name + nested-lambda path). Tracked so they can be
+   * recovered (`.dbg.bu`) when the session ends or the breakpoint is removed —
+   * leaving `0xff` traps in the REPL's functions would corrupt them.
    */
   private readonly armedTraps = new Map<
     string,
-    { name: string; index: number }
+    { name: string; path: number[] }
   >();
   /** Temp dir holding per-statement load files; their frames map back to programPath. */
   private tempDir?: string;
@@ -200,13 +201,14 @@ export class QDebugSession extends LoggingDebugSession {
     const lines = (args.breakpoints ?? []).map((b) => b.line);
     this.requestedBreakpoints.set(file, lines);
     // The native q debugger suspends only inside functions, so a breakpoint is
-    // supported only when its line falls within a lambda body; top-level
-    // (global-scope) lines are reported unverified. In-function breakpoints are
-    // armed as their enclosing function is defined during the statement load.
+    // supported only when its line falls within a lambda body (nested lambdas
+    // included); top-level (global-scope) lines are reported unverified.
+    // In-function breakpoints are armed as their enclosing function is defined
+    // during the statement load.
     const text = this.readSource(file);
     response.body = {
       breakpoints: lines.map((line) =>
-        text !== undefined && functionAt(text, line) !== undefined
+        text !== undefined && lambdaPathAt(text, line) !== undefined
           ? { verified: true, line }
           : {
               verified: false,
@@ -405,12 +407,12 @@ export class QDebugSession extends LoggingDebugSession {
       }
       // Remove every native trap this session set, so the shared process the
       // REPL keeps using is left with clean (un-patched) function bytecode.
-      // `.Q.bu` recovers the original bytecode (`.Q.bd` is unreliable on current
-      // KDB-X builds — its `.Q.BP` bookkeeping signals `'length`). Recovery is
-      // only safe at top level, which reset()/abortToTop() above guarantees.
-      for (const { name, index } of this.armedTraps.values()) {
+      // `.dbg.bu` recovers the original bytecode (`.Q.bd` is unreliable on
+      // current KDB-X builds — its `.Q.BP` bookkeeping signals `'length`).
+      // Recovery is only safe at top level, which reset()/abortToTop() ensures.
+      for (const { name, path } of this.armedTraps.values()) {
         try {
-          await this.driver.evaluate(`.Q.bu[${name};${index}]`);
+          await this.driver.evaluate(`.dbg.bu[\`${name};${qList(path)}]`);
         } catch {
           /* best effort */
         }
@@ -522,6 +524,23 @@ export class QDebugSession extends LoggingDebugSession {
   /** Resume after a stop: continue past a breakpoint, or unwind an exception. */
   private async resume(): Promise<void> {
     if (this.driver.stopReason === "breakpoint") {
+      // The native debugger only traps at function ENTRY; the first breakpoint
+      // in a function is reached by single-stepping from there (advanceToBreakpoint).
+      // So when the current function carries a further requested breakpoint line,
+      // step to it rather than running freely (`:` would skip every in-function
+      // breakpoint past the first). The step resumes from the current line.
+      const resumeLine = await this.currentFunctionResumeLine();
+      if (resumeLine !== undefined) {
+        const outcome = await this.advanceToBreakpoint(resumeLine);
+        if (outcome === "exited") {
+          // The function returned before another breakpoint line: fall back to
+          // the loader (execution is back at the top level).
+          await this.runStatements();
+        } else {
+          await this.reportStopped(outcome);
+        }
+        return;
+      }
       // Run freely until the next stop (a later entry trap, an error, or the
       // end of the program). The entry trap re-arms itself across calls, so a
       // breakpoint in a loop body stops once per call, not once per iteration.
@@ -533,6 +552,32 @@ export class QDebugSession extends LoggingDebugSession {
       await this.driver.abortToTop();
       await this.runStatements();
     }
+  }
+
+  /**
+   * The current source line when the lambda the debugger is suspended in still
+   * carries a requested breakpoint line besides the one at that position — the
+   * signal that resuming should single-step to the next in-lambda breakpoint
+   * (returning the line to step off from), rather than run freely. Undefined when
+   * this is the lambda's only breakpoint, so a free continue is used. Identity is
+   * the trap key (function name + nested path), so a breakpoint in a sibling or
+   * nested lambda does not count as "the same lambda".
+   */
+  private async currentFunctionResumeLine(): Promise<number | undefined> {
+    const pos = await this.driver.position();
+    const file = this.mapToProgram(pos?.file);
+    if (file === undefined || pos?.line === undefined) return undefined;
+    const text = this.readSource(file);
+    if (text === undefined) return undefined;
+    const here = lambdaPathAt(text, pos.line);
+    if (!here) return undefined;
+    const key = trapKey(here);
+    const lines = this.requestedBreakpoints.get(file) ?? [];
+    const inLambda = lines.filter((line) => {
+      const lp = lambdaPathAt(text, line);
+      return lp !== undefined && trapKey(lp) === key;
+    });
+    return inLambda.length > 1 ? pos.line : undefined;
   }
 
   /**
@@ -557,7 +602,7 @@ export class QDebugSession extends LoggingDebugSession {
     const text = file ? this.readSource(file) : undefined;
     const braceLine =
       text && startLine !== undefined
-        ? functionAt(text, startLine)?.startLine
+        ? lambdaPathAt(text, startLine)?.startLine
         : undefined;
     // `;` separators of the enclosing lambda, to tell statements on one line apart.
     const separators =
@@ -632,17 +677,36 @@ export class QDebugSession extends LoggingDebugSession {
    * "breakpoint" when a requested line is reached (or stepping is capped while
    * still suspended), "exception" on an error, or "exited" if the function returns
    * before any requested line (e.g. a branch not taken).
+   *
+   * When `resumeLine` is given the search starts one step later (used on resume,
+   * where execution already sits on a breakpoint line): that line is not treated
+   * as a match again until execution has left it and come back — a loop back-edge
+   * stops, but the bytecodes still on the resume line do not.
    */
-  private async advanceToBreakpoint(): Promise<
-    "breakpoint" | "exception" | "exited"
-  > {
+  private async advanceToBreakpoint(
+    resumeLine?: number,
+  ): Promise<"breakpoint" | "exception" | "exited"> {
     // Read the entry position once, then step-and-read in a single round-trip per
     // instruction (q's `>` echoes the new position), rather than a separate
     // `.Q.bt[]` before every step.
-    let pos = await this.driver.position();
+    let pos =
+      resumeLine === undefined
+        ? await this.driver.position()
+        : await this.driver.stepPosition();
+    let leftResumeLine = false;
     let guard = 0;
     while (this.driver.suspended && guard++ < MAX_BREAKPOINT_STEPS) {
       if (this.driver.stopReason === "exception") return "exception";
+      // Don't re-stop on the line we resumed from until execution has moved off
+      // it; only a genuine loop back to it (after leaving) counts as a hit.
+      if (resumeLine !== undefined && pos?.line === resumeLine) {
+        if (!leftResumeLine) {
+          pos = await this.driver.stepPosition();
+          continue;
+        }
+      } else if (resumeLine !== undefined) {
+        leftResumeLine = true;
+      }
       if (this.isBreakpointLine(this.mapToProgram(pos?.file), pos?.line)) {
         return "breakpoint";
       }
@@ -730,16 +794,20 @@ export class QDebugSession extends LoggingDebugSession {
 
   /**
    * Reconcile native traps with the requested breakpoints, for functions defined
-   * up to `throughLine`. A trap is set at the function ENTRY (`.Q.bs[f;0]` - index
-   * 0 is always a valid stop). When it fires we single-step to the requested source
-   * line (advanceToBreakpoint) using q's own reported line, so placement is correct
-   * even inside if/while/do/$ constructs (a static bytecode-offset map does not
-   * reliably predict the line q reports). Traps for functions whose breakpoints
-   * were all removed are recovered (`.Q.bu`) here, at a top-level boundary where
-   * that is safe; the rest are recorded in `armedTraps` for removal on session end.
+   * up to `throughLine`. A trap is set at the ENTRY (bytecode 0 — always a valid
+   * stop) of the lambda enclosing each breakpoint: the top-level function itself,
+   * or, for a breakpoint inside a NESTED lambda, that nested lambda (reached via
+   * `.dbg.bs` from the outer function's name and a source-order descent path,
+   * since `>` single-stepping does not descend into nested calls). When the trap
+   * fires we single-step to the requested source line (advanceToBreakpoint) using
+   * q's own reported line, so placement is correct even inside if/while/do/$
+   * constructs (a static bytecode-offset map does not reliably predict the line q
+   * reports). Traps whose breakpoints were all removed are recovered (`.dbg.bu`)
+   * here, at a top-level boundary where that is safe; the rest are recorded in
+   * `armedTraps` for removal on session end.
    */
   private async syncBreakpoints(throughLine: number): Promise<void> {
-    // Function names that still carry at least one requested breakpoint line.
+    // Trap keys that still carry at least one requested breakpoint line.
     const wanted = new Set<string>();
     for (const [file, lines] of this.requestedBreakpoints) {
       const text = this.readSource(file);
@@ -747,31 +815,37 @@ export class QDebugSession extends LoggingDebugSession {
       // `throughLine` tracks load progress through THE PROGRAM file only, so
       // the "defined yet?" line gate applies only there. Functions in other
       // files (e.g. loaded via \l from inside the program) are armed as soon as
-      // their name resolves; until then the failed `.Q.bs` below is simply
+      // their name resolves; until then the failed `.dbg.bs` below is simply
       // retried at the next statement boundary.
       const gated = file === this.programPath;
       for (const line of lines) {
-        const fn = functionAt(text, line);
-        if (!fn) continue;
-        wanted.add(fn.name);
-        if (gated && fn.startLine > throughLine) continue;
-        if (this.armedTraps.has(fn.name)) continue;
+        const lambda = lambdaPathAt(text, line);
+        if (!lambda) continue;
+        const key = trapKey(lambda);
+        wanted.add(key);
+        // Gate on the OUTERMOST function's definition: a nested lambda only
+        // exists (as a constant) once its whole enclosing function has loaded,
+        // which happens atomically as one top-level statement.
+        if (gated && lambda.rootLine > throughLine) continue;
+        if (this.armedTraps.has(key)) continue;
         // The function may not be defined yet (loaded, but its assignment not
         // reached, or resolved via a name the process does not know). Only record
-        // the trap when `.Q.bs` succeeds, so a failed arm is retried at the next
+        // the trap when `.dbg.bs` succeeds, so a failed arm is retried at the next
         // statement boundary rather than left as a phantom trap.
-        const res = await this.driver.evaluate(`.Q.bs[${fn.name};0]`);
+        const res = await this.driver.evaluate(
+          `.dbg.bs[\`${lambda.name};${qList(lambda.path)}]`,
+        );
         if (!res.errored) {
-          this.armedTraps.set(fn.name, { name: fn.name, index: 0 });
+          this.armedTraps.set(key, { name: lambda.name, path: lambda.path });
         }
       }
     }
-    // Recover functions whose breakpoints were all removed, so their calls stop
+    // Recover lambdas whose breakpoints were all removed, so their calls stop
     // firing the entry trap (which would otherwise single-step to no purpose).
-    for (const [name, { index }] of [...this.armedTraps]) {
-      if (wanted.has(name)) continue;
-      await this.driver.evaluate(`.Q.bu[${name};${index}]`);
-      this.armedTraps.delete(name);
+    for (const [key, { name, path }] of [...this.armedTraps]) {
+      if (wanted.has(key)) continue;
+      await this.driver.evaluate(`.dbg.bu[\`${name};${qList(path)}]`);
+      this.armedTraps.delete(key);
     }
   }
 
@@ -903,6 +977,25 @@ export function statementStart(
   }
   while (start < lineText.length && /\s/.test(lineText[start])) start++;
   return start;
+}
+
+/**
+ * Stable identity of a native trap: the outermost function name and its
+ * nested-lambda descent path. Two breakpoints share a trap iff they resolve to
+ * the same lambda. The space joiner cannot occur in a q name, so `f`+`[]` and `f`+`[0]`
+ * never collide.
+ */
+export function trapKey(lambda: QLambdaPath): string {
+  return `${lambda.name} [${lambda.path.join(",")}]`;
+}
+
+/**
+ * Render a descent path as a q int-list literal for `.dbg.bs`/`.dbg.bu`: `()`
+ * for the function itself (empty path), else space-separated indices (`.dbg`
+ * coerces a scalar to a list, so a single index is fine as-is).
+ */
+export function qList(path: number[]): string {
+  return path.length === 0 ? "()" : path.join(" ");
 }
 
 export function frameName(f: QFrame): string {
