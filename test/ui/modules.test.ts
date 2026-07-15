@@ -56,9 +56,14 @@ describe("Modules", () => {
   });
 
   describe("Completion", () => {
-    it("should offer bar members (incl. h) after `bar.`", async () => {
+    // Both cases operate on main.q with no other editor stealing focus (the
+    // activation Welcome webview otherwise does).
+    beforeEach(async () => {
       await waitForEditor("main.q");
       await closeOtherEditors("main.q");
+    });
+
+    it("should offer bar members (incl. h) after `bar.`", async () => {
       // line 7: `r1:bar.f[10]` — caret right after `bar.`
       const labels = await completionLabelsAt("main.q", 7, 8);
       for (const name of ["bar.f", "bar.g", "bar.h"]) {
@@ -67,8 +72,6 @@ describe("Modules", () => {
     });
 
     it("should insert `bar.f` without duplicating the `bar.` prefix", async () => {
-      await waitForEditor("main.q");
-      await closeOtherEditors("main.q");
       const line = await acceptCompletion("main.q", "t:bar.", "bar.f");
       assert.ok(line.includes("bar.f"), `expected bar.f in ${line}`);
       assert.ok(!line.includes("bar.bar"), `duplicated prefix: ${line}`);

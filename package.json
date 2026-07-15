@@ -1298,7 +1298,7 @@
     "test:folder": "cross-env TEST_FOLDER=$1 npm run test",
     "coverage": "rimraf out && c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
     "preui-test-cmd": "tsc --outdir out-test --strict false",
-    "ui-test-cmd": "extest setup-and-run --code_version 1.103.0 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
+    "ui-test-cmd": "extest setup-and-run --code_version 1.128.1 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "preui-test": "rimraf out-test .test-extensions",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
     "q-test": "q qcumber.q -color -src ./test/q/main.q -test ./test/q/tests",
