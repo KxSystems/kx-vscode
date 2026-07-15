@@ -11,8 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { readFile } from "fs/promises";
-import { fileURLToPath } from "url";
+import { readFile, stat } from "fs/promises";
+import { delimiter, join, sep } from "path";
+import { fileURLToPath, pathToFileURL } from "url";
 import {
   CallHierarchyIncomingCall,
   CallHierarchyIncomingCallsParams,
@@ -91,6 +92,7 @@ export default class QLangServer {
   declare private params: InitializeParams;
   declare private opened: Set<string>;
   declare private cached: Map<string, Source>;
+  declare private modules: Map<string, string | undefined>;
   declare public documents: TextDocuments<TextDocument>;
   declare public notebooks: NotebookDocuments<TextDocument>;
 
@@ -99,6 +101,7 @@ export default class QLangServer {
     this.params = params;
     this.opened = new Set();
     this.cached = new Map();
+    this.modules = new Map();
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
     this.documents.onDidOpen(this.onDidOpen.bind(this));
@@ -145,7 +148,7 @@ export default class QLangServer {
       referencesProvider: true,
       definitionProvider: true,
       renameProvider: true,
-      completionProvider: { resolveProvider: false },
+      completionProvider: { resolveProvider: false, triggerCharacters: ["."] },
       selectionRangeProvider: true,
       callHierarchyProvider: true,
       semanticTokensProvider: {
@@ -193,6 +196,18 @@ export default class QLangServer {
     return res ?? {};
   }
 
+  private async getQHome(uri: string): Promise<string | undefined> {
+    const workspace = await this.connection.workspace.getConfiguration({
+      scopeUri: uri,
+      section: "kdb.qHomeDirectoryWorkspace",
+    });
+    const global = await this.connection.workspace.getConfiguration({
+      scopeUri: uri,
+      section: "kdb.qHomeDirectory",
+    });
+    return workspace || global || process.env.QHOME || undefined;
+  }
+
   private notify(
     message: string,
     kind: MessageKind,
@@ -211,7 +226,16 @@ export default class QLangServer {
 
   public onDidChangeWatchedFiles({ changes }: DidChangeWatchedFilesParams) {
     for (const change of changes) {
-      this.cached.delete(change.uri);
+      this.invalidate(change.uri);
+    }
+    this.modules.clear();
+  }
+
+  private invalidate(uri: string) {
+    for (const key of this.cached.keys()) {
+      if (key === uri || key.startsWith(uri + "\0")) {
+        this.cached.delete(key);
+      }
     }
   }
 
@@ -225,7 +249,7 @@ export default class QLangServer {
     const uri = document.uri;
 
     if (this.opened.has(uri)) this.opened.delete(uri);
-    else this.cached.delete(uri);
+    else this.invalidate(uri);
 
     if (await this.getLinting(uri)) {
       const source = await this.getSource(uri);
@@ -341,26 +365,52 @@ export default class QLangServer {
   }: CompletionParams): Promise<CompletionItem[]> {
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
+    const scope = Scope(target);
 
-    const res = (await this.getSources(uri))
-      .map((source) =>
-        source.references
-          .filter(
-            (token) =>
-              token.scope === Scope(target) && Name(token) === Name(target),
-          )
-          .map((token) => {
-            return {
-              label: token.image,
-              labelDetails: {
-                detail: ` .${Namespace(token)}`,
-              },
-              kind: CompletionItemKind.Variable,
-              insertText: Relative(token, target),
-            };
-          }),
-      )
-      .flat();
+    // Range of the (possibly dotted) word already typed before the cursor. A
+    // member completion must replace this whole prefix via a textEdit; relying
+    // on VS Code's default range appends after `bar.` and yields `bar.bar.f`
+    // (the q wordPattern excludes the trailing dot from the current word).
+    const prefix =
+      this.documents
+        .get(uri)
+        ?.getText(
+          Range.create(position.line, 0, position.line, position.character),
+        )
+        .match(/[.\w]*$/)?.[0] ?? "";
+    const range = Range.create(
+      position.line,
+      position.character - prefix.length,
+      position.line,
+      position.character,
+    );
+
+    const items = new Map<string, CompletionItem>();
+
+    for (const source of await this.getSources(uri)) {
+      for (const token of source.references) {
+        if (Scope(token) && Scope(token) !== scope) {
+          continue;
+        }
+        const name = Name(token);
+        if (!items.has(name)) {
+          items.set(name, {
+            // Use the qualified name (e.g. `bar.h`) so members show and filter
+            // correctly under a dotted prefix like `bar.`; the raw image would
+            // be the bare `h`, which VS Code filters out against `bar.`.
+            label: name,
+            labelDetails: {
+              detail: ` .${Namespace(token)}`,
+            },
+            kind: CompletionItemKind.Variable,
+            filterText: name,
+            textEdit: TextEdit.replace(range, name),
+          });
+        }
+      }
+    }
+
+    const res = [...items.values()];
 
     if (res.length > 0) {
       this.notify("onCompletion", MessageKind.DEBUG, {
@@ -621,7 +671,93 @@ export default class QLangServer {
     return result;
   }
 
-  private async related(uri: string): Promise<string[]> {
+  private async related(
+    uri: string,
+  ): Promise<{ uri: string; alias?: string }[]> {
+    const res: { uri: string; alias?: string }[] = [];
+
+    for (const file of await this.relatedFiles(uri)) {
+      res.push({ uri: file });
+    }
+    for (const { alias, file } of await this.relatedModules(uri)) {
+      res.push({ uri: file, alias });
+    }
+
+    return res;
+  }
+
+  private async relatedModules(
+    uri: string,
+  ): Promise<{ alias: string; file: string }[]> {
+    const source = await this.getSource(uri);
+    const res: { alias: string; file: string }[] = [];
+
+    for (const { alias, module } of source.imports) {
+      const file = await this.resolveModule(module, uri);
+      if (file) {
+        res.push({ alias, file });
+      }
+    }
+
+    return res;
+  }
+
+  private async resolveModule(
+    module: string,
+    uri: string,
+  ): Promise<string | undefined> {
+    if (this.modules.has(module)) {
+      return this.modules.get(module);
+    }
+
+    const roots: string[] = [];
+
+    if (process.env.QPATH) {
+      roots.push(...process.env.QPATH.split(delimiter).filter(Boolean));
+    }
+
+    const folders = await this.connection.workspace.getWorkspaceFolders();
+    if (folders) {
+      for (const folder of folders) {
+        const dir = fileURLToPath(folder.uri);
+        roots.push(dir, join(dir, "mod"));
+      }
+    }
+
+    const qHome = await this.getQHome(uri);
+    if (qHome) {
+      roots.push(join(qHome, "mod"));
+    }
+
+    const name = module.split(/[.:]/).join(sep);
+    const candidates = [
+      `${name}.k`,
+      `${name}.q`,
+      join(name, "init.k"),
+      join(name, "init.q"),
+    ];
+
+    let resolved: string | undefined;
+
+    outer: for (const root of roots) {
+      for (const candidate of candidates) {
+        const file = join(root, candidate);
+        try {
+          if ((await stat(file)).isFile()) {
+            resolved = pathToFileURL(file).href;
+            break outer;
+          }
+        } catch {
+          // not present in this root; try the next candidate
+        }
+      }
+    }
+
+    this.modules.set(module, resolved);
+    return resolved;
+  }
+
+  private async relatedFiles(uri: string): Promise<string[]> {
     const res = [uri];
 
     if (uri.startsWith("vscode-notebook-cell:")) {
@@ -686,27 +822,29 @@ export default class QLangServer {
     return res;
   }
 
-  private async getSource(uri: string): Promise<Source> {
-    let source = this.cached.get(uri);
+  private async getSource(uri: string, alias?: string): Promise<Source> {
+    const key = alias ? uri + "\0" + alias : uri;
+    let source = this.cached.get(key);
     if (!source) {
       const document = this.documents.get(uri);
       let text = "";
       if (document) {
         text = document.getText();
       } else if (uri.startsWith("file:")) {
-        const file = fileURLToPath(uri);
         try {
-          text = await readFile(file, { encoding: "utf8" });
+          // fileURLToPath throws on Windows for a non-absolute URL (no drive
+          // letter), so keep it inside the guard alongside the read.
+          text = await readFile(fileURLToPath(uri), { encoding: "utf8" });
         } catch (error) {
-          this.notify(`Unable to read '${file}'.`, MessageKind.DEBUG, {
+          this.notify(`Unable to read '${uri}'.`, MessageKind.DEBUG, {
             logger,
             params: `${error}`,
           });
           text = "";
         }
       }
-      source = Source.create(uri, text);
-      this.cached.set(uri, source);
+      source = Source.create(uri, text, alias);
+      this.cached.set(key, source);
     }
     return source;
   }
@@ -716,8 +854,8 @@ export default class QLangServer {
 
     switch (await this.getRefactoring(uri)) {
       case "Workspace":
-        for (const target of await this.related(uri)) {
-          res.push(await this.getSource(target));
+        for (const { uri: target, alias } of await this.related(uri)) {
+          res.push(await this.getSource(target, alias));
         }
         break;
       case "Window":
