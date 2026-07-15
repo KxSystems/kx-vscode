@@ -101,6 +101,28 @@ describe("qBacktrace.parseCurrentPosition", () => {
     assert.strictEqual(parseCurrentPosition(""), undefined);
   });
 
+  // A one-line lambda prints its whole body on the frame header line, so the
+  // caret sits directly under the header and is display-aligned (it includes
+  // the `>>[n]  file:line: ` prefix); the reported column must be relative to
+  // the source text, matching parseBacktrace.
+  it("strips the header prefix when the caret is directly under the header", () => {
+    const body = "g:{[z] a:z+1; b:a*2; b}";
+    const header = ">>[1]  /tmp/prog.q:1: " + body;
+    const caretAbs = header.length - body.length + body.indexOf("b:a*2");
+    const text = [
+      header,
+      " ".repeat(caretAbs) + "^",
+      "  [0]  g[10]",
+      "       ^",
+    ].join("\n");
+
+    const pos = parseCurrentPosition(text);
+    assert.strictEqual(pos?.file, "/tmp/prog.q");
+    assert.strictEqual(pos?.line, 1);
+    assert.strictEqual(pos?.col, body.indexOf("b:a*2"));
+    assert.strictEqual(body[pos!.col!], "b");
+  });
+
   // q's `>` single-step echoes only the current frame, with the ordinary `  [n]`
   // prefix rather than the `>>` marker. The parser takes the first frame then.
   it("reads position from a single-step echo that has no `>>` marker", () => {

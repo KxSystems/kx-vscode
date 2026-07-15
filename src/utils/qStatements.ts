@@ -41,7 +41,12 @@ export function splitTopLevelStatements(text: string): QStatement[] {
     for (const token of parse(text)) {
       const name = token.tokenType?.name;
       const topLevel = token.scope === undefined;
-      if (topLevel && (name === "EndOfLine" || name === "SemiColon")) {
+      // An EndOfLine ends a statement only when the parser marked it as one
+      // (escaped === ";"): a newline followed by an indented continuation line
+      // does NOT end the statement, so `a: 1 +\n 2` stays a single unit.
+      const ends =
+        name === "SemiColon" || (name === "EndOfLine" && token.escaped === ";");
+      if (topLevel && ends) {
         boundaries.add(token.startLine ?? 0);
       }
     }

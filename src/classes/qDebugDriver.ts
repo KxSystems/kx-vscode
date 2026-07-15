@@ -18,6 +18,8 @@ import {
   spawn,
 } from "node:child_process";
 import { EventEmitter } from "node:events";
+import { realpathSync } from "node:fs";
+import { relative } from "node:path";
 
 import {
   QFrame,
@@ -217,9 +219,18 @@ export class QDebugDriver extends EventEmitter {
    * backtrace call is unnecessary. Returns undefined when the step left the
    * debugger (the function returned) or no position could be parsed; callers check
    * {@link suspended}/{@link stopReason} for why.
+   *
+   * The `>` command runs with echo off (it is debugger control traffic), but the
+   * stepped instruction may itself print (`show`, `0N!`, handle writes) — or, when
+   * the step lets the function finish, the pending statement's result may print.
+   * That output belongs to the user, so everything before the frame echo (all of
+   * the output, if no frame follows) is re-emitted to the display consumer; only
+   * the frame dump stays suppressed.
    */
   async stepPosition(): Promise<QPosition | undefined> {
     const result = await this.run(">", false);
+    const preamble = programOutput(result.output);
+    if (preamble.trim().length > 0) this.emit("data", preamble + "\n");
     return this.suspended ? parseCurrentPosition(result.output) : undefined;
   }
 
@@ -270,9 +281,40 @@ export class QDebugDriver extends EventEmitter {
     this.lastStop = undefined;
   }
 
-  /** Load a q script into the running process. */
+  /**
+   * Load a q script into the running process. q's `\l` cannot parse a path
+   * containing spaces (it signals `'nyi`, with or without quoting), so a
+   * space-free argument is derived: the absolute path when it already has no
+   * spaces, otherwise the path relative to q's current directory — which drops
+   * the common prefix that usually carries the spaces (e.g. a Windows profile
+   * dir like `C:\Users\John Doe` shared by the workspace and `%TEMP%`).
+   * Backslashes become forward slashes on Windows (q's own path convention).
+   */
   async load(fsPath: string): Promise<QCommandResult> {
-    return this.run(`\\l ${fsPath}`);
+    let arg = this.win32 ? fsPath.replace(/\\/g, "/") : fsPath;
+    if (/\s/.test(arg)) {
+      const cwd = await this.currentDir();
+      // Resolve symlinks on both sides before relativizing (e.g. macOS /tmp ->
+      // /private/tmp): q reports its cwd canonicalized, and a mismatched prefix
+      // would defeat the common-prefix drop the relative path relies on.
+      const rel = cwd ? relative(realPath(cwd), realPath(fsPath)) : "";
+      const relArg = this.win32 ? rel.replace(/\\/g, "/") : rel;
+      if (relArg.length > 0 && !/\s/.test(relArg)) {
+        arg = relArg;
+      } else {
+        throw new Error(
+          `cannot load "${fsPath}": q's \\l does not support paths containing spaces`,
+        );
+      }
+    }
+    return this.run(`\\l ${arg}`);
+  }
+
+  /** q's current working directory (`system "cd"`), or undefined if unreadable. */
+  private async currentDir(): Promise<string | undefined> {
+    const res = await this.run('system "cd"', false);
+    const dir = unquoteOutput(res.output);
+    return res.errored || dir.length === 0 ? undefined : dir;
   }
 
   /** Interrupt a running computation (SIGINT), e.g. from a REPL Ctrl+C. */
@@ -413,7 +455,45 @@ function isError(output: string): boolean {
   return output.trimStart().startsWith("'");
 }
 
-/** Quote a path for the shell if it contains spaces. */
+/** Matches a backtrace frame line (`>>[n]  ...` or `  [n]  ...`). */
+const FRAME_LINE_RE = /^(?:>>|\s\s)\[\d+\]\s/;
+
+/**
+ * The program's own output within a step echo: everything before the first
+ * backtrace frame line (or all of it, when the step left the debugger and no
+ * frame was echoed).
+ */
+function programOutput(output: string): string {
+  const lines = output.split("\n");
+  const idx = lines.findIndex((line) => FRAME_LINE_RE.test(line));
+  return (idx === -1 ? lines : lines.slice(0, idx)).join("\n");
+}
+
+/** Canonical path with symlinks resolved; the path itself if that fails. */
+function realPath(p: string): string {
+  try {
+    return realpathSync.native(p);
+  } catch {
+    return p;
+  }
+}
+
+/** Strip the surrounding quotes q's display puts around a returned string. */
+function unquoteOutput(output: string): string {
+  const t = output.trim();
+  return t.length >= 2 && t.startsWith('"') && t.endsWith('"')
+    ? t.slice(1, -1)
+    : t;
+}
+
+/**
+ * Quote a path for the shell the q child is spawned through. cmd.exe: double
+ * quotes (a `"` is illegal in Windows paths, so no escaping is needed). POSIX
+ * (bash): single quotes with embedded ones escaped, so spaces, `$`, backticks
+ * and `\` in the path are never shell-interpreted.
+ */
 function quote(p: string): string {
-  return /\s/.test(p) ? `"${p}"` : p;
+  return process.platform === "win32"
+    ? `"${p}"`
+    : `'${p.replace(/'/g, "'\\''")}'`;
 }

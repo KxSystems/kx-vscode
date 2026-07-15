@@ -123,6 +123,15 @@ export function parseCurrentPosition(text: string): QPosition | undefined {
       if (frameRe.test(lines[j])) break;
       if (/^\s*\^\s*$/.test(lines[j])) {
         col = lines[j].indexOf("^");
+        // A caret directly below the header points into the header's DISPLAY
+        // line, which carries the `>>[n]  file:line: ` prefix before the source
+        // (a one-line lambda prints its whole body there); strip the prefix so
+        // the column is a source column, as parseBacktrace does. A caret under
+        // any later line sits under a raw source line and is already absolute.
+        if (j === i + 1) {
+          const body = fm ? fm[3] : m[3];
+          col = Math.max(0, col - (lines[i].length - body.length));
+        }
         break;
       }
     }

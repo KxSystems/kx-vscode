@@ -12,9 +12,29 @@
 / debugger's Locals scope. `value f` layout: index 1 is the params, index 2 the
 / locals (both symbol vectors). Resolves the function by name and degrades to an
 / empty array for anything that is not a lambda or whose shape is unexpected.
+/ The JSON is WRITTEN to stdout (neg[1]) rather than returned: a returned string
+/ would be display-formatted at the prompt and elided at the console width (\c),
+/ truncating the JSON the adapter parses; handle writes are never truncated.
 /   nm - the function's name as a symbol (e.g. `g or `.ns.f)
 .dbg.locals:{[nm]
   f:@[get;nm;::];
-  $[100h = type f;
+  neg[1] $[100h = type f;
     .j.j string @[{raze (value x) 1 2};f;`$()];
-    .j.j `$()] };
+    .j.j `$()];
+  };
+
+/ Frame-locals dict rendered as JSON and written to stdout (neg[1], untruncated;
+/ see .dbg.locals). The adapter calls this with a dict built as a bare expression
+/ in the suspended frame, so the values are the live frame locals. Any value
+/ larger than .dbg.cap serialized bytes (-22!) is replaced by a type/count
+/ summary, so a huge table or vector is never serialized in full; a value whose
+/ size cannot be probed is summarized too. A total failure writes nothing and
+/ the adapter falls back to querying each name individually.
+.dbg.cap:16384;
+.dbg.val:{[v]
+  $[.dbg.cap >= @[{-22!x};v;{0W}];
+    v;
+    "<",string[type v],"h type; ",string[count v]," count; too large to display>"] };
+.dbg.vals:{[d]
+  @[{neg[1] .j.j x};.dbg.val each d;::];
+  };

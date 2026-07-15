@@ -58,11 +58,17 @@ written to the process's stdin**.
 
 ### Locals (custom helper)
 
-- **`.dbg.locals`** — reads `value f` (param/local name indices) and returns JSON
-  via `.j.j`. Injected into the debuggee before the user program and used to name
-  locals in the Scopes view, rather than dereferencing frames with `Lp`.
+- **`.dbg.locals`** — reads `value f` (param/local name indices) and emits JSON
+  via `.j.j`, written to stdout with `neg[1]` so the payload is never elided at
+  the console width (`\c` truncates displayed values, not handle writes).
+  Injected into the debuggee before the user program and used to name locals in
+  the Scopes view, rather than dereferencing frames with `Lp`.
   [debug.q:16](../../resources/q/debug.q#L16),
   [qDebugSession.ts:755](../../src/classes/qDebugSession.ts#L755)
+- **`.dbg.vals`** — renders a frame-locals dict as JSON the same way, replacing
+  any value larger than `.dbg.cap` serialized bytes (`-22!`) with a type/count
+  summary so a huge table or vector is never serialized in full.
+  [debug.q](../../resources/q/debug.q)
 
 ### Scratchpad / query path (not the DAP debugger)
 

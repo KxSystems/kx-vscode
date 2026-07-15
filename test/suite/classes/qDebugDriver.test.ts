@@ -229,6 +229,97 @@ describe("QDebugDriver", () => {
     });
   });
 
+  describe("load", () => {
+    it("loads an absolute space-free path directly", async () => {
+      const io = attach(() => "q)");
+      await driver.load("/tmp/kx-debug-1/s0.q");
+      assert.deepStrictEqual(io.writes, ["\\l /tmp/kx-debug-1/s0.q\n"]);
+    });
+
+    it("loads via a cwd-relative path when the absolute path has spaces", async () => {
+      const io = attach((chunk) =>
+        chunk.startsWith('system "cd"') ? '"/tmp/kx spc"\nq)' : "q)",
+      );
+      await driver.load("/tmp/kx spc/kx-debug-1/s0.q");
+      assert.deepStrictEqual(io.writes, [
+        'system "cd"\n',
+        "\\l kx-debug-1/s0.q\n",
+      ]);
+    });
+
+    it("rejects a load whose relative path still contains spaces", async () => {
+      const io = attach((chunk) =>
+        chunk.startsWith('system "cd"') ? '"/home/user"\nq)' : "q)",
+      );
+      await assert.rejects(
+        driver.load("/tmp/kx spc/s0.q"),
+        /does not support paths containing spaces/,
+      );
+      assert.ok(
+        !io.writes.some((w) => w.startsWith("\\l")),
+        "no \\l command was sent",
+      );
+    });
+  });
+
+  describe("stepPosition", () => {
+    // Suspend the driver at a breakpoint so a step is meaningful.
+    async function suspend(io: { data: (chunk: string) => void }) {
+      const hit = driver.run("f[]");
+      io.data("#0\nq))");
+      await hit;
+    }
+
+    it("re-emits program output printed by the stepped instruction", async () => {
+      const chunks: string[] = [];
+      driver.on("data", (c: string) => chunks.push(c));
+      const io = attach();
+      await suspend(io);
+      chunks.length = 0;
+
+      const step = driver.stepPosition();
+      io.data(
+        "hello\n  [1]  /tmp/f.q:2: f:{[x]\n  show`hello;\n  x+1\n    ^\nq))",
+      );
+      const pos = await step;
+
+      assert.deepStrictEqual(chunks, ["hello\n"]);
+      assert.strictEqual(pos?.file, "/tmp/f.q");
+      assert.strictEqual(pos?.line, 2);
+    });
+
+    it("emits nothing when the step echoes only the frame", async () => {
+      const chunks: string[] = [];
+      driver.on("data", (c: string) => chunks.push(c));
+      const io = attach();
+      await suspend(io);
+      chunks.length = 0;
+
+      const step = driver.stepPosition();
+      io.data("  [1]  /tmp/f.q:3: f:{[x]\n  x+1\n    ^\nq))");
+      const pos = await step;
+
+      assert.deepStrictEqual(chunks, [], "the frame echo stays suppressed");
+      assert.strictEqual(pos?.line, 3);
+    });
+
+    it("re-emits the statement's output when the step leaves the debugger", async () => {
+      const chunks: string[] = [];
+      driver.on("data", (c: string) => chunks.push(c));
+      const io = attach();
+      await suspend(io);
+      chunks.length = 0;
+
+      const step = driver.stepPosition();
+      io.data("42\nq)");
+      const pos = await step;
+
+      assert.deepStrictEqual(chunks, ["42\n"]);
+      assert.strictEqual(pos, undefined);
+      assert.strictEqual(driver.suspended, false);
+    });
+  });
+
   describe("frames", () => {
     it("parses .Q.bt[] into frames with the current-frame marker", async () => {
       const io = attach();

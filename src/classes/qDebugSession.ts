@@ -112,6 +112,16 @@ export class QDebugSession extends LoggingDebugSession {
   /** Cache of source file contents, keyed by absolute path. */
   private readonly sourceCache = new Map<string, string>();
 
+  /**
+   * Tail of the chain serializing driver-touching operations. DAP requests
+   * arrive concurrently (watch/hover evaluations, Variables for several frames,
+   * a step while watches refresh) and each is a multi-command sequence on the
+   * one shared q prompt (navigate frames, evaluate, pop back); interleaving two
+   * would evaluate in the wrong frame and desync {@link qCurrentIndex}, so every
+   * such operation runs through {@link serialized}.
+   */
+  private pendingOp: Promise<unknown> = Promise.resolve();
+
   constructor() {
     super();
     this.setDebuggerLinesStartAt1(true);
@@ -260,11 +270,15 @@ export class QDebugSession extends LoggingDebugSession {
     const frameIndex = args.variablesReference - VAR_REF_BASE;
     const frame = this.currentFrames.find((f) => f.index === frameIndex);
     if (frame) {
-      const names = await this.localNamesForFrame(frame);
-      if (names.length > 0) {
+      variables = await this.serialized(async () => {
+        // Re-checked under the lock: a queued continue/step may have resumed
+        // execution while this request waited its turn.
+        if (!this.driver.suspended) return [];
+        const names = await this.localNamesForFrame(frame);
+        if (names.length === 0) return [];
         await this.navigateTo(frameIndex);
-        variables = await this.readLocals(names);
-      }
+        return this.readLocals(names);
+      });
     }
 
     response.body = { variables };
@@ -292,10 +306,22 @@ export class QDebugSession extends LoggingDebugSession {
       });
       return;
     }
-    if (args.frameId !== undefined) {
-      await this.navigateTo(args.frameId);
+    // The suspension can end while this request waits its turn (a queued
+    // continue/step ran first), so the paused check is repeated under the lock.
+    const res = await this.serialized(async () => {
+      if (!this.driver.suspended) return undefined;
+      if (args.frameId !== undefined) {
+        await this.navigateTo(args.frameId);
+      }
+      return this.driver.evaluate(args.expression);
+    });
+    if (res === undefined) {
+      this.sendErrorResponse(response, {
+        id: 1002,
+        format: "Not paused: cannot evaluate.",
+      });
+      return;
     }
-    const res = await this.driver.evaluate(args.expression);
     response.body = {
       result: res.output.trim(),
       variablesReference: 0,
@@ -308,7 +334,7 @@ export class QDebugSession extends LoggingDebugSession {
   ): Promise<void> {
     response.body = { allThreadsContinued: true };
     this.sendResponse(response);
-    await this.resume();
+    await this.serialized(() => this.resume());
   }
 
   protected async nextRequest(
@@ -335,7 +361,7 @@ export class QDebugSession extends LoggingDebugSession {
 
   /** Step over/into/out are all mapped to next-statement in the native debugger. */
   private async step(): Promise<void> {
-    await this.stepStatement();
+    await this.serialized(() => this.stepStatement());
   }
 
   protected terminateRequest(response: DebugProtocol.TerminateResponse): void {
@@ -403,6 +429,18 @@ export class QDebugSession extends LoggingDebugSession {
 
   // ---- internals ----
 
+  /**
+   * Run a driver-touching operation after every previously queued one has
+   * finished, so multi-command sequences never interleave on the shared prompt.
+   * The chain survives a failed operation (e.g. a command timeout): the failure
+   * propagates to that operation's caller only.
+   */
+  private serialized<T>(op: () => Promise<T>): Promise<T> {
+    const result = this.pendingOp.then(op);
+    this.pendingOp = result.catch(() => undefined);
+    return result;
+  }
+
   /** Begin execution once both launch and configuration are done. */
   private async tryRun(): Promise<void> {
     if (
@@ -428,7 +466,7 @@ export class QDebugSession extends LoggingDebugSession {
     this.tempDir = mkdtempSync(join(tmpdir(), "kx-debug-"));
     this.statements = splitTopLevelStatements(text);
     this.stmtIndex = 0;
-    await this.runStatements();
+    await this.serialized(() => this.runStatements());
   }
 
   /**
@@ -706,12 +744,18 @@ export class QDebugSession extends LoggingDebugSession {
     for (const [file, lines] of this.requestedBreakpoints) {
       const text = this.readSource(file);
       if (text === undefined) continue;
+      // `throughLine` tracks load progress through THE PROGRAM file only, so
+      // the "defined yet?" line gate applies only there. Functions in other
+      // files (e.g. loaded via \l from inside the program) are armed as soon as
+      // their name resolves; until then the failed `.Q.bs` below is simply
+      // retried at the next statement boundary.
+      const gated = file === this.programPath;
       for (const line of lines) {
         const fn = functionAt(text, line);
         if (!fn) continue;
         wanted.add(fn.name);
-        if (fn.startLine > throughLine || this.armedTraps.has(fn.name))
-          continue;
+        if (gated && fn.startLine > throughLine) continue;
+        if (this.armedTraps.has(fn.name)) continue;
         // The function may not be defined yet (loaded, but its assignment not
         // reached, or resolved via a name the process does not know). Only record
         // the trap when `.Q.bs` succeeds, so a failed arm is retried at the next
@@ -775,9 +819,12 @@ export class QDebugSession extends LoggingDebugSession {
   private async readLocals(names: string[]): Promise<DebugProtocol.Variable[]> {
     const symList = names.map((n) => "`" + n).join("");
     const valList = names.join(";");
-    // A bare expression evaluates in the suspended frame's scope (a lambda would
-    // not see the frame locals). `.j.j` renders the dict as JSON we can parse.
-    const res = await this.driver.evaluate(`.j.j ${symList}!(${valList})`);
+    // The dict is built as a bare expression so it evaluates in the suspended
+    // frame's scope (a lambda would not see the frame locals); `.dbg.vals`
+    // renders it as JSON — writing to stdout to dodge console-width elision,
+    // and summarizing any value over its size cap so a huge table/vector is
+    // never serialized in full (see resources/q/debug.q).
+    const res = await this.driver.evaluate(`.dbg.vals ${symList}!(${valList})`);
     const parsed = parseJsonDict(res.output);
     if (parsed) {
       return Object.entries(parsed).map(
@@ -802,12 +849,15 @@ function errText(err: unknown): string {
 
 /**
  * Whether an expression is safe to evaluate on hover: a bare (optionally dotted)
- * name, optionally with a single simple index like `t[0]`. Excludes assignment
- * (`:`), statement separators (`;`) and anything else that could mutate the
- * debuggee when VS Code auto-evaluates a hovered token.
+ * name, optionally with a single simple index like `t[0]`, `d[`k]` or `x[-1]`.
+ * The index may contain only names, numbers, symbols, dots and `-` — no spaces,
+ * strings or operators, since those admit function application (`t[f x]`,
+ * `t[system "..."]`), which could mutate the debuggee when VS Code
+ * auto-evaluates a hovered token. Assignment (`:`) and statement separators
+ * (`;`) are likewise excluded.
  */
 export function isReadOnlyExpression(expression: string): boolean {
-  return /^\s*[.a-zA-Z][a-zA-Z0-9_.]*\s*(\[[^\][:;]*\])?\s*$/.test(expression);
+  return /^\s*[.a-zA-Z][a-zA-Z0-9_.]*\s*(\[[\w.`-]*\])?\s*$/.test(expression);
 }
 
 /**
@@ -871,9 +921,20 @@ export function frameFuncName(f: QFrame): string | undefined {
   return m ? m[1] : undefined;
 }
 
-/** Parse the JSON string array `.dbg.locals` prints (`.j.j`, quoted by q). */
+/**
+ * The JSON text within q output: raw when q WROTE it via a handle (`neg[1]`,
+ * the untruncated path locals use), q-quoted when q DISPLAYED the string at the
+ * prompt (kept for compatibility, e.g. a `.j.j` result surfacing via display).
+ */
+function jsonPayload(output: string): string | undefined {
+  const trimmed = output.trim();
+  if (trimmed.length === 0) return undefined;
+  return trimmed.startsWith('"') ? unquoteQString(trimmed) : trimmed;
+}
+
+/** Parse the JSON string array `.dbg.locals` emits. */
 export function parseJsonNames(output: string): string[] {
-  const jsonText = unquoteQString(output.trim());
+  const jsonText = jsonPayload(output);
   if (jsonText === undefined) return [];
   try {
     const parsed = JSON.parse(jsonText);
@@ -885,12 +946,11 @@ export function parseJsonNames(output: string): string[] {
   }
 }
 
-/** Parse the JSON string q's `.j.j` prints (it is wrapped in double quotes). */
+/** Parse the JSON dict text a `.j.j` query emits. */
 export function parseJsonDict(
   output: string,
 ): Record<string, unknown> | undefined {
-  const trimmed = output.trim();
-  const jsonText = unquoteQString(trimmed);
+  const jsonText = jsonPayload(output);
   if (jsonText === undefined) return undefined;
   try {
     const parsed = JSON.parse(jsonText);

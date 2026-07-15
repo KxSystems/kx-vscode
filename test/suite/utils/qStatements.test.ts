@@ -52,6 +52,17 @@ describe("qStatements.splitTopLevelStatements", () => {
     assert.ok(texts.some((t) => t === "c[]"));
   });
 
+  it("keeps an indented continuation line with its statement", () => {
+    const stmts = splitTopLevelStatements("a: 1 +\n 2\nb: 3");
+    assert.deepStrictEqual(
+      stmts.map((s) => [s.startLine, s.endLine, s.text]),
+      [
+        [1, 2, "a: 1 +\n 2"],
+        [3, 3, "b: 3"],
+      ],
+    );
+  });
+
   it("returns nothing for empty or whitespace-only input", () => {
     assert.deepStrictEqual(splitTopLevelStatements(""), []);
     assert.deepStrictEqual(splitTopLevelStatements("\n\n  \n"), []);
