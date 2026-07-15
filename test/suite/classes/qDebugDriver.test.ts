@@ -277,6 +277,29 @@ describe("QDebugDriver", () => {
       assert.strictEqual(result.depth, 2);
       assert.ok(!io.writes.some((w) => w.startsWith("\\")));
     });
+
+    it("preserves the stop reason when an errored query does NOT deepen the prompt", async () => {
+      // A malformed/erroring side-query (e.g. a locals probe) can signal `'` while
+      // the prompt stays at the same depth. drain() records that as an exception;
+      // evaluate must restore the real reason so the next stop is not mislabelled.
+      const io = attach(() => "'length\nq))");
+      (driver as any).depth = 2;
+      (driver as any).lastStop = "breakpoint";
+
+      const result = await driver.evaluate("`a`b!(;a;b)");
+
+      assert.strictEqual(result.depth, 2);
+      assert.ok(result.errored, "the query itself errored");
+      assert.strictEqual(
+        driver.stopReason,
+        "breakpoint",
+        "the suspension reason is unchanged by a side-query",
+      );
+      assert.ok(
+        !io.writes.some((w) => w.startsWith("\\")),
+        "no unwind needed since the prompt did not deepen",
+      );
+    });
   });
 
   describe("reset", () => {

@@ -188,9 +188,15 @@ export class QDebugDriver extends EventEmitter {
   }
 
   /**
-   * Evaluate an expression in the current (possibly suspended) frame. Errors nest a
-   * further debugger level; we pop back to the original depth with `\` so the frame
-   * context is preserved for subsequent operations.
+   * Evaluate an expression in the current (possibly suspended) frame. If the
+   * expression errors and nests a further debugger level, pop back to the original
+   * depth with `\` so the frame context is preserved for subsequent operations.
+   *
+   * A side-query (locals, watch, hover) NEVER changes why execution is suspended,
+   * so the stop reason is always restored afterwards — including when the error did
+   * not deepen the prompt. Otherwise a transient `'` signal (e.g. a not-yet-assigned
+   * local, or a malformed locals probe) would leave `lastStop` stuck at "exception"
+   * and the next stop would be mislabelled as an exception.
    */
   async evaluate(expr: string): Promise<QCommandResult> {
     const before = this.depth;
@@ -199,10 +205,8 @@ export class QDebugDriver extends EventEmitter {
     if (result.depth > before) {
       await this.popTo(before);
       result.depth = this.depth;
-      // A transient error from the evaluated expression (e.g. referencing a
-      // not-yet-assigned local) is not why execution is suspended; restore it.
-      this.lastStop = reason;
     }
+    this.lastStop = reason;
     return result;
   }
 

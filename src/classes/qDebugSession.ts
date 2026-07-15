@@ -536,14 +536,14 @@ export class QDebugSession extends LoggingDebugSession {
       const pos = await this.driver.stepPosition();
       if (!this.driver.suspended) break;
       if (this.driver.stopReason === "exception") {
-        await this.reportStopped();
+        await this.reportStopped("exception");
         return;
       }
       const line = pos?.line;
       if (line === undefined || line === braceLine) continue;
       const id = statementId(separators, line, pos?.col);
       if (line !== startLine || id > prevId) {
-        await this.reportStopped();
+        await this.reportStopped("step");
         return;
       }
       prevId = id;
@@ -553,7 +553,11 @@ export class QDebugSession extends LoggingDebugSession {
       // Let the line run so its effect surfaces (typically an error), then report.
       await this.driver.continueFromBreakpoint();
       if (this.driver.suspended) {
-        await this.reportStopped();
+        // Reason reflects the fresh stop from the continue (a signal, or another
+        // breakpoint), captured now before any other command can perturb it.
+        await this.reportStopped(
+          this.driver.stopReason === "exception" ? "exception" : "breakpoint",
+        );
       } else {
         await this.runStatements();
       }
@@ -569,13 +573,13 @@ export class QDebugSession extends LoggingDebugSession {
    */
   private async handleSuspension(): Promise<boolean> {
     if (this.driver.stopReason === "exception") {
-      await this.reportStopped();
+      await this.reportStopped("exception");
       return true;
     }
     // Entry trap fired: single-step until q reports a requested breakpoint line.
     const outcome = await this.advanceToBreakpoint();
     if (outcome === "exited") return false;
-    await this.reportStopped();
+    await this.reportStopped(outcome);
     return true;
   }
 
@@ -636,8 +640,17 @@ export class QDebugSession extends LoggingDebugSession {
     return file;
   }
 
-  /** Capture frames for the current suspension and emit a DAP stopped event. */
-  private async reportStopped(): Promise<void> {
+  /**
+   * Capture frames for the current suspension and emit a DAP stopped event with an
+   * explicit reason. The reason is decided by the caller at the moment it chooses
+   * to stop — it must NOT be re-derived here from `driver.stopReason`, which is
+   * mutable: capturing the backtrace, or a concurrent hover/watch/variables
+   * evaluate that momentarily deepens the prompt, can flip it between the stop
+   * decision and this event, mislabelling a breakpoint/step pause as an exception.
+   */
+  private async reportStopped(
+    reason: "breakpoint" | "step" | "exception",
+  ): Promise<void> {
     // Drop the synthetic `\l <temp>` loader frame at the base of the stack.
     this.currentFrames = (await this.driver.frames()).filter(
       (f) => !/^\\l\s/.test(f.text),
@@ -647,8 +660,6 @@ export class QDebugSession extends LoggingDebugSession {
       this.currentFrames[0]?.index ??
       0;
     await this.captureMarker();
-    const reason =
-      this.driver.stopReason === "breakpoint" ? "breakpoint" : "exception";
     // Surface the live q terminal (where the debugger prompt is) on each stop.
     this.driver.reveal();
     this.sendEvent(new StoppedEvent(reason, THREAD_ID));
@@ -738,7 +749,10 @@ export class QDebugSession extends LoggingDebugSession {
     const name = frameFuncName(frame);
     if (!name) return [];
     const res = await this.driver.evaluate(`.dbg.locals \`${name}`);
-    return parseJsonNames(res.output);
+    // A no-argument lambda's param slot is a single empty symbol, which surfaces
+    // as an empty name; drop it so it never enters a `` `a`b!(…) `` locals probe
+    // (an empty key would make the dict malformed and signal `'length`).
+    return parseJsonNames(res.output).filter((n) => n.length > 0);
   }
 
   private readSource(file: string): string | undefined {
