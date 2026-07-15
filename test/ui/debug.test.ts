@@ -17,16 +17,25 @@ import {
   DebugToolbar,
   DebugView,
   EditorView,
+  ModalDialog,
   TextEditor,
   VSBrowser,
   Workbench,
 } from "vscode-extension-tester";
 
+// Re-fetch the editor by title. The debug UI re-renders the workbench constantly
+// (opening the Run view, pausing, stepping), which stales any held editor
+// reference, so every interaction re-locates the element rather than reusing one
+// — the same pattern the completion helpers in fixtures/utils.ts rely on.
+async function editorFor(title: string): Promise<TextEditor> {
+  return (await new EditorView().openEditor(title)) as TextEditor;
+}
+
 // Resolve once the debugger has paused on a breakpoint, or return "unavailable"
 // if q could not start (e.g. no q runtime on PATH in this environment). Lets the
 // test skip rather than false-fail where the runtime cannot be exercised.
 async function awaitPausedOrUnavailable(
-  editor: TextEditor,
+  title: string,
   timeoutMs: number,
 ): Promise<"paused" | "unavailable"> {
   const deadline = Date.now() + timeoutMs;
@@ -35,7 +44,7 @@ async function awaitPausedOrUnavailable(
     // The debug UI mutates the DOM constantly; tolerate transient stale-element
     // errors between polls rather than failing the whole test on a flake.
     try {
-      if (await editor.getPausedBreakpoint()) return "paused";
+      if (await (await editorFor(title)).getPausedBreakpoint()) return "paused";
       const notes = await new Workbench().getNotifications();
       for (const note of notes) {
         const msg = await note.getMessage();
@@ -57,9 +66,9 @@ async function awaitPausedOrUnavailable(
 
 // The paused-breakpoint element is recreated as the debug view re-renders, so
 // reading its line can throw a stale-element error; treat that as "not yet".
-async function pausedLine(editor: TextEditor): Promise<number | undefined> {
+async function pausedLine(title: string): Promise<number | undefined> {
   try {
-    const bp = await editor.getPausedBreakpoint();
+    const bp = await (await editorFor(title)).getPausedBreakpoint();
     return bp ? await bp.getLineNumber() : undefined;
   } catch {
     return undefined;
@@ -67,16 +76,33 @@ async function pausedLine(editor: TextEditor): Promise<number | undefined> {
 }
 
 async function waitForPausedLine(
-  editor: TextEditor,
+  title: string,
   line: number,
   timeoutMs: number,
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if ((await pausedLine(editor)) === line) return true;
+    if ((await pausedLine(title)) === line) return true;
     await new Promise((r) => setTimeout(r, 300));
   }
   return false;
+}
+
+// Step over repeatedly until execution pauses on `target`, tolerating extra
+// intermediate stops (q revisits a construct's header line, e.g. the `if[` after
+// its body, so consecutive steps are not one source line apart).
+async function stepToLine(
+  toolbar: DebugToolbar,
+  title: string,
+  target: number,
+  maxSteps: number,
+): Promise<boolean> {
+  for (let i = 0; i < maxSteps; i++) {
+    if ((await pausedLine(title)) === target) return true;
+    await toolbar.stepOver();
+    if (await waitForPausedLine(title, target, 4000)) return true;
+  }
+  return (await pausedLine(title)) === target;
 }
 
 // Stop any active debug session so a retry (or the next test) does not hit the
@@ -90,19 +116,45 @@ async function stopDebugging(): Promise<void> {
   await new Promise((r) => setTimeout(r, 750));
 }
 
-// Set a breakpoint idempotently (so a test retry does not toggle it off).
-// toggleBreakpoint clicks the gutter and waits for the marker; the editor element
-// can go stale mid-toggle, so settle the cursor first and retry.
-async function setBreakpoint(editor: TextEditor, line: number): Promise<void> {
-  await editor.moveCursor(line, 1);
-  if (await editor.getBreakpoint(line).catch(() => undefined)) return;
-  for (let attempt = 0; attempt < 3; attempt++) {
+// Launch the "Debug q File" config. A previous session's teardown can lag behind
+// this call, so VS Code sometimes shows a modal "'Debug q File' is already
+// running. Do you want to start another instance?" — confirm it so the new
+// session launches (the adapter takes over the shared q process cleanly). The
+// modal surfaces a beat after start() returns, so a single immediate check races
+// it; poll a short window and confirm it as soon as it appears.
+async function startDebugging(debugView: DebugView): Promise<void> {
+  await debugView.start();
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
     try {
+      const dialog = new ModalDialog();
+      if (await dialog.getMessage()) {
+        await dialog.pushButton("Yes");
+        return;
+      }
+    } catch {
+      /* no dialog present yet; retry on the next tick */
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+}
+
+// Set a breakpoint idempotently (so a test retry does not toggle it off). The
+// editor element stales as the workbench re-renders, so re-fetch it, click to
+// focus, and retry the whole sequence — matching fixtures/utils.ts.
+async function setBreakpoint(title: string, line: number): Promise<void> {
+  await VSBrowser.instance.driver.sleep(1000);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const editor = await editorFor(title);
+      await editor.click();
+      await editor.moveCursor(line, 1);
+      if (await editor.getBreakpoint(line).catch(() => undefined)) return;
       await editor.toggleBreakpoint(line);
       return;
-    } catch (err) {
-      if (attempt === 2) throw err;
-      await new Promise((r) => setTimeout(r, 1000));
+    } catch (error) {
+      if (attempt >= 6) throw error;
+      await VSBrowser.instance.driver.sleep(500);
     }
   }
 }
@@ -136,21 +188,29 @@ async function hasVariable(
   return false;
 }
 
-// Drives a real F5 debug session of the native q debugger. Requires a q runtime
+// Drives a real F5 debug session of the native q debugger. `control.q` exercises
+// every control construct (if/$/while/do) plus a list literal `(1*2;3*4;4;5)`
+// whose semicolons must NOT be treated as statement separators; `klondike.q` is a
+// full real-world program used as a second session. Requires a q runtime
 // discoverable by the extension (e.g. ~/.kx/bin/q or q on PATH), the same
-// requirement as `npm run q-test`. The debugger is local-only: it suspends
-// inside functions, so the fixture breakpoint sits in a lambda body.
+// requirement as `npm run q-test`. The debugger is local-only: it suspends inside
+// functions, so breakpoints sit in lambda bodies.
 describe("q Debugger", () => {
-  let editor: TextEditor;
   let debugView: DebugView;
+
+  // Open a fixture from the debug folder and make it the active editor, so the
+  // "Debug q File" launch config (program: ${file}) targets it.
+  async function openDebug(fileName: string): Promise<void> {
+    await VSBrowser.instance.openResources(
+      `./test/ui/fixtures/debug/${fileName}`,
+    );
+    await new EditorView().openEditor(fileName);
+  }
 
   before(async function () {
     this.timeout(60000);
-    await VSBrowser.instance.openResources(
-      "./test/ui/fixtures/debug",
-      "./test/ui/fixtures/debug/main.q",
-    );
-    editor = (await new EditorView().openEditor("main.q")) as TextEditor;
+    await VSBrowser.instance.openResources("./test/ui/fixtures/debug");
+    await openDebug("control.q");
 
     const run = await new ActivityBar().getViewControl("Run");
     assert.ok(run, "Run and Debug view control should exist");
@@ -161,46 +221,79 @@ describe("q Debugger", () => {
 
   afterEach(stopDebugging);
 
-  it("pauses at a line breakpoint, steps to the next line, and stops", async function () {
+  it("pauses inside an if body, exposes locals, and steps to the next statement", async function () {
     this.timeout(120000);
 
-    // Breakpoint on `b:a+y;` (line 3), hit when add[10;20] runs.
-    await setBreakpoint(editor, 3);
-    await debugView.start();
+    await openDebug("control.q");
+    // Line 4 is `r:r+1;` inside `if[n>0; ...]` — a control-body breakpoint, hit
+    // when run[3] executes.
+    await setBreakpoint("control.q", 4);
+    await startDebugging(debugView);
 
-    const outcome = await awaitPausedOrUnavailable(editor, 30000);
+    const outcome = await awaitPausedOrUnavailable("control.q", 30000);
     if (outcome === "unavailable") {
-      // q runtime or node-pty native module unavailable in this environment.
+      // q runtime unavailable in this environment.
       this.skip();
     }
 
     assert.ok(
-      await waitForPausedLine(editor, 3, 10000),
-      "execution should pause on line 3",
+      await waitForPausedLine("control.q", 4, 10000),
+      "execution should pause on the if-body line 4",
     );
 
-    // The Locals scope is populated from q at runtime (.dbg.locals): add's
-    // params/locals (x, y, a, b) should appear.
+    // Locals scope (.dbg.locals) lists run's params/locals; `r` is assigned before
+    // the breakpoint.
     assert.ok(
-      await hasVariable(debugView, (n) => ["x", "y", "a"].includes(n), 10000),
+      await hasVariable(debugView, (n) => ["n", "r"].includes(n), 10000),
       "a local should appear in the Locals scope",
     );
 
-    // The Globals scope (.dbg.globals) lists root-namespace data globals, which
-    // remain visible while suspended inside a function: `greeting` was assigned
-    // before add[10;20] ran.
+    // Step to the next statement in the if body (line 5, `r:r+n];`).
+    const toolbar = await DebugToolbar.create(60000);
     assert.ok(
-      await hasVariable(debugView, (n) => n === "greeting", 10000),
-      "global `greeting` should appear in the Globals scope",
+      await stepToLine(toolbar, "control.q", 5, 3),
+      "step should reach the second if-body line 5",
     );
 
-    const toolbar = await DebugToolbar.create(60000);
+    await toolbar.stop();
+  });
 
-    // Stepping advances to the next source line (b:a+y -> a+b).
-    await toolbar.stepOver();
+  it("debugs a real program (klondike): breaks in deal, shows locals", async function () {
+    this.timeout(120000);
+
+    // A second debug session in the same browser — exercises that a session
+    // started after a previous one has stopped is still detected (the Stop fix
+    // terminates the first session cleanly instead of leaving it lingering).
+    await openDebug("klondike.q");
+
+    // Line 39 is `g[`s]:0;` inside `deal:{[] ...}`, reached as soon as the
+    // top-level `see g:deal[]` runs. At the stop, `g` and `deck` are assigned
+    // locals.
+    await setBreakpoint("klondike.q", 39);
+    await startDebugging(debugView);
+
+    const outcome = await awaitPausedOrUnavailable("klondike.q", 30000);
+    if (outcome === "unavailable") {
+      this.skip();
+    }
+
     assert.ok(
-      await waitForPausedLine(editor, 4, 20000),
-      "step should advance to line 4",
+      await waitForPausedLine("klondike.q", 39, 10000),
+      "execution should pause on the deal-body line 39",
+    );
+
+    // Locals scope (.dbg.locals) lists deal's locals; both are assigned by
+    // line 39.
+    assert.ok(
+      await hasVariable(debugView, (n) => ["g", "deck"].includes(n), 10000),
+      "a local (g/deck) should appear in the Locals scope",
+    );
+
+    // Step within deal to the next statement line 40 (`g[`p]:0;`).
+    const toolbar = await DebugToolbar.create(60000);
+    assert.ok(
+      await stepToLine(toolbar, "klondike.q", 40, 3),
+      "step should reach the next deal-body line 40",
     );
 
     await toolbar.stop();

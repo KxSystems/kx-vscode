@@ -47,14 +47,18 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 const THREAD_ID = 1;
 // Variables references encode the frame index they belong to (offset avoids 0).
 const VAR_REF_BASE = 1000;
-// Distinct reference for the Globals scope (frame refs are >= VAR_REF_BASE).
-const GLOBALS_REF = 999;
 
 export class QDebugSession extends LoggingDebugSession {
   // Only one debug session may drive a (possibly shared) q process at a time.
   // A new launch takes over, cancelling any previous session so its statement
   // loop stops touching the driver.
   private static current?: QDebugSession;
+  // In-flight cleanup of the session being torn down. Termination is reported to
+  // VS Code immediately (so the session ends promptly and a new launch is not
+  // blocked by the "already running" dialog), but the actual unwind runs after;
+  // the next launch awaits this so its driver.reset() cannot race the unwind on
+  // the shared q process.
+  private static releasing?: Promise<void>;
 
   /** The shared q session borrowed from the program's REPL (assigned on launch). */
   private driver!: QDebugDriver;
@@ -91,6 +95,13 @@ export class QDebugSession extends LoggingDebugSession {
   private currentFrames: QFrame[] = [];
   /** The frame index q's debugger currently points at (its `>>` frame). */
   private qCurrentIndex = 0;
+  /**
+   * The start of the statement about to execute in the current frame. Reported as
+   * the top stack frame's column so VS Code marks the statement, not just the line.
+   * q's `^` caret lands at an inconsistent sub-token offset, so we use it only to
+   * pick which statement, then snap to that statement's start via the parser.
+   */
+  private currentMarker?: { line: number; col: number };
   /** Cache of source file contents, keyed by absolute path. */
   private readonly sourceCache = new Map<string, string>();
 
@@ -124,6 +135,9 @@ export class QDebugSession extends LoggingDebugSession {
     const previous = QDebugSession.current;
     QDebugSession.current = this;
     if (previous && previous !== this) previous.cancelled = true;
+    // Wait for a previous session's unwind to finish so our reset() below does
+    // not interleave commands with it on the shared driver.
+    await QDebugSession.releasing?.catch(() => undefined);
 
     try {
       // Debug the same live q process as the program's REPL: borrow its shared
@@ -200,6 +214,11 @@ export class QDebugSession extends LoggingDebugSession {
       const src =
         file !== undefined ? new Source(basename(file), file) : undefined;
       const frame = new StackFrame(f.index, frameName(f), src, f.line ?? 0);
+      // Mark the statement in the frame where execution is paused.
+      const marker = this.currentMarker;
+      if (f.current && marker && marker.line === f.line) {
+        frame.column = marker.col;
+      }
       frame.presentationHint = src ? "normal" : "subtle";
       return frame;
     });
@@ -215,12 +234,8 @@ export class QDebugSession extends LoggingDebugSession {
     args: DebugProtocol.ScopesArguments,
   ): void {
     // frameId is the q frame index; encode it into the variables reference.
-    // Globals are the same in every frame, so one shared reference.
     response.body = {
-      scopes: [
-        new Scope("Locals", VAR_REF_BASE + args.frameId, false),
-        new Scope("Globals", GLOBALS_REF, true),
-      ],
+      scopes: [new Scope("Locals", VAR_REF_BASE + args.frameId, false)],
     };
     this.sendResponse(response);
   }
@@ -231,17 +246,13 @@ export class QDebugSession extends LoggingDebugSession {
   ): Promise<void> {
     let variables: DebugProtocol.Variable[] = [];
 
-    if (args.variablesReference === GLOBALS_REF) {
-      variables = await this.readGlobals();
-    } else {
-      const frameIndex = args.variablesReference - VAR_REF_BASE;
-      const frame = this.currentFrames.find((f) => f.index === frameIndex);
-      if (frame) {
-        const names = await this.localNamesForFrame(frame);
-        if (names.length > 0) {
-          await this.navigateTo(frameIndex);
-          variables = await this.readLocals(names);
-        }
+    const frameIndex = args.variablesReference - VAR_REF_BASE;
+    const frame = this.currentFrames.find((f) => f.index === frameIndex);
+    if (frame) {
+      const names = await this.localNamesForFrame(frame);
+      if (names.length > 0) {
+        await this.navigateTo(frameIndex);
+        variables = await this.readLocals(names);
       }
     }
 
@@ -306,18 +317,24 @@ export class QDebugSession extends LoggingDebugSession {
     await this.stepStatement();
   }
 
-  protected async terminateRequest(
+  protected terminateRequest(
     response: DebugProtocol.TerminateResponse,
-  ): Promise<void> {
-    await this.release();
+  ): void {
+    // Report termination FIRST, then unwind. release() unwinds the debugger and
+    // removes traps but keeps the shared q process alive, so nothing else signals
+    // the session is over — and its abort commands can take a moment. Answering
+    // up front ends the session immediately (one Stop click, no lingering session
+    // that would block the next launch with the "already running" dialog).
     this.sendResponse(response);
+    this.sendEvent(new TerminatedEvent());
+    QDebugSession.releasing = this.release();
   }
 
-  protected async disconnectRequest(
+  protected disconnectRequest(
     response: DebugProtocol.DisconnectResponse,
-  ): Promise<void> {
-    await this.release();
+  ): void {
     this.sendResponse(response);
+    QDebugSession.releasing = this.release();
   }
 
   /**
@@ -437,16 +454,6 @@ export class QDebugSession extends LoggingDebugSession {
     return this.driver.load(file);
   }
 
-  /** Read user-defined data globals (root namespace) for the Globals scope. */
-  private async readGlobals(): Promise<DebugProtocol.Variable[]> {
-    const res = await this.driver.evaluate(".dbg.globals[]");
-    const parsed = parseJsonDict(res.output);
-    if (!parsed) return [];
-    return Object.entries(parsed).map(
-      ([name, value]) => new Variable(name, formatValue(value)),
-    );
-  }
-
   /** Resume after a stop: continue past a breakpoint, or unwind an exception. */
   private async resume(): Promise<void> {
     if (this.driver.stopReason === "breakpoint") {
@@ -465,11 +472,14 @@ export class QDebugSession extends LoggingDebugSession {
 
   /**
    * Step to the next statement. Single-steps the native debugger (`>`, one
-   * bytecode) until the current position leaves the starting statement — either
-   * a different source line, or a different `;`-separated statement on the SAME
-   * line — skipping the function's brace/param line. This gives true per-statement
-   * stepping even for one-liners like `a:1;b:2`. Falls through to the loader when
-   * the function returns, and reports an exception if one surfaces mid-step.
+   * bytecode) until the current position leaves the starting statement, stopping
+   * on either a different source line or a FORWARD move to a later `;`-separated
+   * statement on the same line. A loop back-edge (the caret jumping back to an
+   * earlier same-line statement, e.g. a `do`/`while` counter/condition) is skipped
+   * rather than stopped on, so stepping a one-liner like `do[3; r:r+10]` stops on
+   * the body once per iteration instead of bouncing on the loop control each pass.
+   * Falls through to the loader when the function returns, and reports an exception
+   * if one surfaces mid-step.
    */
   private async stepStatement(): Promise<void> {
     if (!this.driver.suspended) {
@@ -494,6 +504,10 @@ export class QDebugSession extends LoggingDebugSession {
     // Bound the steps: a single statement spans only a handful of bytecodes, so
     // if the position never leaves it (e.g. sitting on an unconditional `'signal`,
     // or a single-line loop) give up and let the line run rather than spin.
+    // `prevId` tracks the last position so a same-line move is only a stop when it
+    // advances to a LATER statement (id increases); a jump back to an earlier
+    // same-line statement is a loop back-edge and is stepped over silently.
+    let prevId = startId;
     let guard = 0;
     while (this.driver.suspended && guard++ < 256) {
       await this.driver.step();
@@ -506,10 +520,11 @@ export class QDebugSession extends LoggingDebugSession {
       const line = pos?.line;
       if (line === undefined || line === braceLine) continue;
       const id = statementId(separators, line, pos?.col);
-      if (line !== startLine || id !== startId) {
+      if (line !== startLine || id > prevId) {
         await this.reportStopped();
         return;
       }
+      prevId = id;
     }
     if (this.driver.suspended) {
       // Could not advance by stepping (e.g. sitting on an unconditional `'signal`).
@@ -594,10 +609,32 @@ export class QDebugSession extends LoggingDebugSession {
       this.currentFrames.find((f) => f.current)?.index ??
       this.currentFrames[0]?.index ??
       0;
+    await this.captureMarker();
     const reason = this.driver.stopReason === "breakpoint" ? "breakpoint" : "exception";
     // Surface the live q terminal (where the debugger prompt is) on each stop.
     this.driver.reveal();
     this.sendEvent(new StoppedEvent(reason, THREAD_ID));
+  }
+
+  /**
+   * Record the start column of the statement at q's `^` caret, for the top frame's
+   * marker. The caret picks the statement; `statementStart` snaps to its first
+   * token using the parser's `;` separators (so a caret anywhere in `a:1; b:2` or
+   * inside a `(…;…)` list resolves to the right statement's start).
+   */
+  private async captureMarker(): Promise<void> {
+    this.currentMarker = undefined;
+    const pos = await this.driver.position();
+    if (pos?.line === undefined || pos.col === undefined) return;
+    const file = this.mapToProgram(pos.file);
+    const text = file ? this.readSource(file) : undefined;
+    if (text === undefined) return;
+    const separators = lambdaStatementSeparators(text, pos.line);
+    const lineText = text.split("\n")[pos.line - 1] ?? "";
+    this.currentMarker = {
+      line: pos.line,
+      col: statementStart(separators, lineText, pos.line, pos.col),
+    };
   }
 
   /**
@@ -707,6 +744,30 @@ function statementId(
     if (s.line < line || (s.line === line && s.column - 1 < c)) id++;
   }
   return id;
+}
+
+/**
+ * The 0-based start column of the statement containing a 0-based caret column on
+ * `line`: just after the nearest same-line statement `;` before the caret (or the
+ * line start), skipping leading whitespace. `separators` are the lambda/control
+ * `;` from the parser, so list/application/param `;` never split a statement.
+ */
+function statementStart(
+  separators: QSeparator[],
+  lineText: string,
+  line: number,
+  col: number,
+): number {
+  let start = 0;
+  for (const s of separators) {
+    // A `;` at 1-based column s.column sits at 0-based index s.column - 1; the
+    // statement after it starts at 0-based index s.column.
+    if (s.line === line && s.column - 1 < col && s.column > start) {
+      start = s.column;
+    }
+  }
+  while (start < lineText.length && /\s/.test(lineText[start])) start++;
+  return start;
 }
 
 function frameName(f: QFrame): string {
