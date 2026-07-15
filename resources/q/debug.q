@@ -1,110 +1,42 @@
-.debug.bps:([]file:`$();line:`int$();enabled:0#0b);
-.debug.paused:0b;
-.debug.stepMode:`none;
-.debug.currentLocals:`$()!();
-.debug.currentFile:"";
-.debug.currentLine:0;
+/ q debugger support helpers, loaded into the debuggee before the user program.
+/ These assist the VS Code debug adapter (see src/classes/qDebugDriver.ts) with
+/ operations the native debugger does not expose directly. All live under .dbg.
+/ NOTE: never leave a line containing only "/" here - q treats it as the start of
+/ a multi-line comment block (ended only by a lone "\") and would swallow the rest.
 
-.debug.send:{-1"__DBG__:",.j.j x;};
+/ The per-bytecode source-offset map of a function. The element layout of
+/ `value f` varies (params/locals/globals presence shifts it), so identify the
+/ map robustly: the long (7h) vector whose length equals the bytecode length.
+.dbg.posmap:{[f]
+  v:value f;
+  bc:count first v;
+  first v where (7h = type each v) & bc = count each v };
 
-.debug.str:{
-  $[x~(::);"::";
-    10h=type x;x;
-    98h=type x;"[table]";
-    99h=type x;.j.j x;
-    100h<=type x;"[function]";
-    @[.j.j;x;{"[error]"}]]};
+/ Map a 1-based source line (RELATIVE to a function's own definition) to a valid
+/ bytecode index on that line, for use with .Q.bs[f;index]; returns -1 when no
+/ bytecode maps to the line. Among the bytecodes on a line, pick the one with the
+/ greatest source offset: that is the instruction boundary q's debugger stops at.
+/ Lower offsets on the same line are mid-instruction bytes (e.g. an assignment
+/ colon); trapping there does not stop and can crash q.
+/   f  - the function value
+/   rl - 1-based line within the function's source (last value f)
+.dbg.lineToIndex:{[f;rl]
+  pm:.dbg.posmap f;
+  src:last value f;
+  ln:{[s;o] 1 + sum "\n" = s til o & count s}[src] each pm;
+  cand:where ln = rl;
+  $[count cand; cand first idesc pm cand; -1] };
 
-.debug.checkBp:{[fp;ln]
-  f:`$fp;
-  any((.debug.bps`file)=f)&((.debug.bps`line)=ln)&.debug.bps`enabled};
+/ Number of source lines a function spans (for validating breakpoint lines).
+.dbg.lineCount:{[f] 1 + sum "\n" = last value f};
 
-.debug.bp:{[file;line;locals]
-  if[.debug.checkBp[file;line] or `over=.debug.stepMode;
-    .debug.paused:1b;
-    .debug.stepMode:`none;
-    .debug.currentLocals:locals;
-    .debug.currentFile:file;
-    .debug.currentLine:line;
-    .debug.send`event`reason`file`line!("stopped";"breakpoint";file;line);
-    .debug.waitForCmd[];
-    .debug.paused:0b]};
-
-.debug.readLines:{
-  raw:read0 0;
-  lines:$[10h=type raw;"\n" vs raw;raw];
-  lines where 0<count each lines};
-
-.debug.setBreakpoints:{[cmd]
-  file:`$cmd`file;
-  rawlines:cmd`lines;
-  lines:`int$$[0>type rawlines;enlist rawlines;rawlines];
-  .debug.bps::.debug.bps where not(.debug.bps[`file])=file;
-  if[count lines;
-    .debug.bps,:([]file:count[lines]#file;line:lines;enabled:count[lines]#1b)];
-  .debug.send`event`file`lines!("setBreakpointsResponse";string file;lines)};
-
-.debug.doLaunch:{[cmd]
-  file:cmd`file;
-  .debug.send`event`data!("launched";file);
-  @[system;("l ",file);{[e].debug.send`event`msg!("runtimeError";e)}];
-  .debug.send`event`data!("terminated";"")};
-
-.debug.sendVariables:{
-  locs:@[{.debug.str each x};.debug.currentLocals;{()!()}];
-  globs:@[{[_]
-    k:key `.;
-    gvals:@[get;;{""}]each k;
-    mask:not 99h=type each gvals;
-    (k where mask)!.debug.str each gvals where mask
-    };(::);{()!()}];
-  .debug.send`event`locals`globals!("variables";locs;globs)};
-
-.debug.sendStack:{
-  .debug.send`event`data!("stackTrace";"")};
-
-.debug.sendEval:{[cmd]
-  expr:cmd`expression;
-  res:.[{[locs;e]
-    s:$[-10h=type e;enlist e;10h=type e;e;string e];
-    sym:`$s;
-    $[any sym=key locs;locs sym;@[value;s;{x}]]
-    };(.debug.currentLocals;expr);{x}];
-  .debug.send`event`result!("evaluate";.debug.str res)};
-
-.debug.handleSetupCmd:{[line]
-  if[0=count line;:0b];
-  cmd:.j.k line;
-  c:cmd`cmd;
-  $[c~"setBreakpoints";[.debug.setBreakpoints[cmd];0b];
-    c~"clearBreakpoints";[.debug.bps::.debug.bps where 0b;0b];
-    c~"launch";[.debug.doLaunch[cmd];1b];
-    [.debug.send`event`msg!("log";"unknown setup cmd: ",c);0b]]};
-
-.debug.handlePausedCmd:{[line]
-  if[0=count line;:0b];
-  cmd:.j.k line;
-  c:cmd`cmd;
-  $[c~"continue";1b;
-    c~"stepOver";[.debug.stepMode:`over;1b];
-    c~"variables";[.debug.sendVariables[];0b];
-    c~"stackTrace";[.debug.sendStack[];0b];
-    c~"evaluate";[.debug.sendEval[cmd];0b];
-    [.debug.send`event`msg!("log";"unknown cmd: ",c);0b]]};
-
-.debug.setupLoop:{
-  done:0b;
-  while[not done;
-    lines:.debug.readLines[];
-    if[0=count lines;:[]];  
-    done:any .debug.handleSetupCmd each lines]};
-
-.debug.waitForCmd:{
-  done:0b;
-  while[not done;
-    lines:.debug.readLines[];
-    if[0=count lines;:[]];  
-    done:any .debug.handlePausedCmd each lines]};
-
-.debug.send`event`data!("ready";"");
-.debug.setupLoop[];
+/ User-defined data globals in the root namespace, as a JSON name->repr map, for
+/ the debugger's Globals scope. Functions and namespaces (types 100-112h) are
+/ excluded. Globals are visible from inside this lambda (unlike frame locals), so
+/ it works both at the top-level prompt and while suspended in a function.
+.dbg.globals:{[]
+  k:key `.;
+  v:@[get;;::] each k;
+  m:not (type each v) within 100 112h;
+  k:k where m; v:v where m;
+  .j.j k ! {@[.Q.s1;x;{"?"}]} each v };

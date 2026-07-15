@@ -584,7 +584,8 @@
             "type": "q",
             "request": "launch",
             "name": "Debug q File",
-            "program": "${file}"
+            "program": "${file}",
+            "internalConsoleOptions": "neverOpen"
           }
         ],
         "configurationSnippets": [
@@ -595,7 +596,8 @@
               "type": "q",
               "request": "launch",
               "name": "Debug q File",
-              "program": "^\"\\${file}\""
+              "program": "^\"\\${file}\"",
+              "internalConsoleOptions": "neverOpen"
             }
           }
         ]
