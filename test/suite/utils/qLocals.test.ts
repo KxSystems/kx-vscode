@@ -13,29 +13,10 @@
 
 import * as assert from "assert";
 
-import { functionAt, functionLocalsAt } from "../../../src/utils/qLocals";
-
-describe("qLocals.functionLocalsAt", () => {
-  it("returns params and assigned locals of a single-line function", () => {
-    const text = "g:{[z] a:z+1; a+`sym}\nf:{[x] b:x*2; g[b]}\nf[10]";
-    assert.deepStrictEqual(functionLocalsAt(text, "g", 1).sort(), ["a", "z"]);
-    assert.deepStrictEqual(functionLocalsAt(text, "f", 2).sort(), ["b", "x"]);
-  });
-
-  it("recovers locals of a multi-line function, excluding its own name", () => {
-    const text = "c: {\n  d:1;\n  e:d+2;\n  d+e\n  }\nc[]";
-    assert.deepStrictEqual(functionLocalsAt(text, "c", 3).sort(), ["d", "e"]);
-  });
-
-  it("falls back to the enclosing lambda by line when no name is given", () => {
-    const text = "c: {\n  d:1;\n  e:d+2;\n  d+e\n  }\nc[]";
-    assert.deepStrictEqual(functionLocalsAt(text, "", 3).sort(), ["d", "e"]);
-  });
-
-  it("returns an empty list at top level", () => {
-    assert.deepStrictEqual(functionLocalsAt("a:1;\nb:2", "", 1), []);
-  });
-});
+import {
+  functionAt,
+  lambdaStatementSeparators,
+} from "../../../src/utils/qLocals";
 
 describe("qLocals.functionAt", () => {
   it("identifies the enclosing function name and brace line", () => {
@@ -45,5 +26,53 @@ describe("qLocals.functionAt", () => {
 
   it("returns undefined for a top-level line", () => {
     assert.strictEqual(functionAt("a:1;\nb:2", 1), undefined);
+  });
+});
+
+describe("qLocals.lambdaStatementSeparators", () => {
+  it("returns the lambda's top-level `;` positions", () => {
+    // Two statements on line 2: the `;` after `p:x+1` separates them.
+    const text = "add:{[x;y]\n  p:x+1; q:y+1;\n  p+q }";
+    const seps = lambdaStatementSeparators(text, 2);
+    assert.deepStrictEqual(
+      seps.map((s) => [s.line, s.column]),
+      [
+        [2, 8],
+        [2, 15],
+      ],
+    );
+  });
+
+  it("includes `;` inside control brackets (if/while/do/$)", () => {
+    // Control constructs sequence their `;`-separated parts, so the condition and
+    // body separators count as well as the lambda-level `;` after the `if[...]`.
+    const text = "g:{[a;b]\n  if[a>0; r:1; r:2];\n  r }";
+    const seps = lambdaStatementSeparators(text, 2);
+    assert.deepStrictEqual(
+      seps.map((s) => [s.line, s.column]),
+      [
+        [2, 9],
+        [2, 14],
+        [2, 20],
+      ],
+    );
+  });
+
+  it("excludes `;` in application, lists, and params", () => {
+    // f[a;b] and (a;b) semicolons are argument separators, not statements; only
+    // the two lambda-level `;` remain.
+    const text = "h:{[a;b]\n  z:f[a;b]; w:(a;b);\n  z }";
+    const seps = lambdaStatementSeparators(text, 2);
+    assert.deepStrictEqual(
+      seps.map((s) => [s.line, s.column]),
+      [
+        [2, 11],
+        [2, 20],
+      ],
+    );
+  });
+
+  it("returns [] for a top-level line", () => {
+    assert.deepStrictEqual(lambdaStatementSeparators("a:1;\nb:2", 1), []);
   });
 });

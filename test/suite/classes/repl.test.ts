@@ -11,270 +11,119 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { PythonExtension } from "@vscode/python-extension";
 import * as assert from "node:assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { QDebugDriver } from "../../../src/classes/qDebugDriver";
 import * as repl from "../../../src/classes/replConnection";
+import { ext } from "../../../src/extensionVariables";
 
 describe("REPL", () => {
-  let stdinChunk: string;
-  let stdinWriteCallback: (error: Error) => void;
-  let instance: repl.ReplConnection;
+  const terminal = <vscode.Terminal>{ show() {}, dispose() {} };
 
-  const target = {
-    on(_: string) {},
-    stdout: { on(_: string) {} },
-    stderr: { on(_: string) {} },
-    stdin: {
-      write(chunk: any, callback: (error: Error) => void) {
-        stdinChunk = chunk;
-        stdinWriteCallback = callback;
+  beforeEach(() => {
+    // The output channel is a global set by extension activation; ensure it
+    // exists so notify() paths are safe when this file runs in isolation.
+    if (!ext.outputChannel) {
+      ext.outputChannel = vscode.window.createOutputChannel("kdb", {
+        log: true,
+      });
+    }
+    if (!ext.context) {
+      ext.context = {
+        extensionPath: "/ext",
+        extensionUri: vscode.Uri.file("/ext"),
+        subscriptions: [],
+      } as any;
+    }
+    // Never spawn a real q, resolve a real venv, or create a real terminal.
+    sinon.stub(PythonExtension, "api").resolves({
+      environments: {
+        getActiveEnvironmentPath: () => ({}),
+        resolveEnvironment: async () => undefined,
       },
-      on(_: string) {},
-    },
-  };
-  const terminal = <vscode.Terminal>{ show() {} };
-
-  beforeEach(async () => {
-    sinon
-      .stub(repl.ReplConnection.prototype, <any>"createProcess")
-      .returns(target);
+    } as any);
+    sinon.stub(QDebugDriver.prototype, "start").resolves();
     sinon.stub(vscode.window, "createTerminal").returns(terminal);
-    instance = await repl.ReplConnection.getOrCreateInstance();
   });
 
   afterEach(() => {
     sinon.restore();
-    stdinChunk = undefined;
-    stdinWriteCallback = undefined;
-    instance = undefined;
   });
 
-  describe("connect", () => {
-    it("should listen error on target", () => {
-      const stub = sinon.stub(target, "on");
-      instance["connect"]();
-      sinon.assert.calledWithMatch(stub, "error");
-    });
-    it("should listen exit on target", () => {
-      const stub = sinon.stub(target, "on");
-      instance["connect"]();
-      sinon.assert.calledWithMatch(stub, "exit");
-    });
-    it("should listen data on target stdout", () => {
-      const stub = sinon.stub(target.stdout, "on");
-      instance["connect"]();
-      sinon.assert.calledWithMatch(stub, "data");
-    });
-    it("should listen error on target stdout", () => {
-      const stub = sinon.stub(target.stdout, "on");
-      instance["connect"]();
-      sinon.assert.calledWithMatch(stub, "error");
-    });
-    it("should listen data on target stderr", () => {
-      const stub = sinon.stub(target.stderr, "on");
-      instance["connect"]();
-      sinon.assert.calledWithMatch(stub, "data");
-    });
-    it("should listen error on target stderr", () => {
-      const stub = sinon.stub(target.stderr, "on");
-      instance["connect"]();
-      sinon.assert.calledWithMatch(stub, "error");
+  // Make an instance whose driver looks live and whose run() is scripted.
+  async function makeInstance(run?: (line: string) => string) {
+    const instance = await repl.ReplConnection.getOrCreateInstance();
+    const driver = instance["driver"] as QDebugDriver;
+    (driver as any).proc = {}; // alive === !!proc && !exited
+    const runStub = sinon
+      .stub(driver, "run")
+      .callsFake(
+        async (line: string) =>
+          ({ output: run ? run(line) : "", depth: 1, errored: false }) as any,
+      );
+    return { instance, driver, runStub };
+  }
+
+  describe("session", () => {
+    it("exposes the shared driver for the debugger", async () => {
+      const { instance, driver } = await makeInstance();
+      assert.strictEqual(await instance.session(), driver);
+      instance["close"]();
     });
   });
 
-  describe("sendToProcess", () => {
-    it("should write data to stdin with CRLF", () => {
-      instance["sendToProcess"]("a:1");
-      assert.ok(stdinChunk.startsWith("a:1\r\n"));
+  describe("executeQuery", () => {
+    it("runs each normalized line via the driver and concatenates output", async () => {
+      const { instance, runStub } = await makeInstance((line) => `<${line}>`);
+      const token = new vscode.CancellationTokenSource().token;
+
+      const result = await instance.executeQuery("2+2", token);
+
+      assert.ok(runStub.calledWith("2+2"));
+      assert.strictEqual(result.output, "<2+2>");
+      instance["close"]();
+    });
+
+    it("stops and reports cancelled when the token is cancellation-requested", async () => {
+      const { instance, runStub } = await makeInstance();
+      const source = new vscode.CancellationTokenSource();
+      source.cancel();
+
+      const result = await instance.executeQuery("2+2", source.token);
+
+      assert.strictEqual(result.cancelled, true);
+      assert.ok(runStub.notCalled, "no line is sent once cancelled");
+      instance["close"]();
     });
   });
 
-  describe("sendToTerminal", () => {
-    let data: string;
-
-    beforeEach(() => {
-      sinon.stub(instance, <any>"onDidWrite").value({
-        fire(_data: string) {
-          data = _data;
-        },
-      });
+  describe("interactive input", () => {
+    it("submits the typed line to the driver on Enter", async () => {
+      const { instance, runStub } = await makeInstance();
+      instance["handleInput"]("a");
+      instance["handleInput"]("b");
+      instance["handleInput"]("\r");
+      assert.ok(runStub.calledOnceWith("ab"));
+      instance["close"]();
     });
 
-    afterEach(() => {
-      data = undefined;
+    it("erases the last character on backspace", async () => {
+      const { instance } = await makeInstance();
+      instance["handleInput"]("a");
+      instance["handleInput"]("b");
+      instance["handleInput"]("\x7f");
+      assert.strictEqual(instance["input"].join(""), "a");
+      instance["close"]();
     });
 
-    it("should fire onDidWrite", () => {
-      instance["messages"] = undefined;
-      instance["sendToTerminal"]("test");
-      assert.strictEqual(data, "test");
-    });
-  });
-
-  describe("moveCursorToColumn", () => {
-    it("should return ANSİ code for moving cursor", () => {
-      const res = instance["moveCursorToColumn"](1);
-      assert.strictEqual(res, "\x1B[1G");
-    });
-  });
-
-  describe("word deletion", () => {
-    beforeEach(() => {
-      sinon.stub(instance, <any>"showPrompt");
-      instance["maxInputIndex"] = 1000;
-    });
-
-    const setInput = (text: string, index: number) => {
-      instance["input"] = [...text];
-      instance["inputIndex"] = index;
-    };
-
-    it("should delete the previous word", () => {
-      setInput("foo bar", 7);
-      instance["deleteWordLeft"]();
-      assert.strictEqual(instance["input"].join(""), "foo ");
-      assert.strictEqual(instance["inputIndex"], 4);
-    });
-
-    it("should delete trailing whitespace and the previous word", () => {
-      setInput("foo bar  ", 9);
-      instance["deleteWordLeft"]();
-      assert.strictEqual(instance["input"].join(""), "foo ");
-      assert.strictEqual(instance["inputIndex"], 4);
-    });
-
-    it("should do nothing deleting the previous word at the start", () => {
-      setInput("foo", 0);
-      instance["deleteWordLeft"]();
-      assert.strictEqual(instance["input"].join(""), "foo");
-      assert.strictEqual(instance["inputIndex"], 0);
-    });
-
-    it("should delete the next word", () => {
-      setInput("foo bar", 0);
-      instance["deleteWordRight"]();
-      assert.strictEqual(instance["input"].join(""), " bar");
-      assert.strictEqual(instance["inputIndex"], 0);
-    });
-
-    it("should delete leading whitespace and the next word", () => {
-      setInput("  foo bar", 0);
-      instance["deleteWordRight"]();
-      assert.strictEqual(instance["input"].join(""), " bar");
-      assert.strictEqual(instance["inputIndex"], 0);
-    });
-
-    it("should do nothing deleting the next word at the end", () => {
-      setInput("foo", 3);
-      instance["deleteWordRight"]();
-      assert.strictEqual(instance["input"].join(""), "foo");
-      assert.strictEqual(instance["inputIndex"], 3);
-    });
-  });
-
-  describe("keyboard navigation", () => {
-    beforeEach(() => {
-      sinon.stub(instance, <any>"showPrompt");
-      instance["maxInputIndex"] = 1000;
-    });
-
-    const setInput = (text: string, index: number) => {
-      instance["input"] = [...text];
-      instance["inputIndex"] = index;
-    };
-
-    it("should jump to the start of the previous word on Ctrl+Left", () => {
-      setInput("select price", 12);
-      instance["handleInput"]("\x1b[1;5D");
-      assert.strictEqual(instance["inputIndex"], 7);
-    });
-
-    it("should jump to the start of the previous word on Option+Left", () => {
-      setInput("select price", 12);
-      instance["handleInput"]("\x1bb");
-      assert.strictEqual(instance["inputIndex"], 7);
-    });
-
-    it("should jump to the end of the next word on Ctrl+Right", () => {
-      setInput("select price", 0);
-      instance["handleInput"]("\x1b[1;5C");
-      assert.strictEqual(instance["inputIndex"], 6);
-    });
-
-    it("should jump to the end of the next word on Option+Right", () => {
-      setInput("select price", 0);
-      instance["handleInput"]("\x1bf");
-      assert.strictEqual(instance["inputIndex"], 6);
-    });
-
-    it("should not insert stray characters for a navigation sequence", () => {
-      setInput("select price", 12);
-      instance["handleInput"]("\x1b[1;5D");
-      assert.strictEqual(instance["input"].join(""), "select price");
-    });
-  });
-
-  describe("clear", () => {
-    let sendToTerminalStub: sinon.SinonStub;
-    let showPromptStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      sendToTerminalStub = sinon.stub(instance, <any>"sendToTerminal");
-      showPromptStub = sinon.stub(instance, <any>"showPrompt");
-      instance["maxInputIndex"] = 1000;
-      instance["executing"] = undefined;
-    });
-
-    it("should clear the screen and scrollback and preserve input on Ctrl+L", () => {
-      instance["input"] = [..."select price"];
-      instance["inputIndex"] = 12;
-      instance["handleInput"]("\x0c");
-      sinon.assert.calledWith(sendToTerminalStub, "\x1b[2J\x1b[3J\x1b[H");
-      sinon.assert.calledWith(showPromptStub, true);
-      assert.strictEqual(instance["input"].join(""), "select price");
-    });
-  });
-
-  describe("Output", () => {
-    let sendToTerminalSub: sinon.SinonStub;
-
-    beforeEach(() => {
-      sendToTerminalSub = sinon.stub(instance, <any>"sendToTerminal");
-    });
-
-    describe("showPrompt", () => {
-      it("should not output to terminal if exited", () => {
-        sinon.stub(instance, <any>"exited").value(true);
-        instance["showPrompt"]();
-        sinon.assert.notCalled(sendToTerminalSub);
-      });
-    });
-  });
-
-  describe("show", () => {
-    let showStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      showStub = sinon.stub(terminal, "show");
-    });
-
-    it("should show REPL when autofocus is enabled", () => {
-      instance["show"]();
-      sinon.assert.calledOnce(showStub);
-    });
-
-    it("should not show REPL when autofocus is disabled", () => {
-      sinon.stub(vscode.workspace, "getConfiguration").value(() => {
-        return {
-          get() {
-            return false;
-          },
-        };
-      });
-      instance["show"]();
-      sinon.assert.notCalled(showStub);
+    it("ignores control sequences like arrow keys", async () => {
+      const { instance } = await makeInstance();
+      instance["handleInput"]("\x1b[A"); // up arrow
+      assert.strictEqual(instance["input"].length, 0);
+      instance["close"]();
     });
   });
 
@@ -400,9 +249,11 @@ describe("REPL", () => {
       assert.notStrictEqual(chosen, replA);
     });
 
-    it("should mark a REPL active when it is started", () => {
+    it("should mark a REPL active when it is started", async () => {
+      const instance = await repl.ReplConnection.getOrCreateInstance();
       instance["start"]();
       assert.strictEqual((repl.ReplConnection as any)["active"], instance);
+      instance["close"]();
     });
 
     it("should clear the active REPL when it closes", async () => {

@@ -107,9 +107,39 @@ async function setBreakpoint(editor: TextEditor, line: number): Promise<void> {
   }
 }
 
+// Poll the Variables view (expanding every scope) for a variable whose name
+// matches. The debug tree re-renders constantly, so tolerate transient errors.
+async function hasVariable(
+  debugView: DebugView,
+  match: (name: string) => boolean,
+  timeoutMs: number,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const section = await debugView.getVariablesSection();
+      for (const item of await section.getVisibleItems()) {
+        await item.expand().catch(() => undefined);
+      }
+      for (const item of await section.getVisibleItems()) {
+        // getVariableName() returns "name =", so compare the leading token.
+        const name = (await item.getVariableName().catch(() => ""))
+          .replace(/\s*=.*/, "")
+          .trim();
+        if (match(name)) return true;
+      }
+    } catch {
+      /* variables view in flux; retry */
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return false;
+}
+
 // Drives a real F5 debug session of the native q debugger. Requires a q runtime
 // discoverable by the extension (e.g. ~/.kx/bin/q or q on PATH), the same
-// requirement as `npm run q-test`, plus terminal shell integration.
+// requirement as `npm run q-test`. The debugger is local-only: it suspends
+// inside functions, so the fixture breakpoint sits in a lambda body.
 describe("q Debugger", () => {
   let editor: TextEditor;
   let debugView: DebugView;
@@ -149,6 +179,21 @@ describe("q Debugger", () => {
       "execution should pause on line 3",
     );
 
+    // The Locals scope is populated from q at runtime (.dbg.locals): add's
+    // params/locals (x, y, a, b) should appear.
+    assert.ok(
+      await hasVariable(debugView, (n) => ["x", "y", "a"].includes(n), 10000),
+      "a local should appear in the Locals scope",
+    );
+
+    // The Globals scope (.dbg.globals) lists root-namespace data globals, which
+    // remain visible while suspended inside a function: `greeting` was assigned
+    // before add[10;20] ran.
+    assert.ok(
+      await hasVariable(debugView, (n) => n === "greeting", 10000),
+      "global `greeting` should appear in the Globals scope",
+    );
+
     const toolbar = await DebugToolbar.create(60000);
 
     // Stepping advances to the next source line (b:a+y -> a+b).
@@ -159,76 +204,5 @@ describe("q Debugger", () => {
     );
 
     await toolbar.stop();
-  });
-});
-
-// Global-scope debugging: breakpoints on top-level statements (not inside a
-// function) pause the loader before the statement runs, and the Globals scope
-// lists user-defined root-namespace variables.
-describe("q Debugger (global scope)", () => {
-  let editor: TextEditor;
-  let debugView: DebugView;
-
-  before(async function () {
-    this.timeout(60000);
-    await VSBrowser.instance.openResources(
-      "./test/ui/fixtures/debug",
-      "./test/ui/fixtures/debug/globals.q",
-    );
-    editor = (await new EditorView().openEditor("globals.q")) as TextEditor;
-
-    const run = await new ActivityBar().getViewControl("Run");
-    assert.ok(run, "Run and Debug view control should exist");
-    await run.openView();
-    debugView = new DebugView();
-    await debugView.selectLaunchConfiguration("Debug q File");
-  });
-
-  afterEach(stopDebugging);
-
-  it("pauses at a top-level breakpoint and exposes globals", async function () {
-    this.timeout(120000);
-
-    // `show greeting` (line 5) is top-level; pausing there is a global-scope stop.
-    await setBreakpoint(editor, 5);
-    await debugView.start();
-
-    const outcome = await awaitPausedOrUnavailable(editor, 30000);
-    if (outcome === "unavailable") this.skip();
-
-    assert.ok(
-      await waitForPausedLine(editor, 5, 10000),
-      "execution should pause on the top-level line 5",
-    );
-
-    // `greeting` was assigned on line 1, so it appears in the Globals scope.
-    // Expand every scope node (Locals, Globals) so their child variables render,
-    // then look for `greeting` by variable name among the visible items — the
-    // scope's children are nested, so a plain top-level findItem would miss them.
-    let greeting = false;
-    const deadline = Date.now() + 15000;
-    while (!greeting && Date.now() < deadline) {
-      try {
-        const globals = await debugView.getVariablesSection();
-        for (const item of await globals.getVisibleItems()) {
-          await item.expand().catch(() => undefined);
-        }
-        for (const item of await globals.getVisibleItems()) {
-          // getVariableName() returns the name plus its separator, e.g.
-          // "greeting =", so compare on the leading name token only.
-          const name = await item.getVariableName().catch(() => "");
-          if (name.replace(/\s*=.*/, "").trim() === "greeting") {
-            greeting = true;
-            break;
-          }
-        }
-      } catch {
-        /* variables view in flux; retry */
-      }
-      if (!greeting) await new Promise((r) => setTimeout(r, 500));
-    }
-    assert.ok(greeting, "global `greeting` should appear in the Globals scope");
-
-    await (await DebugToolbar.create(60000)).stop();
   });
 });

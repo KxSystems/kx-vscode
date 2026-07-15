@@ -13,7 +13,10 @@
 
 import * as assert from "assert";
 
-import { parseBacktrace } from "../../../src/utils/qBacktrace";
+import {
+  parseBacktrace,
+  parseCurrentPosition,
+} from "../../../src/utils/qBacktrace";
 
 describe("qBacktrace.parseBacktrace", () => {
   it("parses interactively-defined frames (no file) with the current marker", () => {
@@ -69,5 +72,36 @@ describe("qBacktrace.parseBacktrace", () => {
   it("returns an empty list when there is no backtrace", () => {
     assert.deepStrictEqual(parseBacktrace(""), []);
     assert.deepStrictEqual(parseBacktrace("q))"), []);
+  });
+});
+
+describe("qBacktrace.parseCurrentPosition", () => {
+  // A suspended lambda prints its whole source under the >> frame; the caret sits
+  // below the current line (not adjacent to the header), and there is a second
+  // caret under the caller frame that must be ignored.
+  const bt = [
+    ">>[1]  /tmp/add.q:2: add:{[x;y]",
+    "  p:x+1; q:y+1;",
+    "             ^",
+    "  p+q }",
+    "  [0]  add[10;20]",
+    "       ^",
+  ].join("\n");
+
+  it("reads the current frame's file, line, and caret column", () => {
+    const pos = parseCurrentPosition(bt);
+    assert.strictEqual(pos?.file, "/tmp/add.q");
+    assert.strictEqual(pos?.line, 2);
+    // Caret under the `1` of `q:y+1` (0-based column 13 of "  p:x+1; q:y+1;").
+    assert.strictEqual(pos?.col, 13);
+    assert.strictEqual("  p:x+1; q:y+1;"[pos!.col!], "1");
+  });
+
+  it("returns undefined when no frame is current", () => {
+    assert.strictEqual(parseCurrentPosition(""), undefined);
+    assert.strictEqual(
+      parseCurrentPosition("  [0]  add[10;20]\n       ^"),
+      undefined,
+    );
   });
 });

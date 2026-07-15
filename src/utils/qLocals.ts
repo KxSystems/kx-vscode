@@ -12,58 +12,12 @@
  */
 
 import { parse } from "../../server/src/parser/parser";
-import { Token } from "../../server/src/parser/utils";
 import {
+  Token,
   assignable,
-  assigned,
   inLambda,
-  inParam,
   lamdaDefinition,
 } from "../../server/src/parser/utils";
-
-/**
- * Determine the local variable names (parameters and assigned locals) of a q
- * function, so the debugger can query their values in a suspended frame.
- *
- * The native backtrace only prints a display excerpt of a function, so local
- * names are recovered from the actual source text using the language parser.
- * The function is matched by its name (as reported by the backtrace frame) with
- * a line-based fallback for anonymous/edge cases.
- *
- * @param text full source of the file the frame belongs to
- * @param name function name from the frame (e.g. `g`, `.ns.f`), may be empty
- * @param line 1-based current line of the frame (fallback anchor)
- */
-export function functionLocalsAt(
-  text: string,
-  name: string,
-  line?: number,
-): string[] {
-  let tokens: Token[];
-  try {
-    tokens = parse(text);
-  } catch {
-    return [];
-  }
-
-  const lambda = name
-    ? lambdaOfDefinition(tokens, name)
-    : line !== undefined
-      ? lambdaAtLine(tokens, line)
-      : undefined;
-
-  if (!lambda) return [];
-
-  const names = new Set<string>();
-  for (const token of tokens) {
-    if (!assignable(token)) continue;
-    if (inLambda(token) !== lambda) continue;
-    if (assigned(token) || inParam(token)) {
-      names.add(token.image);
-    }
-  }
-  return [...names];
-}
 
 export interface QFunctionInfo {
   /** Function name it is assigned to (e.g. `g`, `.ns.f`). */
@@ -76,6 +30,9 @@ export interface QFunctionInfo {
  * Identify the function whose body encloses a 1-based source line, returning its
  * name and the line of its opening `{`. Used to translate a DAP breakpoint line
  * into a bytecode index relative to the function's own source.
+ *
+ * (Local variable names are no longer derived here; the debugger reads them from
+ * q at runtime via `.dbg.locals`.)
  */
 export function functionAt(
   text: string,
@@ -100,16 +57,6 @@ export function functionAt(
   return undefined;
 }
 
-/** Find the lambda a named function is assigned to (e.g. `g` in `g:{...}`). */
-function lambdaOfDefinition(tokens: Token[], name: string): Token | undefined {
-  for (const token of tokens) {
-    if (!assignable(token) || token.image !== name) continue;
-    const lambda = lamdaDefinition(token);
-    if (lambda) return lambda;
-  }
-  return undefined;
-}
-
 /** Innermost lambda enclosing any token on the given 1-based line. */
 function lambdaAtLine(tokens: Token[], line: number): Token | undefined {
   const onLine = tokens.filter((t) => (t.startLine ?? 0) === line);
@@ -118,4 +65,58 @@ function lambdaAtLine(tokens: Token[], line: number): Token | undefined {
     if (lambda) return lambda;
   }
   return undefined;
+}
+
+/** A statement-separating `;` position within a lambda body. */
+export interface QSeparator {
+  /** 1-based source line of the `;`. */
+  line: number;
+  /** 1-based source column of the `;`. */
+  column: number;
+}
+
+/**
+ * Statement-separating `;` positions within the lambda enclosing a 1-based source
+ * line. A `;` separates statements when its scope is a SEQUENTIAL context: the
+ * lambda body itself, or an `if[…]`/`while[…]`/`do[…]`/`$[…]` bracket (whose
+ * `;`-separated parts run in sequence). A `;` in an application `f[a;b]`, an index
+ * `x[i;j]`, a param list `[x;y]`, or a list `(a;b)` is an argument separator, not a
+ * statement boundary, and is excluded. This lets stepping advance through the
+ * sub-statements of a control construct even when it is written on one line.
+ * (A bare newline never separates statements inside `{…}`; only `;` does.)
+ */
+export function lambdaStatementSeparators(
+  text: string,
+  line: number,
+): QSeparator[] {
+  let tokens: Token[];
+  try {
+    tokens = parse(text);
+  } catch {
+    return [];
+  }
+  const lambda = lambdaAtLine(tokens, line);
+  if (!lambda) return [];
+  return tokens
+    .filter(
+      (t) =>
+        t.tokenType?.name === "SemiColon" &&
+        inLambda(t) === lambda &&
+        sequentialScope(t.scope),
+    )
+    .map((t) => ({ line: t.startLine ?? 0, column: t.startColumn ?? 0 }));
+}
+
+/**
+ * Whether a scope token sequences the `;`-separated statements directly inside it:
+ * the lambda body (`{…}`), or a control/cond bracket (`if`/`while`/`do`/`$`),
+ * identified by the bracket's `tangled` head token. Application/index/param/list
+ * brackets are not sequential.
+ */
+function sequentialScope(scope?: Token): boolean {
+  const type = scope?.tokenType?.name;
+  if (type === "LCurly") return true;
+  if (type !== "LBracket") return false;
+  const head = scope?.tangled?.tokenType?.name;
+  return head === "Control" || head === "Cond";
 }

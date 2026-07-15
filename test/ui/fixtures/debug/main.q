@@ -4,4 +4,5 @@ add:{[x;y]
   a+b
   }
 
+greeting:`hello
 add[10;20]

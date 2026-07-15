@@ -72,3 +72,51 @@ export function parseBacktrace(text: string): QFrame[] {
 
   return frames;
 }
+
+/** The current execution position of the suspended frame. */
+export interface QPosition {
+  /** Absolute file path of the current frame, if from a loaded script. */
+  file?: string;
+  /** 1-based source line the debugger currently points at. */
+  line?: number;
+  /** 0-based column of the `^` caret within that source line, if drawn. */
+  col?: number;
+}
+
+/**
+ * Extract the current execution position from a `.Q.bt[]` dump: the `>>` frame's
+ * `file:line` and the column of the `^` caret q draws under the current token.
+ * Unlike a top-level error, a suspended lambda's caret sits a few display lines
+ * below the frame header (the frame prints the function's whole source), so scan
+ * forward to the caret line, stopping at the next frame. Columns are absolute in
+ * the source line (matching the parser), for mapping a step to a statement.
+ */
+export function parseCurrentPosition(text: string): QPosition | undefined {
+  const lines = text.split("\n");
+  const frameRe = /^(>>|\s\s)\[(\d+)\]\s\s?(.*)$/;
+  const fileRe = /^(.*):(\d+):\s(.*)$/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(frameRe);
+    if (!m || m[1] !== ">>") continue;
+
+    let file: string | undefined;
+    let line: number | undefined;
+    const fm = m[3].match(fileRe);
+    if (fm) {
+      file = fm[1];
+      line = Number(fm[2]);
+    }
+
+    let col: number | undefined;
+    for (let j = i + 1; j < lines.length; j++) {
+      if (frameRe.test(lines[j])) break;
+      if (/^\s*\^\s*$/.test(lines[j])) {
+        col = lines[j].indexOf("^");
+        break;
+      }
+    }
+    return { file, line, col };
+  }
+  return undefined;
+}

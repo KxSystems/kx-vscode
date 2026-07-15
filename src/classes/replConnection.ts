@@ -12,23 +12,17 @@
  */
 
 import { PythonExtension, ResolvedEnvironment } from "@vscode/python-extension";
-import kill from "kill-sync";
-import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import path from "node:path";
 import * as vscode from "vscode";
 
+import { QDebugDriver } from "./qDebugDriver";
 import { showSetupError } from "../commands/setupCommand";
 import { ext } from "../extensionVariables";
 import {
   getAutoFocusOutputOnEntrySetting,
   getEnvironment,
 } from "../utils/core";
-import {
-  Cancellable,
-  MessageKind,
-  notify,
-  Runner,
-} from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
 import { moduleSearchPath, selectRepl } from "../utils/replPath";
 import { errorMessage } from "../utils/shared";
@@ -36,87 +30,20 @@ import { pickWorkspace } from "../utils/workspace";
 
 const logger = "replConnection";
 
-const ANSI = {
-  EMPTY: "",
-  SPACE: " ",
-  QUOTE: '"',
-  SEMI: ";",
-  AT: "@",
-  CR: "\r",
-  CRLF: "\r\n",
-  DOWN: "\x1b[1B",
-  SAVE: "\x1b[s",
-  RESTORE: "\x1b[u",
-  ERASETOEND: "\x1b[0J",
-  CLEAR: "\x1b[2J\x1b[3J\x1b[H",
-  LINESTART: "\x1b[0G",
-  FAINTON: "\x1b[2m",
-  FAINTOFF: "\x1b[22m",
+const CRLF = "\r\n";
+
+const CONF = {
+  DEFAULT: "default",
+  TITLE: `KX ${ext.REPL}`,
 };
 
 const KEY = {
   CR: "\r",
   CTRLC: "\x03",
   CTRLD: "\x04",
-  CTRLL: "\x0c",
   BS: "\b",
   BSMAC: "\x7f",
-  DEL: "\x1b[3~",
-  UP: "\x1b[A",
-  DOWN: "\x1b[B",
-  LEFT: "\x1b[D",
-  RIGHT: "\x1b[C",
-  HOME: "\x1b[H",
-  HOMEMAC: "\x01",
-  END: "\x1b[F",
-  ENDMAC: "\x05",
-  ALTHOME: "\x1b[1;5A",
-  ALTEND: "\x1b[1;5B",
-  SHIFTUP: "\x1b[1;2A",
-  SHIFTDOWN: "\x1b[1;2B",
-  SHIFTLEFT: "\x1b[1;2D",
-  SHIFTRIGHT: "\x1b[1;2C",
-  CTRLLEFT: "\x1b[1;5D",
-  CTRLRIGHT: "\x1b[1;5C",
-  ALTLEFT: "\x1b[1;3D",
-  ALTRIGHT: "\x1b[1;3C",
-  METALEFT: "\x1bb",
-  METARIGHT: "\x1bf",
-  DELWORDLEFT: "\x17",
-  DELWORDLEFTMETA: "\x1b\x7f",
-  DELWORDRIGHT: "\x1bd",
-  DELWORDRIGHTCTRL: "\x1b[3;5~",
-  DELWORDRIGHTALT: "\x1b[3;3~",
 };
-
-const CTX = {
-  Q: "q",
-  K: "k",
-};
-
-const NS = {
-  Q: ',string[system"d"],',
-  K: ',$:[."\\\\d"],',
-};
-
-const CONF = {
-  DEFAULT: "default",
-  TITLE: `KX ${ext.REPL}`,
-  PROMPT: ")",
-  MAX_INPUT: 80 * 40,
-};
-
-interface Execution {
-  token: vscode.CancellationToken;
-  source: vscode.CancellationTokenSource;
-  cancelled: boolean;
-  lines: string[];
-  output: string[];
-  done: RegExpExecArray[];
-  index: number;
-  reject: (reason?: any) => void;
-  resolve: (value: Result) => void;
-}
 
 export interface Result {
   cancelled?: boolean;
@@ -127,128 +54,48 @@ function notEnvironment(target: string) {
   return !/[/\\](?:scripts|bin)[/\\]/is.test(target);
 }
 
-class HistoryItem {
-  prev?: HistoryItem;
-  next?: HistoryItem;
-  constructor(readonly input: string) {}
-}
-
-class History {
-  private head?: HistoryItem;
-  private item?: HistoryItem;
-
-  push(input: string) {
-    if (input === this.head?.input) {
-      return;
-    }
-    const item = new HistoryItem(input);
-    if (this.head) {
-      item.next = this.head;
-      this.head.prev = item;
-    }
-    this.head = item;
-  }
-
-  get next() {
-    this.item = this.item === undefined ? this.head : this.item.next;
-    return this.item;
-  }
-
-  get prev() {
-    this.item = this.item?.prev;
-    return this.item;
-  }
-
-  rewind() {
-    this.item = undefined;
-  }
-
-  clear() {
-    this.head = undefined;
-    this.rewind();
-  }
-}
-
+/**
+ * An interactive q session presented as a VS Code terminal.
+ *
+ * The session runs q over the shared {@link QDebugDriver} transport
+ * (`KX_TTY=1`/`KX_LINE=0`), so q prints its own prompts (top level `q)`, inside a
+ * namespace `q.foo)`) and its interactive debugger engages on demand. The same
+ * live process therefore serves both the REPL and the q debugger — the debugger
+ * borrows this connection's driver rather than spawning its own q. The debug
+ * helper (`resources/q/debug.q`) is loaded at startup so the process is
+ * debug-ready.
+ *
+ * This is a pseudoterminal whose backend is the extension: q's raw output is
+ * mirrored to the terminal, and typed input is echoed locally and forwarded to q
+ * one line at a time. Line-editing niceties (history, word navigation, cursor
+ * movement, the k/q toggle) are intentionally minimal for now.
+ */
 export class ReplConnection {
-  private readonly win32 = process.platform === "win32";
-  private readonly identity = crypto.randomUUID();
-  private readonly token = new RegExp(
-    this.identity + ANSI.AT + ".([0-9a-zA-Z_]*)" + ANSI.AT,
-    "gs",
-  );
-  private readonly onDidWrite: vscode.EventEmitter<string>;
-  private readonly decoder: TextDecoder;
+  private readonly onDidWrite = new vscode.EventEmitter<string>();
   private readonly terminal: vscode.Terminal;
-  private readonly executions: Execution[] = [];
-
-  private messages? = [
-    `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
-  ];
+  private readonly driver = new QDebugDriver();
+  private readonly ready: Promise<void>;
 
   private env: { [key: string]: string } = {};
-  private process: ChildProcessWithoutNullStreams;
   private activate = "";
-  private prefix = ANSI.EMPTY;
-  private _context = CTX.Q;
-  private _namespace = ANSI.EMPTY;
-  private columns = 0;
-  private rows = 0;
-  private maxInputIndex = 0;
-  private inputIndex = 0;
+  /** Display output buffered until the pseudoterminal's `open()` fires. */
+  private pendingDisplay?: string[] = [];
+  /** The current interactive input line (characters). */
   private input: string[] = [];
+  private opened = false;
   private exited = false;
-  private stopped = false;
-  private executing?: Execution;
 
   private constructor(
     private readonly workspace?: vscode.WorkspaceFolder,
     private readonly venv?: ResolvedEnvironment,
     private readonly baseUri?: vscode.Uri,
   ) {
-    this.onDidWrite = new vscode.EventEmitter<string>();
-    this.decoder = new TextDecoder("utf8");
     this.createEnvironment();
-    this.process = this.createProcess();
-    this.connect();
+    this.driver.on("data", (chunk: string) => this.render(chunk));
+    this.driver.on("exited", () => this.handleExit());
+    this.driver.on("reveal", () => this.terminal?.show(true));
     this.terminal = this.createTerminal();
-  }
-
-  private get inputText() {
-    return this.input.join(ANSI.EMPTY);
-  }
-
-  private set inputText(text: string) {
-    this.input = [...text];
-    this.inputIndex = this.visibleInputIndex;
-  }
-
-  private get visibleInputIndex() {
-    return this.input.length > this.maxInputIndex
-      ? this.maxInputIndex
-      : this.input.length;
-  }
-
-  private get context() {
-    return this._context;
-  }
-
-  private set context(context: string) {
-    this._context = context;
-    if (context === CTX.K) this.sendToProcess("\\x .z.pi" + ANSI.CRLF + "\\");
-    else this.sendToProcess("\\" + ANSI.CRLF + this.createHandler());
-    this.inputText = ANSI.EMPTY;
-    this.updateMaxInputIndex();
-    this.sendToTerminal(ANSI.CRLF);
-    this.showPrompt(true);
-  }
-
-  private get namespace() {
-    return this._namespace;
-  }
-
-  private set namespace(namespace: string) {
-    this._namespace = namespace;
-    this.updateMaxInputIndex();
+    this.ready = this.startDriver();
   }
 
   private get key() {
@@ -272,11 +119,10 @@ export class ReplConnection {
   private createTerminal() {
     return vscode.window.createTerminal({
       pty: {
-        close: this.close.bind(this),
-        open: this.open.bind(this),
-        setDimensions: this.setDimensions.bind(this),
-        handleInput: this.handleInput.bind(this),
         onDidWrite: this.onDidWrite.event,
+        open: this.open.bind(this),
+        close: this.close.bind(this),
+        handleInput: this.handleInput.bind(this),
       },
       name: `${CONF.TITLE} (${this.terminalLabel()})`,
       isTransient: true,
@@ -296,15 +142,19 @@ export class ReplConnection {
     const dir = path.basename(path.dirname(bin));
     if (name !== dir) return;
 
-    this.activate = this.win32
+    const win32 = process.platform === "win32";
+    this.activate = win32
       ? `"${path.join(bin, "activate.bat")}"`
       : `source "${path.join(bin, "activate")}"`;
-    this.prefix = `(${name}) `;
   }
 
-  private createProcess() {
+  /** Resolve the environment and start the q process over the shared transport. */
+  private async startDriver(): Promise<void> {
     this.env = getEnvironment(this.workspace);
-    if (!this.env.qBinPath) showSetupError(this.workspace);
+    if (!this.env.qBinPath) {
+      showSetupError(this.workspace);
+      return;
+    }
 
     // Only KDB-X has a module system; classic kdb+ ignores QPATH.
     const base = this.baseUri?.fsPath;
@@ -312,478 +162,99 @@ export class ReplConnection {
       this.env.QPATH = moduleSearchPath(base, this.env.QPATH, this.env.QHOME);
     }
 
-    return spawn(
-      `${this.activate ? this.activate + " && " : ""}"${this.env.qBinPath}"`,
-      {
-        env: this.env,
-        cwd: this.baseUri?.fsPath ?? this.workspace?.uri.fsPath,
-        windowsHide: true,
-        shell: this.win32 ? "cmd.exe" : "bash",
-      },
+    const cwd = this.baseUri?.fsPath ?? this.workspace?.uri.fsPath;
+    const helper = path.join(
+      ext.context.extensionPath,
+      "resources",
+      "q",
+      "debug.q",
     );
-  }
+    const commandPrefix = this.activate ? `${this.activate} && ` : "";
 
-  private connect() {
-    let handler = this.handleError.bind(this);
-    this.process.on("error", handler);
-    this.process.stdin.on("error", handler);
-    this.process.stdout.on("error", handler);
-    this.process.stderr.on("error", handler);
-    this.process.on("exit", this.handleExit.bind(this));
-    handler = this.handleOutput.bind(this);
-    this.process.stdout.on("data", handler);
-    this.process.stderr.on("data", handler);
-    this.process.on("spawn", () => this.sendToProcess(this.createHandler()));
-  }
-
-  private createToken(pipe: 1 | 2) {
-    return (
-      `${pipe} {x}` +
-      ANSI.QUOTE +
-      this.identity +
-      ANSI.AT +
-      ANSI.QUOTE +
-      (this.context === CTX.Q ? NS.Q : NS.K) +
-      ANSI.QUOTE +
-      ANSI.AT +
-      ANSI.QUOTE +
-      ANSI.SEMI
-    );
-  }
-
-  private createHandler() {
-    return normalizeQuery(
-      `.z.pi:{show value x;${this.createToken(1)}${this.createToken(2)}};`,
-    );
-  }
-
-  private stub(query: string) {
-    return query.replace(
-      /(?<![A-Za-z0-9.])(?:read0(?![A-Za-z0-9.])|0::)/gs,
-      '{$[x~0;"";0::[x]]}',
-    );
-  }
-
-  private sendToProcess(data: string) {
-    this.process.stdin.write(
-      this.context === CTX.Q
-        ? data + ANSI.CRLF
-        : this.stub(data) +
-            ANSI.CRLF +
-            this.createToken(1) +
-            this.createToken(2) +
-            ANSI.CRLF,
-    );
-  }
-
-  private stopExecution() {
-    this.stopped = this.win32;
-    if (this.process.pid) kill(this.process.pid, "SIGINT", true);
-  }
-
-  private stopProcess(restart = false) {
-    this.stopped = restart;
-    if (this.process.pid) kill(this.process.pid, "SIGKILL", true);
-  }
-
-  private runQuery(data: string) {
-    const runner = Runner.create((_, token) => this.executeQuery(data, token));
-    runner.cancellable = Cancellable.EXECUTOR;
-    runner.title = "Executing query on REPL.";
-    runner.execute();
-  }
-
-  private sendToTerminal(data: string) {
-    if (this.messages) this.messages.push(data);
-    else this.onDidWrite.fire(data);
-  }
-
-  private promptProperties(context?: string, index?: number) {
-    const length =
-      1 +
-      (context ?? this.context).length +
-      this.namespace.length +
-      this.prefix.length +
-      CONF.PROMPT.length +
-      (index ?? this.visibleInputIndex);
-
-    const lines = Math.ceil(length / this.columns);
-    const column = length % this.columns;
-
-    return { length, lines, column };
-  }
-
-  private updateInputIndex(data?: string) {
-    this.inputIndex += data?.length ?? 0;
-
-    if (this.inputIndex > this.maxInputIndex) {
-      this.inputIndex = this.maxInputIndex - 1;
+    try {
+      await this.driver.start(
+        this.env.qBinPath,
+        this.env,
+        cwd,
+        helper,
+        commandPrefix,
+      );
+    } catch (error) {
+      this.render(`${errorMessage(error)}${CRLF}`);
     }
   }
 
-  private updateMaxInputIndex() {
-    const { length } = this.promptProperties(this.context, 0);
-    const max = this.columns * this.rows;
-    this.maxInputIndex = (max > CONF.MAX_INPUT ? CONF.MAX_INPUT : max) - length;
-    this.updateInputIndex();
-  }
+  // ---- display ----
 
-  private moveCursorToColumn(column: number) {
-    return `\x1b[${column}G`;
-  }
-
-  private moveCursorToContext(context?: string, length?: number) {
-    const { lines, column } = this.promptProperties(context, length);
-
-    return (
-      ANSI.RESTORE +
-      ANSI.DOWN.repeat(lines - (column === 0 ? 0 : 1)) +
-      this.moveCursorToColumn(column + 1)
-    );
-  }
-
-  private showPrompt(create?: boolean, context?: string) {
-    if (this.exited) {
-      return;
-    }
-    this.sendToTerminal(
-      (create ? ANSI.SAVE : ANSI.RESTORE) +
-        ANSI.FAINTON +
-        this.prefix +
-        (context ?? this.context) +
-        this.namespace +
-        CONF.PROMPT +
-        ANSI.SPACE +
-        ANSI.FAINTOFF +
-        this.input.slice(0, this.visibleInputIndex).join(ANSI.EMPTY) +
-        ANSI.ERASETOEND +
-        this.moveCursorToContext(context, this.inputIndex),
-    );
-  }
-
-  private isWordChar(index: number) {
-    const char = this.input[index];
-    return char !== undefined && /\w/.test(char);
-  }
-
-  private wordLeft() {
-    let index = this.inputIndex;
-    while (index > 0 && !this.isWordChar(index - 1)) index--;
-    while (index > 0 && this.isWordChar(index - 1)) index--;
-    return index;
-  }
-
-  private wordRight() {
-    const max = this.visibleInputIndex;
-    let index = this.inputIndex;
-    while (index < max && !this.isWordChar(index)) index++;
-    while (index < max && this.isWordChar(index)) index++;
-    return index;
-  }
-
-  private deleteWordLeft() {
-    const index = this.wordLeft();
-    if (index < this.inputIndex) {
-      this.input.splice(index, this.inputIndex - index);
-      this.inputIndex = index;
-      this.showPrompt();
-    }
-  }
-
-  private deleteWordRight() {
-    const index = this.wordRight();
-    if (index > this.inputIndex) {
-      this.input.splice(this.inputIndex, index - this.inputIndex);
-      this.showPrompt();
-    }
-  }
-
-  private clear() {
-    this.sendToTerminal(ANSI.CLEAR);
-    if (!this.executing) this.showPrompt(true);
-  }
-
-  private recall(history?: HistoryItem) {
-    const input = history?.input ?? ANSI.EMPTY;
-    this.input = [...input];
-    this.inputIndex = 0;
-    this.updateInputIndex(input);
-    this.showPrompt();
-  }
-
-  private cancel(error?: Error) {
-    if (this.executing) {
-      if (error) this.executing.reject(error);
-      this.executing.source.cancel();
-    }
-  }
-
-  private normalize(decoded: string) {
-    return decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
-  }
-
-  private clean(decoded: string) {
-    return decoded.replace(/(?:\r\n|[\r\n])+/gs, "");
-  }
-
-  private executeNext() {
-    if (!this.executing && !this.messages) {
-      this.executing = this.executions.shift();
-      if (this.executing) {
-        this.sendToTerminal(ANSI.CRLF);
-        this.sendToProcess(this.executing.lines[this.executing.index]);
-      }
-    }
-  }
-
-  private resolve() {
-    let c = this.executing;
-    if (!c) return;
-    this.executing = undefined;
-    const output = c.output.join(ANSI.EMPTY);
-    if (output && !output.endsWith(ANSI.CRLF)) this.sendToTerminal(ANSI.CRLF);
-    c.resolve({ cancelled: c.cancelled, output });
-    if (!this.exited || !this.stopped) this.showPrompt(true);
-    if (c.cancelled)
-      while ((c = this.executions.shift())) c.resolve({ cancelled: true });
-    else this.executeNext();
-  }
-
-  private handleOutput(data: any) {
-    const chunk = this.decoder.decode(data);
-    this.token.lastIndex = 0;
-    const output = this.normalize(chunk.replace(this.token, ANSI.EMPTY));
-    if (output) this.sendToTerminal(output);
-
-    const c = this.executing;
-    if (!c) return;
-    if (output) c.output.push(output);
-
-    if (/'\d{4}\.\d{2}\.\d{2}T/m.test(c.output.join(ANSI.EMPTY))) {
-      c.cancelled = true;
-      this.resolve();
-      return;
-    }
-
-    this.token.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = this.token.exec(chunk))) c.done.push(match);
-
-    if (c.done.length === (c.index + 1) * 2) {
-      match = c.done[c.done.length - 1];
-      this.namespace = match[1] ? `.${match[1]}` : ANSI.EMPTY;
-      if (c.index < c.lines.length - 1) {
-        c.index++;
-        this.sendToProcess(c.lines[c.index]);
-      } else this.resolve();
-    }
-  }
-
-  private handleError(error: Error) {
-    this.sendToTerminal(`${error.message}${ANSI.CRLF}`);
-    this.cancel(error);
-  }
-
-  private handleExit(code?: number) {
-    if (this.stopped) {
-      this.stopped = false;
-      this.resolve();
-      this.process = this.createProcess();
-      this.connect();
-      this._context = CTX.Q;
-      this._namespace = ANSI.EMPTY;
-      this.inputText = ANSI.EMPTY;
-      this.updateMaxInputIndex();
-      this.sendToTerminal(ANSI.CRLF);
-      this.showPrompt(true);
-      return;
-    }
-    this.exited = true;
-    if (ReplConnection.active === this) ReplConnection.active = undefined;
-    this.sendToTerminal(
-      `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`,
-    );
-    this.resolve();
-  }
-
-  private close() {
-    if (ReplConnection.repls.get(this.key) === this) {
-      ReplConnection.repls.delete(this.key);
-    }
-    if (ReplConnection.active === this) ReplConnection.active = undefined;
-    this.exited = true;
-    this.cancel();
-    this.stopProcess();
-    this.onDidWrite.dispose();
+  private render(chunk: string) {
+    const text = chunk.replace(/\r?\n/g, CRLF);
+    if (this.pendingDisplay) this.pendingDisplay.push(text);
+    else this.onDidWrite.fire(text);
   }
 
   private open(dimensions?: vscode.TerminalDimensions) {
-    if (dimensions) this.setDimensions(dimensions);
-    this.messages?.forEach((message) => this.onDidWrite.fire(message));
-    this.messages = undefined;
-    this.showPrompt(true);
-    this.executeNext();
+    void dimensions;
+    this.opened = true;
+    const pending = this.pendingDisplay;
+    this.pendingDisplay = undefined;
+    pending?.forEach((text) => this.onDidWrite.fire(text));
   }
 
-  private setDimensions(dimensions: vscode.TerminalDimensions) {
-    this.rows = dimensions.rows;
-    this.columns = dimensions.columns;
-    this.updateMaxInputIndex();
-  }
+  // ---- interactive input (minimal) ----
 
   private handleInput(data: string) {
-    if (this.exited) {
+    if (this.exited) return;
+
+    if (data === KEY.CTRLC) {
+      this.driver.interrupt();
+      return;
+    }
+    if (data === KEY.CTRLD) {
+      // EOF/restart is deferred; ignore for now.
       return;
     }
 
-    let inputText: string | undefined;
+    // Enter (and pasted multi-line input): submit each completed line.
+    if (/[\r\n]/.test(data)) {
+      const parts = data.split(/\r\n|\r|\n/);
+      parts.forEach((part, i) => {
+        if (part) {
+          this.input.push(...part);
+          this.onDidWrite.fire(part);
+        }
+        if (i < parts.length - 1) this.submit();
+      });
+      return;
+    }
 
-    switch (data) {
-      case KEY.CR:
-        inputText = this.inputText;
-        if (this.executing) {
-          this.sendToTerminal(ANSI.CRLF);
-          this.sendToProcess(inputText);
-          this.executing.output.push(inputText + ANSI.CRLF);
-          this.inputText = ANSI.EMPTY;
-          break;
-        }
-        if (!inputText) {
-          this.sendToTerminal(ANSI.CRLF);
-          this.showPrompt(true);
-          break;
-        }
-        if (/^\\[\t ]*$/m.test(inputText)) {
-          this.context = this.context === CTX.K ? CTX.Q : CTX.K;
-          break;
-        }
-        ReplConnection.history.push(inputText);
-        ReplConnection.history.rewind();
-        this.inputIndex = this.visibleInputIndex;
-        this.showPrompt();
-        this.inputText = ANSI.EMPTY;
-        this.runQuery(inputText);
-        break;
-      case KEY.CTRLC:
-        this.cancel();
-        break;
-      case KEY.CTRLD:
-        this.stopProcess(true);
-        break;
-      case KEY.CTRLL:
-        this.clear();
-        break;
-      case KEY.BS:
-      case KEY.BSMAC:
-        if (this.inputIndex > 0 && this.input.splice(this.inputIndex - 1, 1)) {
-          this.inputIndex--;
-          this.showPrompt();
-        }
-        break;
-      case KEY.DEL:
-        if (this.input.splice(this.inputIndex, 1)) {
-          this.showPrompt();
-        }
-        break;
-      case KEY.DELWORDLEFT:
-      case KEY.DELWORDLEFTMETA:
-        this.deleteWordLeft();
-        break;
-      case KEY.DELWORDRIGHT:
-      case KEY.DELWORDRIGHTCTRL:
-      case KEY.DELWORDRIGHTALT:
-        this.deleteWordRight();
-        break;
-      case KEY.HOME:
-      case KEY.HOMEMAC:
-        this.inputIndex = 0;
-        this.showPrompt();
-        break;
-      case KEY.END:
-      case KEY.ENDMAC:
-        if (this.visibleInputIndex > 0) {
-          this.inputIndex = this.visibleInputIndex - 1;
-          this.showPrompt();
-        }
-        break;
-      case KEY.ALTHOME:
-      case KEY.SHIFTUP:
-        if (this.inputIndex >= this.columns) {
-          this.inputIndex -= this.columns;
-          this.showPrompt();
-        }
-        break;
-      case KEY.ALTEND:
-      case KEY.SHIFTDOWN:
-        if (this.inputIndex <= this.visibleInputIndex - this.columns) {
-          this.inputIndex += this.columns;
-          this.showPrompt();
-        }
-        break;
-      case KEY.LEFT:
-      case KEY.SHIFTLEFT:
-        if (this.inputIndex > 0) {
-          this.inputIndex--;
-          this.showPrompt();
-        }
-        break;
-      case KEY.RIGHT:
-      case KEY.SHIFTRIGHT:
-        if (this.inputIndex < this.visibleInputIndex) {
-          this.inputIndex++;
-          this.showPrompt();
-        }
-        break;
-      case KEY.CTRLLEFT:
-      case KEY.ALTLEFT:
-      case KEY.METALEFT: {
-        const index = this.wordLeft();
-        if (index !== this.inputIndex) {
-          this.inputIndex = index;
-          this.showPrompt();
-        }
-        break;
+    if (data === KEY.BS || data === KEY.BSMAC) {
+      if (this.input.length > 0) {
+        this.input.pop();
+        this.onDidWrite.fire("\b \b");
       }
-      case KEY.CTRLRIGHT:
-      case KEY.ALTRIGHT:
-      case KEY.METARIGHT: {
-        const index = this.wordRight();
-        if (index !== this.inputIndex) {
-          this.inputIndex = index;
-          this.showPrompt();
-        }
-        break;
-      }
-      case KEY.DOWN:
-        this.recall(ReplConnection.history.prev);
-        break;
-      case KEY.UP:
-        this.recall(ReplConnection.history.next);
-        break;
-      default:
-        if (/(?:\r\n|[\r\n])/s.test(data)) {
-          if (notEnvironment(data)) {
-            if (path.isAbsolute(data))
-              this.runQuery(
-                `\\l ${path.relative(path.resolve(this.env.qBinPath, ".."), this.clean(data))}`,
-              );
-            else this.runQuery(data);
-          }
-          break;
-        }
-        if (data.length < CONF.MAX_INPUT) {
-          const target = data.replace(/[^\P{Cc}]/gsu, ANSI.EMPTY);
-          this.input.splice(this.inputIndex, 0, ...target);
-          this.updateInputIndex(target);
-          if (this.executing) this.sendToTerminal(target);
-          else this.showPrompt();
-        }
-        break;
+      return;
+    }
+
+    // Echo printable input; ignore other control sequences (arrows, etc.) for now.
+    if (![...data].some((c) => (c.codePointAt(0) ?? 0) < 32)) {
+      this.input.push(...data);
+      this.onDidWrite.fire(data);
     }
   }
 
+  private submit() {
+    const line = this.input.join("");
+    this.input = [];
+    this.onDidWrite.fire(CRLF);
+    void this.driver.run(line).catch(() => {
+      /* process gone or timed out; output already surfaced via the data event */
+    });
+  }
+
+  // ---- public API ----
+
   clearHistory() {
-    ReplConnection.history.clear();
+    /* history is deferred in the prompt-based REPL */
   }
 
   start() {
@@ -795,53 +266,71 @@ export class ReplConnection {
     if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
   }
 
-  executeQuery(text: string, token: vscode.CancellationToken) {
-    return new Promise<Result>((resolve, reject) => {
-      const source = new vscode.CancellationTokenSource();
-
-      const execution = {
-        source,
-        token,
-        cancelled:
-          token.isCancellationRequested || source.token.isCancellationRequested,
-        lines: normalizeQuery(text)
-          .split(ANSI.CRLF)
-          .filter((line) => line),
-        output: [],
-        done: [],
-        index: 0,
-        reject,
-        resolve,
-      };
-
-      let retry = 0;
-
-      const requestCancellation = () => {
-        if (this.executing) {
-          if (retry < 50) {
-            retry++;
-            this.stopExecution();
-            setTimeout(requestCancellation, 50);
-          } else {
-            this.stopProcess(true);
-          }
-        }
-      };
-
-      [token, source.token].forEach((token) =>
-        token.onCancellationRequested(requestCancellation),
-      );
-
-      if (execution.cancelled) {
-        resolve({ cancelled: true });
-      } else {
-        this.executions.push(execution);
-        this.executeNext();
-      }
-    });
+  /** Bring the terminal to the foreground (used by the debugger on a stop). */
+  reveal() {
+    this.terminal.show(true);
   }
 
-  private static readonly history = new History();
+  /**
+   * The shared q session transport backing this REPL. The debugger drives the
+   * same live process through it, so debugging happens in this terminal.
+   */
+  async session(): Promise<QDebugDriver> {
+    await this.ready;
+    return this.driver;
+  }
+
+  /**
+   * Run q source, one statement per line, returning the combined output. Display
+   * is handled live via the driver's data event; this captures the parsed result
+   * for callers (run-file, notebook cells).
+   */
+  async executeQuery(
+    text: string,
+    token: vscode.CancellationToken,
+  ): Promise<Result> {
+    await this.ready;
+    if (this.exited || !this.driver.alive) return { output: "" };
+
+    const lines = normalizeQuery(text)
+      .split(CRLF)
+      .filter((line) => line);
+
+    let output = "";
+    for (const line of lines) {
+      if (token.isCancellationRequested) return { cancelled: true, output };
+      if (this.opened) this.onDidWrite.fire(line + CRLF);
+      try {
+        const result = await this.driver.run(line);
+        output += result.output;
+      } catch {
+        return { cancelled: true, output };
+      }
+    }
+    return { output };
+  }
+
+  private handleExit() {
+    if (this.exited) return;
+    this.exited = true;
+    if (ReplConnection.active === this) ReplConnection.active = undefined;
+    ReplConnection.repls.delete(this.key);
+    this.render(`${CONF.TITLE} exited.${CRLF}`);
+  }
+
+  private close() {
+    if (this.exited) return;
+    this.exited = true;
+    if (ReplConnection.repls.get(this.key) === this) {
+      ReplConnection.repls.delete(this.key);
+    }
+    if (ReplConnection.active === this) ReplConnection.active = undefined;
+    this.driver.dispose();
+    this.onDidWrite.dispose();
+  }
+
+  // ---- static routing (unchanged singleton model) ----
+
   private static readonly repls = new Map<string, ReplConnection>();
 
   // The REPL the user is actively working in, tracked from terminal focus.

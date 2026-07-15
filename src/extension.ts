@@ -365,7 +365,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.debug.registerDebugAdapterDescriptorFactory("q", {
       createDebugAdapterDescriptor(): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
         return new vscode.DebugAdapterInlineImplementation(
-          new QDebugSession(context.extensionPath),
+          new QDebugSession(),
         );
       },
     }),

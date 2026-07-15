@@ -4,31 +4,9 @@
 / NOTE: never leave a line containing only "/" here - q treats it as the start of
 / a multi-line comment block (ended only by a lone "\") and would swallow the rest.
 
-/ The per-bytecode source-offset map of a function. The element layout of
-/ `value f` varies (params/locals/globals presence shifts it), so identify the
-/ map robustly: the long (7h) vector whose length equals the bytecode length.
-.dbg.posmap:{[f]
-  v:value f;
-  bc:count first v;
-  first v where (7h = type each v) & bc = count each v };
-
-/ Map a 1-based source line (RELATIVE to a function's own definition) to a valid
-/ bytecode index on that line, for use with .Q.bs[f;index]; returns -1 when no
-/ bytecode maps to the line. Among the bytecodes on a line, pick the one with the
-/ greatest source offset: that is the instruction boundary q's debugger stops at.
-/ Lower offsets on the same line are mid-instruction bytes (e.g. an assignment
-/ colon); trapping there does not stop and can crash q.
-/   f  - the function value
-/   rl - 1-based line within the function's source (last value f)
-.dbg.lineToIndex:{[f;rl]
-  pm:.dbg.posmap f;
-  src:last value f;
-  ln:{[s;o] 1 + sum "\n" = s til o & count s}[src] each pm;
-  cand:where ln = rl;
-  $[count cand; cand first idesc pm cand; -1] };
-
-/ Number of source lines a function spans (for validating breakpoint lines).
-.dbg.lineCount:{[f] 1 + sum "\n" = last value f};
+/ (Breakpoint placement is done by the adapter: it traps the function entry with
+/ .Q.bs[f;0] and single-steps to the requested line using q's reported backtrace
+/ line, so no static bytecode->line map is needed here.)
 
 / User-defined data globals in the root namespace, as a JSON name->repr map, for
 / the debugger's Globals scope. Functions and namespaces (types 100-112h) are
@@ -40,3 +18,14 @@
   m:not (type each v) within 100 112h;
   k:k where m; v:v where m;
   .j.j k ! {@[.Q.s1;x;{"?"}]} each v };
+
+/ Parameter and local names of a lambda, as a JSON array of strings, for the
+/ debugger's Locals scope. `value f` layout: index 1 is the params, index 2 the
+/ locals (both symbol vectors). Resolves the function by name and degrades to an
+/ empty array for anything that is not a lambda or whose shape is unexpected.
+/   nm - the function's name as a symbol (e.g. `g or `.ns.f)
+.dbg.locals:{[nm]
+  f:@[get;nm;::];
+  $[100h = type f;
+    .j.j string @[{raze (value x) 1 2};f;`$()];
+    .j.j `$()] };

@@ -13,7 +13,6 @@
 
 import * as assert from "node:assert";
 import * as sinon from "sinon";
-import * as vscode from "vscode";
 
 import { QDebugDriver } from "../../../src/classes/qDebugDriver";
 
@@ -59,7 +58,6 @@ describe("QDebugDriver", () => {
       if (out !== undefined) queueMicrotask(() => (driver as any).onData(out));
     });
     (driver as any).proc = proc;
-    (driver as any).pending = undefined;
     return { writes, data: (chunk: string) => (driver as any).onData(chunk) };
   }
 
@@ -68,9 +66,6 @@ describe("QDebugDriver", () => {
       const createProcess = sinon
         .stub(QDebugDriver.prototype, <any>"createProcess")
         .returns(fakeProcess());
-      sinon
-        .stub(vscode.window, "createTerminal")
-        .returns(<vscode.Terminal>{ show() {}, dispose() {} });
 
       const started = driver.start(
         "/opt/q",
@@ -92,21 +87,32 @@ describe("QDebugDriver", () => {
       assert.strictEqual(options.env.QHOME, "/opt/qhome");
       assert.strictEqual(driver.promptDepth, 1);
       assert.strictEqual(driver.suspended, false);
+      assert.strictEqual(driver.alive, true);
     });
 
-    it("names the terminal 'q Debug'", async () => {
-      sinon
+    it("prepends the command prefix (e.g. a venv activation)", async () => {
+      const createProcess = sinon
         .stub(QDebugDriver.prototype, <any>"createProcess")
         .returns(fakeProcess());
-      const createTerminal = sinon
-        .stub(vscode.window, "createTerminal")
-        .returns(<vscode.Terminal>{ show() {}, dispose() {} });
 
-      const started = driver.start("/opt/q", {});
+      const started = driver.start("/opt/q", {}, undefined, undefined, "source x && ");
       (driver as any).onData("q)");
       await started;
 
-      assert.strictEqual(createTerminal.firstCall.args[0].name, "q Debug");
+      assert.ok(
+        (createProcess.firstCall.args[0] as string).startsWith("source x && "),
+        "the command begins with the prefix",
+      );
+    });
+  });
+
+  describe("data event", () => {
+    it("emits raw q output for a display consumer", () => {
+      const chunks: string[] = [];
+      driver.on("data", (c: string) => chunks.push(c));
+      attach();
+      (driver as any).onData("some output\nq)");
+      assert.deepStrictEqual(chunks, ["some output\nq)"]);
     });
   });
 
@@ -141,6 +147,27 @@ describe("QDebugDriver", () => {
     });
   });
 
+  describe("prompt parsing", () => {
+    it("reads the namespace from a q.ns) prompt", async () => {
+      const io = attach();
+      const p = driver.run("\\d .foo");
+      io.data("q.foo)");
+      const result = await p;
+      assert.strictEqual(result.depth, 1);
+      assert.strictEqual(driver.namespace, ".foo");
+      assert.strictEqual(driver.suspended, false);
+    });
+
+    it("tracks suspend depth from the trailing ) count", async () => {
+      const io = attach();
+      const p = driver.run("f 1");
+      io.data("'type\nq))");
+      const result = await p;
+      assert.strictEqual(result.depth, 2);
+      assert.strictEqual(driver.suspended, true);
+    });
+  });
+
   describe("suspend detection", () => {
     it("marks an exception stop from a leading ' signal at a deeper prompt", async () => {
       const io = attach();
@@ -149,7 +176,6 @@ describe("QDebugDriver", () => {
       const result = await p;
       assert.strictEqual(result.depth, 2);
       assert.strictEqual(result.errored, true);
-      assert.strictEqual(driver.suspended, true);
       assert.strictEqual(driver.stopReason, "exception");
     });
 
@@ -192,9 +218,6 @@ describe("QDebugDriver", () => {
 
   describe("evaluate", () => {
     it("pops back to the original depth after a nested error and restores the stop reason", async () => {
-      // Suspended at a breakpoint (depth 2). Evaluating an unassigned local nests
-      // another level; evaluate() must unwind with `\` back to depth 2 and keep
-      // the original "breakpoint" reason (the eval error is not why we stopped).
       const responder = (chunk: string) =>
         chunk.startsWith("\\") ? "q))" : "'badvar\nq)))";
       const io = attach(responder);
@@ -205,10 +228,7 @@ describe("QDebugDriver", () => {
 
       assert.strictEqual(result.depth, 2, "unwound back to the breakpoint depth");
       assert.strictEqual(driver.stopReason, "breakpoint");
-      assert.ok(
-        io.writes.some((w) => w.startsWith("\\")),
-        "an abort was sent to pop the nested level",
-      );
+      assert.ok(io.writes.some((w) => w.startsWith("\\")));
     });
 
     it("returns the value without unwinding when the prompt does not deepen", async () => {
@@ -220,24 +240,37 @@ describe("QDebugDriver", () => {
 
       assert.strictEqual(result.output, "42");
       assert.strictEqual(result.depth, 2);
-      assert.ok(
-        !io.writes.some((w) => w.startsWith("\\")),
-        "no abort is needed when the level did not change",
+      assert.ok(!io.writes.some((w) => w.startsWith("\\")));
+    });
+  });
+
+  describe("reset", () => {
+    it("unwinds any suspension back to the top level", async () => {
+      // Each abort pops one level: q))) -> q)) -> q).
+      let level = 3;
+      const io = attach((chunk) =>
+        chunk.startsWith("\\") ? "q" + ")".repeat(--level) : undefined,
+      );
+      (driver as any).depth = 3;
+
+      await driver.reset();
+
+      assert.strictEqual(driver.promptDepth, 1);
+      assert.strictEqual(driver.stopReason, undefined);
+      assert.strictEqual(
+        io.writes.filter((w) => w.startsWith("\\")).length,
+        2,
+        "one abort per suspended level",
       );
     });
   });
 
   describe("dispose", () => {
-    it("disposes the terminal, clears the process, and rejects further commands", async () => {
+    it("clears the process and rejects further commands", async () => {
       attach();
-      const disposeSpy = sinon.spy();
-      (driver as any).terminal = { dispose: disposeSpy };
-
       driver.dispose();
-
-      assert.ok(disposeSpy.calledOnce);
       assert.strictEqual((driver as any).proc, undefined);
-      // A command issued after dispose must reject rather than hang forever.
+      assert.strictEqual(driver.alive, false);
       await assert.rejects(driver.run("2+2"), /not running/);
     });
   });

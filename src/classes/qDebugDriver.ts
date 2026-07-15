@@ -18,11 +18,15 @@ import {
   spawn,
 } from "node:child_process";
 import { EventEmitter } from "node:events";
-import * as vscode from "vscode";
 
-import { QFrame, parseBacktrace } from "../utils/qBacktrace";
+import {
+  QFrame,
+  QPosition,
+  parseBacktrace,
+  parseCurrentPosition,
+} from "../utils/qBacktrace";
 
-export type { QFrame } from "../utils/qBacktrace";
+export type { QFrame, QPosition } from "../utils/qBacktrace";
 
 /** Result of running a single command at the (possibly nested) q prompt. */
 export interface QCommandResult {
@@ -35,12 +39,14 @@ export interface QCommandResult {
 }
 
 /**
- * Matches the q prompt at the very end of accumulated output. q prints `q)` at top
- * level and adds one `)` per nested debugger suspension (`q))`, `q)))`, ...). The
- * prompt is emitted with no trailing newline while q waits for input; the driver
- * consumes each prompt as it arrives, so the next prompt starts a fresh buffer.
+ * Matches the q prompt at the very end of accumulated output. Under `KX_TTY=1` q
+ * prints its own prompt: `q)` at top level, `q.ns)` inside a namespace, and one
+ * extra `)` per nested debugger suspension (`q))`, `q.ns))`, ...). The prompt is
+ * emitted with no trailing newline while q waits for input; the driver consumes
+ * each prompt as it arrives, so the next prompt starts a fresh buffer.
+ *   group 1 = whole prompt, group 2 = namespace (".foo" or ""), group 3 = the `)`s
  */
-const PROMPT_RE = /(?:^|\n)(q(\)+))[ \t]*$/;
+const PROMPT_RE = /(?:^|\n)(q([.\w]*)(\)+))[ \t]*$/;
 
 /** ANSI CSI/OSC escape sequences to strip before parsing q's text output. */
 const ANSI_RE =
@@ -50,35 +56,33 @@ const ANSI_RE =
 const DEFAULT_COMMAND_TIMEOUT = 15000;
 const START_TIMEOUT = 30000;
 
-const CRLF = "\r\n";
-
 /**
- * Drives q's native interactive debugger over a plain piped child process — the
- * same transport the REPL uses (see src/classes/replConnection.ts), no native
- * module and no terminal shell integration required. The trick is `KX_TTY=1`,
- * which makes q behave as if attached to a tty (so its interactive debugger and
- * the `q))` suspend prompt engage) even though stdio is piped; `KX_LINE=0`
- * disables q's own readline echo so the stream stays clean and line-based.
+ * Drives q over a plain piped child process — the transport shared by the REPL
+ * ({@link ../classes/replConnection}) and the debugger. No native module and no
+ * terminal shell integration: `KX_TTY=1` makes q behave as if attached to a tty
+ * (so it prints prompts and its interactive debugger's `q))` suspend engages)
+ * even though stdio is piped, and `KX_LINE=0` disables q's readline echo so the
+ * stream stays clean and line-based.
  *
- * The child's output is mirrored into a VS Code `Pseudoterminal` so the user
- * watches the live session, while the driver reads the same stream to track the
- * prompt depth (whether q is suspended) and parse backtraces. Commands the
- * debugger issues are written straight to the child's stdin.
+ * This class owns only the q process and the prompt state machine. It does NOT
+ * own a terminal: q's raw output is emitted as a `data` event for a consumer
+ * (the REPL's pseudoterminal) to display, and commands the caller issues are
+ * written straight to the child's stdin. Tracking the prompt reveals the current
+ * namespace and whether q is suspended (depth >= 2).
+ *
+ * Events: `data` (string chunk of q output), `exited` (code), `reveal` (a
+ * request to surface the owning terminal).
  */
 export class QDebugDriver extends EventEmitter {
   private readonly win32 = process.platform === "win32";
   private proc?: ChildProcessWithoutNullStreams;
-  private terminal?: vscode.Terminal;
-  private readonly onDidWrite = new vscode.EventEmitter<string>();
   private readonly decoder = new TextDecoder("utf8");
 
   private buffer = "";
   private depth = 1;
+  private ns = "";
   private exited = false;
   private lastStop: "breakpoint" | "exception" | undefined;
-  /** Display output buffered until the pseudoterminal's `open()` fires. */
-  private pending?: string[] = [];
-  private readonly disposables: vscode.Disposable[] = [];
 
   private readonly queue: {
     resolve: (r: QCommandResult) => void;
@@ -92,20 +96,24 @@ export class QDebugDriver extends EventEmitter {
    * @param qBinPath absolute path to the q executable
    * @param env process environment (typically from getEnvironment); KX_TTY=1 and KX_LINE=0 are forced on
    * @param cwd working directory for the q process
-   * @param startupScript q script loaded at startup (the debug helper), before the user program
+   * @param startupScript q script loaded at startup (the debug helper), before any user input
+   * @param commandPrefix shell text run before q (e.g. a venv `source …/activate && `)
    */
   async start(
     qBinPath: string,
     env: { [key: string]: string },
     cwd?: string,
     startupScript?: string,
+    commandPrefix = "",
   ): Promise<void> {
-    // KX_TTY=1 engages q's interactive debugger over pipes; KX_LINE=0 turns off
-    // q's readline echo so the stream is clean, line-based output.
+    // KX_TTY=1 engages q's tty mode (prompts + interactive debugger) over pipes;
+    // KX_LINE=0 turns off q's readline echo so the stream is clean line output.
     const childEnv = { ...env, KX_TTY: "1", KX_LINE: "0" };
-    const command = startupScript
-      ? `${quote(qBinPath)} ${quote(startupScript)}`
-      : quote(qBinPath);
+    const command =
+      commandPrefix +
+      (startupScript
+        ? `${quote(qBinPath)} ${quote(startupScript)}`
+        : quote(qBinPath));
 
     const proc = this.createProcess(command, {
       env: childEnv,
@@ -115,39 +123,23 @@ export class QDebugDriver extends EventEmitter {
     });
     this.proc = proc;
 
-    const onExit = () => this.handleClosed();
     proc.on("error", (e) => this.handleSpawnError(e));
-    proc.on("exit", onExit);
+    proc.on("exit", () => this.handleClosed());
     proc.stdout.on("data", (d) => this.onData(this.decoder.decode(d)));
     proc.stderr.on("data", (d) => this.onData(this.decoder.decode(d)));
-
-    // Mirror the session into a visible pseudoterminal, exactly like the REPL:
-    // VS Code owns the terminal UI, the extension is its backend, and the q
-    // child stays on plain pipes that the driver controls.
-    this.terminal = vscode.window.createTerminal({
-      name: "q Debug",
-      pty: {
-        onDidWrite: this.onDidWrite.event,
-        open: () => this.flushPending(),
-        close: () => this.dispose(),
-        handleInput: (data: string) => this.proc?.stdin.write(data),
-      },
-      isTransient: true,
-    });
-    this.terminal.show(true);
-    this.disposables.push(
-      vscode.window.onDidCloseTerminal((t) => {
-        if (t === this.terminal) this.handleClosed();
-      }),
-    );
 
     // Wait for q's initial `q)` prompt before accepting commands.
     await this.waitForPrompt(START_TIMEOUT);
   }
 
-  /** Bring the q terminal to the foreground so the user sees the live session. */
+  /** Ask the owning terminal (if any) to surface itself. */
   reveal(): void {
-    this.terminal?.show(true);
+    this.emit("reveal");
+  }
+
+  /** True while the q process is running. */
+  get alive(): boolean {
+    return !!this.proc && !this.exited;
   }
 
   /** True when q is currently suspended in the debugger (prompt depth >= 2). */
@@ -158,6 +150,11 @@ export class QDebugDriver extends EventEmitter {
   /** Current prompt depth (1 == top level). */
   get promptDepth(): number {
     return this.depth;
+  }
+
+  /** Current namespace as shown in the prompt (".foo", or "" at root). */
+  get namespace(): string {
+    return this.ns;
   }
 
   /** Why the debugger is currently suspended (undefined when running). */
@@ -221,6 +218,12 @@ export class QDebugDriver extends EventEmitter {
     return parseBacktrace(result.output);
   }
 
+  /** Current execution position (file/line/caret column) of the suspended frame. */
+  async position(): Promise<QPosition | undefined> {
+    const result = await this.run(".Q.bt[]");
+    return parseCurrentPosition(result.output);
+  }
+
   /**
    * Resume from a breakpoint. `:` continues execution; the breakpoint auto-re-arms,
    * so this returns once q either hits the next breakpoint or runs to completion.
@@ -240,23 +243,34 @@ export class QDebugDriver extends EventEmitter {
     }
   }
 
+  /** Reset debugger state for reuse by a new session: unwind any suspension. */
+  async reset(): Promise<void> {
+    if (this.alive) await this.abortToTop();
+    this.lastStop = undefined;
+  }
+
   /** Load a q script into the running process. */
   async load(fsPath: string): Promise<QCommandResult> {
     return this.run(`\\l ${fsPath}`);
   }
 
-  /** Terminate the q process and its terminal. */
+  /** Interrupt a running computation (SIGINT), e.g. from a REPL Ctrl+C. */
+  interrupt(): void {
+    const pid = this.proc?.pid;
+    if (pid) {
+      try {
+        kill(pid, "SIGINT", true);
+      } catch {
+        /* nothing to interrupt */
+      }
+    }
+  }
+
+  /** Terminate the q process. */
   dispose(): void {
     if (this.exited) return;
     this.exited = true;
     this.failPending(new Error("q process exited"));
-    for (const d of this.disposables.splice(0)) {
-      try {
-        d.dispose();
-      } catch {
-        /* ignore */
-      }
-    }
     const pid = this.proc?.pid;
     if (pid) {
       try {
@@ -266,12 +280,6 @@ export class QDebugDriver extends EventEmitter {
       }
     }
     this.proc = undefined;
-    try {
-      this.terminal?.dispose();
-    } catch {
-      /* already gone */
-    }
-    this.terminal = undefined;
   }
 
   // ---- internals ----
@@ -285,7 +293,7 @@ export class QDebugDriver extends EventEmitter {
   }
 
   private handleSpawnError(error: Error): void {
-    this.writeDisplay(`Failed to start q: ${error.message}${CRLF}`);
+    this.emit("data", `Failed to start q: ${error.message}\n`);
     this.handleClosed();
   }
 
@@ -326,22 +334,11 @@ export class QDebugDriver extends EventEmitter {
   }
 
   private onData(data: string): void {
-    // Show the raw q output to the user (as CRLF for the terminal), and feed a
+    // Emit the raw output for a display consumer (the REPL terminal), and feed a
     // cleaned copy (no ANSI, no CR) to the prompt/backtrace parser.
-    this.writeDisplay(data.replace(/\r?\n/g, CRLF));
+    this.emit("data", data);
     this.buffer += data.replace(ANSI_RE, "").replace(/\r/g, "");
     this.drain();
-  }
-
-  private writeDisplay(text: string): void {
-    if (this.pending) this.pending.push(text);
-    else this.onDidWrite.fire(text);
-  }
-
-  private flushPending(): void {
-    const pending = this.pending;
-    this.pending = undefined;
-    pending?.forEach((t) => this.onDidWrite.fire(t));
   }
 
   private drain(): void {
@@ -350,12 +347,12 @@ export class QDebugDriver extends EventEmitter {
       const m = head.match(this.buffer);
       if (!m || m.index === undefined) return;
 
-      const prompt = m[1];
       const consumedEnd = m.index + m[0].length;
       const raw = this.buffer.slice(0, m.index);
       this.buffer = this.buffer.slice(consumedEnd);
 
-      this.depth = countTrailing(prompt, ")");
+      this.ns = m[2] ?? "";
+      this.depth = (m[3] ?? ")").length;
 
       const output = raw.replace(/^\n+/, "").replace(/\n+$/, "");
       // Record why execution is suspended from the markers q prints: `#<index>`
@@ -385,12 +382,6 @@ export class QDebugDriver extends EventEmitter {
       head.reject(err);
     }
   }
-}
-
-function countTrailing(s: string, ch: string): number {
-  let n = 0;
-  for (let i = s.length - 1; i >= 0 && s[i] === ch; i--) n++;
-  return n;
 }
 
 function isError(output: string): boolean {
