@@ -99,9 +99,22 @@ describe("qBacktrace.parseCurrentPosition", () => {
 
   it("returns undefined when no frame is current", () => {
     assert.strictEqual(parseCurrentPosition(""), undefined);
-    assert.strictEqual(
-      parseCurrentPosition("  [0]  add[10;20]\n       ^"),
-      undefined,
-    );
+  });
+
+  // q's `>` single-step echoes only the current frame, with the ordinary `  [n]`
+  // prefix rather than the `>>` marker. The parser takes the first frame then.
+  it("reads position from a single-step echo that has no `>>` marker", () => {
+    const echo = [
+      "  [1]  /tmp/add.q:3: add:{[x;y]",
+      "  p:x+1;",
+      "  q:y+1;",
+      "    ^",
+      "  r:p+q; r }",
+    ].join("\n");
+    const pos = parseCurrentPosition(echo);
+    assert.strictEqual(pos?.file, "/tmp/add.q");
+    assert.strictEqual(pos?.line, 3);
+    assert.strictEqual(pos?.col, 4);
+    assert.strictEqual("  q:y+1;"[pos!.col!], "y");
   });
 });

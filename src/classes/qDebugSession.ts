@@ -40,13 +40,15 @@ import { splitTopLevelStatements, QStatement } from "../utils/qStatements";
 
 interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
   program: string;
-  qBinPath?: string;
-  stopOnEntry?: boolean;
 }
 
 const THREAD_ID = 1;
 // Variables references encode the frame index they belong to (offset avoids 0).
 const VAR_REF_BASE = 1000;
+// Ceiling on single-steps taken to reach a breakpoint line from a function entry
+// trap. A breakpoint only reachable after this many instructions is treated as
+// unsteppable rather than spinning indefinitely.
+const MAX_BREAKPOINT_STEPS = 100000;
 
 export class QDebugSession extends LoggingDebugSession {
   // Only one debug session may drive a (possibly shared) q process at a time.
@@ -65,6 +67,7 @@ export class QDebugSession extends LoggingDebugSession {
   private repl?: ReplConnection;
   private onExited?: () => void;
   private cancelled = false;
+  private released = false;
   private program = "";
   private configDone = false;
   private started = false;
@@ -82,11 +85,15 @@ export class QDebugSession extends LoggingDebugSession {
   /** Requested breakpoint lines, keyed by absolute source path. */
   private readonly requestedBreakpoints = new Map<string, number[]>();
   /**
-   * Native breakpoints currently set on the shared q process, keyed by
-   * `name\0index`. Tracked so they can be removed (`.Q.bd`) when the session
-   * ends — leaving `0xff` traps in the REPL's functions would corrupt them.
+   * Native breakpoints currently set on the shared q process, keyed by function
+   * name. Tracked so they can be recovered (`.Q.bu`) when the session ends or the
+   * breakpoint is removed — leaving `0xff` traps in the REPL's functions would
+   * corrupt them.
    */
-  private readonly armedTraps = new Map<string, { name: string; index: number }>();
+  private readonly armedTraps = new Map<
+    string,
+    { name: string; index: number }
+  >();
   /** Temp dir holding per-statement load files; their frames map back to programPath. */
   private tempDir?: string;
   private tempSeq = 0;
@@ -271,6 +278,16 @@ export class QDebugSession extends LoggingDebugSession {
       });
       return;
     }
+    // Hovering must not mutate the debuggee: q evaluates whatever text is sent, so
+    // restrict hover to a bare name/index lookup (no assignment `:`, no `;`). Watch
+    // and REPL expressions are entered deliberately and left unrestricted.
+    if (args.context === "hover" && !isReadOnlyExpression(args.expression)) {
+      this.sendErrorResponse(response, {
+        id: 1003,
+        format: "Hover evaluation is limited to simple lookups.",
+      });
+      return;
+    }
     if (args.frameId !== undefined) {
       await this.navigateTo(args.frameId);
     }
@@ -317,9 +334,7 @@ export class QDebugSession extends LoggingDebugSession {
     await this.stepStatement();
   }
 
-  protected terminateRequest(
-    response: DebugProtocol.TerminateResponse,
-  ): void {
+  protected terminateRequest(response: DebugProtocol.TerminateResponse): void {
     // Report termination FIRST, then unwind. release() unwinds the debugger and
     // removes traps but keeps the shared q process alive, so nothing else signals
     // the session is over — and its abort commands can take a moment. Answering
@@ -343,6 +358,9 @@ export class QDebugSession extends LoggingDebugSession {
    * next debug session) can keep using the same instance.
    */
   private async release(): Promise<void> {
+    // VS Code sends both terminate and disconnect; unwind the shared process once.
+    if (this.released) return;
+    this.released = true;
     this.cancelled = true;
     if (QDebugSession.current === this) QDebugSession.current = undefined;
     if (this.onExited && this.driver) {
@@ -357,9 +375,12 @@ export class QDebugSession extends LoggingDebugSession {
       }
       // Remove every native trap this session set, so the shared process the
       // REPL keeps using is left with clean (un-patched) function bytecode.
+      // `.Q.bu` recovers the original bytecode (`.Q.bd` is unreliable on current
+      // KDB-X builds — its `.Q.BP` bookkeeping signals `'length`). Recovery is
+      // only safe at top level, which reset()/abortToTop() above guarantees.
       for (const { name, index } of this.armedTraps.values()) {
         try {
-          await this.driver.evaluate(`.Q.bd[${name};${index}]`);
+          await this.driver.evaluate(`.Q.bu[${name};${index}]`);
         } catch {
           /* best effort */
         }
@@ -420,8 +441,10 @@ export class QDebugSession extends LoggingDebugSession {
         this.stmtIndex++;
 
         // Arm breakpoints for functions defined by previously-loaded statements,
-        // so a call in this statement stops correctly.
-        await this.armBreakpoints(this.loadedThroughLine);
+        // so a call in this statement stops correctly (and disarm any the user
+        // has since removed). Runs at a top-level statement boundary, where trap
+        // recovery is safe.
+        await this.syncBreakpoints(this.loadedThroughLine);
 
         await this.loadStatement(stmt);
         this.loadedThroughLine = Math.max(this.loadedThroughLine, stmt.endLine);
@@ -510,13 +533,12 @@ export class QDebugSession extends LoggingDebugSession {
     let prevId = startId;
     let guard = 0;
     while (this.driver.suspended && guard++ < 256) {
-      await this.driver.step();
+      const pos = await this.driver.stepPosition();
       if (!this.driver.suspended) break;
       if (this.driver.stopReason === "exception") {
         await this.reportStopped();
         return;
       }
-      const pos = await this.driver.position();
       const line = pos?.line;
       if (line === undefined || line === braceLine) continue;
       const id = statementId(separators, line, pos?.col);
@@ -568,16 +590,31 @@ export class QDebugSession extends LoggingDebugSession {
   private async advanceToBreakpoint(): Promise<
     "breakpoint" | "exception" | "exited"
   > {
+    // Read the entry position once, then step-and-read in a single round-trip per
+    // instruction (q's `>` echoes the new position), rather than a separate
+    // `.Q.bt[]` before every step.
+    let pos = await this.driver.position();
     let guard = 0;
-    while (this.driver.suspended && guard++ < 100000) {
+    while (this.driver.suspended && guard++ < MAX_BREAKPOINT_STEPS) {
       if (this.driver.stopReason === "exception") return "exception";
-      const pos = await this.driver.position();
       if (this.isBreakpointLine(this.mapToProgram(pos?.file), pos?.line)) {
         return "breakpoint";
       }
-      await this.driver.step();
+      pos = await this.driver.stepPosition();
     }
-    return this.driver.suspended ? "breakpoint" : "exited";
+    if (this.driver.suspended) {
+      // Hit the step ceiling while still running: stop here rather than silently
+      // stepping forever, and say so (a breakpoint reachable only after this many
+      // instructions is effectively unsteppable through the native debugger).
+      this.sendEvent(
+        new OutputEvent(
+          `Stopped searching for a breakpoint after ${MAX_BREAKPOINT_STEPS} steps.\n`,
+          "console",
+        ),
+      );
+      return "breakpoint";
+    }
+    return "exited";
   }
 
   /** True when `line` in `file` carries a requested breakpoint. */
@@ -610,7 +647,8 @@ export class QDebugSession extends LoggingDebugSession {
       this.currentFrames[0]?.index ??
       0;
     await this.captureMarker();
-    const reason = this.driver.stopReason === "breakpoint" ? "breakpoint" : "exception";
+    const reason =
+      this.driver.stopReason === "breakpoint" ? "breakpoint" : "exception";
     // Surface the live q terminal (where the debugger prompt is) on each stop.
     this.driver.reveal();
     this.sendEvent(new StoppedEvent(reason, THREAD_ID));
@@ -638,24 +676,43 @@ export class QDebugSession extends LoggingDebugSession {
   }
 
   /**
-   * Arm breakpoints for functions defined up to `throughLine`. A trap is set at
-   * the function ENTRY (`.Q.bs[f;0]` - index 0 is always a valid stop). When it
-   * fires we single-step to the requested source line (advanceToBreakpoint) using
-   * q's own reported line, so placement is correct even inside if/while/do/$
-   * constructs (a static bytecode-offset map does not reliably predict the line q
-   * reports). The entry trap is recorded in `armedTraps` for removal on session end.
+   * Reconcile native traps with the requested breakpoints, for functions defined
+   * up to `throughLine`. A trap is set at the function ENTRY (`.Q.bs[f;0]` - index
+   * 0 is always a valid stop). When it fires we single-step to the requested source
+   * line (advanceToBreakpoint) using q's own reported line, so placement is correct
+   * even inside if/while/do/$ constructs (a static bytecode-offset map does not
+   * reliably predict the line q reports). Traps for functions whose breakpoints
+   * were all removed are recovered (`.Q.bu`) here, at a top-level boundary where
+   * that is safe; the rest are recorded in `armedTraps` for removal on session end.
    */
-  private async armBreakpoints(throughLine: number): Promise<void> {
+  private async syncBreakpoints(throughLine: number): Promise<void> {
+    // Function names that still carry at least one requested breakpoint line.
+    const wanted = new Set<string>();
     for (const [file, lines] of this.requestedBreakpoints) {
       const text = this.readSource(file);
       if (text === undefined) continue;
       for (const line of lines) {
         const fn = functionAt(text, line);
-        if (!fn || fn.startLine > throughLine) continue;
-        if (this.armedTraps.has(fn.name)) continue;
-        await this.driver.evaluate(`.Q.bs[${fn.name};0]`);
-        this.armedTraps.set(fn.name, { name: fn.name, index: 0 });
+        if (!fn) continue;
+        wanted.add(fn.name);
+        if (fn.startLine > throughLine || this.armedTraps.has(fn.name))
+          continue;
+        // The function may not be defined yet (loaded, but its assignment not
+        // reached, or resolved via a name the process does not know). Only record
+        // the trap when `.Q.bs` succeeds, so a failed arm is retried at the next
+        // statement boundary rather than left as a phantom trap.
+        const res = await this.driver.evaluate(`.Q.bs[${fn.name};0]`);
+        if (!res.errored) {
+          this.armedTraps.set(fn.name, { name: fn.name, index: 0 });
+        }
       }
+    }
+    // Recover functions whose breakpoints were all removed, so their calls stop
+    // firing the entry trap (which would otherwise single-step to no purpose).
+    for (const [name, { index }] of [...this.armedTraps]) {
+      if (wanted.has(name)) continue;
+      await this.driver.evaluate(`.Q.bu[${name};${index}]`);
+      this.armedTraps.delete(name);
     }
   }
 
@@ -726,12 +783,22 @@ function errText(err: unknown): string {
 }
 
 /**
+ * Whether an expression is safe to evaluate on hover: a bare (optionally dotted)
+ * name, optionally with a single simple index like `t[0]`. Excludes assignment
+ * (`:`), statement separators (`;`) and anything else that could mutate the
+ * debuggee when VS Code auto-evaluates a hovered token.
+ */
+export function isReadOnlyExpression(expression: string): boolean {
+  return /^\s*[.a-zA-Z][a-zA-Z0-9_.]*\s*(\[[^\][:;]*\])?\s*$/.test(expression);
+}
+
+/**
  * Index of the `;`-separated statement containing a 0-based (line, col) position:
  * the count of lambda separators that precede it. Two positions in the same
  * statement share an id; crossing a `;` increments it. Used to detect when a step
  * has moved to the next statement on the same line.
  */
-function statementId(
+export function statementId(
   separators: QSeparator[],
   line?: number,
   col?: number,
@@ -752,7 +819,7 @@ function statementId(
  * line start), skipping leading whitespace. `separators` are the lambda/control
  * `;` from the parser, so list/application/param `;` never split a statement.
  */
-function statementStart(
+export function statementStart(
   separators: QSeparator[],
   lineText: string,
   line: number,
@@ -770,7 +837,7 @@ function statementStart(
   return start;
 }
 
-function frameName(f: QFrame): string {
+export function frameName(f: QFrame): string {
   // Prefer the assigned function name (e.g. `g` from `g:{...}`), else the text.
   const m = f.text.match(/^([.a-zA-Z][a-zA-Z0-9_.]*)\s*:/);
   return m ? m[1] : f.text.slice(0, 40);
@@ -781,13 +848,13 @@ function frameName(f: QFrame): string {
  * `name:{...}` definition), suitable for `` `name `` in a q expression. Anonymous
  * lambdas return undefined (no locals can be looked up by name).
  */
-function frameFuncName(f: QFrame): string | undefined {
+export function frameFuncName(f: QFrame): string | undefined {
   const m = f.text.match(/^([.a-zA-Z][a-zA-Z0-9_.]*)\s*:/);
   return m ? m[1] : undefined;
 }
 
 /** Parse the JSON string array `.dbg.locals` prints (`.j.j`, quoted by q). */
-function parseJsonNames(output: string): string[] {
+export function parseJsonNames(output: string): string[] {
   const jsonText = unquoteQString(output.trim());
   if (jsonText === undefined) return [];
   try {
@@ -818,13 +885,13 @@ export function parseJsonDict(
 }
 
 /** q prints a string as `"...\"...\""`; unwrap the outer quotes and unescape. */
-function unquoteQString(s: string): string | undefined {
+export function unquoteQString(s: string): string | undefined {
   if (s.length < 2 || !s.startsWith('"') || !s.endsWith('"')) return undefined;
   const inner = s.slice(1, -1);
   return inner.replace(/\\(["\\/])/g, "$1");
 }
 
-function formatValue(value: unknown): string {
+export function formatValue(value: unknown): string {
   if (value === null) return "::";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);

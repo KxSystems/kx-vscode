@@ -95,7 +95,13 @@ describe("QDebugDriver", () => {
         .stub(QDebugDriver.prototype, <any>"createProcess")
         .returns(fakeProcess());
 
-      const started = driver.start("/opt/q", {}, undefined, undefined, "source x && ");
+      const started = driver.start(
+        "/opt/q",
+        {},
+        undefined,
+        undefined,
+        "source x && ",
+      );
       (driver as any).onData("q)");
       await started;
 
@@ -113,6 +119,31 @@ describe("QDebugDriver", () => {
       attach();
       (driver as any).onData("some output\nq)");
       assert.deepStrictEqual(chunks, ["some output\nq)"]);
+    });
+
+    it("mirrors output for a command run with echo (the default)", async () => {
+      const chunks: string[] = [];
+      driver.on("data", (c: string) => chunks.push(c));
+      const io = attach();
+      const p = driver.run("2+2");
+      io.data("4\nq)");
+      await p;
+      assert.ok(chunks.join("").includes("4"));
+    });
+
+    it("suppresses output for a command run with echo=false", async () => {
+      const chunks: string[] = [];
+      driver.on("data", (c: string) => chunks.push(c));
+      const io = attach();
+      // Debugger control traffic (e.g. a backtrace) must not reach the terminal.
+      const p = driver.run(".Q.bt[]", false);
+      io.data(">>[1]  f:{x+1}\n       ^\nq))");
+      await p;
+      assert.deepStrictEqual(
+        chunks,
+        [],
+        "no output mirrored for a silent command",
+      );
     });
   });
 
@@ -226,7 +257,11 @@ describe("QDebugDriver", () => {
 
       const result = await driver.evaluate("badvar");
 
-      assert.strictEqual(result.depth, 2, "unwound back to the breakpoint depth");
+      assert.strictEqual(
+        result.depth,
+        2,
+        "unwound back to the breakpoint depth",
+      );
       assert.strictEqual(driver.stopReason, "breakpoint");
       assert.ok(io.writes.some((w) => w.startsWith("\\")));
     });

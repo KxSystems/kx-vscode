@@ -566,15 +566,6 @@
                 "type": "string",
                 "description": "Path to the .q file to debug.",
                 "default": "${file}"
-              },
-              "qBinPath": {
-                "type": "string",
-                "description": "Path to the q executable. Defaults to the extension setting."
-              },
-              "stopOnEntry": {
-                "type": "boolean",
-                "description": "Stop on first line of the program.",
-                "default": false
               }
             }
           }

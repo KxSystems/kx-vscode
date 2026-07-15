@@ -89,6 +89,8 @@ export class QDebugDriver extends EventEmitter {
     reject: (e: Error) => void;
     match: (buf: string) => RegExpMatchArray | null;
     timer: NodeJS.Timeout;
+    /** Whether this command's q output is mirrored to the display consumer. */
+    echo: boolean;
   }[] = [];
 
   /**
@@ -165,15 +167,22 @@ export class QDebugDriver extends EventEmitter {
   /**
    * Send a command and resolve once q returns to a prompt. q (KX_LINE=0) does not
    * echo input, so the returned output is exactly what q printed in response.
+   *
+   * `echo` controls whether q's output for this command is mirrored to the display
+   * consumer (the REPL terminal). The debugger's own control traffic — backtraces,
+   * single-steps, frame navigation, breakpoint (un)arming, locals probes — is run
+   * with `echo=false` so it does not flood the shared terminal; only the user
+   * program's own output (loads, continues) is left visible.
    */
   async run(
     command: string,
+    echo = true,
     timeout = DEFAULT_COMMAND_TIMEOUT,
   ): Promise<QCommandResult> {
     if (!this.proc || this.exited) {
       throw new Error("q process is not running");
     }
-    const result = this.enqueue((buf) => buf.match(PROMPT_RE), timeout);
+    const result = this.enqueue((buf) => buf.match(PROMPT_RE), timeout, echo);
     this.proc.stdin.write(command + "\n");
     return result;
   }
@@ -186,7 +195,7 @@ export class QDebugDriver extends EventEmitter {
   async evaluate(expr: string): Promise<QCommandResult> {
     const before = this.depth;
     const reason = this.lastStop;
-    const result = await this.run(expr);
+    const result = await this.run(expr, false);
     if (result.depth > before) {
       await this.popTo(before);
       result.depth = this.depth;
@@ -197,30 +206,38 @@ export class QDebugDriver extends EventEmitter {
     return result;
   }
 
-  /** Single-step one bytecode instruction (native debugger `>` command). */
-  async step(): Promise<QCommandResult> {
-    return this.run(">");
+  /**
+   * Single-step one bytecode instruction (native debugger `>` command) and return
+   * the resulting execution position in one round-trip. q's `>` echoes the current
+   * frame (file:line + `^` caret) exactly as `.Q.bt[]` would, so a separate
+   * backtrace call is unnecessary. Returns undefined when the step left the
+   * debugger (the function returned) or no position could be parsed; callers check
+   * {@link suspended}/{@link stopReason} for why.
+   */
+  async stepPosition(): Promise<QPosition | undefined> {
+    const result = await this.run(">", false);
+    return this.suspended ? parseCurrentPosition(result.output) : undefined;
   }
 
   /** Move the debugger's current frame up (towards the outer/entry call). */
   async up(): Promise<void> {
-    await this.run("`");
+    await this.run("`", false);
   }
 
   /** Move the debugger's current frame down (towards the innermost call). */
   async down(): Promise<void> {
-    await this.run(".");
+    await this.run(".", false);
   }
 
   /** Fetch and parse the current backtrace via `.Q.bt[]`. */
   async frames(): Promise<QFrame[]> {
-    const result = await this.run(".Q.bt[]");
+    const result = await this.run(".Q.bt[]", false);
     return parseBacktrace(result.output);
   }
 
   /** Current execution position (file/line/caret column) of the suspended frame. */
   async position(): Promise<QPosition | undefined> {
-    const result = await this.run(".Q.bt[]");
+    const result = await this.run(".Q.bt[]", false);
     return parseCurrentPosition(result.output);
   }
 
@@ -239,7 +256,7 @@ export class QDebugDriver extends EventEmitter {
   async abortToTop(): Promise<void> {
     let guard = 0;
     while (this.depth > 1 && !this.exited && guard++ < 64) {
-      await this.run("\\");
+      await this.run("\\", false);
     }
   }
 
@@ -307,7 +324,7 @@ export class QDebugDriver extends EventEmitter {
   private async popTo(target: number): Promise<void> {
     let guard = 0;
     while (this.depth > target && !this.exited && guard++ < 64) {
-      await this.run("\\");
+      await this.run("\\", false);
     }
   }
 
@@ -320,6 +337,7 @@ export class QDebugDriver extends EventEmitter {
   private enqueue(
     match: (buf: string) => RegExpMatchArray | null,
     timeout: number,
+    echo = true,
   ): Promise<QCommandResult> {
     return new Promise<QCommandResult>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -327,16 +345,19 @@ export class QDebugDriver extends EventEmitter {
         if (idx !== -1) this.queue.splice(idx, 1);
         reject(new Error("Timed out waiting for q prompt"));
       }, timeout);
-      this.queue.push({ resolve, reject, match, timer });
+      this.queue.push({ resolve, reject, match, timer, echo });
       // A prompt may already be buffered (e.g. queued right after start).
       this.drain();
     });
   }
 
   private onData(data: string): void {
-    // Emit the raw output for a display consumer (the REPL terminal), and feed a
-    // cleaned copy (no ANSI, no CR) to the prompt/backtrace parser.
-    this.emit("data", data);
+    // Mirror the raw output to the display consumer (the REPL terminal) unless the
+    // in-flight command opted out (debugger control traffic). Commands are awaited
+    // one at a time, so output arriving now belongs to the head of the queue; with
+    // no command in flight (spontaneous output) it is shown. A cleaned copy (no
+    // ANSI, no CR) always feeds the prompt/backtrace parser.
+    if (this.queue[0]?.echo ?? true) this.emit("data", data);
     this.buffer += data.replace(ANSI_RE, "").replace(/\r/g, "");
     this.drain();
   }

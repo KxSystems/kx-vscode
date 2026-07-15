@@ -84,21 +84,31 @@ export interface QPosition {
 }
 
 /**
- * Extract the current execution position from a `.Q.bt[]` dump: the `>>` frame's
- * `file:line` and the column of the `^` caret q draws under the current token.
- * Unlike a top-level error, a suspended lambda's caret sits a few display lines
- * below the frame header (the frame prints the function's whole source), so scan
- * forward to the caret line, stopping at the next frame. Columns are absolute in
- * the source line (matching the parser), for mapping a step to a statement.
+ * Extract the current execution position from a q debugger dump: the current
+ * frame's `file:line` and the column of the `^` caret q draws under the current
+ * token. Unlike a top-level error, a suspended lambda's caret sits a few display
+ * lines below the frame header (the frame prints the function's whole source), so
+ * scan forward to the caret line, stopping at the next frame. Columns are absolute
+ * in the source line (matching the parser), for mapping a step to a statement.
+ *
+ * Two dump shapes are handled: `.Q.bt[]` marks the current frame `>>` amongst
+ * several, whereas the single-step (`>`) command echoes only the current frame
+ * with the ordinary `  [n]` prefix. When no `>>` marker is present we therefore
+ * take the first frame, so the step echo can be parsed without a second `.Q.bt[]`
+ * round-trip.
  */
 export function parseCurrentPosition(text: string): QPosition | undefined {
   const lines = text.split("\n");
   const frameRe = /^(>>|\s\s)\[(\d+)\]\s\s?(.*)$/;
   const fileRe = /^(.*):(\d+):\s(.*)$/;
+  const hasCurrent = lines.some((l) => l.startsWith(">>"));
 
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(frameRe);
-    if (!m || m[1] !== ">>") continue;
+    if (!m) continue;
+    // Prefer q's explicit `>>` current-frame marker; fall back to the first frame
+    // when the dump has none (a `>` step echo shows only the current frame).
+    if (hasCurrent && m[1] !== ">>") continue;
 
     let file: string | undefined;
     let line: number | undefined;
