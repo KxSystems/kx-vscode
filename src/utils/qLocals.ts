@@ -111,7 +111,11 @@ export function lambdaPathAt(
 
   // Enclosing-lambda chain, outermost first.
   const chain: Token[] = [];
-  for (let cur: Token | undefined = innermost; cur; cur = enclosingLambda(cur)) {
+  for (
+    let cur: Token | undefined = innermost;
+    cur;
+    cur = enclosingLambda(cur)
+  ) {
     if (cur.tokenType !== LCurly) return undefined;
     chain.unshift(cur);
   }
@@ -200,6 +204,25 @@ export function lambdaStatementSeparators(
         sequentialScope(t.scope),
     )
     .map((t) => ({ line: t.startLine ?? 0, column: t.startColumn ?? 0 }));
+}
+
+/**
+ * The default namespace in effect at a 1-based source line, as a prefix (e.g.
+ * `.utils`, or `""` for the root namespace), by scanning `\d` directives above
+ * the line. A program that switches namespace with `\d .utils` defines a bare
+ * `run:{…}` as `.utils.run`, so the adapter must qualify the parser's bare name
+ * before arming a trap or reading locals. `\d .` (or `\d`) resets to root. Only
+ * top-level `\d` command lines are considered (q forbids `\d` inside a lambda).
+ */
+export function namespaceAt(text: string, line: number): string {
+  const lines = text.split("\n");
+  const directive = /^\s*\\d\s+(\.[A-Za-z][\w.]*|\.)\s*$/;
+  let ns = "";
+  for (let i = 0; i < line - 1 && i < lines.length; i++) {
+    const m = lines[i].match(directive);
+    if (m) ns = m[1] === "." ? "" : m[1];
+  }
+  return ns;
 }
 
 /**

@@ -36,6 +36,7 @@ import {
   QSeparator,
   lambdaPathAt,
   lambdaStatementSeparators,
+  namespaceAt,
 } from "../utils/qLocals";
 import { splitTopLevelStatements, QStatement } from "../utils/qStatements";
 
@@ -530,6 +531,20 @@ export class QDebugSession extends LoggingDebugSession {
         // so every step-in trap is off-stack and safe to recover).
         await this.recoverStepInTraps();
 
+        // A `\d` namespace directive must change the SESSION's default namespace
+        // and persist for later statements; loaded via `\l` it would be reset
+        // when that load finishes (so `run:{…}` under `\d .utils` would wrongly
+        // define a root `run`). Run it directly instead — it defines no
+        // function, so it needs no line-mapped temp file.
+        if (/^\s*\\d\b/.test(stmt.text)) {
+          await this.driver.run(stmt.text.trim(), false);
+          this.loadedThroughLine = Math.max(
+            this.loadedThroughLine,
+            stmt.endLine,
+          );
+          continue;
+        }
+
         await this.loadStatement(stmt);
         this.loadedThroughLine = Math.max(this.loadedThroughLine, stmt.endLine);
         // q's output is shown live in the debug terminal, so it is not echoed
@@ -725,7 +740,12 @@ export class QDebugSession extends LoggingDebugSession {
       text && startLine !== undefined
         ? lambdaPathAt(text, startLine)
         : undefined;
-    const startName = enclosing?.name;
+    // Namespace-qualified name of the function we start in, so a nested-local
+    // step-in target resolves against the real global (e.g. `.utils.run`).
+    const startName =
+      text && enclosing
+        ? this.qualify(text, enclosing.name, enclosing.rootLine)
+        : undefined;
     const braceLine = enclosing?.startLine;
     // Call-stack depth we start at: descending into a callee (a different
     // function OR a nested lambda of this one) raises q's frame index, which is
@@ -862,12 +882,16 @@ export class QDebugSession extends LoggingDebugSession {
       const name = m[0];
       if (seen.has(name)) continue;
       seen.add(name);
-      if (name === enclosingFn) continue;
-      // Prefer a local lambda of the enclosing function (a call shadows any
-      // global of the same name); fall back to a global function.
+      // Skip the enclosing function itself (its qualified name); a local call
+      // shadows any global, so try a nested-local target before a global — the
+      // global candidate is namespace-qualified so a sibling `.utils.helper[]`
+      // resolves under `\d .utils`.
+      if (this.qualify(text, name, startLine) === enclosingFn) continue;
       const target =
         (await this.resolveLocalStepInTarget(enclosingFn, name)) ??
-        (await this.resolveGlobalStepInTarget(name));
+        (await this.resolveGlobalStepInTarget(
+          this.qualify(text, name, startLine),
+        ));
       if (!target) continue;
       const key = trapKeyOf(target.name, target.path);
       // Skip a target already armed for a step-in, or one a real breakpoint owns.
@@ -1019,6 +1043,19 @@ export class QDebugSession extends LoggingDebugSession {
   }
 
   /**
+   * Fully-qualify a parser-derived (bare) name with the `\d` namespace in effect
+   * at its source line, so `.dbg.*` (which resolve globals absolutely) target the
+   * right symbol: under `\d .utils`, `run:{…}` is `.utils.run`. A name that is
+   * already absolute (leading `.`) is returned unchanged, as is any name when the
+   * line is in the root namespace.
+   */
+  private qualify(text: string, name: string, line: number): string {
+    if (name.startsWith(".")) return name;
+    const ns = namespaceAt(text, line);
+    return ns ? `${ns}.${name}` : name;
+  }
+
+  /**
    * Map a temp load-file path back to the original program path. Matches on the
    * unique temp-dir name rather than an exact path, since q may canonicalize it
    * (e.g. macOS /var -> /private/var symlink resolution).
@@ -1109,7 +1146,10 @@ export class QDebugSession extends LoggingDebugSession {
       for (const line of lines) {
         const lambda = lambdaPathAt(text, line);
         if (!lambda) continue;
-        const key = trapKey(lambda);
+        // Qualify with the `\d` namespace at the function's definition so the
+        // trap targets the real global (e.g. `.utils.run`, not `run`).
+        const name = this.qualify(text, lambda.name, lambda.rootLine);
+        const key = trapKeyOf(name, lambda.path);
         wanted.add(key);
         // Gate on the OUTERMOST function's definition: a nested lambda only
         // exists (as a constant) once its whole enclosing function has loaded,
@@ -1121,10 +1161,10 @@ export class QDebugSession extends LoggingDebugSession {
         // the trap when `.dbg.bs` succeeds, so a failed arm is retried at the next
         // statement boundary rather than left as a phantom trap.
         const res = await this.driver.evaluate(
-          `.dbg.bs[\`${lambda.name};${qList(lambda.path)}]`,
+          `.dbg.bs[\`${name};${qList(lambda.path)}]`,
         );
         if (!res.errored) {
-          this.armedTraps.set(key, { name: lambda.name, path: lambda.path });
+          this.armedTraps.set(key, { name, path: lambda.path });
         }
       }
     }
@@ -1182,8 +1222,14 @@ export class QDebugSession extends LoggingDebugSession {
     const text = file !== undefined ? this.readSource(file) : undefined;
     if (text !== undefined && frame.line !== undefined) {
       const lam = lambdaPathAt(text, frame.line);
-      if (lam) return { name: lam.name, path: lam.path };
+      if (lam) {
+        return {
+          name: this.qualify(text, lam.name, lam.rootLine),
+          path: lam.path,
+        };
+      }
     }
+    // Fallback: q's backtrace already prints the fully-qualified name.
     const name = frameFuncName(frame);
     return name ? { name, path: [] } : undefined;
   }
