@@ -29,16 +29,32 @@
 / bytecode (.Q.bd is unreliable on current KDB-X, so .Q.bu is used).
 .dbg.bu:{[nm;path] .Q.bu[.dbg.nested[nm;path]; 0] };
 
-/ Parameter and local names of a lambda, as a JSON array of strings, for the
-/ debugger's Locals scope. `value f` layout: index 1 is the params, index 2 the
-/ locals (both symbol vectors). Resolves the function by name and degrades to an
-/ empty array for anything that is not a lambda or whose shape is unexpected.
-/ The JSON is WRITTEN to stdout (neg[1]) rather than returned: a returned string
-/ would be display-formatted at the prompt and elided at the console width (\c),
-/ truncating the JSON the adapter parses; handle writes are never truncated.
-/   nm - the function's name as a symbol (e.g. `g or `.ns.f)
-.dbg.locals:{[nm]
-  f:@[get;nm;::];
+/ Source-order index of the nested lambda of `nm` whose value is (identical to)
+/ `f`, or a null long when `f` is not one of `nm`'s direct child lambdas. Used by
+/ step-in to resolve a LOCAL lambda call (e.g. `f[]` where `f: {...}` is assigned
+/ inside the function) to a (nm;path) the trap primitives understand: the adapter
+/ passes the local's live value as `f` (evaluated in the suspended frame), and the
+/ matching child index is the path to arm. Only direct children are considered;
+/ a deeper local falls back to step-over in the adapter.
+/   nm - the enclosing (outermost) function name as a symbol
+/   f  - a candidate lambda value from the suspended frame
+.dbg.childidx:{[nm;f]
+  c:value get nm; first where f ~/: c where 100h=type each c };
+
+/ Parameter and local names of the lambda at (nm;path), as a JSON array of
+/ strings, for the debugger's Locals scope. `value f` layout: index 1 is the
+/ params, index 2 the locals (both symbol vectors). The lambda is resolved via
+/ .dbg.nested (so a step-in into a nested lambda `(nm;k)` lists ITS locals, not
+/ the outer function's), degrading to an empty array for an invalid path or
+/ anything that is not a lambda. The JSON is WRITTEN to stdout (neg[1]) rather
+/ than returned: a returned string would be display-formatted at the prompt and
+/ elided at the console width (\c), truncating the JSON the adapter parses;
+/ handle writes are never truncated. The trailing `;` makes the lambda return ::
+/ (not the neg[1] handle), so nothing extra prints after the JSON.
+/   nm   - the outermost function name as a symbol (e.g. `g or `.ns.f)
+/   path - nested-lambda descent (() for the function itself)
+.dbg.locals:{[nm;path]
+  f:.[.dbg.nested;(nm;path);::];
   neg[1] $[100h = type f;
     .j.j string @[{raze (value x) 1 2};f;`$()];
     .j.j `$()];

@@ -123,6 +123,7 @@ export class ReplConnection {
         open: this.open.bind(this),
         close: this.close.bind(this),
         handleInput: this.handleInput.bind(this),
+        setDimensions: this.setDimensions.bind(this),
       },
       name: `${CONF.TITLE} (${this.terminalLabel()})`,
       isTransient: true,
@@ -193,11 +194,38 @@ export class ReplConnection {
   }
 
   private open(dimensions?: vscode.TerminalDimensions) {
-    void dimensions;
     this.opened = true;
     const pending = this.pendingDisplay;
     this.pendingDisplay = undefined;
     pending?.forEach((text) => this.onDidWrite.fire(text));
+    if (dimensions) this.syncConsoleSize(dimensions);
+  }
+
+  private setDimensions(dimensions: vscode.TerminalDimensions) {
+    this.syncConsoleSize(dimensions);
+  }
+
+  /**
+   * Keep q's console size (`\c rows cols`) in step with the terminal, so
+   * displayed values wrap and elide at the real width instead of q's 25x80
+   * default (q reads COLUMNS/LINES only at startup, and the extension-host pty
+   * passes neither). The command runs quietly through the shared driver queue,
+   * so it cannot interleave with an in-flight debugger operation, and `\c` is
+   * depth-safe: it executes at a suspended `q))` prompt without disturbing the
+   * suspension. Sizes are clamped to q's 10x10 minimum. Best effort — a busy
+   * or exited q simply misses the resize.
+   */
+  private syncConsoleSize(dimensions: vscode.TerminalDimensions) {
+    const rows = Math.max(10, dimensions.rows);
+    const cols = Math.max(10, dimensions.columns);
+    void this.ready
+      .then(() => {
+        if (this.exited || !this.driver.alive) return;
+        return this.driver.run(`\\c ${rows} ${cols}`, false);
+      })
+      .catch(() => {
+        /* best effort */
+      });
   }
 
   // ---- interactive input (minimal) ----

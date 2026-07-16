@@ -95,6 +95,20 @@ export class QDebugSession extends LoggingDebugSession {
     string,
     { name: string; path: number[] }
   >();
+  /**
+   * Entry traps armed transiently to let a step-in descend into a callee, keyed
+   * by {@link trapKey} (a callee is a global function `(g;[])` or a nested lambda
+   * of the current function `(outer;[k])`). Unlike {@link armedTraps} (real
+   * breakpoints) these must be removed once the step-in is done, but recovering a
+   * trap on a function still on the call stack corrupts its bytecode (q may exit)
+   * — so removal is deferred to the first stop at which the function is off the
+   * stack (see {@link recoverStepInTraps}), and to {@link release}. Never overlaps
+   * a real breakpoint's trap (see {@link armStepInTraps}).
+   */
+  private readonly stepInTraps = new Map<
+    string,
+    { name: string; path: number[] }
+  >();
   /** Temp dir holding per-statement load files; their frames map back to programPath. */
   private tempDir?: string;
   private tempSeq = 0;
@@ -272,15 +286,16 @@ export class QDebugSession extends LoggingDebugSession {
     const frameIndex = args.variablesReference - VAR_REF_BASE;
     const frame = this.currentFrames.find((f) => f.index === frameIndex);
     if (frame) {
-      variables = await this.serialized(async () => {
-        // Re-checked under the lock: a queued continue/step may have resumed
-        // execution while this request waited its turn.
-        if (!this.driver.suspended) return [];
-        const names = await this.localNamesForFrame(frame);
-        if (names.length === 0) return [];
-        await this.navigateTo(frameIndex);
-        return this.readLocals(names);
-      });
+      variables =
+        (await this.settle(async () => {
+          // Re-checked under the lock: a queued continue/step may have resumed
+          // execution while this request waited its turn.
+          if (!this.driver.suspended) return [];
+          const names = await this.localNamesForFrame(frame);
+          if (names.length === 0) return [];
+          await this.navigateTo(frameIndex);
+          return this.readLocals(names);
+        })) ?? [];
     }
 
     response.body = { variables };
@@ -310,7 +325,7 @@ export class QDebugSession extends LoggingDebugSession {
     }
     // The suspension can end while this request waits its turn (a queued
     // continue/step ran first), so the paused check is repeated under the lock.
-    const res = await this.serialized(async () => {
+    const res = await this.settle(async () => {
       if (!this.driver.suspended) return undefined;
       if (args.frameId !== undefined) {
         await this.navigateTo(args.frameId);
@@ -336,7 +351,7 @@ export class QDebugSession extends LoggingDebugSession {
   ): Promise<void> {
     response.body = { allThreadsContinued: true };
     this.sendResponse(response);
-    await this.serialized(() => this.resume());
+    await this.settle(() => this.resume());
   }
 
   protected async nextRequest(
@@ -349,21 +364,20 @@ export class QDebugSession extends LoggingDebugSession {
   protected async stepInRequest(
     response: DebugProtocol.StepInResponse,
   ): Promise<void> {
-    // Step in/over/out are all mapped to next-source-line for now.
     this.sendResponse(response);
-    await this.step();
+    await this.settle(() => this.stepInto());
   }
 
   protected async stepOutRequest(
     response: DebugProtocol.StepOutResponse,
   ): Promise<void> {
     this.sendResponse(response);
-    await this.step();
+    await this.settle(() => this.stepOut());
   }
 
-  /** Step over/into/out are all mapped to next-statement in the native debugger. */
+  /** Step over (next statement). Step in has its own {@link stepInto}. */
   private async step(): Promise<void> {
-    await this.serialized(() => this.stepStatement());
+    await this.settle(() => this.stepStatement());
   }
 
   protected terminateRequest(response: DebugProtocol.TerminateResponse): void {
@@ -410,7 +424,10 @@ export class QDebugSession extends LoggingDebugSession {
       // `.dbg.bu` recovers the original bytecode (`.Q.bd` is unreliable on
       // current KDB-X builds — its `.Q.BP` bookkeeping signals `'length`).
       // Recovery is only safe at top level, which reset()/abortToTop() ensures.
-      for (const { name, path } of this.armedTraps.values()) {
+      for (const { name, path } of [
+        ...this.armedTraps.values(),
+        ...this.stepInTraps.values(),
+      ]) {
         try {
           await this.driver.evaluate(`.dbg.bu[\`${name};${qList(path)}]`);
         } catch {
@@ -419,6 +436,7 @@ export class QDebugSession extends LoggingDebugSession {
       }
     }
     this.armedTraps.clear();
+    this.stepInTraps.clear();
     if (this.tempDir) {
       try {
         rmSync(this.tempDir, { recursive: true, force: true });
@@ -441,6 +459,24 @@ export class QDebugSession extends LoggingDebugSession {
     const result = this.pendingOp.then(op);
     this.pendingOp = result.catch(() => undefined);
     return result;
+  }
+
+  /**
+   * {@link serialized}, but tolerant of the shared q process being torn down
+   * mid-request (e.g. the window closing): {@link QDebugDriver.dispose} rejects
+   * every in-flight command with "q process exited", and the DAP framework
+   * leaves a rejected request-handler promise unhandled. That failure is benign
+   * here — the session is ending — so it is swallowed and reported as
+   * `undefined`. Genuine q errors do not reach this path: driver commands
+   * resolve with an `errored` result rather than rejecting, so only transport
+   * failures (process gone, command timeout) are caught.
+   */
+  private async settle<T>(op: () => Promise<T>): Promise<T | undefined> {
+    try {
+      return await this.serialized(op);
+    } catch {
+      return undefined;
+    }
   }
 
   /** Begin execution once both launch and configuration are done. */
@@ -489,6 +525,10 @@ export class QDebugSession extends LoggingDebugSession {
         // has since removed). Runs at a top-level statement boundary, where trap
         // recovery is safe.
         await this.syncBreakpoints(this.loadedThroughLine);
+        // Also drop any leftover step-in traps before running this statement
+        // freely, so a call in it cannot stop in one (we are at top level here,
+        // so every step-in trap is off-stack and safe to recover).
+        await this.recoverStepInTraps();
 
         await this.loadStatement(stmt);
         this.loadedThroughLine = Math.max(this.loadedThroughLine, stmt.endLine);
@@ -655,6 +695,251 @@ export class QDebugSession extends LoggingDebugSession {
   }
 
   /**
+   * Step INTO a function called by the current statement. q's `>` runs a called
+   * function to completion (it never descends), so a source-level step-in is
+   * synthesized: the functions the current statement could call are given
+   * temporary ENTRY traps, then the statement is single-stepped. With a trap in
+   * place `>` descends into the callee, so as soon as the position moves into a
+   * different enclosing lambda (a different function, OR a nested lambda of this
+   * one — e.g. a local `f:{...}` called as `f[]`) execution is paused on the
+   * callee's first line. If no call is taken the statement completes and this
+   * degrades to exactly {@link stepStatement} (step over). Indirect calls (a
+   * function value applied without a bare name on the line) are not trapped and
+   * fall back to step-over.
+   *
+   * The temporary traps are NOT removed here: recovering a function's trap while
+   * it is still on the call stack corrupts its bytecode (q may exit). They are
+   * recovered by {@link recoverStepInTraps} at the first stop where the function
+   * is no longer on the stack — {@link armStepInTraps} records them for that.
+   */
+  private async stepInto(): Promise<void> {
+    if (!this.driver.suspended) {
+      await this.runStatements();
+      return;
+    }
+    const start = await this.driver.position();
+    const startLine = start?.line;
+    const startFile = this.mapToProgram(start?.file);
+    const text = startFile ? this.readSource(startFile) : undefined;
+    const enclosing =
+      text && startLine !== undefined
+        ? lambdaPathAt(text, startLine)
+        : undefined;
+    const startName = enclosing?.name;
+    const braceLine = enclosing?.startLine;
+    // Call-stack depth we start at: descending into a callee (a different
+    // function OR a nested lambda of this one) raises q's frame index, which is
+    // how the step-in stop is detected — reliably, unlike a source line, which is
+    // ambiguous around a nested lambda's own definition.
+    const startIndex = start?.index;
+    const separators =
+      text && startLine !== undefined
+        ? lambdaStatementSeparators(text, startLine)
+        : [];
+    const startId = statementId(separators, startLine, start?.col);
+
+    await this.armStepInTraps(text, startLine, startName);
+
+    let prevId = startId;
+    let guard = 0;
+    while (this.driver.suspended && guard++ < 256) {
+      const pos = await this.driver.stepPosition();
+      if (!this.driver.suspended) break;
+      if (this.driver.stopReason === "exception") {
+        await this.reportStopped("exception");
+        return;
+      }
+      // Entered a callee: `>` descended through a trap, so the frame index rose.
+      // Pause on the callee's first reported line.
+      if (
+        pos?.index !== undefined &&
+        startIndex !== undefined &&
+        pos.index > startIndex
+      ) {
+        await this.reportStopped("step");
+        return;
+      }
+      // Still in the starting lambda: apply step-over's stop rule.
+      const line = pos?.line;
+      if (line === undefined || line === braceLine) continue;
+      const id = statementId(separators, line, pos?.col);
+      if (line !== startLine || id > prevId) {
+        await this.reportStopped("step");
+        return;
+      }
+      prevId = id;
+    }
+    // No call was taken and the statement did not advance by stepping (e.g. an
+    // unconditional signal): drop the traps we armed (all still off-stack here)
+    // so a free continue cannot stop in one, then fall through to stepStatement's
+    // tail.
+    await this.recoverStepInTraps();
+    if (this.driver.suspended) {
+      await this.driver.continueFromBreakpoint();
+      if (this.driver.suspended) {
+        await this.reportStopped(
+          this.driver.stopReason === "exception" ? "exception" : "breakpoint",
+        );
+      } else {
+        await this.runStatements();
+      }
+    } else {
+      await this.runStatements();
+    }
+  }
+
+  /**
+   * Step OUT of the current lambda: run it to its return and pause in the caller.
+   * q has no native run-to-return (`:` continues to the next breakpoint or the
+   * program's end, overshooting the caller), so the current lambda is single-
+   * stepped (`>`, which runs over calls without descending) until the position
+   * leaves it — i.e. the enclosing lambda's identity changes because control
+   * popped back to the caller (or descended into a breakpoint/armed trap along
+   * the way, which is a valid place to stop). Stepping out of the outermost
+   * function returns to the top level, so the statement loader resumes. A real
+   * breakpoint or step-in trap encountered while stepping out pauses there.
+   */
+  private async stepOut(): Promise<void> {
+    if (!this.driver.suspended) {
+      await this.runStatements();
+      return;
+    }
+    const start = await this.driver.position();
+    const startIndex = start?.index;
+    let guard = 0;
+    while (this.driver.suspended && guard++ < MAX_BREAKPOINT_STEPS) {
+      const pos = await this.driver.stepPosition();
+      if (!this.driver.suspended) break;
+      if (this.driver.stopReason === "exception") {
+        await this.reportStopped("exception");
+        return;
+      }
+      // Popped back to the caller: q's frame index fell below where we started.
+      // (`>` runs over calls, so within this lambda the index only ever rises for
+      // a trapped callee and returns; a drop means this lambda itself returned.)
+      if (
+        pos?.index !== undefined &&
+        startIndex !== undefined &&
+        pos.index < startIndex
+      ) {
+        await this.reportStopped("step");
+        return;
+      }
+    }
+    if (this.driver.suspended) {
+      // Hit the step ceiling without returning; stop here rather than spin.
+      await this.reportStopped("step");
+    } else {
+      // The function (and any outer frames it returned through) finished.
+      await this.runStatements();
+    }
+  }
+
+  /**
+   * Arm temporary entry traps on the functions the statement at `startLine` could
+   * call, so a step-in can descend into whichever runs first, and record them in
+   * {@link stepInTraps} for deferred recovery. Candidates are the bare identifiers
+   * on that source line. Each is resolved to a trap target `(name;path)`:
+   *  - a LOCAL lambda (a `{...}` assigned inside `enclosingFn`, called as `x[]`)
+   *    resolves to a nested-lambda path of `enclosingFn` via {@link resolveLocalStepInTarget}
+   *    — the local's live value is matched against the function's child lambdas;
+   *  - otherwise a GLOBAL function `x`, armed at its own entry `(x;[])`.
+   * Anything that is not an armable lambda (a plain local, a builtin, an undefined
+   * name, or a name that only occurs inside a string/symbol literal) fails to
+   * resolve and is skipped. The enclosing function itself, targets already armed
+   * for a step-in, and any target that already carries a real breakpoint (whose
+   * trap is not ours to touch) are left alone.
+   */
+  private async armStepInTraps(
+    text: string | undefined,
+    startLine: number | undefined,
+    enclosingFn: string | undefined,
+  ): Promise<void> {
+    if (text === undefined || startLine === undefined) return;
+    const lineText = text.split("\n")[startLine - 1] ?? "";
+    const seen = new Set<string>();
+    for (const m of lineText.matchAll(/[.a-zA-Z][a-zA-Z0-9_.]*/g)) {
+      const name = m[0];
+      if (seen.has(name)) continue;
+      seen.add(name);
+      if (name === enclosingFn) continue;
+      // Prefer a local lambda of the enclosing function (a call shadows any
+      // global of the same name); fall back to a global function.
+      const target =
+        (await this.resolveLocalStepInTarget(enclosingFn, name)) ??
+        (await this.resolveGlobalStepInTarget(name));
+      if (!target) continue;
+      const key = trapKeyOf(target.name, target.path);
+      // Skip a target already armed for a step-in, or one a real breakpoint owns.
+      if (this.stepInTraps.has(key) || this.armedTraps.has(key)) continue;
+      const res = await this.driver.evaluate(
+        `.dbg.bs[\`${target.name};${qList(target.path)}]`,
+      );
+      if (!res.errored) this.stepInTraps.set(key, target);
+    }
+  }
+
+  /**
+   * Resolve `name` to a nested-lambda trap target of `enclosingFn` when it is a
+   * local `{...}` of that function (the common `f:{...}; f[]` pattern). `.dbg.childidx`
+   * evaluates `name` in the suspended frame and returns the source-order index of
+   * the matching child lambda, or a null long when `name` is not one of the
+   * function's direct child lambdas (or is undefined/not a lambda). Only direct
+   * children are resolved; a deeper local yields undefined and falls back to
+   * step-over.
+   */
+  private async resolveLocalStepInTarget(
+    enclosingFn: string | undefined,
+    name: string,
+  ): Promise<{ name: string; path: number[] } | undefined> {
+    if (enclosingFn === undefined) return undefined;
+    const res = await this.driver.evaluate(
+      `.dbg.childidx[\`${enclosingFn};${name}]`,
+    );
+    // A bare non-negative integer means a matching child; a null long (`0N`, from
+    // no match) or a signal (undefined/not-a-lambda) means "not a local target".
+    if (res.errored || !/^\d+$/.test(res.output.trim())) return undefined;
+    return { name: enclosingFn, path: [Number(res.output.trim())] };
+  }
+
+  /** Resolve `name` to a global-function trap target `(name;[])`, if it is one. */
+  private async resolveGlobalStepInTarget(
+    name: string,
+  ): Promise<{ name: string; path: number[] } | undefined> {
+    // `.dbg.nested[`name;()]` is `get name`; it is a lambda only for a global
+    // function. Anything else signals, so a clean result means "armable global".
+    const res = await this.driver.evaluate(
+      `100h~type .dbg.nested[\`${name};()]`,
+    );
+    return !res.errored && res.output.trim() === "1b"
+      ? { name, path: [] }
+      : undefined;
+  }
+
+  /**
+   * Recover every step-in trap whose function is no longer on the call stack —
+   * the only point at which removing its trap is safe (recovering a trap on a
+   * still-executing function corrupts its bytecode). At top level (not suspended)
+   * nothing is on the stack, so all pending traps are recovered. `frames` may be
+   * passed to reuse a backtrace already fetched (see {@link reportStopped}).
+   */
+  private async recoverStepInTraps(frames?: QFrame[]): Promise<void> {
+    if (this.stepInTraps.size === 0) return;
+    const onStack = new Set<string>();
+    if (this.driver.suspended) {
+      for (const f of frames ?? (await this.driver.frames())) {
+        const name = frameFuncName(f);
+        if (name) onStack.add(name);
+      }
+    }
+    for (const [key, { name, path }] of [...this.stepInTraps]) {
+      if (onStack.has(name)) continue;
+      await this.driver.evaluate(`.dbg.bu[\`${name};${qList(path)}]`);
+      this.stepInTraps.delete(key);
+    }
+  }
+
+  /**
    * Handle a fresh suspension. Returns true if execution should stay paused (a
    * DAP stopped event was emitted), false if the loader should keep running.
    */
@@ -765,6 +1050,9 @@ export class QDebugSession extends LoggingDebugSession {
       this.currentFrames.find((f) => f.current)?.index ??
       this.currentFrames[0]?.index ??
       0;
+    // A stop is a safe moment to recover step-in traps for any function we have
+    // since left (reusing the backtrace just fetched).
+    await this.recoverStepInTraps(this.currentFrames);
     await this.captureMarker();
     // Surface the live q terminal (where the debugger prompt is) on each stop.
     this.driver.reveal();
@@ -864,17 +1152,40 @@ export class QDebugSession extends LoggingDebugSession {
 
   /**
    * Local variable names (params + locals) for a frame, obtained from q itself:
-   * `.dbg.locals` reads them out of `value f`. Only named frames can be resolved
-   * (the name comes from the backtrace); anonymous lambdas yield no locals.
+   * `.dbg.locals` reads them out of the frame's lambda `value`. The lambda is
+   * identified as a (name;path) via {@link frameLambda}, so a frame inside a
+   * NESTED lambda (e.g. after stepping into a local `f:{...}`) lists that lambda's
+   * own locals rather than nothing. Frames with no resolvable lambda yield none.
    */
   private async localNamesForFrame(frame: QFrame): Promise<string[]> {
-    const name = frameFuncName(frame);
-    if (!name) return [];
-    const res = await this.driver.evaluate(`.dbg.locals \`${name}`);
+    const target = this.frameLambda(frame);
+    if (!target) return [];
+    const res = await this.driver.evaluate(
+      `.dbg.locals[\`${target.name};${qList(target.path)}]`,
+    );
     // A no-argument lambda's param slot is a single empty symbol, which surfaces
     // as an empty name; drop it so it never enters a `` `a`b!(…) `` locals probe
     // (an empty key would make the dict malformed and signal `'length`).
     return parseJsonNames(res.output).filter((n) => n.length > 0);
+  }
+
+  /**
+   * The lambda a frame is executing, as a (name;path) for `.dbg.*` — from the
+   * source lambda enclosing the frame's line (which carries the nested-lambda
+   * path), falling back to a plain named function `(name;[])` when the source is
+   * unavailable. Undefined for an unresolvable/anonymous frame.
+   */
+  private frameLambda(
+    frame: QFrame,
+  ): { name: string; path: number[] } | undefined {
+    const file = this.mapToProgram(frame.file);
+    const text = file !== undefined ? this.readSource(file) : undefined;
+    if (text !== undefined && frame.line !== undefined) {
+      const lam = lambdaPathAt(text, frame.line);
+      if (lam) return { name: lam.name, path: lam.path };
+    }
+    const name = frameFuncName(frame);
+    return name ? { name, path: [] } : undefined;
   }
 
   private readSource(file: string): string | undefined {
@@ -986,7 +1297,12 @@ export function statementStart(
  * never collide.
  */
 export function trapKey(lambda: QLambdaPath): string {
-  return `${lambda.name} [${lambda.path.join(",")}]`;
+  return trapKeyOf(lambda.name, lambda.path);
+}
+
+/** {@link trapKey} from a bare name and descent path (no full QLambdaPath). */
+export function trapKeyOf(name: string, path: number[]): string {
+  return `${name} [${path.join(",")}]`;
 }
 
 /**

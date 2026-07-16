@@ -68,9 +68,12 @@ const START_TIMEOUT = 30000;
  *
  * This class owns only the q process and the prompt state machine. It does NOT
  * own a terminal: q's raw output is emitted as a `data` event for a consumer
- * (the REPL's pseudoterminal) to display, and commands the caller issues are
- * written straight to the child's stdin. Tracking the prompt reveals the current
- * namespace and whether q is suspended (depth >= 2).
+ * (the REPL's pseudoterminal) to display. Commands the caller issues are queued
+ * and written to the child's stdin strictly one at a time — the next only after
+ * the previous command's prompt has been consumed (see {@link pump}) — so
+ * concurrent callers (the REPL and the debugger share one process) can never
+ * interleave their output. Tracking the prompt reveals the current namespace and
+ * whether q is suspended (depth >= 2).
  *
  * Events: `data` (string chunk of q output), `exited` (code), `reveal` (a
  * request to surface the owning terminal).
@@ -87,6 +90,11 @@ export class QDebugDriver extends EventEmitter {
   private lastStop: "breakpoint" | "exception" | undefined;
 
   private readonly queue: {
+    /** Text written to q's stdin when this entry reaches the head (undefined for
+     * the startup wait, which sends nothing and just awaits q's first prompt). */
+    command?: string;
+    /** True once the command has been written — see {@link pump}. */
+    sent: boolean;
     resolve: (r: QCommandResult) => void;
     reject: (e: Error) => void;
     match: (buf: string) => RegExpMatchArray | null;
@@ -113,11 +121,22 @@ export class QDebugDriver extends EventEmitter {
     // KX_TTY=1 engages q's tty mode (prompts + interactive debugger) over pipes;
     // KX_LINE=0 turns off q's readline echo so the stream is clean line output.
     const childEnv = { ...env, KX_TTY: "1", KX_LINE: "0" };
+    // Merge q's stderr into stdout (`2>&1`) so the driver reads ONE ordered
+    // stream. q writes a command's result to stdout but its prompt (and the
+    // debugger's `>`/backtrace traffic) to stderr; as two separate pipes their
+    // `data` events can be delivered out of order, so the prompt may arrive
+    // before the output it terminates — the matcher then resolves with empty
+    // output and the real output leaks into the next command (e.g. a second
+    // `.Q.bt[]` in a row would read as undefined). One pipe keeps bytes in
+    // write-order and removes the race. The redirect binds to the q invocation
+    // (after any `source venv/activate &&` prefix), and `2>&1` is valid in both
+    // bash and cmd.exe.
     const command =
       commandPrefix +
       (startupScript
         ? `${quote(qBinPath)} ${quote(startupScript)}`
-        : quote(qBinPath));
+        : quote(qBinPath)) +
+      " 2>&1";
 
     const proc = this.createProcess(command, {
       env: childEnv,
@@ -184,9 +203,7 @@ export class QDebugDriver extends EventEmitter {
     if (!this.proc || this.exited) {
       throw new Error("q process is not running");
     }
-    const result = this.enqueue((buf) => buf.match(PROMPT_RE), timeout, echo);
-    this.proc.stdin.write(command + "\n");
-    return result;
+    return this.enqueue((buf) => buf.match(PROMPT_RE), timeout, echo, command);
   }
 
   /**
@@ -384,17 +401,48 @@ export class QDebugDriver extends EventEmitter {
     match: (buf: string) => RegExpMatchArray | null,
     timeout: number,
     echo = true,
+    command?: string,
   ): Promise<QCommandResult> {
     return new Promise<QCommandResult>((resolve, reject) => {
       const timer = setTimeout(() => {
         const idx = this.queue.findIndex((q) => q.timer === timer);
         if (idx !== -1) this.queue.splice(idx, 1);
         reject(new Error("Timed out waiting for q prompt"));
+        // If the head timed out, let the next command take the prompt.
+        this.pump();
       }, timeout);
-      this.queue.push({ resolve, reject, match, timer, echo });
-      // A prompt may already be buffered (e.g. queued right after start).
+      this.queue.push({
+        command,
+        sent: false,
+        resolve,
+        reject,
+        match,
+        timer,
+        echo,
+      });
+      // Write the command only when it reaches the head (pump), then check the
+      // buffer in case a prompt is already there (e.g. queued right after start).
+      this.pump();
       this.drain();
     });
+  }
+
+  /**
+   * Write the head command to q, once. Commands are sent strictly one at a time —
+   * the next is written only after the previous command's prompt has been consumed
+   * (see {@link drain}) — so two commands' outputs can never coalesce in the
+   * buffer. Were they to coalesce (e.g. an unawaited resize `\c` racing a debugger
+   * step), the end-anchored {@link PROMPT_RE} would match the LAST prompt and one
+   * command's matcher would greedily swallow the next command's output, stranding
+   * that command's promise unresolved (a hang).
+   */
+  private pump(): void {
+    const head = this.queue[0];
+    if (!head || head.sent) return;
+    head.sent = true;
+    if (head.command !== undefined && this.proc && !this.exited) {
+      this.proc.stdin.write(head.command + "\n");
+    }
   }
 
   private onData(data: string): void {
@@ -411,6 +459,9 @@ export class QDebugDriver extends EventEmitter {
   private drain(): void {
     while (this.queue.length > 0) {
       const head = this.queue[0];
+      // The head's command may not have been written yet (only the head is ever
+      // in flight); nothing of its output can be in the buffer until it is.
+      if (!head.sent) return;
       const m = head.match(this.buffer);
       if (!m || m.index === undefined) return;
 
@@ -439,6 +490,8 @@ export class QDebugDriver extends EventEmitter {
         depth: this.depth,
         errored: isError(output),
       });
+      // This command's prompt is consumed; the next may now be written.
+      this.pump();
     }
   }
 

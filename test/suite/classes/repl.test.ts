@@ -75,6 +75,30 @@ describe("REPL", () => {
     });
   });
 
+  describe("console size", () => {
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it("syncs q's \\c to the terminal dimensions on open and resize", async () => {
+      const { instance, runStub } = await makeInstance();
+      instance["open"]({ rows: 40, columns: 150 });
+      await tick();
+      assert.deepStrictEqual(runStub.firstCall.args, ["\\c 40 150", false]);
+
+      instance["setDimensions"]({ rows: 12, columns: 200 });
+      await tick();
+      assert.deepStrictEqual(runStub.secondCall.args, ["\\c 12 200", false]);
+      instance["close"]();
+    });
+
+    it("clamps to q's 10x10 minimum console size", async () => {
+      const { instance, runStub } = await makeInstance();
+      instance["setDimensions"]({ rows: 3, columns: 5 });
+      await tick();
+      assert.deepStrictEqual(runStub.firstCall.args, ["\\c 10 10", false]);
+      instance["close"]();
+    });
+  });
+
   describe("executeQuery", () => {
     it("runs each normalized line via the driver and concatenates output", async () => {
       const { instance, runStub } = await makeInstance((line) => `<${line}>`);

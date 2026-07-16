@@ -81,6 +81,13 @@ export interface QPosition {
   line?: number;
   /** 0-based column of the `^` caret within that source line, if drawn. */
   col?: number;
+  /**
+   * The frame index q prints (`[n]`) for the current frame — the call-stack
+   * depth. It rises when execution descends into a callee and falls when it
+   * returns, so a step-in/step-out can detect crossing a call boundary reliably
+   * (a source line alone is ambiguous around a nested lambda's definition).
+   */
+  index?: number;
 }
 
 /**
@@ -135,7 +142,7 @@ export function parseCurrentPosition(text: string): QPosition | undefined {
         break;
       }
     }
-    return { file, line, col };
+    return { file, line, col, index: Number(m[2]) };
   }
   return undefined;
 }
