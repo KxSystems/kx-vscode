@@ -639,29 +639,43 @@ export class InsightsConnection {
         params: { url: options.url },
       });
 
-      return await axios(options).then((response: any) => {
-        if (!token?.isCancellationRequested) {
-          if (response.data.error) {
+      return await axios(options)
+        .then((response: any) => {
+          if (!token?.isCancellationRequested) {
+            if (response.data.error) {
+              notify(
+                `Error occured while populating scratchpad: ${response.data.errorMsg || "Unknown error"}`,
+                silent ? MessageKind.DEBUG : MessageKind.ERROR,
+                {
+                  logger,
+                  params: { status: response.status },
+                },
+              );
+            } else {
+              notify(
+                `Scratchpad variable (${variableName}) populated.`,
+                silent ? MessageKind.DEBUG : MessageKind.INFO,
+                {
+                  logger,
+                  params: { status: response.status },
+                },
+              );
+            }
+          }
+        })
+        .catch((error: any) => {
+          if (!token?.isCancellationRequested) {
+            const errorMsg = extractInsightsRequestError(error);
             notify(
-              "Error occured while populating scratchpad.",
+              `Error occured while populating scratchpad: ${errorMsg}`,
               silent ? MessageKind.DEBUG : MessageKind.ERROR,
               {
                 logger,
-                params: { status: response.status },
-              },
-            );
-          } else {
-            notify(
-              `Scratchpad variable (${variableName}) populated.`,
-              silent ? MessageKind.DEBUG : MessageKind.INFO,
-              {
-                logger,
-                params: { status: response.status },
+                params: { status: error?.response?.status },
               },
             );
           }
-        }
-      });
+        });
     } else {
       this.noConnectionOrEndpoints();
     }
