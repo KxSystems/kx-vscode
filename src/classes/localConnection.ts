@@ -106,57 +106,25 @@ export class LocalConnection {
         this.connection = conn;
         this.connected = true;
 
-        // Sets useAPI to true if this is a secured process with .vscode defined
-        this.checkCapabilities(conn, resolve);
+        // Set useAPI to true if connecting a process with .vscode defined, so the functions
+        // in that namespace will be used instead of sending the functions with each request.
+        this.connection?.k(".vscode.getManifest", null, (err) => {
+          this.useAPI = !err;
+          this.update();
+          notify(
+            (this.useAPI
+              ? ".vscode namespace found, using functions"
+              : ".vscode namespace not found, using lambdas") +
+              ` on ${this.connLabel}`,
+            MessageKind.DEBUG,
+            {
+              logger,
+            },
+          );
+          resolve(conn);
+        });
       });
     });
-  }
-
-  private checkCapabilities(
-    conn: nodeq.Connection,
-    resolve: (conn: nodeq.Connection) => void,
-  ) {
-    // This checks if an arbitrary string can be executed,
-    // which means we can send the wrapper functions over with each request
-    // instead of relying on the .vscode namespace to be defined
-    this.connection?.k("123", (err) => {
-      if (!err) {
-        this.setUseAPI(false);
-        return resolve(conn);
-      }
-
-      // Test if vscode library functions are present and can be called
-      this.connection?.k(".vscode.getManifest", null, (err) => {
-        if (!err) {
-          this.setUseAPI(true);
-        } else {
-          notify("Failed to check security settings", MessageKind.ERROR, {
-            logger,
-            params: err,
-          });
-        }
-        resolve(conn);
-      });
-    });
-  }
-
-  public setUseAPI(result: boolean): void {
-    if (result) {
-      this.useAPI = true;
-    }
-
-    this.update();
-
-    notify(
-      (result
-        ? ".vscode namespace found, using functions"
-        : ".vscode namespace not found, using lambdas") +
-        ` on ${this.connLabel}`,
-      MessageKind.DEBUG,
-      {
-        logger,
-      },
-    );
   }
 
   public disconnect(): void {

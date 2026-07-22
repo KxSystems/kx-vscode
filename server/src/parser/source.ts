@@ -14,8 +14,9 @@
 import { IToken } from "chevrotain";
 import { Diagnostic, Position, Range } from "vscode-languageserver";
 
-import { Identifier, LSql, RSql } from "./keywords";
+import { Identifier, LSql, Module, RSql } from "./keywords";
 import { QLexer } from "./lexer";
+import { SymbolLiteral } from "./literals";
 import { ExitCommentBegin } from "./ranges";
 import {
   Colon,
@@ -53,6 +54,7 @@ export class Source {
   readonly errors: Token[] = [];
   readonly references: Token[] = [];
   readonly definitions: Token[] = [];
+  readonly imports: { alias: string; module: string }[] = [];
 
   private constructor(
     readonly uri: string,
@@ -233,6 +235,59 @@ export class Source {
     }
   }
 
+  private resolveImports() {
+    const sig = this.tokens.filter(
+      (token) => Type(token) !== WhiteSpace && Type(token) !== EndOfLine,
+    );
+    for (let i = 0; i < sig.length; i++) {
+      if (Type(sig[i]) !== Module || sig[i].image !== "use") {
+        continue;
+      }
+      const symbol = sig[i + 1];
+      const colon = sig[i - 1];
+      const target = sig[i - 2];
+      if (
+        !symbol ||
+        Type(symbol) !== SymbolLiteral ||
+        !colon ||
+        Type(colon) !== Colon ||
+        !target
+      ) {
+        continue;
+      }
+      const module = symbol.image.slice(1);
+      if (!module) {
+        continue;
+      }
+      if (Type(target) === Identifier) {
+        // `alias: use `module` — members are surfaced under the alias namespace
+        this.imports.push({ alias: target.image, module });
+      } else if (Type(target) === RParen || Type(target) === RBracket) {
+        // `([a;b]): use `module` — destructured members are bound bare, so
+        // import with no alias and let them resolve in the default namespace
+        this.imports.push({ alias: "", module });
+      }
+    }
+  }
+
+  // Surfaces an imported module's top-level identifiers under the importing
+  // alias (e.g. `f` -> `bar.f`), so the qualified references that access them
+  // (`bar.f`) match natively through Name() across every language service.
+  private applyAlias(alias: string) {
+    const reprefix = (token: Token) => {
+      if (
+        token.scope === undefined &&
+        token.namespace === "." &&
+        Type(token) === Identifier &&
+        !token.image.startsWith(".")
+      ) {
+        token.namespace = alias;
+      }
+    };
+    this.definitions.forEach(reprefix);
+    this.references.forEach(reprefix);
+  }
+
   get symbols() {
     return this.definitions.filter((token) => token.scope === undefined);
   }
@@ -249,10 +304,14 @@ export class Source {
     });
   }
 
-  static create(uri: string, text: string) {
+  static create(uri: string, text: string, alias?: string) {
     const source = new Source(uri, text);
     source.parse();
     source.process();
+    source.resolveImports();
+    if (alias) {
+      source.applyAlias(alias);
+    }
     return source;
   }
 }

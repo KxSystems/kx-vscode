@@ -56,7 +56,7 @@ export class InsightsConnection {
   public meta?: MetaObject;
   public config?: InsightsConfig;
   public apiConfig?: InsightsApiConfig;
-  public insightsVersion?: number;
+  public insightsVersion?: string;
   public connEndpoints?: InsightsEndpoints;
   private scratchpadLogger?: ScratchpadLogger;
 
@@ -87,7 +87,7 @@ export class InsightsConnection {
   public async setActive() {
     if (
       this.insightsVersion &&
-      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.18)
+      isBaseVersionGreaterOrEqual(this.insightsVersion, "1.18")
     ) {
       if (!this.scratchpadLogger) {
         this.scratchpadLogger = new ScratchpadLogger(this.node.details);
@@ -233,7 +233,7 @@ export class InsightsConnection {
     if (
       this.connected &&
       this.insightsVersion &&
-      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.13)
+      isBaseVersionGreaterOrEqual(this.insightsVersion, "1.13")
     ) {
       const configUrl = new url.URL(
         ext.insightsAuthUrls.apiConfigUrl,
@@ -296,7 +296,7 @@ export class InsightsConnection {
     const version = match ? match[0].replace(/-/g, "") : null;
     if (version) {
       const [major, minor, _path] = version.split(".");
-      this.insightsVersion = parseFloat(`${major}.${minor}`);
+      this.insightsVersion = `${major}.${minor}`;
     }
   }
 
@@ -315,11 +315,11 @@ export class InsightsConnection {
     const getVersionGroup = (): string => {
       if (
         !this.insightsVersion ||
-        !isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
+        !isBaseVersionGreaterOrEqual(this.insightsVersion, "1.11")
       ) {
         return "pre-1.11";
       }
-      if (!isBaseVersionGreaterOrEqual(this.insightsVersion, 1.14)) {
+      if (!isBaseVersionGreaterOrEqual(this.insightsVersion, "1.14")) {
         return "v1.11-1.13";
       }
       return "v1.14+";
@@ -416,7 +416,7 @@ export class InsightsConnection {
   public generateQSqlBody(
     query: string,
     assemblyTarget: string,
-    version?: number,
+    version?: string,
   ) {
     const [plainAssembly, tier, plainDap] =
       normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
@@ -424,7 +424,7 @@ export class InsightsConnection {
     const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
     const dap = this.retrieveCorrectDAPName(plainDap, tier);
 
-    if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
+    if (version && isBaseVersionGreaterOrEqual(version, "1.13")) {
       return {
         query,
         scope: {
@@ -751,7 +751,7 @@ export class InsightsConnection {
       };
 
       if (this.insightsVersion) {
-        if (isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)) {
+        if (isBaseVersionGreaterOrEqual(this.insightsVersion, "1.12")) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
@@ -792,7 +792,7 @@ export class InsightsConnection {
             if (isTableView) {
               if (
                 this.insightsVersion &&
-                isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+                isBaseVersionGreaterOrEqual(this.insightsVersion, "1.12")
               ) {
                 response.data = JSON.parse(
                   response.data.data,

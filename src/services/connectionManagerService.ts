@@ -393,7 +393,7 @@ export class ConnectionManagementService {
 
     if (
       conn.insightsVersion &&
-      isBaseVersionGreaterOrEqual(conn.insightsVersion, 1.13)
+      isBaseVersionGreaterOrEqual(conn.insightsVersion, "1.13")
     ) {
       const confirmationPrompt = `Reset Scratchpad? All data in the ${conn.connLabel} Scratchpad will be lost, and variables will be reset.`;
       const selection = await notify(
@@ -498,12 +498,12 @@ export class ConnectionManagementService {
     }
   }
 
-  public async retrieveInsightsConnVersion(connLabel: string): Promise<number> {
+  public async retrieveInsightsConnVersion(connLabel: string): Promise<string> {
     const connection = this.retrieveConnectedConnection(connLabel);
     if (!connection || !(connection instanceof InsightsConnection)) {
-      return 0;
+      return "0";
     }
-    return connection.insightsVersion ? connection.insightsVersion : 0;
+    return connection.insightsVersion ? connection.insightsVersion : "0";
   }
 
   public async retrieveInsightsConnQEEnabled(

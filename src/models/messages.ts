@@ -45,7 +45,7 @@ export interface DataSourceMessage2 {
   timeoutValue: number;
   servers: string[];
   selectedServer: string;
-  selectedServerVersion: number;
+  selectedServerVersion: string;
   isInsights: boolean;
   insightsMeta: MetaObjectPayload;
   dataSourceFile: DataSourceFiles;

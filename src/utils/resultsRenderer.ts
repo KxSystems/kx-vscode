@@ -19,7 +19,7 @@ import { StructuredTextResults } from "../models/queryResult";
 export function convertToGrid(
   results: any,
   isInsights: boolean,
-  connVersion?: number,
+  connVersion?: string,
   isPython?: boolean,
 ): any {
   let rowData = [];
@@ -30,7 +30,7 @@ export function convertToGrid(
     /* TODO: Workaround for Python structuredText bug */
     (!isPython &&
       connVersion &&
-      isBaseVersionGreaterOrEqual(connVersion, 1.12)) ||
+      isBaseVersionGreaterOrEqual(connVersion, "1.12")) ||
     results.columns
   ) {
     rowData = updatedExtractRowData(results);

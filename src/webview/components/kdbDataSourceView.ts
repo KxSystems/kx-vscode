@@ -137,7 +137,7 @@ export class KdbDataSourceView extends LitElement {
   rowLimitCount = "100000";
   isRowLimitLast = true;
   rowLimit = false;
-  selectedServerVersion = 0;
+  selectedServerVersion = "";
   endTS = "";
   fill = "";
   filled = false;
@@ -207,7 +207,7 @@ export class KdbDataSourceView extends LitElement {
       this.timeoutUnit = msg.timeoutUnit;
       this.selectedServerVersion = msg.selectedServerVersion
         ? msg.selectedServerVersion
-        : 0;
+        : "";
       this.isInsights = msg.isInsights;
       this.isMetaLoaded = !!msg.insightsMeta.dap;
       this.insightsMeta = msg.insightsMeta;

@@ -218,11 +218,11 @@ export class KxNotebookController {
 
   getInsightProps(conn: LocalConnection | InsightsConnection) {
     let isInsights = false;
-    let connVersion = 0;
+    let connVersion = "0";
 
     if (conn instanceof InsightsConnection) {
       isInsights = true;
-      connVersion = conn.insightsVersion ?? 0;
+      connVersion = conn.insightsVersion ?? "0";
     }
 
     return { isInsights, connVersion };
@@ -334,7 +334,7 @@ function render(
   results: any,
   isPython: boolean,
   isInsights: boolean,
-  connVersion?: number,
+  connVersion?: string,
 ): Rendered {
   let text = "No results.";
   let mime = "text/plain";
