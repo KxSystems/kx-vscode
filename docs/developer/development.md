@@ -107,7 +107,7 @@ npm exec ncu
 
 ## Releasing a new version
 
-Let Veronica, or someone else from the doc's team, know that a release is about to go out so they can publish the docs concurrently.
+Let Veronica, or the #docs channel if she is unavailable, know that a release is about to go out so they can publish the docs concurrently.
 
 Check out the branch to release, update the version number in package.json, then run
 ```
