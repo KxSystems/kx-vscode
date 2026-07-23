@@ -195,6 +195,45 @@ describe("serverCommand", () => {
         sinon.match.any,
       );
     });
+
+    it("should reject an insecure http:// Insights URL", async () => {
+      getInsightsStub.returns({});
+      insightsData.server = "http://insightsservername.com/";
+      await serverCommand.addInsightsConnection(insightsData);
+      sinon.assert.notCalled(updateInsightsStub);
+      sinon.assert.calledWithExactly(
+        notifyStub,
+        sinon.match(/require a secure https:\/\/ URL/),
+        sinon.match.any,
+        sinon.match.any,
+      );
+    });
+
+    it("should reject an Insights URL with no protocol", async () => {
+      getInsightsStub.returns({});
+      insightsData.server = "insightsservername.com";
+      await serverCommand.addInsightsConnection(insightsData);
+      sinon.assert.notCalled(updateInsightsStub);
+      sinon.assert.calledWithExactly(
+        notifyStub,
+        sinon.match(/require a secure https:\/\/ URL/),
+        sinon.match.any,
+        sinon.match.any,
+      );
+    });
+
+    it("should reject an empty Insights URL", async () => {
+      getInsightsStub.returns({});
+      insightsData.server = "";
+      await serverCommand.addInsightsConnection(insightsData);
+      sinon.assert.notCalled(updateInsightsStub);
+      sinon.assert.calledWithExactly(
+        notifyStub,
+        "Insights connection address is required.",
+        sinon.match.any,
+        sinon.match.any,
+      );
+    });
   });
 
   describe("addKdbConnection", () => {

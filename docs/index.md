@@ -1,23 +1,27 @@
 ---
 type: Index
 title: kdb VS Code Extension Docs
-description: In-tree documentation for the kdb VS Code extension, split into user notes and developer notes.
+description:
+  In-tree documentation for the kdb VS Code extension, split into user notes and
+  developer notes.
 tags: [kdb, vscode, documentation]
 timestamp: 2026-07-10
 ---
 
-# kdb VS Code Extension Docs
+# kdb VS Code Extension Wiki
 
-Welcome to the developer and user documentation for the
-[kdb VS Code extension](https://marketplace.visualstudio.com/items?itemName=KX.kdb).
+This is the in-repo wiki for the
+[kdb VS Code extension](https://marketplace.visualstudio.com/items?itemName=KX.kdb),
+covering developer and user notes.
 
-These docs follow the [Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/):
+These pages follow the
+[Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/):
 plain markdown files with YAML frontmatter, `index.md` files for navigation, and
 relative cross-links. They were ported from the project's
 [GitHub wiki](https://github.com/KxSystems/kx-vscode/wiki).
 
 > The end-user product documentation is hosted separately at
-> <https://gitlab.com/kxdev/documentation/vscode-docs/>.
+> <https://code.kx.com/vscode/>.
 
 ## User Notes
 

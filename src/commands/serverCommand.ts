@@ -88,6 +88,7 @@ import {
   workspaceHas,
 } from "../utils/workspace";
 import {
+  validateInsightsServerUrl,
   validateServerAlias,
   validateServerName,
   validateServerPort,
@@ -120,8 +121,14 @@ export async function addInsightsConnection(
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
+  const serverValidation = validateInsightsServerUrl(insightsData.server);
+  if (serverValidation) {
+    notify(serverValidation, MessageKind.ERROR, { logger });
+    return;
+  }
+  const server = insightsData.server!.trim();
   if (insightsData.alias === undefined || insightsData.alias === "") {
-    const host = new url.URL(insightsData.server!);
+    const host = new url.URL(server);
     insightsData.alias = host.host;
   }
 
@@ -138,10 +145,6 @@ export async function addInsightsConnection(
     return;
   } else {
     const key = insightsData.alias;
-    let server = insightsData.server || "";
-    if (!/^https?:\/\//i.exec(server)) {
-      server = "https://" + server;
-    }
     if (insights === undefined) {
       insights = {
         key: {
@@ -201,6 +204,12 @@ export async function editInsightsConnection(
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
+  const serverValidation = validateInsightsServerUrl(insightsData.server);
+  if (serverValidation) {
+    notify(serverValidation, MessageKind.ERROR, { logger });
+    return;
+  }
+  insightsData.server = insightsData.server.trim();
   const isConnectedConn = isConnected(oldAlias);
   await disconnect(oldAlias);
   if (insightsData.alias === undefined || insightsData.alias === "") {

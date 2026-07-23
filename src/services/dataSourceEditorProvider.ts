@@ -105,7 +105,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     } catch {
       notify(
         "No database running in this Insights connection.",
-        MessageKind.ERROR,
+        MessageKind.WARNING,
         { logger },
       );
       meta = Promise.resolve(<MetaObjectPayload>{});
