@@ -42,6 +42,12 @@ export const RSql = createToken({
   longer_alt: Identifier,
 });
 
+export const Module = createToken({
+  name: "Module",
+  pattern: /(?:use|export)/,
+  longer_alt: Identifier,
+});
+
 export const Keyword = createToken({
   name: "Keyword",
   pattern:

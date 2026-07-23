@@ -447,14 +447,14 @@ describe("ConnectionManagementService", () => {
 
     it("should reset the scratchpad if the active connection is an InsightsConnection", async () => {
       ext.activeConnection = insightsConn;
-      ext.activeConnection.insightsVersion = 1.13;
+      ext.activeConnection.insightsVersion = "1.13";
       showInformationMessageStub.resolves("Yes");
       await connMngService.resetScratchpad();
       sinon.assert.calledOnce(resetScratchpadStub);
     });
 
     it("should retrieve insights connection and procced with resetScratchpad", async () => {
-      insightsConn.insightsVersion = 1.13;
+      insightsConn.insightsVersion = "1.13";
       retrieveConnectedConnectionStub.returns(insightsConn);
       showInformationMessageStub.resolves("Yes");
       await connMngService.resetScratchpad("test");
@@ -462,7 +462,7 @@ describe("ConnectionManagementService", () => {
     });
 
     it("should retrieve insights connection and procced with resetScratchpad", async () => {
-      insightsConn.insightsVersion = 1.13;
+      insightsConn.insightsVersion = "1.13";
       retrieveConnectedConnectionStub.returns(insightsConn);
       showInformationMessageStub.resolves("No");
       await connMngService.resetScratchpad("test");
@@ -485,7 +485,7 @@ describe("ConnectionManagementService", () => {
 
     it("should log an error if insightsVersion is less than or equal to 1.11", async () => {
       ext.activeConnection = insightsConn;
-      ext.activeConnection.insightsVersion = 1.11;
+      ext.activeConnection.insightsVersion = "1.11";
       await connMngService.resetScratchpad();
       sinon.assert.calledOnce(kdbOutputLogStub);
     });
@@ -706,7 +706,7 @@ describe("ConnectionManagementService", () => {
           "nonInsightsLabel",
         );
 
-      assert.strictEqual(result, 0);
+      assert.strictEqual(result, "0");
     });
 
     it("should return 1.11 in case of Insights connection with  version", async () => {
@@ -716,7 +716,7 @@ describe("ConnectionManagementService", () => {
           "insightsLabel",
         );
 
-      assert.strictEqual(result, 1.11);
+      assert.strictEqual(result, "1.11");
     });
 
     it("should not return the version of undefined connection", async () => {
@@ -726,7 +726,7 @@ describe("ConnectionManagementService", () => {
           "nonInsightsLabel",
         );
 
-      assert.strictEqual(result, 0);
+      assert.strictEqual(result, "0");
     });
 
     it("should return  0 in case of Insights with no connection version", async () => {
@@ -742,7 +742,7 @@ describe("ConnectionManagementService", () => {
           "insightsLabel",
         );
 
-      assert.strictEqual(result, 0);
+      assert.strictEqual(result, "0");
     });
   });
 

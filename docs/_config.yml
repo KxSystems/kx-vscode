@@ -1,0 +1,17 @@
+# GitHub Pages (Jekyll) configuration for the in-tree docs/ site.
+# Enable via repo Settings -> Pages -> Source: "Deploy from a branch",
+# then pick the branch and the /docs folder. No Actions workflow required.
+
+title: kdb VS Code Extension Docs
+description: In-tree documentation for the kdb VS Code extension, ported from the GitHub wiki in Open Knowledge Format.
+theme: jekyll-theme-cayman
+
+# jekyll-relative-links (auto-enabled on GitHub Pages) rewrites relative .md
+# links to their rendered .html URLs and preserves #anchors. Listed here so
+# local `bundle exec jekyll serve` builds behave the same as Pages.
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: false

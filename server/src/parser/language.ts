@@ -15,7 +15,7 @@ import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
 import { resolve } from "path";
 
-import { Control, Identifier, Keyword, Reserved } from "./keywords";
+import { Control, Identifier, Keyword, Module, Reserved } from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,
@@ -187,6 +187,10 @@ const repository = {
       {
         name: "keyword.control.q",
         match: `${__(Control)}`,
+      },
+      {
+        name: "keyword.control.module.q",
+        match: `${__(Module)}`,
       },
       {
         name: "keyword.other.reserved.q",

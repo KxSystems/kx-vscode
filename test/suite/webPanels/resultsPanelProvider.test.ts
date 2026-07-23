@@ -231,7 +231,7 @@ describe("ResultsPanelProvider", () => {
         ],
       });
 
-      const output = renderer.convertToGrid(results, true, 1.12);
+      const output = renderer.convertToGrid(results, true, "1.12");
       assert.equal(JSON.stringify(output), expectedOutput);
     });
 
@@ -537,7 +537,7 @@ describe("ResultsPanelProvider", () => {
     it("should show the view and update the web view with insights", () => {
       const queryResults = { data: "test" };
       const isInsights = true;
-      const connVersion = 1.11;
+      const connVersion = "1.11";
 
       const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
 
@@ -554,7 +554,7 @@ describe("ResultsPanelProvider", () => {
     it("should show the view and update the web view without insights", () => {
       const queryResults = { data: "test" };
       const isInsights = false;
-      const connVersion = 1.11;
+      const connVersion = "1.11";
 
       const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
 
@@ -572,7 +572,7 @@ describe("ResultsPanelProvider", () => {
       resultsPanel["_view"] = undefined;
       const queryResults = { data: "test" };
       const isInsights = true;
-      const connVersion = 1.11;
+      const connVersion = "1.11";
 
       const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
 

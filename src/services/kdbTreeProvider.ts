@@ -683,7 +683,7 @@ export class InsightsNode extends vscode.TreeItem {
     const qeEnabled = await connService.retrieveInsightsConnQEEnabled(
       this.label,
     );
-    if (version !== 0) {
+    if (version !== "0") {
       tooltipMd.appendMarkdown(`\nVersion: ${version}\n`);
     }
     if (qeEnabled !== undefined) {
