@@ -19,6 +19,13 @@ fi
 
 if [ -z "$KDB_K4LICENSE_B64" ]; then
     echo "error: no kdb+ license found. Set KDB_K4LICENSE_B64, or place k4.lic in \$QLIC, \$QHOME, or ~/.kx/." >&2
+    # This caveat is because neither shell-specific dot files nor /etc/environment are read
+    # when starting non-interactive non-login shells in Windows.
+    # WSLENV lives in the Windows registry, and stores what windows env vars get forwarded to WSL
+    # > notepad $PROFILE
+    # Add the line$env:QLIC="/home/username/q"
+    # > setx WSLENV "$($env:WSLENV):QLIC"
+    echo "On Windows, at least one of these must be passed in via WSLENV." >&2
     exit 1
 fi
 

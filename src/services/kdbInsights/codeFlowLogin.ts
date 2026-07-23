@@ -48,7 +48,7 @@ async function getAuthPrefix(
         insightsUrl,
       ).toString(),
       {
-        maxRedirects: 0,
+        maxRedirects: 5,
         validateStatus: () => true,
         transformResponse: (res) => res,
         responseType: "json",

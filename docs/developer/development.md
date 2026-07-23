@@ -107,9 +107,25 @@ npm exec ncu
 
 ## Releasing a new version
 
+Let the doc writer, or the #docs channel if they're unavailable, know that a release is about to go out so they can publish the docs concurrently.
+
 Check out the branch to release, update the version number in package.json, then run
 ```
 git tag v1.2.3
 git push origin v1.2.3
 ```
 Then, in the [Actions](https://github.com/KxSystems/kx-vscode/actions) tab, open the pipeline that was just created, and give manual approval once the action reaches that point. It can take 10 minutes for the version number to be updated in the extension marketplace, even after it updates the timestamp to reflect the new release.
+
+Announce the release in #kx-product-releases, using the template
+```
+:rocket: VSCode Extension x.y.z has been released
+
+https://github.com/KxSystems/kx-vscode/releases/tag/vX.Y.Z
+https://marketplace.visualstudio.com/items?itemName=KX.kdb
+
+
+vX.Y.Z
+Release date: [Today's Date]
+
+[The change log, which can be found by clicking the release [here](https://github.com/KxSystems/kx-vscode/tags)]
+```

@@ -181,7 +181,7 @@ describe("KdbNewConnectionView", () => {
     it("should render connection address for Insights", () => {
       const result = view.renderConnAddress(ServerType.INSIGHTS);
       assert.strictEqual(
-        JSON.stringify(result).includes("myinsights.clouddeploy.com"),
+        JSON.stringify(result).includes("https://myinsights.example.com"),
         true,
       );
     });
