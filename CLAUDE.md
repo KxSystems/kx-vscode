@@ -42,8 +42,21 @@ npm run test:file <path>          # Single test file (TEST_FILE env)
 npm run test:folder <path>        # A folder of tests (TEST_FOLDER env)
 npm run coverage                  # Same suite under c8 coverage
 npm run ui-test                   # End-to-end UI tests via vscode-extension-tester (test/ui/**)
-npm run q-test                    # q-language unit tests (requires a q runtime on PATH; uses qcumber.q)
+npm run q-test                    # q-language unit tests — runs in the qpbuild docker image (no local q needed)
 ```
+
+`q-test` wraps [qcumber.sh](qcumber.sh), which runs the tests inside the
+`qpbuild` image and sets up pykx via `test/q/preTest.sh`. The image lives in a
+private GitLab registry — if it isn't already local, the script pulls it,
+relying on whatever credentials docker already has (this is how CI authenticates
+— a `docker/login-action` step runs before `qcumber.sh`). Only if that pull
+fails does it authenticate itself — from `GITLAB_TOKEN` (a GitLab PAT with the
+`read_registry` scope) or an interactive prompt — and retry once. It also needs
+a kdb+ license passed to the container as `KDB_K4LICENSE_B64` (this is how CI
+passes it, from a secret). If that env var is unset, `qcumber.sh` base64-encodes
+a `k4.lic` file, looked up as `$QLIC/k4.lic`, `$QHOME/k4.lic`, then
+`~/.kx/k4.lic` — so if you already have `$QLIC`/`$QHOME` set there's nothing to
+configure. (A `kc.lic` will not work; the tests need a `k4.lic`.)
 
 Test framework is **Mocha** with **Sinon** for stubs and
 **proxyquire**/**mock-fs** for module and filesystem mocking. Tests mirror the
@@ -144,8 +157,9 @@ end-user product documentation is hosted separately at
 - **Dependencies**: pin every package to an absolute version (no `^`/`~` ranges)
   and commit the updated `package-lock.json`.
 - **Branching**: PRs target `dev` (the default branch), not `main`.
-- **Commit messages**: a single line, no body/newlines. Lead with the affected
-  area, then a comma-separated summary of what changed, e.g.
+- **Commit messages**: a single line, no body/newlines and no `Co-Authored-By`
+  trailer. Lead with the affected area, then a comma-separated summary of what
+  changed, e.g.
   `REPL: add word nav/delete keys, route orphan files to active REPL, dedupe query normalization`.
 - **Squashing**: interactive rebase isn't available here — squash with a soft
   reset instead, then re-commit in the style above, e.g.

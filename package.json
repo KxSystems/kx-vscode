@@ -1242,7 +1242,7 @@
     "ui-test-cmd": "extest setup-and-run --code_version 1.103.0 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "preui-test": "rimraf out-test .test-extensions",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
-    "q-test": "q qcumber.q -color -src ./test/q/main.q -test ./test/q/tests",
+    "q-test": "bash qcumber.sh -src test/q/main.q -test test/q/tests",
     "mock-insights-server": "node --experimental-strip-types scripts/mock-insights-server/server.ts"
   },
   "devDependencies": {
