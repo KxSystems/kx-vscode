@@ -50,10 +50,10 @@ feature .vscode.runQQuery
                 (`error;      1b);
                 (`errorMsg;   "type");
                 (`stacktrace; "\n" sv (
-                    "  [3]  .test.bar:{1 + x}";
-                    "                    ^";
-                    "  [2]  .test.foo:{.test.bar x}";
-                    "                  ^";
+                    "  [3]  /app/project/test/q/tests/vscode.quke:41: .qu.userCode.expect@:{1 + x}";
+                    "                                                                         ^";
+                    "  [2]  /app/project/test/q/tests/vscode.quke:40: .qu.userCode.expect@:{.test.bar x}";
+                    "                                                                       ^";
                     "  [1]  .test.foo `";
                     "       ^\n")))]
 
@@ -68,10 +68,10 @@ feature .vscode.runQQuery
                 (`error;      1b);
                 (`errorMsg;   "some error");
                 (`stacktrace; "\n" sv (
-                    "  [3]  bar:{' \"some error\"}";
-                    "            ^";
-                    "  [2]  foo:{bar x}";
-                    "            ^";
+                    "  [3]  /app/project/test/q/tests/vscode.quke:63: .qu.userCode.expect@:{' \"some error\"}";
+                    "                                                                       ^";
+                    "  [2]  /app/project/test/q/tests/vscode.quke:62: .qu.userCode.expect@:{bar x}";
+                    "                                                                       ^";
                     "  [1]  foo `";
                     "       ^\n")))]
 
