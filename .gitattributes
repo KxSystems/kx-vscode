@@ -1,0 +1,2 @@
+# When the repo is cloned into windows, the scripts still need LF line endings to run in bash
+*.sh text eol=lf
