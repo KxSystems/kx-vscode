@@ -62,7 +62,9 @@ Single test file can also be debugged by clicking run button from the editor too
 
 ## q Testing
 
-To run the tests locally, you need to
+To run the tests non-interactively, you can just run `npm run q-test` and they will be run in the q-build container.
+
+To run the tests interactively, you need to
 1. Install Python version 3.12 installed, as the tests rely on an old version of pykx that doesn't support the latest Python
 ```
 ~/kx-vscode $ brew install python@3.12
@@ -78,8 +80,6 @@ To run the tests locally, you need to
 3. kdb+ installed, with the `q` executable in the system path
 4. [AxLibraries](https://code.kx.com/developer/getting-started/) should be installed, according to its readme.
 
-You can then run the tests with `npm run q-test`.
-
 To debug the tests, create a file with a username and password to secure the q process, then start a q process using that authentication.
 ```
 $ echo "myusername:mypassword" >> users.txt
@@ -92,6 +92,23 @@ q)\l test/q/main.q
 ```
 
 You can now connect to the process on port 1234 and step through the tests
+
+## Python and matplotlib
+
+Start a virtual environment
+
+```sh
+python3 -m venv ~/kx-vscode/venv
+source venv/bin/activate
+```
+
+Then install matplotlib
+```sh
+pip install --upgrade matplotlib
+```
+
+and PyKX, following the steps here
+https://code.kx.com/pykx/getting-started/installing.html#1-install-kdb-x-python
 
 ## Restart Extension Host
 
