@@ -1,0 +1,113 @@
+feature .vscode.runPyQuery
+    before
+        system "l out/vscode.q"
+    
+    should run python code
+        expect a message that this isn't implemented yet
+            .qu.compare[
+                .vscode.runPyQuery ([code: "1+2"; returnFormat: "text"; sample_fn: (::); sample_size: (::)]);
+                ([data: (::); error: 1b; errorMsg: "Running Python code in secured processes is not yet supported"])]
+
+feature .vscode.runQQuery
+    before
+        system "l out/vscode.q"
+
+    should handle multiple return formats
+        expect "text" responses to be the stringified q
+            .qu.compare[
+                .vscode.runQQuery ([code: "1+2"; ctx:"."; returnFormat: "text"; sampleFn: (::); sampleSize: (::)]);
+                ([data: "3\n"; error: 0b; errorMsg: ""; stacktrace: ()])]
+        expect "structuredText" to be JSON
+            .qu.compare[
+                .vscode.runQQuery ([code: "1 2 3"; ctx:"."; returnFormat: "structuredText"; sampleFn: (::); sampleSize: (::)]);
+                ([data: "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"1\",\"2\",\"3\"],\"order\":[0,1,2]}],\"warnings\":[]}"; error: 0b; errorMsg: ""; stacktrace: ()])]
+
+        xexpect sampleFn and sampleSize to be applied
+            // This seems to be running `"last" 1 2 3` instead of `last 1 2 3`
+            .qu.compare[
+                .vscode.runQQuery ([code: "1 2 3"; ctx:"."; returnFormat: "structuredText"; sampleFn: "last"; sampleSize: 1]);
+                ([data: "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"3\"],\"order\":[0]}],\"warnings\":[]}"; error: 0b; errorMsg: ""; stacktrace: ()])]
+
+    should handle contexts
+        expect the query to be run in the specified context 
+            result: .vscode.runQQuery ([code: "\\d"; ctx:".foo"; returnFormat: "text"; sampleFn: (::); sampleSize: (::)]);
+            .qu.compare[result`data; "`.foo\n"]
+        expect the context to have been restored
+            .qu.compare[system "d"; `.]
+
+    should show errors with stack traces
+        expect stack traces to be returned when using customQEvaluators
+            // NOTE: This will fail when you run it line-by-line from vscode,
+            // since the stack trace formatter is looking for the first .Q.trp in the call stack,
+            // and remote execution adds another .Q.trp before the one it's looking for.
+            // You'd need to run the call to .vscode.runQQuery from the q terminal
+            .test.foo:{.test.bar x};
+            .test.bar:{1 + x};
+            .vscode.customQEvaluator: {value x`code};
+            result: .vscode.runQQuery ([code: ".test.foo `"; ctx:"."; returnFormat: "text"; sampleFn: (::); sampleSize: (::)]);
+            .qu.compare[result; (!) . flip (
+                (`data;       ::);
+                (`error;      1b);
+                (`errorMsg;   "type");
+                (`stacktrace; "\n" sv (
+                    "  [3]  /app/project/test/q/tests/vscode.quke:41: .qu.userCode.expect@:{1 + x}";
+                    "                                                                         ^";
+                    "  [2]  /app/project/test/q/tests/vscode.quke:40: .qu.userCode.expect@:{.test.bar x}";
+                    "                                                                       ^";
+                    "  [1]  .test.foo `";
+                    "       ^\n")))]
+
+        expect stack traces to be returned when not using customQEvaluator
+            // NOTE: This will fail when you run it line-by-line from vscode, see the previous test
+            delete customQEvaluator from `.vscode;    
+            foo:: {bar x};
+            bar:: {' "some error"};
+            result: .vscode.runQQuery ([code: "foo `"; ctx:"."; returnFormat: "text"; sampleFn: (::); sampleSize: (::)]);
+            .qu.compare[result; (!) . flip (
+                (`data;       ::);
+                (`error;      1b);
+                (`errorMsg;   "some error");
+                (`stacktrace; "\n" sv (
+                    "  [3]  /app/project/test/q/tests/vscode.quke:63: .qu.userCode.expect@:{' \"some error\"}";
+                    "                                                                       ^";
+                    "  [2]  /app/project/test/q/tests/vscode.quke:62: .qu.userCode.expect@:{bar x}";
+                    "                                                                       ^";
+                    "  [1]  foo `";
+                    "       ^\n")))]
+
+feature .vscode remaining functions
+    before
+        system "l out/vscode.q"
+    
+    should declare available functionality
+        expect the version to be defined in a global
+            all .vscode.version in .Q.n , "."
+
+        expect the manifest to include the version number
+            manifest: .vscode.getManifest[];
+            .qu.compare[
+                manifest`version;
+                .vscode.version]
+
+        expect evaluateQ and listMem to be available
+            manifest: .vscode.getManifest[];
+            .qu.compare[
+                manifest`features;
+                `evaluateQ`listMem]
+    
+    should return information about the process
+        expect a list of reserved words to be returned
+            all `if`min`max`select in .vscode.reservedWords[]
+
+        expect a list of views to be returned
+            value "foo: 1; bar: 2;";
+            value "myView:: foo + bar";
+            result: .vscode.getViews[];
+            (`myView in result) and not `foo in result
+
+        expect a table of variables
+            variables: .vscode.listMem[];
+            all (
+                `id`pid`name`fname`typeNum`namespace`context`isNs ~ cols variables;
+                all `runQQuery`foo`myView in variables`name
+                )

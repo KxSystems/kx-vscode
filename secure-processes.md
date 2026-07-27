@@ -6,8 +6,13 @@ To allow the KX extension to connect to this process, the process
 The following gives an simplified version of such a process.
 Note that this example is a demonstration only, and not intended to provide robust security.
 
+First, generate out/vs-code.q by running
+```
+$ node build-api.js
+```
+
 ```q
-\l resources/q/vscode.q
+\l out/vscode.q
 
 \d .secure
 
@@ -49,17 +54,19 @@ isVariable: {(first[x] in .Q.a,.Q.n,".") and (all 1 _ x in .Q.an,".") and not x 
 
 If the process owner wanted to restrict which expressions could be run from VSCode, such as only allowing "select" expressions,
 they can define a .vscode.customQEvaluator function which will be called to evaluate each request.
-The context will already be set, using the context in args`context
+The context will already be set, using the context in args`ctx
+
+Note that this example is a demonstration only, and not intended to provide security.
 
 ```q
 // @param args        {dict}
-// @desc args.ctx     {string} The context to evaluate the code in
-// @desc args.code    {string} The code to run, which may be one expression, or multiple expressions, as a single string
-// @desc returnFormat {string} The format of the results
+// @desc args.ctx     {string} The context to evaluate code in. This will already be set by the parent function.
+// @desc args.code    {string} The code to run, which may be one expression, or multiple expressions, as a single string.
+// @desc returnFormat {string} The result format requested by the extension. Formatting is handled by the parent function.
 //  "text" will return the stringified value
 //  "structuredText" will return stringified values in a tabular format, with metadata
 //  "serialized" will return the result as a q value
-// @returns {any} The result of the code, formatted according to returnFormat
+// @returns {any} The result of the code
 .vscode.customQEvaluator: {[args]
     tree: parse args`code;
 
@@ -72,4 +79,4 @@ The context will already be set, using the context in args`context
 ```
 
 It's the responsibility of the process owner to ensure .vscode.customQEvaluator is secured,
-e.g. prevents overwriting .z.pg, .z.pg, or .vscode.customQEvaluator
+e.g. that it prevents overwriting .z.ps, .z.pg, or .vscode.customQEvaluator
