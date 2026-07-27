@@ -43,6 +43,9 @@ jobs:
           path: coverage-reports/lcov.info
           retention-days: 1
 
+  q-api:
+    uses: ./.github/workflows/q-api.yml
+
   app-sec:
     needs: build
     uses: ./.github/workflows/app-sec-template.yml
@@ -58,16 +61,20 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: KDB-VSCode-Extension
+      - name: Download vscode.q from q-api job
+        uses: actions/download-artifact@v4
+        with:
+          name: q-api
       - name: Release to Portal
         run: |
           NOW=$(date +'%Y%m%dT%H%M%S')
-          curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
-          -H 'content-type: application/octet-stream' \
-          --upload-file ./kdb-*.vsix \
-          https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/kdb-${{ github.ref_name }}.$NOW.vsix
-
 
           curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
-          -H 'content-type: application/octet-stream' \
-          --upload-file ./kdb-*.vsix \
-          https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/$NOW/kdb-${{ github.ref_name }}.vsix
+            -H 'content-type: application/octet-stream' \
+            --upload-file ./kdb-*.vsix \
+            https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/kdb-${{ github.ref_name }}.$NOW.vsix
+
+          curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
+            -H 'content-type: application/octet-stream' \
+            --upload-file ./kdb-*.vsix \
+            https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/$NOW/kdb-${{ github.ref_name }}.vsix

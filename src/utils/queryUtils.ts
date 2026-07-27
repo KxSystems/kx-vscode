@@ -208,7 +208,7 @@ export function getPythonWrapper(
   query: string,
   returnFormat: "serialized" | "text" | "structuredText",
 ): string {
-  const wrapper = normalizeQSQLQuery(queryWrapper(true, false));
+  const wrapper = queryWrapper(true, false);
   const args = {
     returnFormat,
     code: normalizePyQuery(query),
