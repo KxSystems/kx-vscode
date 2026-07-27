@@ -1,8 +1,8 @@
 feature removeExtraIndents
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[isString; code]
-            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
+        .test.evaluatePy: {[returnFormat; code]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
 
     should handle unmatched dedents
@@ -81,8 +81,8 @@ feature evaluatePy 1
     // These are the tests from the scratchpad repo
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[isString; code]
-            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
+        .test.evaluatePy: {[returnFormat; code]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
         .test.wrap: {`error`errorMsg`data!(0b; "None"; x)}
         
@@ -236,8 +236,8 @@ feature evaluatePy 2
     // These are the tests specific to the VS Code extension
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[isString; code]
-            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
+        .test.evaluatePy: {[returnFormat]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
 
     should define nothing in the global namespace except when explicitly the result of user code
@@ -298,8 +298,8 @@ feature python toStructuredText
         .pykx.pyexec "from collections import namedtuple";
         .pykx.pyexec "import traceback";
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[isString; code]
-            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
+        .test.evaluatePy: {[returnFormat; code]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
 
     should test the structured text functionality in python
@@ -635,4 +635,15 @@ feature python toStructuredText
             .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`errorMsg; "(\"unsupported operand type(s) for +: 'int' and 'str'\",)"]
         expect error dictionary to contain stacktrace
             .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`stacktrace; "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nTypeError: unsupported operand type(s) for +: 'int' and 'str'"]
-            
+
+    should handle PNGs returned regardless of the returnFormat
+        expect byte strings which aren't PNGs to be returned as structuredText
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a')"][`data];
+                "{\"count\":7,\"columns\":[{\"name\":\"values\",\"type\":\"ByteVector\",\"values\":[\"pykx.ByteAtom(pykx.q('0x89'))\",\"pykx.ByteAtom(pykx.q('0x50'))\",\"pykx.ByteAtom(pykx.q('0x4e'))\",\"pykx.ByteAtom(pykx.q('0x47'))\",\"pykx.ByteAtom(pykx.q('0x0d'))\",\"pykx.ByteAtom(pykx.q('0x0a'))\",\"pykx.ByteAtom(pykx.q('0x1a'))\"],\"order\":[5,4,6,3,2,1,0]}],\"warnings\":[]}"]
+        expect PNG byte strings to be returned serialized, regardless of the return format
+            all (
+                .test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a')"][`data] ~ 0x89504e470d0a1a0a;
+                .test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a01020304050607080910')"][`data] ~ 0x89504e470d0a1a0a01020304050607080910;
+                .test.evaluatePy["text"; "kx.q('0x89504e470d0a1a0aaabbccddeeff')"][`data] ~ 0x89504e470d0a1a0aaabbccddeeff
+            )
