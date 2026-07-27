@@ -1,5 +1,4 @@
 {[args]
-    // args: `returnFormat`code`sample_fn`sample_size!("text"; "range(0,10)"; "first"; 10000);
     returnFormat:args`returnFormat;
     code:args`code;
     sampleFn:args`sample_fn;
