@@ -221,7 +221,7 @@ feature evaluatePy 2
     // These are the tests specific to the VS Code extension
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[returnFormat]
+        .test.evaluatePy: {[returnFormat; code]
             0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
 
