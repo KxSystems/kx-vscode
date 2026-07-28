@@ -582,9 +582,11 @@ feature python toStructuredText
                 "{\"count\":13,\"columns\":[{\"name\":\"values\",\"type\":\"str\",\"values\":[\"'The brown fox'\"],\"order\":[0]}],\"warnings\":[]}"]
         expect python structured text to truncate all other data types when count of data is over TABULAR_LIMIT
             .struct.TABULAR_LIMIT : 2;
-            .qu.compare[
+            result: .qu.compare[
                 .test.evaluatePy["structuredText"; "(1,2,3,4,5)"]`data;
-                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"tuple\",\"values\":[\"1\",\"2\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"]
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"tuple\",\"values\":[\"1\",\"2\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
+            .struct.TABULAR_LIMIT : 600000;
+            result
         // There is currently a bug where type error would be returned even if being handled in the codebase.
         // Since this is a relatively minor bug as the code appears to work on runtime, we will xexpect until a fix is found
         xexpect python structuredText using the default TABULAR_LIMIT if no valid value is found.
