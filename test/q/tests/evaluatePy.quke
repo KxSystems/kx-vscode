@@ -615,7 +615,7 @@ feature python toStructuredText
             a: .test.evaluatePy["structuredText"; "1 + '2'"];
             .qu.compare[key a; `error`errorMsg`data`stacktrace]
         expect error dictionary to contain null for data
-            .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`data; "null"]
+            .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`data; ::]
         expect error dictionary to contain a 1b for error
             .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`error; 1b]
         expect error dictionary to contain proper errorMsg
