@@ -52,6 +52,37 @@ jobs:
           path: coverage-reports/lcov.info
           retention-days: 1
 
+      # Fork PRs get no secrets from the pull_request event, so the inline
+      # app-sec job below is skipped for them. Capture the PR context here so
+      # the secrets-enabled app-sec-forks.yml (workflow_run) can re-run app-sec.
+      # Values go via env (not string-interpolated into the script) to avoid
+      # shell injection from attacker-controlled ref/branch names.
+      - name: Write PR metadata for fork app-sec
+        if: runner.os == 'Linux' && github.event.pull_request.head.repo.fork
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          mkdir -p pr-meta
+          {
+            echo "PR_NUMBER=${PR_NUMBER}"
+            echo "PR_HEAD_REPO=${PR_HEAD_REPO}"
+            echo "PR_HEAD_SHA=${PR_HEAD_SHA}"
+            echo "PR_HEAD_REF=${PR_HEAD_REF}"
+            echo "PR_BASE_REF=${PR_BASE_REF}"
+          } > pr-meta/pr.env
+
+      - name: Upload PR metadata for fork app-sec
+        if: runner.os == 'Linux' && github.event.pull_request.head.repo.fork
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-meta
+          path: pr-meta/pr.env
+          retention-days: 1
+
   test-q:
     runs-on: ubuntu-latest
     steps:
