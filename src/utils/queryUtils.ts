@@ -207,15 +207,26 @@ export function getHeaders(
 export function getPythonWrapper(
   query: string,
   returnFormat: "serialized" | "text" | "structuredText",
+  signalErrors = false,
 ): string {
-  const wrapper = queryWrapper(true, false);
+  // NOTE - evaluatePy.q ends in a newline, which would leave the argument
+  // immediately below it on its own line; and it takes a single dictionary,
+  // not positional arguments (applying it positionally is a rank error).
+  const wrapper = queryWrapper(true, false).trimEnd();
   const args = {
     returnFormat,
     code: normalizePyQuery(query),
     sample_fn: "first",
     sample_size: 10000,
   };
-  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`error;res\`errorMsg;res\`data]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
+  // On error the wrapper collapses the result dictionary down to the message,
+  // which loses the fact that it failed at all. Callers that have somewhere to
+  // report an error (the scratchpad sets `error` when the expression signals)
+  // opt into signalling instead; the REPL keeps printing the message as text.
+  // The signal has to go through a lambda: a bare '[x] parses as the each
+  // adverb rather than as a signal.
+  const onError = signalErrors ? "{'x}res`errorMsg" : "res`errorMsg";
+  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}\`returnFormat\`code\`sample_fn\`sample_size!(returnFormat;code;sample_fn;sample_size);$[res\`error;${onError};res\`data]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
 }
 
 export function getQSQLWrapper(

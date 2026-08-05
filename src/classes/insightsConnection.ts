@@ -44,7 +44,7 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { getHeaders } from "../utils/queryUtils";
+import { getHeaders, getPythonWrapper } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
@@ -778,12 +778,19 @@ export class InsightsConnection {
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
       );
+      // Python is evaluated with the extension's evaluatePy.q, sent as q, so
+      // scratchpad execution matches the local and REPL paths rather than
+      // relying on the server side evaluator. The wrapper returns the value
+      // unformatted ("serialized"), leaving the rendering to the returnFormat
+      // below; formatting in both places would double encode the result.
       const body: ScratchpadRequestBody = {
-        expression: query,
-        language: !isPython ? "q" : "python",
+        expression: isPython
+          ? getPythonWrapper(query, "serialized", true)
+          : query,
+        language: "q",
         context: context || ".",
         sampleFn: "first",
-        sampleSize: 10000,
+        sampleSize: 100000, // TODO: This is workaround for the truncation of PNGs
       };
 
       if (this.insightsVersion) {
