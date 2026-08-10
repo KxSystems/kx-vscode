@@ -1,3 +1,5 @@
+This is a test
+
 # kdb Visual Studio Code Extension
 
 [![KX VScode CI Main Testing](https://github.com/KxSystems/kx-vscode/actions/workflows/main.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/main.yml)
