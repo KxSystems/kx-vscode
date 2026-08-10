@@ -407,6 +407,8 @@
     format:{[returnFormat; sampleFn; sampleSize; result]
         if [returnFormat ~ "text";
             result[`data]: {[text]
+                // If the text is longer than 250,000 characters,
+                // truncate the text and an a q style ".."
                 $[  count[text]>maxSize:250000;
                     sublist[maxSize;text],$["\n" in text;"\n..";".."];
                     text],"\n"
