@@ -433,7 +433,7 @@
     
     // This can't be replaced with something simpler, like
     // (type[result[`data]`]=4h) and 0x89504e470d0a1a0a ~ 8#result[`data]`;
-    // because there are side-effects and overhead to casting a some values to q, and some values will error when cast to q
+    // because there are side-effects and overhead to casting some values to q, and some values will error when cast to q
     .pykx.pyexec "def is_png_bytevector(x=None):
         import pykx as kx
 
