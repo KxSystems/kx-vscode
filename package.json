@@ -1260,7 +1260,7 @@
     "@types/ws": "8.18.1",
     "@vscode/extension-telemetry": "1.4.0",
     "@vscode/python-extension": "1.0.6",
-    "@vscode/test-electron": "2.5.2",
+    "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "3.9.2",
     "axios": "1.16.1",
     "c8": "11.0.0",

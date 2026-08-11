@@ -53,6 +53,9 @@ jobs:
           retention-days: 1
   test-q:
     runs-on: ubuntu-latest
+    # Needs the private GitLab registry credentials and a kdb+ license, neither
+    # of which is available to pull requests from forks.
+    if: "! github.event.pull_request.head.repo.fork"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
