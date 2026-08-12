@@ -628,9 +628,9 @@ feature python toStructuredText
             .qu.compare[
                 .test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a')"][`data];
                 "{\"count\":7,\"columns\":[{\"name\":\"values\",\"type\":\"ByteVector\",\"values\":[\"pykx.ByteAtom(pykx.q('0x89'))\",\"pykx.ByteAtom(pykx.q('0x50'))\",\"pykx.ByteAtom(pykx.q('0x4e'))\",\"pykx.ByteAtom(pykx.q('0x47'))\",\"pykx.ByteAtom(pykx.q('0x0d'))\",\"pykx.ByteAtom(pykx.q('0x0a'))\",\"pykx.ByteAtom(pykx.q('0x1a'))\"],\"order\":[5,4,6,3,2,1,0]}],\"warnings\":[]}"]
-        expect PNG byte strings to be returned serialized, regardless of the return format
-            all (
-                .test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a')"][`data] ~ 0x89504e470d0a1a0a;
-                .test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a01020304050607080910')"][`data] ~ 0x89504e470d0a1a0a01020304050607080910;
-                .test.evaluatePy["text"; "kx.q('0x89504e470d0a1a0aaabbccddeeff')"][`data] ~ 0x89504e470d0a1a0aaabbccddeeff
-            )
+        expect PNG byte strings to be returned serialized if they match the PNG signature exactly
+            .qu.compare[.test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a')"] `data; 0x89504e470d0a1a0a];
+        expect PNG byte strings to be returned serialized if the return format is structuredText
+            .qu.compare[.test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a01020304050607080910')"] `data; 0x89504e470d0a1a0a01020304050607080910];
+        expect PNG byte strings to be returned serialized if the return format is text
+            .qu.compare[.test.evaluatePy["text"; "kx.q('0x89504e470d0a1a0aaabbccddeeff')"] `data; 0x89504e470d0a1a0aaabbccddeeff];

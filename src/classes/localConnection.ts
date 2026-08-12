@@ -190,12 +190,10 @@ export class LocalConnection {
           );
         } else {
           const result = res.data === null ? "" : res.data;
-          if (stringify) {
-            resolve(result);
-          } else if (Array.isArray(result)) {
-            // This handles the case where the response is an array of numbers.
-            // The back end will disregard the return format and return an array of bytes
-            // if the result of the expression is a byte array starting with the PNG signature 0x89504e470d0a1a0a
+          // The Array.isArray check handles the case where the response is a serialized PNG,
+          // rather than the requested format, as the back end disregards the return format
+          // if the result of the expression is a byte array starting with the PNG signature 0x89504e470d0a1a0a
+          if (stringify || Array.isArray(result)) {
             resolve(result);
           } else {
             resolve(JSON.parse(result));
