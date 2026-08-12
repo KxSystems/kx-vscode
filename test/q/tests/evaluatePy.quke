@@ -104,6 +104,10 @@ feature evaluatePy 1
             .qu.compare[
                 .test.evaluatePy["text"; "1+2"];
                 .test.wrap "3\n"]
+        expect single character expressions to be run correctly
+            .qu.compare[
+                .test.evaluatePy["text"; "1"];
+                .test.wrap "1\n"]
         expect statements to return an empty string
             .qu.compare[
                 .test.evaluatePy["text"; "def axedi_test_fn(x):\n    return 1 + x"];
