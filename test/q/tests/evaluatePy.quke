@@ -1,8 +1,8 @@
 feature removeExtraIndents
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[isString; code]
-            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
+        .test.evaluatePy: {[returnFormat; code]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
 
     should handle unmatched dedents
@@ -81,8 +81,8 @@ feature evaluatePy 1
     // These are the tests from the scratchpad repo
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[isString; code]
-            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
+        .test.evaluatePy: {[returnFormat; code]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
         .test.wrap: {`error`errorMsg`data!(0b; "None"; x)}
         
@@ -130,11 +130,8 @@ feature evaluatePy 1
                 .test.evaluatePy["text"; "Long_Text()"];
                 .test.wrap (raze 25000#enlist "\n123456789") , "\n.."]
         expect invalid statements to error
-            result: .test.evaluatePy["text"; "1+++"];
-            stacktrace: string result[`stacktrace];
-            result[`stacktrace]: stacktrace;
             .qu.compare[
-                result;
+                .test.evaluatePy["text"; "1+++"];
                 (!) . flip (
                     (`error;      1b);
                     (`errorMsg;   "('invalid syntax', ('<unknown>', 1, 5, '1+++\\n', 1, 5))");
@@ -185,11 +182,8 @@ feature evaluatePy 1
                 "def bar(x):";
                 "    return x + 'hello'");
 
-            result: .test.evaluatePy["text"; "size = len(foo(5))"];
-            stacktrace: string result[`stacktrace];
-            result[`stacktrace]: stacktrace;
             .qu.compare[
-                result;
+                .test.evaluatePy["text"; "size = len(foo(5))"];
                 (!) . flip (
                     (`error;      1b);
                     (`errorMsg;   "(\"unsupported operand type(s) for +: 'int' and 'str'\",)");
@@ -197,11 +191,8 @@ feature evaluatePy 1
                     (`stacktrace; "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"<string>\", line 2, in foo\n  File \"<string>\", line 5, in bar\nTypeError: unsupported operand type(s) for +: 'int' and 'str'"))]
 
         expect the stack trace to not show the functions before user code
-            result: .test.evaluatePy["serialized"; "1 2 + 3 4"];
-            stacktrace: string result[`stacktrace];
-            result[`stacktrace]: stacktrace;
             .qu.compare[
-                result;
+                .test.evaluatePy["serialized"; "1 2 + 3 4"];
                 (!) . flip (
                     (`error;      1b);
                     (`errorMsg;   "('invalid syntax', ('<unknown>', 1, 3, '1 2 + 3 4\\n', 1, 4))");
@@ -209,11 +200,8 @@ feature evaluatePy 1
                     (`stacktrace; "  File \"<unknown>\", line 1\n    1 2 + 3 4\n      ^\nSyntaxError: invalid syntax"))]
             
         expect no stack trace for errors outside a function
-            result: .test.evaluatePy["text"; "1 + 'a'"];
-            stacktrace: string result[`stacktrace];
-            result[`stacktrace]: stacktrace;
             .qu.compare[
-                result;
+                .test.evaluatePy["text"; "1 + 'a'"];
                 (!) . flip (
                     (`error;      1b);
                     (`errorMsg;   "(\"unsupported operand type(s) for +: 'int' and 'str'\",)");
@@ -221,11 +209,8 @@ feature evaluatePy 1
                     (`stacktrace; "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nTypeError: unsupported operand type(s) for +: 'int' and 'str'"))]
 
         expect a stack trace for syntax errors
-            result: .test.evaluatePy["serialized"; "2)"];
-            stacktrace: string result[`stacktrace];
-            result[`stacktrace]: stacktrace;
             .qu.compare[
-                result;
+                .test.evaluatePy["serialized"; "2)"];
                 (!) . flip (
                     (`error;      1b);
                     (`errorMsg;   "(\"unmatched ')'\", ('<unknown>', 1, 2, '2)', 1, 2))");
@@ -236,8 +221,8 @@ feature evaluatePy 2
     // These are the tests specific to the VS Code extension
     before
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[isString; code]
-            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
+        .test.evaluatePy: {[returnFormat; code]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
 
     should define nothing in the global namespace except when explicitly the result of user code
@@ -298,8 +283,8 @@ feature python toStructuredText
         .pykx.pyexec "from collections import namedtuple";
         .pykx.pyexec "import traceback";
         .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
-        .test.evaluatePy: {[isString; code]
-            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(isString; code; "first"; 10000))
+        .test.evaluatePy: {[returnFormat; code]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size!(returnFormat; code; "first"; 10000))
             };
 
     should test the structured text functionality in python
@@ -597,9 +582,11 @@ feature python toStructuredText
                 "{\"count\":13,\"columns\":[{\"name\":\"values\",\"type\":\"str\",\"values\":[\"'The brown fox'\"],\"order\":[0]}],\"warnings\":[]}"]
         expect python structured text to truncate all other data types when count of data is over TABULAR_LIMIT
             .struct.TABULAR_LIMIT : 2;
-            .qu.compare[
+            result: .qu.compare[
                 .test.evaluatePy["structuredText"; "(1,2,3,4,5)"]`data;
-                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"tuple\",\"values\":[\"1\",\"2\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"]
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"tuple\",\"values\":[\"1\",\"2\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
+            .struct.TABULAR_LIMIT : 600000;
+            result
         // There is currently a bug where type error would be returned even if being handled in the codebase.
         // Since this is a relatively minor bug as the code appears to work on runtime, we will xexpect until a fix is found
         xexpect python structuredText using the default TABULAR_LIMIT if no valid value is found.
@@ -628,11 +615,22 @@ feature python toStructuredText
             a: .test.evaluatePy["structuredText"; "1 + '2'"];
             .qu.compare[key a; `error`errorMsg`data`stacktrace]
         expect error dictionary to contain null for data
-            .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`data; "null"]
+            .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`data; ::]
         expect error dictionary to contain a 1b for error
             .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`error; 1b]
         expect error dictionary to contain proper errorMsg
             .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`errorMsg; "(\"unsupported operand type(s) for +: 'int' and 'str'\",)"]
         expect error dictionary to contain stacktrace
             .qu.compare[.test.evaluatePy["structuredText"; "1 + '2'"]`stacktrace; "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nTypeError: unsupported operand type(s) for +: 'int' and 'str'"]
-            
+
+    should handle PNGs returned regardless of the returnFormat
+        expect byte strings which aren't PNGs to be returned as structuredText
+            .qu.compare[
+                .test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a')"][`data];
+                "{\"count\":7,\"columns\":[{\"name\":\"values\",\"type\":\"ByteVector\",\"values\":[\"pykx.ByteAtom(pykx.q('0x89'))\",\"pykx.ByteAtom(pykx.q('0x50'))\",\"pykx.ByteAtom(pykx.q('0x4e'))\",\"pykx.ByteAtom(pykx.q('0x47'))\",\"pykx.ByteAtom(pykx.q('0x0d'))\",\"pykx.ByteAtom(pykx.q('0x0a'))\",\"pykx.ByteAtom(pykx.q('0x1a'))\"],\"order\":[5,4,6,3,2,1,0]}],\"warnings\":[]}"]
+        expect PNG byte strings to be returned serialized if they match the PNG signature exactly
+            .qu.compare[.test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a')"] `data; 0x89504e470d0a1a0a];
+        expect PNG byte strings to be returned serialized if the return format is structuredText
+            .qu.compare[.test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a01020304050607080910')"] `data; 0x89504e470d0a1a0a01020304050607080910];
+        expect PNG byte strings to be returned serialized if the return format is text
+            .qu.compare[.test.evaluatePy["text"; "kx.q('0x89504e470d0a1a0aaabbccddeeff')"] `data; 0x89504e470d0a1a0aaabbccddeeff];

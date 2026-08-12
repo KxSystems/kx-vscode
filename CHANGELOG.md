@@ -34,6 +34,12 @@ file.
   `\someCommand "\t"`) was not escaped correctly when the command was rewritten
   for execution.
 
+# v1.18.1
+
+### Enhancements
+
+- VS Code endpoint detection now proactively checks for `.vscode.getManifest` availability rather than falling back to `vscode.q` only after `123` execution fails.
+
 # v1.18.0
 
 ### Enhancements
