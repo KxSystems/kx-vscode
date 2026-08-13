@@ -372,7 +372,7 @@
         }";
 
     removeExtraIndents:{[code]
-        if[1 ~ count code; code: enlist code];
+        if[-10h ~ type code; code: enlist code];
         inStrings:$[(count ss[code;"'''"])or count ss[code;"\"\"\""];
             1+raze{x+til y-x}./:.pykx.qeval["_kx_execution_context['pystruct_find_strings']"]code;
             ()];
