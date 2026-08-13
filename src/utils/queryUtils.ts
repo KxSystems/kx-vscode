@@ -442,6 +442,31 @@ export function resultToBase64(result: any): string | undefined {
   return undefined;
 }
 
+// The PNG signature as it appears on stdout when a process emits an image with
+// `-1 "0x",raze string png;`. The "0x" marker makes a false positive on
+// ordinary log text effectively impossible.
+export const PNG_HEX_PREFIX = "0x89504e470d0a1a0a";
+
+// The IEND chunk (length, type, CRC) that closes every PNG, in the same hex
+// form. Being part of the format it is a terminator that does not depend on the
+// producer's newline surviving transport.
+export const PNG_HEX_IEND = "0000000049454e44ae426082";
+
+// Converts a `0x`-prefixed hex string carrying PNG bytes into a data URI.
+// Returns undefined unless the text is a well formed hex run starting with the
+// PNG signature — Buffer.from(_, "hex") truncates silently on bad input, so the
+// shape has to be checked up front.
+export function hexToBase64(hex: string): string | undefined {
+  if (!hex.toLowerCase().startsWith(PNG_HEX_PREFIX)) {
+    return undefined;
+  }
+  const digits = hex.slice(2);
+  if (digits.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(digits)) {
+    return undefined;
+  }
+  return `data:image/png;base64,${Buffer.from(digits, "hex").toString("base64")}`;
+}
+
 export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
   if (!ext.scratchpadStarted.has(connLabel)) {
     const runner = Runner.create(() =>

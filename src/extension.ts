@@ -21,6 +21,8 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 
+import { initActiveTargetTracking } from "./classes/activeTargetTracker";
+import { OPEN_RESULTS_HINT } from "./classes/connectionConsole";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
@@ -122,6 +124,22 @@ import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
 
 const logger = "extension";
 
+// Sets where query results are written — the kdb Results View (true) or the
+// connection's output console/Terminal (false) — and mirrors it into a context
+// key so the editor-toolbar selector reflects the current destination. When
+// switching to the Results View, reveal it so results are immediately visible.
+function setResultsDestination(showInView: boolean) {
+  ext.isResultsTabVisible = showInView;
+  vscode.commands.executeCommand(
+    "setContext",
+    "kdb.showResultsInView",
+    showInView,
+  );
+  if (showInView) {
+    vscode.commands.executeCommand(`${KdbResultsViewProvider.viewType}.focus`);
+  }
+}
+
 let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -149,6 +167,9 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "kdb.pythonEnabled", false);
   vscode.commands.executeCommand("setContext", "kdb.connected", []);
   vscode.commands.executeCommand("setContext", "kdb.kdbQHCopyList", []);
+
+  // Default query results to the output console (Terminal), not the view.
+  setResultsDestination(false);
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
@@ -271,6 +292,38 @@ export async function activate(context: vscode.ExtensionContext) {
       "kx-notebook",
       new KxNotebookTargetActionProvider(),
     ),
+  );
+
+  // Track the last-focused KX target terminal (REPL or connection console) as
+  // the active execution target for unassigned files.
+  context.subscriptions.push(initActiveTargetTracking());
+
+  // Make the KDB Results view discoverable from a connection console: the
+  // console prints an "Open KDB Results View" hint, which this provider turns
+  // into a clickable link (terminals disallow command: hyperlinks directly)
+  // that reveals the KDB Results view in the bottom panel.
+  const resultsLinkProvider: vscode.TerminalLinkProvider = {
+    provideTerminalLinks: (linkContext: vscode.TerminalLinkContext) => {
+      const index = linkContext.line.indexOf(OPEN_RESULTS_HINT);
+      if (index === -1) {
+        return [];
+      }
+      return [
+        {
+          startIndex: index,
+          length: OPEN_RESULTS_HINT.length,
+          tooltip: "Open kdb Results View",
+        },
+      ];
+    },
+    handleTerminalLink: () => {
+      vscode.commands.executeCommand(
+        `${KdbResultsViewProvider.viewType}.focus`,
+      );
+    },
+  };
+  context.subscriptions.push(
+    vscode.window.registerTerminalLinkProvider(resultsLinkProvider),
   );
 
   //q language server
@@ -460,6 +513,17 @@ function registerResultsPanelCommands(): CommandRegistration[] {
     {
       command: "kdb.resultsPanel.export.csv",
       callback: () => ext.resultsViewProvider.exportToCsv(),
+    },
+    {
+      // Editor-toolbar selector: route query results to the connection's
+      // output console (Terminal).
+      command: "kdb.results.destination.terminal",
+      callback: () => setResultsDestination(false),
+    },
+    {
+      // Editor-toolbar selector: route query results to the kdb Results View.
+      command: "kdb.results.destination.view",
+      callback: () => setResultsDestination(true),
     },
   ];
 

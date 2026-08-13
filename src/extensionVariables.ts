@@ -15,12 +15,15 @@ import {
   ExtensionContext,
   languages,
   LogOutputChannel,
+  NotebookCell,
+  NotebookCellExecution,
   OutputChannel,
   StatusBarItem,
   TextEditor,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 
+import { ConnectionConsole } from "./classes/connectionConsole";
 import { InsightsConnection } from "./classes/insightsConnection";
 import { LocalConnection } from "./classes/localConnection";
 import { kdbAuthMap } from "./models/connectionsModels";
@@ -52,6 +55,10 @@ export namespace ext {
   export let serverProvider: KdbTreeProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
+  // Output destination toggle, driven by the editor-toolbar selector: when true
+  // query results render in the kdb Results View, when false they go to the
+  // connection's output console (Terminal). Mirrored to the
+  // "kdb.showResultsInView" context key for the selector's menu state.
   export let isResultsTabVisible: boolean;
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
   export let dataSourceTreeProvider: WorkspaceTreeProvider;
@@ -72,6 +79,26 @@ export namespace ext {
   export const connectedConnectionList: Array<
     LocalConnection | InsightsConnection
   > = [];
+  // One output-only console terminal per connected connection, keyed by
+  // connLabel. Created on connect, disposed on disconnect.
+  export const connectionConsoles = new Map<string, ConnectionConsole>();
+  // The most recent notebook cell execution per connLabel. Lets output that
+  // arrives out of band — scratchpad stdout on the log websocket — be rendered
+  // in the cell that produced it rather than written to a file.
+  //
+  // The entry outlives the execution because the log websocket and the query
+  // response are independent channels: stdout routinely arrives after the cell
+  // has ended. `endedAt` marks that crossover, since appending through the
+  // execution only works while it is live; afterwards the cell has to be edited
+  // directly. `plotted` records that an image was appended, so the controller
+  // appends its result instead of replacing the cell's outputs.
+  export interface CellExecutionTarget {
+    execution: NotebookCellExecution;
+    cell: NotebookCell;
+    plotted: boolean;
+    endedAt?: number;
+  }
+  export const activeCellExecutions = new Map<string, CellExecutionTarget>();
   export const connectedContextStrings: Array<string> = [];
   export const queryHistoryAvailableToCopy: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];

@@ -36,6 +36,7 @@ import {
   runQuery,
   setQuickPassword,
 } from "./serverCommand";
+import { getActiveTarget } from "../classes/activeTarget";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
@@ -94,8 +95,8 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
     const server = getServerForUri(uri);
-    if (server) {
-      setRunScratchpadItemText(uri, server);
+    if (server || isConnectableFile(uri)) {
+      setRunScratchpadItemText(uri, server || "Choose Connection");
       runItem.show();
     } else {
       runItem.hide();
@@ -375,7 +376,7 @@ export function getConnectionForUri(uri: Uri) {
 export async function pickConnection(uri: Uri) {
   /* c8 ignore start */
   const server = getServerForUri(uri);
-  const items = ["(none)", ...getServers(), ...getQuickServers(uri)];
+  const items = ["(none)", ext.REPL, ...getServers(), ...getQuickServers(uri)];
 
   let picked = await showInputPicker(items, {
     title: `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
@@ -401,6 +402,9 @@ export async function pickConnection(uri: Uri) {
     }
   } else if (picked === "(none)") {
     picked = undefined;
+    await setTargetForUri(uri, undefined);
+  } else if (picked === ext.REPL) {
+    // The REPL has no execution targets, drop any stale assignment.
     await setTargetForUri(uri, undefined);
   } else if (!items.includes(picked)) {
     notify(`Connection "${picked}" is not found.`, MessageKind.ERROR, {
@@ -699,6 +703,19 @@ function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
 
+// A file that can be run against a connection (q/quke/Python/SQL, including
+// workbooks). Used to decide whether to offer the status-bar connection
+// selector, even when the file is not yet assigned to a connection.
+function isConnectableFile(uri: Uri | undefined) {
+  return (
+    !!uri &&
+    (uri.path.endsWith(".q") ||
+      uri.path.endsWith(".quke") ||
+      uri.path.endsWith(".py") ||
+      uri.path.endsWith(".sql"))
+  );
+}
+
 function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
@@ -783,16 +800,55 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 }
 
+export type RunTarget =
+  | { kind: "repl" }
+  | { kind: "connection"; conn: InsightsConnection | LocalConnection };
+
+/**
+ * Decides where a q/Python/SQL file runs. Precedence:
+ *   1. persisted assignment (kdb.connectionMap): an explicit REPL assignment is
+ *      sticky; an explicit connection is resolved (offering to connect);
+ *   2. otherwise the active target — the last-focused KX terminal (REPL or a
+ *      connection console);
+ *   3. otherwise the REPL (getOrCreateInstance picks the active/folder REPL or
+ *      spawns one).
+ */
+export async function resolveRunTarget(
+  uri: Uri,
+): Promise<RunTarget | undefined> {
+  const server = getServerForUri(uri);
+
+  if (server === ext.REPL) {
+    return { kind: "repl" };
+  }
+
+  if (server !== undefined) {
+    const conn = await findConnection(uri);
+    return conn ? { kind: "connection", conn } : undefined;
+  }
+
+  const active = getActiveTarget();
+  if (active?.kind === "connection") {
+    const conn = new ConnectionManagementService().retrieveConnectedConnection(
+      active.connLabel,
+    );
+    if (conn) {
+      return { kind: "connection", conn };
+    }
+  }
+
+  return { kind: "repl" };
+}
+
 export async function runActiveEditor(type?: ExecutionTypes) {
   /* c8 ignore start */
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
-    let server = getServerForUri(uri);
-    if (server === ext.REPL) {
-      server = undefined;
-      await setServerForUri(uri, undefined);
+    const runTarget = await resolveRunTarget(uri);
+    if (!runTarget) {
+      return;
     }
-    if (server === undefined) {
+    if (runTarget.kind === "repl") {
       await runOnRepl(ext.activeTextEditor, type);
       notifyExecution(
         RunFlag.Run |
@@ -804,10 +860,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       );
       return;
     }
-    const conn = await findConnection(uri);
-    if (!conn) {
-      return;
-    }
+    const conn = runTarget.conn;
 
     const isInsights = conn instanceof InsightsConnection;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
@@ -911,23 +964,28 @@ export class ConnectionLensProvider implements CodeLensProvider {
     const server = getServerForUri(document.uri);
     const top = new Range(0, 0, 0, 0);
 
-    const pickConnection = new CodeLens(top, {
-      command: "kdb.file.pickConnection",
-      title: server ? `Run on ${server}` : "Choose Connection",
-    });
+    const lenses: CodeLens[] = [];
+
+    lenses.push(
+      new CodeLens(top, {
+        command: "kdb.file.pickConnection",
+        title: server ? `Run on ${server}` : "Choose Connection",
+      }),
+    );
 
     if (server) {
       const conn = await getConnectionForServer(server);
       if (!isSql(document.uri) && conn instanceof InsightsNode) {
-        const pickTarget = new CodeLens(top, {
-          command: "kdb.file.pickTarget",
-          title: getTargetForUri(document.uri) || "scratchpad",
-        });
-        return [pickConnection, pickTarget];
+        lenses.push(
+          new CodeLens(top, {
+            command: "kdb.file.pickTarget",
+            title: getTargetForUri(document.uri) || "scratchpad",
+          }),
+        );
       }
     }
 
-    return [pickConnection];
+    return lenses;
   }
 }
 

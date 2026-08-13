@@ -232,6 +232,37 @@ describe("ConnectionManagementService", () => {
     });
   });
 
+  describe("clearActiveConnection", () => {
+    beforeEach(() => {
+      ext.activeConnection = undefined;
+      ext.serverProvider = new KdbTreeProvider(servers, insights);
+    });
+
+    afterEach(() => {
+      ext.activeConnection = undefined;
+      ext.connectionNode = undefined;
+      sinon.restore();
+    });
+
+    it("Should do nothing if there is no active connection", () => {
+      const connSpy = sinon.spy(localConn, "setInactive");
+      connectionManagerService.clearActiveConnection();
+      sinon.assert.notCalled(connSpy);
+    });
+
+    it("Should clear the active connection and set it as inactive", () => {
+      ext.activeConnection = localConn;
+      ext.connectionNode = kdbNode;
+
+      const connSpy = sinon.spy(localConn, "setInactive");
+      connectionManagerService.clearActiveConnection();
+
+      sinon.assert.calledOnce(connSpy);
+      assert.strictEqual(ext.activeConnection, undefined);
+      assert.strictEqual(ext.connectionNode, undefined);
+    });
+  });
+
   describe("disconnect", () => {
     let retrieveConnectionStub,
       retrieveConnectedConnectionStub: sinon.SinonStub;

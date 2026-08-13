@@ -850,6 +850,17 @@ export class ReplConnection {
   private static active?: ReplConnection;
   private static focusListener?: vscode.Disposable;
 
+  // Read-only check used by the shared active-target tracker to tell a REPL
+  // terminal apart from a connection console or an unrelated terminal.
+  static isReplTerminal(terminal: vscode.Terminal): boolean {
+    for (const repl of this.repls.values()) {
+      if (repl.terminal === terminal && !repl.exited) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static trackActiveTerminal() {
     if (this.focusListener) return;
     this.focusListener = vscode.window.onDidChangeActiveTerminal((terminal) => {

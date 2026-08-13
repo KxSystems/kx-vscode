@@ -223,6 +223,122 @@ describe("executionConsole", () => {
       );
     });
 
+    describe("resolveSink", () => {
+      const connLabel = "consoleServer";
+      let appendLine: sinon.SinonStub;
+      let show: sinon.SinonStub;
+
+      beforeEach(() => {
+        appendLine = sinon.stub();
+        show = sinon.stub();
+        ext.connectionConsoles.set(connLabel, <any>{
+          appendLine,
+          terminal: { show },
+        });
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(true),
+          update: sinon.stub(),
+        });
+      });
+
+      afterEach(() => {
+        ext.connectionConsoles.delete(connLabel);
+        getConfigurationStub.restore();
+      });
+
+      it("should write to the connection console and reveal its terminal", () => {
+        queryConsole.append("test", "a:1", "fileName", connLabel);
+
+        sinon.assert.calledWith(appendLine, "test");
+        sinon.assert.calledWith(show, true);
+      });
+
+      it("should write errors to the connection console", () => {
+        queryConsole.appendQueryError(
+          "a:1",
+          "error",
+          connLabel,
+          "fileName",
+          true,
+        );
+
+        sinon.assert.calledWith(appendLine, "Error: error");
+      });
+
+      it("should fall back to the shared channel for unknown connections", () => {
+        const consoleSpy = sinon.spy(queryConsole["_console"], "appendLine");
+
+        queryConsole.append("test", "a:1", "fileName", "notAConsole");
+
+        sinon.assert.notCalled(appendLine);
+        assert.ok(consoleSpy.calledWith("test"));
+        consoleSpy.restore();
+      });
+    });
+
+    describe("output details", () => {
+      let appendLineSpy: sinon.SinonSpy;
+
+      beforeEach(() => {
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub(),
+        });
+        appendLineSpy = sinon.spy(queryConsole["_console"], "appendLine");
+      });
+
+      afterEach(() => {
+        appendLineSpy.restore();
+        getConfigurationStub.restore();
+      });
+
+      it("should append every row of an array output", () => {
+        queryConsole.append(["row1", "row2"], "a:1", "fileName", "testServer");
+
+        assert.ok(appendLineSpy.calledWith("row1"));
+        assert.ok(appendLineSpy.calledWith("row2"));
+        assert.ok(appendLineSpy.calledWith("<<<\n"));
+      });
+
+      it("should append converted rows for a datasource output", () => {
+        queryConsole.append(
+          ["col1#$#;header;#$#col2", "value1#$#;#$#value2"],
+          "a:1",
+          "fileName",
+          "testServer",
+          true,
+          "QSQL",
+        );
+
+        assert.ok(
+          appendLineSpy
+            .getCalls()
+            .some((call) => call.args[0].includes("col1")),
+        );
+        assert.ok(
+          appendLineSpy
+            .getCalls()
+            .some((call) => call.args[0].includes("value1")),
+        );
+      });
+
+      it("should append error details when they are not hidden", () => {
+        queryConsole.appendQueryError(
+          "a:1",
+          "error",
+          "testServer",
+          "fileName",
+          true,
+        );
+
+        assert.ok(appendLineSpy.calledWith("ERROR Query executed: a:1\n"));
+        assert.ok(appendLineSpy.calledWith("error"));
+        assert.ok(appendLineSpy.calledWith("<<< >>>"));
+      });
+    });
+
     describe("appendStdErr", () => {
       it("should append message with STDERR prefix", () => {
         const appendLineSpy = sinon.spy(queryConsole["_console"], "appendLine");

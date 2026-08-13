@@ -12,7 +12,6 @@
  */
 
 import * as assert from "assert";
-import * as fs from "node:fs";
 import * as path from "node:path";
 import * as sinon from "sinon";
 
@@ -382,6 +381,46 @@ describe("queryUtils", () => {
       ]);
 
       assert.ok(result);
+    });
+  });
+
+  describe("hexToBase64", () => {
+    const png = "0x89504e470d0a1a0a";
+
+    it("should return undefined for text that is not hex", () => {
+      assert.strictEqual(queryUtils.hexToBase64("some log line"), undefined);
+    });
+
+    it("should return undefined for hex without the png signature", () => {
+      assert.strictEqual(queryUtils.hexToBase64("0xdeadbeef"), undefined);
+    });
+
+    it("should return undefined for an odd number of digits", () => {
+      assert.strictEqual(queryUtils.hexToBase64(`${png}0`), undefined);
+    });
+
+    it("should return undefined for non hex digits", () => {
+      assert.strictEqual(queryUtils.hexToBase64(`${png}zz`), undefined);
+    });
+
+    it("should return a data uri for the signature", () => {
+      assert.strictEqual(
+        queryUtils.hexToBase64(png),
+        "data:image/png;base64,iVBORw0KGgo=",
+      );
+    });
+
+    it("should return a data uri for signature and payload", () => {
+      const result = queryUtils.hexToBase64(`${png}0000000d49484452`);
+
+      assert.ok(result?.startsWith("data:image/png;base64,iVBORw0KGgo"));
+    });
+
+    it("should accept upper case digits", () => {
+      assert.strictEqual(
+        queryUtils.hexToBase64("0x89504E470D0A1A0A"),
+        "data:image/png;base64,iVBORw0KGgo=",
+      );
     });
   });
 

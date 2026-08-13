@@ -24,3 +24,5 @@ out-test/
 /venv
 
 scripts/mock-insights-server/certs/
+
+.claude

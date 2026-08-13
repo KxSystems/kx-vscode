@@ -63,19 +63,10 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     webviewView.webview.html = this.getWebviewContent(webviewView.webview);
 
-    ext.isResultsTabVisible = this._view?.visible || false;
-
     this.updateWebView("");
 
     webviewView.webview.onDidReceiveMessage((data) => {
       this.updateWebView(data);
-    });
-    webviewView.onDidChangeVisibility(() => {
-      ext.isResultsTabVisible = webviewView.visible;
-    });
-
-    webviewView.onDidDispose(() => {
-      ext.isResultsTabVisible = false;
     });
     /* c8 ignore stop */
   }

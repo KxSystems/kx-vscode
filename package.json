@@ -384,6 +384,18 @@
       },
       {
         "category": "KX",
+        "command": "kdb.results.destination.terminal",
+        "title": "Terminal",
+        "icon": "$(terminal)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.results.destination.view",
+        "title": "kdb Results View",
+        "icon": "$(table)"
+      },
+      {
+        "category": "KX",
         "command": "kdb.datasource.import",
         "title": "Import Datasource from old format"
       },
@@ -669,6 +681,18 @@
         "contents": "No connections registered.\n[Add Connection](command:kdb.connections.add)"
       }
     ],
+    "submenus": [
+      {
+        "id": "kdb.results.destination.terminalMenu",
+        "label": "Output Destination",
+        "icon": "$(terminal)"
+      },
+      {
+        "id": "kdb.results.destination.viewMenu",
+        "label": "Output Destination",
+        "icon": "$(table)"
+      }
+    ],
     "menus": {
       "commandPalette": [
         {
@@ -825,6 +849,14 @@
         },
         {
           "command": "kdb.resultsPanel.export.csv",
+          "when": "false"
+        },
+        {
+          "command": "kdb.results.destination.terminal",
+          "when": "false"
+        },
+        {
+          "command": "kdb.results.destination.view",
           "when": "false"
         },
         {
@@ -1078,6 +1110,38 @@
           "command": "kdb.connections.content.selectView",
           "when": "view == kdb-servers && viewItem in kdb.selectContentNodesContext",
           "group": "inline"
+        }
+      ],
+      "editor/title": [
+        {
+          "submenu": "kdb.results.destination.terminalMenu",
+          "group": "navigation@-0.5",
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py)$/i && !kdb.showResultsInView"
+        },
+        {
+          "submenu": "kdb.results.destination.viewMenu",
+          "group": "navigation@-0.5",
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py)$/i && kdb.showResultsInView"
+        }
+      ],
+      "kdb.results.destination.terminalMenu": [
+        {
+          "command": "kdb.results.destination.terminal",
+          "group": "navigation@0"
+        },
+        {
+          "command": "kdb.results.destination.view",
+          "group": "navigation@1"
+        }
+      ],
+      "kdb.results.destination.viewMenu": [
+        {
+          "command": "kdb.results.destination.terminal",
+          "group": "navigation@0"
+        },
+        {
+          "command": "kdb.results.destination.view",
+          "group": "navigation@1"
         }
       ],
       "editor/title/run": [

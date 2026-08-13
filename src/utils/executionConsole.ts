@@ -24,9 +24,17 @@ import {
   checkIfIsDatasource,
   convertRowsToConsole,
 } from "./queryUtils";
+import { ext } from "../extensionVariables";
 import { ServerType } from "../models/connectionsModels";
 
 const logger = "executionConsole";
+
+// A destination for console text: either a connection's own output console
+// terminal (when one exists for the connLabel) or the shared fallback channel.
+interface ConsoleSink {
+  appendLine: (value: string) => void;
+  reveal: () => void;
+}
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -50,10 +58,27 @@ export class ExecutionConsole {
     this._console.dispose();
   }
 
-  public appendQuery(query: string): void {
+  // Resolves where a connection's output should go: its own console terminal
+  // when connected, otherwise the shared fallback channel (e.g. "No connection"
+  // and debug writes that carry no live connLabel).
+  private resolveSink(connLabel: string): ConsoleSink {
+    const console = ext.connectionConsoles.get(connLabel);
+    if (console) {
+      return {
+        appendLine: (value) => console.appendLine(value),
+        reveal: () => console.terminal.show(true),
+      };
+    }
+    return {
+      appendLine: (value) => this._console.appendLine(value),
+      reveal: () => this._console.show(true),
+    };
+  }
+
+  public appendQuery(sink: ConsoleSink, query: string): void {
     if (query.length > 0) {
-      this._console.appendLine(query);
-      this._console.appendLine("");
+      sink.appendLine(query);
+      sink.appendLine("");
     }
   }
 
@@ -90,10 +115,11 @@ export class ExecutionConsole {
     isFromConnTree?: boolean,
   ): void {
     const hideDetails = getHideDetailedConsoleQueryOutputSetting();
+    const sink = this.resolveSink(connLabel);
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
     if (getAutoFocusOutputOnEntrySetting()) {
-      this._console.show(true);
+      sink.reveal();
     }
 
     if (Array.isArray(output)) {
@@ -119,22 +145,20 @@ export class ExecutionConsole {
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {
-      this._console.appendLine(
-        `>>> ${connLabel}  @ ${date.toLocaleTimeString()} <<<`,
-      );
-      this.appendQuery(query);
+      sink.appendLine(`>>> ${connLabel}  @ ${date.toLocaleTimeString()} <<<`);
+      this.appendQuery(sink, query);
     }
     if (Array.isArray(output) && type === undefined) {
-      this._console.appendLine(output[0]);
-      output.forEach((o) => this._console.appendLine(o));
+      sink.appendLine(output[0]);
+      output.forEach((o) => sink.appendLine(o));
     } else if (dataSourceRes.length > 0) {
-      dataSourceRes.forEach((o) => this._console.appendLine(o));
+      dataSourceRes.forEach((o) => sink.appendLine(o));
     } else {
       output = Array.isArray(output) ? output.join("\n") : output;
-      this._console.appendLine(output);
+      sink.appendLine(output);
     }
     if (!hideDetails) {
-      this._console.appendLine(`<<<\n`);
+      sink.appendLine(`<<<\n`);
     }
   }
 
@@ -152,22 +176,23 @@ export class ExecutionConsole {
     isFromConnTree?: boolean,
   ): void {
     const hideDetails = getHideDetailedConsoleQueryOutputSetting();
+    const sink = this.resolveSink(connLabel);
     if (getAutoFocusOutputOnEntrySetting()) {
-      this._console.show(true);
+      sink.reveal();
     }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {
-      this._console.appendLine(
+      sink.appendLine(
         `<<< ERROR -  ${connLabel}  @ ${date.toLocaleTimeString()} >>>`,
       );
     }
     if (isConnected) {
       if (!hideDetails) {
-        this._console.appendLine(`ERROR Query executed: ${query}\n`);
-        this._console.appendLine(result);
+        sink.appendLine(`ERROR Query executed: ${query}\n`);
+        sink.appendLine(result);
       } else {
-        this._console.appendLine(`Error: ${result}`);
+        sink.appendLine(`Error: ${result}`);
       }
       if (!isDatasource) {
         addQueryHistory(
@@ -188,7 +213,7 @@ export class ExecutionConsole {
       notify(`Please connect to a KDB or Insights server`, MessageKind.ERROR, {
         logger,
       });
-      this._console.appendLine(`Please connect to a KDB or Insights server`);
+      sink.appendLine(`Please connect to a KDB or Insights server`);
       commands.executeCommand("kdb.connections.disconnect");
       addQueryHistory(
         query,
@@ -201,7 +226,7 @@ export class ExecutionConsole {
       );
     }
     if (!hideDetails) {
-      this._console.appendLine(`<<< >>>`);
+      sink.appendLine(`<<< >>>`);
     }
   }
 
@@ -210,13 +235,15 @@ export class ExecutionConsole {
     this._console.appendLine(msg);
   }
 
-  public appendStdErr(message: string): void {
-    this._console.appendLine("❌");
-    this._console.appendLine(message);
+  public appendStdErr(message: string, connLabel = ""): void {
+    const sink = this.resolveSink(connLabel);
+    sink.appendLine("❌");
+    sink.appendLine(message);
   }
 
-  public appendStdOut(message: string): void {
-    this._console.appendLine("ℹ️");
-    this._console.appendLine(message);
+  public appendStdOut(message: string, connLabel = ""): void {
+    const sink = this.resolveSink(connLabel);
+    sink.appendLine("ℹ️");
+    sink.appendLine(message);
   }
 }

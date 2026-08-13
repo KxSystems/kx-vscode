@@ -18,6 +18,7 @@ import * as path from "node:path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { setActiveTarget } from "../../../src/classes/activeTarget";
 import { ReplConnection } from "../../../src/classes/replConnection";
 import * as serverCommand from "../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../src/commands/workspaceCommand";
@@ -26,6 +27,7 @@ import { ExecutionTypes } from "../../../src/models/execution";
 import { ConnectionManagementService } from "../../../src/services/connectionManagerService";
 import { InsightsNode, KdbNode } from "../../../src/services/kdbTreeProvider";
 import { WorkspaceTreeProvider } from "../../../src/services/workspaceTreeProvider";
+import * as coreUtils from "../../../src/utils/core";
 import * as dataSourceUtils from "../../../src/utils/dataSource";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
@@ -35,6 +37,7 @@ describe("workspaceCommand", () => {
   const kdbUri = vscode.Uri.file("test-kdb.q");
   const insightsUri = vscode.Uri.file("tests.q");
   const pythonUri = vscode.Uri.file("test-python.q");
+  const replUri = vscode.Uri.file("test-repl.q");
 
   const updateConfStub = sinon.stub();
 
@@ -97,6 +100,7 @@ describe("workspaceCommand", () => {
                 [relativePath(kdbUri)]: "connection2",
                 [relativePath(pythonUri)]: "connection1",
                 [relativePath(insightsUri)]: "connection1",
+                [relativePath(replUri)]: ext.REPL,
               };
             case "targetMap":
               return {
@@ -253,6 +257,14 @@ describe("workspaceCommand", () => {
         vscode.Uri.file("test.kdb.q"),
       );
       assert.strictEqual(result, undefined);
+    });
+
+    it("should return REPL", async () => {
+      sinon.stub(widgets, "showInputPicker").value(async () => ext.REPL);
+      const result = await workspaceCommand.pickConnection(
+        vscode.Uri.file("test.kdb.q"),
+      );
+      assert.strictEqual(result, ext.REPL);
     });
   });
 
@@ -452,6 +464,67 @@ describe("workspaceCommand", () => {
           sinon.assert.calledOnce(getOrCreate);
         });
       });
+    });
+  });
+
+  describe("resolveRunTarget", () => {
+    const unassignedUri = vscode.Uri.file("unassigned.q");
+    const conn = <any>{ connLabel: "local" };
+    let retrieveConnectedConnectionStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      retrieveConnectedConnectionStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "retrieveConnectedConnection",
+      );
+      sinon.stub(notifications, "notify");
+      setActiveTarget(undefined);
+    });
+
+    afterEach(() => {
+      setActiveTarget(undefined);
+      ext.connectionConsoles.clear();
+    });
+
+    it("should return the REPL for a file assigned to the REPL", async () => {
+      const result = await workspaceCommand.resolveRunTarget(replUri);
+      assert.deepStrictEqual(result, { kind: "repl" });
+    });
+
+    it("should return the connection a file is assigned to", async () => {
+      retrieveConnectedConnectionStub.returns(conn);
+      const result = await workspaceCommand.resolveRunTarget(kdbUri);
+      assert.deepStrictEqual(result, { kind: "connection", conn });
+    });
+
+    it("should return undefined when the assigned connection is not connected", async () => {
+      retrieveConnectedConnectionStub.returns(undefined);
+      sinon.stub(coreUtils, "offerConnectAction").resolves(false);
+      const result = await workspaceCommand.resolveRunTarget(kdbUri);
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should fall back to the active connection target", async () => {
+      ext.connectionConsoles.set("local", <any>{});
+      setActiveTarget({ kind: "connection", connLabel: "local" });
+      retrieveConnectedConnectionStub.returns(conn);
+
+      const result = await workspaceCommand.resolveRunTarget(unassignedUri);
+      assert.deepStrictEqual(result, { kind: "connection", conn });
+    });
+
+    it("should fall back to the REPL when the active connection is gone", async () => {
+      ext.connectionConsoles.set("local", <any>{});
+      setActiveTarget({ kind: "connection", connLabel: "local" });
+      retrieveConnectedConnectionStub.returns(undefined);
+
+      const result = await workspaceCommand.resolveRunTarget(unassignedUri);
+      assert.deepStrictEqual(result, { kind: "repl" });
+    });
+
+    it("should fall back to the REPL when there is no active target", async () => {
+      const result = await workspaceCommand.resolveRunTarget(unassignedUri);
+      assert.deepStrictEqual(result, { kind: "repl" });
     });
   });
 

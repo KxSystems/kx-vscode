@@ -366,6 +366,17 @@ export function getServerName(server: ServerDetails): string {
     : `[${server.serverName}:${server.serverPort}]`;
 }
 
+/**
+ * The short display name of a connection label — the inverse of
+ * {@link getServerName}. KDB labels carry a " [host:port]" suffix; strip it to
+ * get the serverAlias. Insights labels and the REPL have no suffix and pass
+ * through unchanged.
+ */
+export function getConnShortName(connLabel: string): string {
+  const suffix = connLabel.lastIndexOf(" [");
+  return suffix > 0 ? connLabel.slice(0, suffix) : connLabel;
+}
+
 export function getServerAlias(serverList: ServerDetails[]): void {
   serverList.forEach(({ serverAlias }) => {
     if (serverAlias) {

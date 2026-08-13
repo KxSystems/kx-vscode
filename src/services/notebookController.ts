@@ -135,6 +135,15 @@ export class KxNotebookController {
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
+      // Lets images the process writes to stdout during this cell's run be
+      // rendered in it, instead of falling back to a .plot file.
+      const cellTarget: ext.CellExecutionTarget = {
+        execution,
+        cell,
+        plotted: false,
+      };
+      ext.activeCellExecutions.set(conn.connLabel, cellTarget);
+
       let success = false;
       let cancellationDisposable: vscode.Disposable | undefined;
 
@@ -197,7 +206,7 @@ export class KxNotebookController {
                 connVersion,
               );
 
-        this.replaceOutput(execution, rendered);
+        this.replaceOutput(execution, rendered, cellTarget);
         success = true;
       } catch (error) {
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
@@ -210,6 +219,13 @@ export class KxNotebookController {
         });
         break;
       } finally {
+        // Kept rather than dropped: stdout for this cell often arrives after it
+        // has ended, and the entry is what lets that output still find the
+        // cell. Marked before end(), since appending through the execution
+        // stops working once it has ended.
+        if (ext.activeCellExecutions.get(conn.connLabel) === cellTarget) {
+          cellTarget.endedAt = Date.now();
+        }
         cancellationDisposable?.dispose();
         execution.end(success, Date.now());
       }
@@ -316,12 +332,21 @@ export class KxNotebookController {
   replaceOutput(
     execution: vscode.NotebookCellExecution,
     rendered: Rendered,
+    target?: ext.CellExecutionTarget,
   ): void {
-    execution.replaceOutput([
-      new vscode.NotebookCellOutput([
-        vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
-      ]),
+    const output = new vscode.NotebookCellOutput([
+      vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
     ]);
+
+    // Images written to stdout were appended while the cell ran, so replacing
+    // here would discard them. The flag has to come from this execution's own
+    // target: another notebook running on the same connection takes over the
+    // map entry, and reading that would apply an unrelated cell's flag.
+    if (target?.execution === execution && target.plotted) {
+      execution.appendOutput(output);
+    } else {
+      execution.replaceOutput([output]);
+    }
   }
 }
 
