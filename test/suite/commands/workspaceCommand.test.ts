@@ -84,6 +84,15 @@ describe("workspaceCommand", () => {
     sinon
       .stub(ConnectionManagementService.prototype, "retrieveMetaContent")
       .returns(JSON.stringify([{ assembly: "assembly", target: "target" }]));
+    sinon.stub(vscode.workspace, "getWorkspaceFolder").value(
+      () =>
+        <vscode.WorkspaceFolder>{
+          uri: vscode.Uri.file("/"),
+          name: "test",
+          index: 0,
+        },
+    );
+
     sinon.stub(vscode.workspace, "getConfiguration").value(() => {
       const relativePath = (uri: vscode.Uri) =>
         vscode.workspace.asRelativePath(uri, false);
@@ -171,6 +180,83 @@ describe("workspaceCommand", () => {
     });
   });
 
+  describe("files outside the workspace", () => {
+    const outsideUri = vscode.Uri.file("/outside/test.q");
+    let notifyStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      sinon.stub(vscode.workspace, "getWorkspaceFolder").value(() => undefined);
+      notifyStub = sinon.stub(notifications, "notify");
+    });
+
+    afterEach(async () => {
+      await workspaceCommand.setServerForUri(outsideUri, undefined);
+      await workspaceCommand.setTargetForUri(outsideUri, undefined);
+      await workspaceCommand.setTimeoutForUri(outsideUri, undefined);
+    });
+
+    it("should associate a server in memory without notifying an error", async () => {
+      await workspaceCommand.setServerForUri(outsideUri, "connection1");
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(outsideUri),
+        "connection1",
+      );
+      sinon.assert.notCalled(notifyStub);
+      sinon.assert.notCalled(updateConfStub);
+    });
+
+    it("should associate a quick connection in memory", async () => {
+      await workspaceCommand.setServerForUri(outsideUri, "localhost:5001");
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(outsideUri),
+        "localhost:5001",
+      );
+    });
+
+    it("should clear the association", async () => {
+      await workspaceCommand.setServerForUri(outsideUri, "connection1");
+      await workspaceCommand.setServerForUri(outsideUri, undefined);
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(outsideUri),
+        undefined,
+      );
+    });
+
+    it("should not leak the association to other uris", async () => {
+      await workspaceCommand.setServerForUri(outsideUri, "connection1");
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(vscode.Uri.file("/outside/other.q")),
+        undefined,
+      );
+    });
+
+    it("should associate a target in memory", async () => {
+      await workspaceCommand.setTargetForUri(outsideUri, "assembly target");
+      assert.strictEqual(
+        workspaceCommand.getTargetForUri(outsideUri),
+        "assembly target",
+      );
+      sinon.assert.notCalled(updateConfStub);
+    });
+
+    it("should associate a timeout in memory", async () => {
+      await workspaceCommand.setTimeoutForUri(outsideUri, 45);
+      assert.deepStrictEqual(workspaceCommand.getTimeoutForUri(outsideUri), {
+        source: "uri",
+        value: 45,
+      });
+      sinon.assert.notCalled(updateConfStub);
+    });
+
+    it("should fall back to the default timeout", async () => {
+      await workspaceCommand.setTimeoutForUri(outsideUri, undefined);
+      assert.deepStrictEqual(workspaceCommand.getTimeoutForUri(outsideUri), {
+        source: "workspace",
+        value: 30,
+      });
+    });
+  });
+
   describe("timeouts", () => {
     let unitStub: sinon.SinonStub;
     let valueStub: sinon.SinonStub;
@@ -251,8 +337,8 @@ describe("workspaceCommand", () => {
   });
 
   describe("pickConnection", () => {
-    it("should return undefined from (none)", async () => {
-      sinon.stub(widgets, "showInputPicker").value(async () => "(none)");
+    it("should return undefined from (active)", async () => {
+      sinon.stub(widgets, "showInputPicker").value(async () => "(active)");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );

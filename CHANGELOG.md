@@ -3,6 +3,67 @@
 All notable changes to the **kdb VS Code extension** are documented in this
 file.
 
+# v1.20.0
+
+### Enhancements
+
+- Every connected connection now has its own output console in the terminal
+  panel. Query results, and the Insights scratchpad log, are written to the
+  console of the connection that produced them instead of to a single shared
+  output channel. Each console links to the **kdb Results View** for the results
+  of the last query.
+- Files that are not assigned to a connection now run on the **active target** —
+  the KX terminal last started or focused, whether that is a REPL or a
+  connection's output console. The status bar item and the code lens read
+  `(active)` and **Run on active** for these files, and the connection picker is
+  offered for any `q`, `quke`, `py` or `sql` file rather than for workbooks
+  alone.
+- Connections can now be chosen for files opened from outside the workspace.
+  Previously picking one failed with _Document (…) is not in workspace_.
+  Assignments for these files are kept in memory and are lost when VS Code
+  restarts.
+- Added a results destination selector to the editor context menu for `q`,
+  `quke`, `py` and `sql` files, to send query results either to the terminal or
+  to the **kdb Results View**.
+- Images returned by a process, such as a plot, are now written to their own
+  `.plot` file and opened in the chart editor, so a process emitting several
+  images produces one chart view apiece.
+- Errors raised by a custom evaluator now come back with a stack trace rather
+  than the error message alone. As the extension does not format errors
+  differently to results, the call stack is what indicates that a result is an
+  error.
+- Insights connection addresses must now be secure `https://` URLs, and are
+  reported as a validation error when they are not. The address placeholder in
+  the connection form now uses `example.com`, and the login flow follows
+  authentication redirects.
+- Connection form fields are now marked as required, and validation messages
+  name the field they refer to (for example _Port number is required._ rather
+  than _Input value must be a number._).
+- `vscode.q`, the API injected into connected q processes, is now published as
+  an asset with each release.
+
+### Fixes
+
+- Fixed an issue where evaluating a single character Python query threw a type
+  error, because the query was incorrectly enlisted.
+- Fixed the syntax highlighting of the `by` clause.
+- Fixed an issue where a PNG returned as an array of bytes was not recognised as
+  an image.
+- Insights queries whose coordinator or gateway connection drops mid-request,
+  and scratchpad populates that fail mid-request, now report a readable error
+  and are recorded in the query history.
+- The datasource notice for a missing database is now a warning rather than an
+  error.
+
+### Internal Improvements
+
+- Added q unit tests covering `vscode.q` and `evaluatePy.q`, and split the
+  evaluation and formatting parts of `evaluatePy.q`.
+- `secure.q` now loads the compiled `vscode.q` instead of the templated source.
+- Excluded files that are not needed from the packaged `.vsix`.
+- CI skips the q test job on pull requests from forks, and `.sh` files are
+  checked out with LF line endings so they run under bash on Windows.
+
 # v1.19.0
 
 ### Enhancements
@@ -38,7 +99,9 @@ file.
 
 ### Enhancements
 
-- VS Code endpoint detection now proactively checks for `.vscode.getManifest` availability rather than falling back to `vscode.q` only after `123` execution fails.
+- VS Code endpoint detection now proactively checks for `.vscode.getManifest`
+  availability rather than falling back to `vscode.q` only after `123` execution
+  fails.
 
 # v1.18.0
 

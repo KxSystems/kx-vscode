@@ -16,6 +16,7 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
+  EventEmitter,
   FileType,
   NotebookCell,
   QuickPickItem,
@@ -96,7 +97,7 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
     const uri = ext.activeTextEditor.document.uri;
     const server = getServerForUri(uri);
     if (server || isConnectableFile(uri)) {
-      setRunScratchpadItemText(uri, server || "Choose Connection");
+      setRunScratchpadItemText(uri, server || "(active)");
       runItem.show();
     } else {
       runItem.hide();
@@ -183,8 +184,11 @@ function getQuickServers(uri: Uri) {
   const conf = workspace.getConfiguration("kdb", uri);
   const connections = conf.get<{ [key: string]: string }>("connectionMap", {});
   const size = quickServers.length;
-  Object.keys(connections).forEach((key) => {
-    const target = connections[key];
+  const targets = [
+    ...Object.values(connections),
+    ...sessionConnectionMap.values(),
+  ];
+  targets.forEach((target) => {
     if (target.includes(":") && !quickServers.includes(target)) {
       quickServers.push(target);
     }
@@ -232,32 +236,70 @@ function relativePath(uri: Uri) {
   return workspace.asRelativePath(uri, false);
 }
 
+// Assignments for files outside the workspace cannot be persisted in the
+// kdb.connectionMap/targetMap/timeoutMap settings, which are keyed by
+// workspace relative path. They are kept in memory for the session instead.
+const sessionConnectionMap = new Map<string, string>();
+const sessionTargetMap = new Map<string, string>();
+const sessionTimeoutMap = new Map<string, number>();
+
+const sessionMapChangedEmitter = new EventEmitter<void>();
+
+// Session assignments don't change the configuration, so consumers relying on
+// kdb.connectionMap changes need this event to know when to refresh.
+export const onDidChangeSessionMaps = sessionMapChangedEmitter.event;
+
+function isOutsideWorkspace(uri: Uri) {
+  return !workspace.getWorkspaceFolder(uri);
+}
+
+function sessionKey(uri: Uri) {
+  return uri.toString();
+}
+
+function setSessionValue<T>(
+  map: Map<string, T>,
+  uri: Uri,
+  value: T | undefined,
+) {
+  if (value === undefined) {
+    map.delete(sessionKey(uri));
+  } else {
+    map.set(sessionKey(uri), value);
+  }
+  sessionMapChangedEmitter.fire();
+}
+
 export async function setServerForUri(uri: Uri, server: string | undefined) {
   uri = Uri.file(uri.path);
+  if (isOutsideWorkspace(uri)) {
+    setSessionValue(sessionConnectionMap, uri, server);
+    return;
+  }
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>(
     "connectionMap",
     {},
   );
-  const relative = relativePath(uri);
-  if (relative.startsWith("/")) {
-    notify(`Document (${uri.path}) is not in workspace.`, MessageKind.ERROR, {
-      logger,
-    });
-  } else {
-    map[relative] = server;
-    await conf.update("connectionMap", map);
-  }
+  map[relativePath(uri)] = server;
+  await conf.update("connectionMap", map);
 }
 
 export function getServerForUri(uri: Uri) {
   uri = Uri.file(uri.path);
-  const conf = workspace.getConfiguration("kdb", uri);
-  const map = conf.get<{ [key: string]: string | undefined }>(
-    "connectionMap",
-    {},
-  );
-  const server = map[relativePath(uri)];
+  let server: string | undefined;
+
+  if (isOutsideWorkspace(uri)) {
+    server = sessionConnectionMap.get(sessionKey(uri));
+  } else {
+    const conf = workspace.getConfiguration("kdb", uri);
+    const map = conf.get<{ [key: string]: string | undefined }>(
+      "connectionMap",
+      {},
+    );
+    server = map[relativePath(uri)];
+  }
+
   const servers = getServers();
 
   return isQuick(server) ||
@@ -268,6 +310,10 @@ export function getServerForUri(uri: Uri) {
 
 export async function setTargetForUri(uri: Uri, target: string | undefined) {
   uri = Uri.file(uri.path);
+  if (isOutsideWorkspace(uri)) {
+    setSessionValue(sessionTargetMap, uri, target);
+    return;
+  }
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
   map[relativePath(uri)] = target;
@@ -276,9 +322,19 @@ export async function setTargetForUri(uri: Uri, target: string | undefined) {
 
 export function getTargetForUri(uri: Uri) {
   uri = Uri.file(uri.path);
-  const conf = workspace.getConfiguration("kdb", uri);
-  const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
-  const target = map[relativePath(uri)];
+  let target: string | undefined;
+
+  if (isOutsideWorkspace(uri)) {
+    target = sessionTargetMap.get(sessionKey(uri));
+  } else {
+    const conf = workspace.getConfiguration("kdb", uri);
+    const map = conf.get<{ [key: string]: string | undefined }>(
+      "targetMap",
+      {},
+    );
+    target = map[relativePath(uri)];
+  }
+
   return target ? normalizeAssemblyTarget(target) : undefined;
 }
 
@@ -313,13 +369,17 @@ export async function setTimeoutForUri(uri: Uri, timeout: number | undefined) {
 
   if (apply) {
     uri = Uri.file(uri.path);
-    const conf = workspace.getConfiguration("kdb", uri);
-    const map = conf.get<{ [key: string]: number | undefined }>(
-      "timeoutMap",
-      {},
-    );
-    map[relativePath(uri)] = timeout;
-    await conf.update("timeoutMap", map);
+    if (isOutsideWorkspace(uri)) {
+      setSessionValue(sessionTimeoutMap, uri, timeout);
+    } else {
+      const conf = workspace.getConfiguration("kdb", uri);
+      const map = conf.get<{ [key: string]: number | undefined }>(
+        "timeoutMap",
+        {},
+      );
+      map[relativePath(uri)] = timeout;
+      await conf.update("timeoutMap", map);
+    }
     setTimeouttemText(uri, { source: "uri", value: timeout });
   }
 }
@@ -327,8 +387,17 @@ export async function setTimeoutForUri(uri: Uri, timeout: number | undefined) {
 export function getTimeoutForUri(uri: Uri) {
   uri = Uri.file(uri.path);
   const conf = workspace.getConfiguration("kdb", uri);
-  const map = conf.get<{ [key: string]: number | undefined }>("timeoutMap", {});
-  const uriTimeout = map[relativePath(uri)];
+  let uriTimeout: number | undefined;
+
+  if (isOutsideWorkspace(uri)) {
+    uriTimeout = sessionTimeoutMap.get(sessionKey(uri));
+  } else {
+    const map = conf.get<{ [key: string]: number | undefined }>(
+      "timeoutMap",
+      {},
+    );
+    uriTimeout = map[relativePath(uri)];
+  }
 
   if (uriTimeout) {
     return {
@@ -376,7 +445,12 @@ export function getConnectionForUri(uri: Uri) {
 export async function pickConnection(uri: Uri) {
   /* c8 ignore start */
   const server = getServerForUri(uri);
-  const items = ["(none)", ext.REPL, ...getServers(), ...getQuickServers(uri)];
+  const items = [
+    "(active)",
+    ext.REPL,
+    ...getServers(),
+    ...getQuickServers(uri),
+  ];
 
   let picked = await showInputPicker(items, {
     title: `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
@@ -400,7 +474,7 @@ export async function pickConnection(uri: Uri) {
       });
       return undefined;
     }
-  } else if (picked === "(none)") {
+  } else if (picked === "(active)") {
     picked = undefined;
     await setTargetForUri(uri, undefined);
   } else if (picked === ext.REPL) {
@@ -413,8 +487,8 @@ export async function pickConnection(uri: Uri) {
     return undefined;
   }
 
-  if (picked) {
-    setRunScratchpadItemText(uri, picked);
+  if (picked || isConnectableFile(uri)) {
+    setRunScratchpadItemText(uri, picked || "(active)");
     ext.runScratchpadItem.show();
   } else {
     ext.runScratchpadItem.hide();
@@ -960,6 +1034,8 @@ function update(uri: Uri) {
 }
 
 export class ConnectionLensProvider implements CodeLensProvider {
+  readonly onDidChangeCodeLenses = onDidChangeSessionMaps;
+
   async provideCodeLenses(document: TextDocument) {
     const server = getServerForUri(document.uri);
     const top = new Range(0, 0, 0, 0);
@@ -969,7 +1045,7 @@ export class ConnectionLensProvider implements CodeLensProvider {
     lenses.push(
       new CodeLens(top, {
         command: "kdb.file.pickConnection",
-        title: server ? `Run on ${server}` : "Choose Connection",
+        title: server ? `Run on ${server}` : "Run on active",
       }),
     );
 

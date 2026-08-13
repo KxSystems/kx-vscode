@@ -10,7 +10,7 @@ timestamp: 2026-07-10
 
 `QHOME` environment variable and `kdb.qHomeDirectory` setting are identical from the viewpoint of VS Code and they are used to locate the `q` executable for REPL.
 
-When `QHOME` is set through operating system, `QHOME` will always be used instead of `kdb.qHomeDirectory`. A workspace `.env` [file](https://code.visualstudio.com/docs/python/environments#_environment-variables) can also be used to set `QHOME` and other environment variables specific to the workspace.
+When `QHOME` is set through operating system, `QHOME` will always be used instead of `kdb.qHomeDirectory`. A workspace [`.env` file](env-files.md) can also be used to set `QHOME` and other environment variables specific to the workspace.
 
 `kdb.qHomeDirectory` setting is in `machine` scope which means it can be set differently per remote machine.
 
