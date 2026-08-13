@@ -135,7 +135,7 @@ navigation, and relative markdown cross-links. Split into
 notebooks) and [docs/developer/](docs/developer/) (setup, notifications,
 execution flow, telemetry), with screenshots under `docs/images/`. The
 end-user product documentation is hosted separately at
-`https://gitlab.com/kxdev/documentation/vscode-docs/`.
+`https://code.kx.com/vscode/`.
 
 - [docs/user/reference-card.md](docs/user/reference-card.md) is the canonical
   reference card (command palette, keybindings, settings, execution matrix,
