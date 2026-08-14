@@ -458,15 +458,27 @@ describe("workspaceCommand", () => {
 
       beforeEach(() => {
         notifyStub = sinon.stub(notifications, "notify");
-        executeStub = sinon.stub(notifications.Runner.prototype, "execute");
       });
 
+      // Only the tests that reach the REPL stub it, so the nested startRepl
+      // describes are free to stub getOrCreateInstance themselves.
+      function stubRepl() {
+        executeStub = sinon.stub().resolves({});
+        sinon
+          .stub(ReplConnection, "getOrCreateInstance")
+          .resolves(<ReplConnection>(
+            (<unknown>{ show() {}, executeQuery: executeStub })
+          ));
+      }
+
       it("should execute q file", async () => {
+        stubRepl();
         await workspaceCommand.runOnRepl(editor, ExecutionTypes.QueryFile);
         sinon.assert.calledOnce(executeStub);
       });
 
       it("should execute q selection", async () => {
+        stubRepl();
         await workspaceCommand.runOnRepl(editor, ExecutionTypes.QuerySelection);
         sinon.assert.calledOnce(executeStub);
       });
@@ -480,6 +492,7 @@ describe("workspaceCommand", () => {
       });
 
       it("should notify execution error", async () => {
+        stubRepl();
         executeStub.rejects(new Error("Test"));
         await workspaceCommand.runOnRepl(editor, ExecutionTypes.QueryFile);
         sinon.assert.calledOnce(notifyStub);

@@ -282,42 +282,6 @@ describe("REPL", () => {
     const repls = () =>
       repl.ReplConnection["repls"] as Map<string, repl.ReplConnection>;
 
-    it("should route a contained file to the most specific folder REPL", async () => {
-      const folder = vscode.Uri.file("/ws/sub");
-      const folderRepl = await repl.ReplConnection.openInFolder(folder);
-      try {
-        const chosen = await repl.ReplConnection.getOrCreateInstance(
-          vscode.Uri.file("/ws/sub/child/x.q"),
-        );
-        assert.strictEqual(chosen, folderRepl);
-      } finally {
-        folderRepl["close"]();
-      }
-    });
-
-    it("should pick the most specific of several overlapping folder REPLs", async () => {
-      const outer = await repl.ReplConnection.openInFolder(
-        vscode.Uri.file("/ws"),
-      );
-      const inner = await repl.ReplConnection.openInFolder(
-        vscode.Uri.file("/ws/sub/child2"),
-      );
-      try {
-        const chosenForOuter = await repl.ReplConnection.getOrCreateInstance(
-          vscode.Uri.file("/ws/other/x.q"),
-        );
-        assert.strictEqual(chosenForOuter, outer);
-
-        const chosenForInner = await repl.ReplConnection.getOrCreateInstance(
-          vscode.Uri.file("/ws/sub/child2/x.q"),
-        );
-        assert.strictEqual(chosenForInner, inner);
-      } finally {
-        outer["close"]();
-        inner["close"]();
-      }
-    });
-
     it("should remove the instance from the cache on close, by key", async () => {
       const folder = vscode.Uri.file("/ws/sub2");
       const folderRepl = await repl.ReplConnection.openInFolder(folder);
@@ -374,7 +338,7 @@ describe("REPL", () => {
       }
     });
 
-    it("should fall back to folder routing when there is no active REPL", async () => {
+    it("should not route by folder when there is no active REPL", async () => {
       const replA = await repl.ReplConnection.openInFolder(
         vscode.Uri.file("/ws/a"),
       );
@@ -382,7 +346,9 @@ describe("REPL", () => {
         const chosen = await repl.ReplConnection.getOrCreateInstance(
           vscode.Uri.file("/ws/a/child.q"),
         );
-        assert.strictEqual(chosen, replA);
+        // The workspace REPL, not the one based in the file's own folder.
+        assert.notStrictEqual(chosen, replA);
+        assert.strictEqual(chosen, instance);
       } finally {
         replA["close"]();
       }

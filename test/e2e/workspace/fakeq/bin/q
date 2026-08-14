@@ -1,0 +1,76 @@
+#!/usr/bin/env node
+/*
+ * A stand-in for the q binary, spawned by ReplConnection through
+ * kdb.qHomeDirectoryWorkspace. It implements just enough of the REPL protocol
+ * for executions to complete, and records everything it is sent.
+ *
+ * The protocol lives in src/classes/replConnection.ts (createHandler,
+ * createToken, handleOutput): the extension installs a .z.pi handler carrying
+ * a per-REPL uuid, then holds each statement until the token
+ *
+ *     <uuid>@.<namespace>@
+ *
+ * has come back twice — once per pipe. Echoing it fewer times stalls the REPL
+ * forever rather than failing, so keep the two writes below in step with
+ * createToken.
+ */
+
+const fs = require("node:fs");
+const path = require("node:path");
+
+// One transcript per REPL: the extension spawns each one in the directory it
+// is based in, so a folder REPL records separately from the workspace REPL.
+const TRANSCRIPT = path.join(process.cwd(), ".transcript.log");
+const HANDLER = /\.z\.pi:/;
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
+
+let identity;
+let pending = "";
+
+function token() {
+  return `${identity}@.@`;
+}
+
+function handle(line) {
+  if (!line) {
+    return;
+  }
+
+  if (HANDLER.test(line)) {
+    // The handler carries the uuid this REPL expects to see echoed back. It is
+    // resent on a context switch, so keep taking the latest one.
+    identity = UUID.exec(line)?.[0];
+    return;
+  }
+
+  fs.appendFileSync(TRANSCRIPT, `${line}\n`);
+
+  if (identity) {
+    // Stand in for `show value x`, so a caller sees deterministic output, then
+    // release the statement.
+    process.stdout.write(`${line}\n`);
+    process.stdout.write(token());
+    process.stdout.write(token());
+  }
+}
+
+process.stdin.on("data", (chunk) => {
+  pending += chunk.toString("utf8");
+  const lines = pending.split(/\r?\n/);
+  pending = lines.pop() ?? "";
+  for (const line of lines) {
+    handle(line.trim());
+  }
+});
+
+process.stdin.on("end", () => process.exit(0));
+
+// The extension interrupts a running query with SIGINT and waits for q's
+// timestamped error before it treats the execution as cancelled.
+process.on("SIGINT", () => {
+  process.stdout.write(`'${new Date().toISOString().replace(/-/g, ".")}\n`);
+  if (identity) {
+    process.stdout.write(token());
+    process.stdout.write(token());
+  }
+});

@@ -16,8 +16,9 @@ coverage-reports/
 coverage/
 
 out-test/
-.test-extensions/
-.test-folder/
+
+# Workbook fixtures are derived from their plain-file counterparts during the run
+test/suite/ui/fixtures/exec.kdb.*
 
 /bin
 /lib
@@ -26,3 +27,10 @@ out-test/
 scripts/mock-insights-server/certs/
 
 .claude
+
+# End to end test transcripts, written by the stand-in q
+**/.transcript.log
+
+# Copies the end to end tests make from the main.* fixtures
+test/e2e/workspace/main.kdb.*
+test/e2e/workspace/local.*

@@ -27,6 +27,14 @@ jobs:
         if: runner.os == 'Linux'
       - run: npm test
         if: runner.os != 'Linux'
+      # The stand-in q the end to end workspace points at cannot run under
+      # cmd.exe, so these are macOS and Linux only for now.
+      - name: End to end tests
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+      - name: End to end tests
+        if: runner.os == 'macOS'
+        run: npm run test:e2e
 
       - name: Code coverage summary
         if: runner.os == 'Linux'

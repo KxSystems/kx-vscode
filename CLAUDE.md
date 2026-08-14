@@ -40,8 +40,8 @@ The primary test suite runs inside a real VS Code instance via
 npm run test                      # Full integration suite (test/suite/**)
 npm run test:file <path>          # Single test file (TEST_FILE env)
 npm run test:folder <path>        # A folder of tests (TEST_FOLDER env)
+npm run test:e2e                  # End to end suite (test/e2e/**), TEST_FILE env narrows it
 npm run coverage                  # Same suite under c8 coverage
-npm run ui-test                   # End-to-end UI tests via vscode-extension-tester (test/ui/**)
 npm run q-test                    # q-language unit tests — runs in the qpbuild docker image (no local q needed)
 ```
 
@@ -57,6 +57,15 @@ passes it, from a secret). If that env var is unset, `qcumber.sh` base64-encodes
 a `k4.lic` file, looked up as `$QLIC/k4.lic`, `$QHOME/k4.lic`, then
 `~/.kx/k4.lic` — so if you already have `$QLIC`/`$QHOME` set there's nothing to
 configure. (A `kc.lic` will not work; the tests need a `k4.lic`.)
+
+`test:e2e` is a separate VS Code window opened on `test/e2e/workspace`, driving
+the extension through its real commands with nothing stubbed — real workspace
+settings, real language server. Two stand-ins replace q and record what they are
+sent: `fakeq/bin/q` for the REPL (reached through `kdb.qHomeDirectoryWorkspace`,
+writing a `.transcript.log` per REPL) and `test/e2e/qserver.ts`, an in-process
+kdb+ IPC server for connections. It runs on macOS and Linux only — the REPL
+spawns q through `cmd.exe` on Windows, which cannot run the stand-in. See
+[docs/developer/development.md](docs/developer/development.md).
 
 Test framework is **Mocha** with **Sinon** for stubs and
 **proxyquire**/**mock-fs** for module and filesystem mocking. Tests mirror the

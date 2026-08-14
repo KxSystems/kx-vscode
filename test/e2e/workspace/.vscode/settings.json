@@ -1,0 +1,10 @@
+{
+  "kdb.qHomeDirectoryWorkspace": "fakeq",
+  "kdb.autoFocusOutputOnEntry": true,
+  "kdb.connectionMap": {
+    "local.q": "TESTLOCAL",
+    "local.sql": "TESTLOCAL",
+    "local.py": "TESTLOCAL",
+    "local.quke": "TESTLOCAL"
+  }
+}

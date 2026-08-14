@@ -1,0 +1,38 @@
+<!--
+  Hover permalinks for section headings. kramdown already gives every heading
+  an id (auto_ids); this only surfaces a clickable "#" so a section can be
+  linked without reading the page source. Picked up by jekyll-theme-cayman,
+  whose default layout includes head-custom.html.
+-->
+<style>
+  .main-content .anchor-link {
+    margin-left: 0.35em;
+    color: #1e6bb8;
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity 0.1s ease-in;
+  }
+
+  .main-content h2:hover .anchor-link,
+  .main-content h3:hover .anchor-link,
+  .main-content h4:hover .anchor-link,
+  .main-content .anchor-link:focus {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var headings = document.querySelectorAll(
+      ".main-content h2[id], .main-content h3[id], .main-content h4[id]",
+    );
+    Array.prototype.forEach.call(headings, function (heading) {
+      var link = document.createElement("a");
+      link.className = "anchor-link";
+      link.href = "#" + heading.id;
+      link.textContent = "#";
+      link.setAttribute("aria-label", "Permalink to " + heading.textContent);
+      heading.appendChild(link);
+    });
+  });
+</script>

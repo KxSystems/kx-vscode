@@ -24,10 +24,8 @@ import {
 } from "../commands/dataSourceCommand";
 import { executeQuery } from "../commands/serverCommand";
 import {
-  findConnection,
-  getServerForUri,
   getTimeoutForUri,
-  setServerForUri,
+  resolveRunTarget,
 } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";
@@ -83,16 +81,27 @@ export class KxNotebookController {
       execution.start(Date.now());
 
       let success = false;
+      const cancellation = execution.token.onCancellationRequested(() =>
+        repl.cancel(),
+      );
+
       try {
         const kind = getCellKind(cell);
         const text = cell.document.getText();
+        if (!text.trim()) {
+          // Nothing to run. Checked before wrapping, because the SQL and
+          // Python wrappers turn an empty cell into a statement the REPL
+          // would send.
+          this.replaceOutput(execution, { text: "", mime: "text/plain" });
+          success = true;
+          continue;
+        }
         const result = await repl.executeQuery(
           kind === CellKind.PYTHON
             ? getPythonWrapper(text, "serialized")
             : kind === CellKind.SQL
               ? getSQLWrapper(text)
               : text,
-          execution.token,
         );
         this.replaceOutput(execution, {
           text: result.output || "",
@@ -104,6 +113,7 @@ export class KxNotebookController {
         this.replaceOutput(execution, { text: `${error}`, mime: "text/plain" });
         break;
       } finally {
+        cancellation.dispose();
         execution.end(success, Date.now());
       }
     }
@@ -114,19 +124,17 @@ export class KxNotebookController {
     notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
   ): Promise<void> {
-    let server = getServerForUri(notebook.uri);
-    if (server === ext.REPL) {
-      server = undefined;
-      await setServerForUri(notebook.uri, undefined);
+    // Same precedence as a q/Python/SQL file: an explicit assignment first,
+    // then the active target, then the REPL.
+    const runTarget = await resolveRunTarget(notebook.uri);
+    if (!runTarget) {
+      return;
     }
-    if (server === undefined) {
+    if (runTarget.kind === "repl") {
       return this.executeRepl(cells, notebook, controller);
     }
 
-    const conn = await findConnection(notebook.uri);
-    if (!conn) {
-      return;
-    }
+    const conn = runTarget.conn;
     const { isInsights, connVersion } = this.getInsightProps(conn);
 
     for (const cell of cells) {
@@ -149,6 +157,12 @@ export class KxNotebookController {
 
       try {
         const kind = getCellKind(cell);
+
+        if (!cell.document.getText().trim()) {
+          this.replaceOutput(execution, { text: "", mime: "text/plain" });
+          success = true;
+          continue;
+        }
 
         const { target, variable } = this.getCellMetadata(
           cell,

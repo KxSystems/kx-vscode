@@ -100,6 +100,9 @@ are lost when VS Code restarts.
 
 `REPL` and `My q` requires [PyKX](use-pykx-within-repl.md) for Python support.
 
+`quke` files support selection and current line execution only — there is no
+whole file run.
+
 ## Telemetry
 
 | Telemetry                         | Measurements | Source                                   |

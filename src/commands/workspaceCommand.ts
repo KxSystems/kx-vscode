@@ -55,12 +55,7 @@ import {
   offerConnectAction,
 } from "../utils/core";
 import { importOldDsFiles } from "../utils/dataSource";
-import {
-  Cancellable,
-  MessageKind,
-  notify,
-  Runner,
-} from "../utils/notifications";
+import { MessageKind, notify, Runner } from "../utils/notifications";
 import {
   RunFlag,
   getPythonWrapper,
@@ -850,22 +845,22 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
       return;
   }
 
+  // Nothing to run. Checked before wrapping, because the SQL and Python
+  // wrappers turn empty text into a non-empty statement the REPL would send.
+  if (!text.trim()) {
+    return;
+  }
+
   try {
-    const runner = Runner.create(async (_, token) => {
-      const repl = await ReplConnection.getOrCreateInstance(uri);
-      repl.show();
-      return repl.executeQuery(
-        isPython(uri)
-          ? getPythonWrapper(text, "serialized")
-          : isSql(uri)
-            ? getSQLWrapper(text)
-            : text,
-        token,
-      );
-    });
-    runner.cancellable = Cancellable.EXECUTOR;
-    runner.title = `Executing ${basename} on ${ext.REPL}.`;
-    await runner.execute();
+    const repl = await ReplConnection.getOrCreateInstance(uri);
+    repl.show();
+    await repl.executeQuery(
+      isPython(uri)
+        ? getPythonWrapper(text, "serialized")
+        : isSql(uri)
+          ? getSQLWrapper(text)
+          : text,
+    );
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
       logger,
@@ -884,8 +879,8 @@ export type RunTarget =
  *      sticky; an explicit connection is resolved (offering to connect);
  *   2. otherwise the active target — the last-focused KX terminal (REPL or a
  *      connection console);
- *   3. otherwise the REPL (getOrCreateInstance picks the active/folder REPL or
- *      spawns one).
+ *   3. otherwise the REPL (getOrCreateInstance picks the active REPL or spawns
+ *      one for the workspace).
  */
 export async function resolveRunTarget(
   uri: Uri,

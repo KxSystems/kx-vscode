@@ -23,14 +23,9 @@ import {
   getAutoFocusOutputOnEntrySetting,
   getEnvironment,
 } from "../utils/core";
-import {
-  Cancellable,
-  MessageKind,
-  notify,
-  Runner,
-} from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
-import { moduleSearchPath, selectRepl } from "../utils/replPath";
+import { moduleSearchPath } from "../utils/replPath";
 import { errorMessage } from "../utils/shared";
 import { pickWorkspace } from "../utils/workspace";
 
@@ -107,7 +102,6 @@ const CONF = {
 };
 
 interface Execution {
-  token: vscode.CancellationToken;
   source: vscode.CancellationTokenSource;
   cancelled: boolean;
   lines: string[];
@@ -182,7 +176,8 @@ export class ReplConnection {
   private readonly executions: Execution[] = [];
 
   private messages? = [
-    `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
+    `${CONF.TITLE} Copyright (C) 1993-${new Date().getFullYear()} KX Systems` +
+      ANSI.CRLF.repeat(2),
   ];
 
   private env: { [key: string]: string } = {};
@@ -387,10 +382,9 @@ export class ReplConnection {
   }
 
   private runQuery(data: string) {
-    const runner = Runner.create((_, token) => this.executeQuery(data, token));
-    runner.cancellable = Cancellable.EXECUTOR;
-    runner.title = "Executing query on REPL.";
-    runner.execute();
+    // Errors are written to the terminal by handleError before the promise
+    // rejects, so there is nothing left to report here.
+    this.executeQuery(data).catch(() => {});
   }
 
   private sendToTerminal(data: string) {
@@ -511,7 +505,9 @@ export class ReplConnection {
     this.showPrompt();
   }
 
-  private cancel(error?: Error) {
+  // Stops the running query, the same way Ctrl+C does from the terminal.
+  // Notebook cells call this from their own interrupt button.
+  cancel(error?: Error) {
     if (this.executing) {
       if (error) this.executing.reject(error);
       this.executing.source.cancel();
@@ -795,15 +791,13 @@ export class ReplConnection {
     if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
   }
 
-  executeQuery(text: string, token: vscode.CancellationToken) {
+  executeQuery(text: string) {
     return new Promise<Result>((resolve, reject) => {
       const source = new vscode.CancellationTokenSource();
 
       const execution = {
         source,
-        token,
-        cancelled:
-          token.isCancellationRequested || source.token.isCancellationRequested,
+        cancelled: false,
         lines: normalizeQuery(text)
           .split(ANSI.CRLF)
           .filter((line) => line),
@@ -828,12 +822,14 @@ export class ReplConnection {
         }
       };
 
-      [token, source.token].forEach((token) =>
-        token.onCancellationRequested(requestCancellation),
-      );
+      // Cancellation is driven from the terminal (Ctrl+C) through this source.
+      source.token.onCancellationRequested(requestCancellation);
 
-      if (execution.cancelled) {
-        resolve({ cancelled: true });
+      if (execution.lines.length === 0) {
+        // Blank lines, comments and exit comments all normalize away, so there
+        // is nothing to run. Queueing it would send lines[0] (undefined) to the
+        // process.
+        resolve({ output: ANSI.EMPTY });
       } else {
         this.executions.push(execution);
         this.executeNext();
@@ -845,8 +841,8 @@ export class ReplConnection {
   private static readonly repls = new Map<string, ReplConnection>();
 
   // The REPL the user is actively working in, tracked from terminal focus.
-  // Used to route "orphan" files (those not owned by any folder REPL) to the
-  // REPL the user is looking at instead of spawning a new one.
+  // Every execution routed to the REPL runs here, so a file follows the REPL
+  // the user is looking at rather than the folder it happens to live in.
   private static active?: ReplConnection;
   private static focusListener?: vscode.Disposable;
 
@@ -894,25 +890,11 @@ export class ReplConnection {
   }
 
   static async getOrCreateInstance(resource?: vscode.Uri) {
-    if (resource) {
-      // Executions always target the active REPL (the one the user last
-      // started or focused) when it is live.
-      if (this.active && !this.active.exited) {
-        return this.active;
-      }
-      // No active REPL: fall back to the most-specific folder REPL that owns
-      // the file, if any.
-      const match = selectRepl(
-        resource.fsPath,
-        [...this.repls.values()].map((repl) => ({
-          baseFsPath: repl.baseUri?.fsPath,
-          exited: repl.exited,
-          repl,
-        })),
-      );
-      if (match) {
-        return match.repl;
-      }
+    // Executions always target the active REPL (the one the user last started
+    // or focused) when it is live, the same way they target the active
+    // connection. Where the file sits on disk plays no part.
+    if (resource && this.active && !this.active.exited) {
+      return this.active;
     }
 
     const workspace =

@@ -41,6 +41,35 @@
       "preLaunchTask": "npm: pretest"
     },
     {
+      "name": "E2E Tests",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "${workspaceFolder}/test/e2e/workspace",
+        "--disable-workspace-trust",
+        "--user-data-dir=${workspaceFolder}/.vscode-test/e2e-user-data",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/out-test/test/e2e/index"
+      ],
+      "outFiles": ["${workspaceFolder}/out-test/**/*.js"],
+      "preLaunchTask": "npm: pretest:e2e"
+    },
+    {
+      "name": "E2E Test Selected File",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "${workspaceFolder}/test/e2e/workspace",
+        "--disable-workspace-trust",
+        "--user-data-dir=${workspaceFolder}/.vscode-test/e2e-user-data",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/out-test/test/e2e/index"
+      ],
+      "env": { "TEST_FILE": "${fileBasenameNoExtension}" },
+      "outFiles": ["${workspaceFolder}/out-test/**/*.js"],
+      "preLaunchTask": "npm: pretest:e2e"
+    },
+    {
       "name": "Test Selected File",
       "type": "extensionHost",
       "request": "launch",
@@ -52,26 +81,6 @@
       "env": { "TEST_FILE": "${fileBasenameNoExtension}" },
       "outFiles": ["${workspaceFolder}/out-test/**/*.js"],
       "preLaunchTask": "npm: pretest"
-    },
-    {
-      "name": "Extension UI Tests",
-      "request": "launch",
-      "runtimeArgs": ["run", "ui-test"],
-      "runtimeExecutable": "npm",
-      "skipFiles": ["<node_internals>/**"],
-      "type": "node"
-    },
-    {
-      "name": "UI Test Selected File",
-      "request": "launch",
-      "runtimeArgs": [
-        "run",
-        "ui-test-cmd",
-        "./out-test/test/ui/${fileBasenameNoExtension}.js"
-      ],
-      "runtimeExecutable": "npm",
-      "skipFiles": ["<node_internals>/**"],
-      "type": "node"
     }
   ],
   "compounds": [
