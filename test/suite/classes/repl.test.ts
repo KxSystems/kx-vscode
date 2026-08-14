@@ -12,6 +12,8 @@
  */
 
 import * as assert from "node:assert";
+import path from "node:path";
+import proxyquire from "proxyquire";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
@@ -171,6 +173,70 @@ describe("REPL", () => {
       instance["deleteWordRight"]();
       assert.strictEqual(instance["input"].join(""), "foo");
       assert.strictEqual(instance["inputIndex"], 3);
+    });
+  });
+
+  describe("loadPath", () => {
+    const base = path.join(path.sep, "work", "space");
+
+    it("should resolve against the working directory", () => {
+      sinon.stub(repl.ReplConnection.prototype, <any>"cwd").get(() => base);
+      const result = instance["loadPath"](path.join(base, "src", "test.q"));
+      assert.strictEqual(result, ["src", "test.q"].join("/"));
+    });
+
+    it("should keep the absolute path without a working directory", () => {
+      sinon
+        .stub(repl.ReplConnection.prototype, <any>"cwd")
+        .get(() => undefined);
+      const target = path.join(base, "src", "test.q");
+      const result = instance["loadPath"](target);
+      assert.strictEqual(result, target.split(path.sep).join("/"));
+    });
+
+    it("should load a file dropped on the terminal", () => {
+      sinon.stub(repl.ReplConnection.prototype, <any>"cwd").get(() => base);
+      const runQueryStub = sinon.stub(instance, <any>"runQuery");
+      instance["handleInput"](path.join(base, "src", "test.q") + "\r\n");
+      sinon.assert.calledWith(runQueryStub, "\\l src/test.q");
+    });
+  });
+
+  describe("killProcess", () => {
+    let notifyStub: sinon.SinonStub;
+    let killStub: sinon.SinonStub;
+    let ReplConnectionClass: any;
+
+    const createInstance = (pid?: number) => {
+      sinon
+        .stub(ReplConnectionClass.prototype, "createProcess")
+        .returns({ ...target, pid });
+      return ReplConnectionClass.getOrCreateInstance();
+    };
+
+    beforeEach(() => {
+      notifyStub = sinon.stub();
+      killStub = sinon.stub().throws(new Error("taskkill failed"));
+      ReplConnectionClass = proxyquire.noPreserveCache()(
+        "../../../src/classes/replConnection",
+        {
+          "kill-sync": killStub,
+          "../utils/notifications": { notify: notifyStub },
+        },
+      ).ReplConnection;
+    });
+
+    it("should log instead of throwing when the kill fails", async () => {
+      const killable = await createInstance(1234);
+      assert.doesNotThrow(() => killable["stopProcess"]());
+      sinon.assert.calledWith(killStub, 1234, "SIGKILL", true);
+      sinon.assert.called(notifyStub);
+    });
+
+    it("should not kill without a pid", async () => {
+      const killable = await createInstance(undefined);
+      killable["killProcess"]("SIGKILL");
+      sinon.assert.notCalled(killStub);
     });
   });
 

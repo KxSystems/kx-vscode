@@ -250,6 +250,20 @@ export class ReplConnection {
     return this.baseUri?.toString() ?? CONF.DEFAULT;
   }
 
+  private get cwd() {
+    return this.baseUri?.fsPath ?? this.workspace?.uri.fsPath;
+  }
+
+  // `\l` resolves against the working directory the process was started in and
+  // only understands forward slashes.
+  private loadPath(target: string) {
+    const base = this.cwd;
+    const relative = base ? path.relative(base, target) : target;
+    return (path.isAbsolute(relative) || !relative ? target : relative)
+      .split(path.sep)
+      .join("/");
+  }
+
   private terminalLabel() {
     if (this.workspace) {
       if (
@@ -311,7 +325,7 @@ export class ReplConnection {
       `${this.activate ? this.activate + " && " : ""}"${this.env.qBinPath}"`,
       {
         env: this.env,
-        cwd: this.baseUri?.fsPath ?? this.workspace?.uri.fsPath,
+        cwd: this.cwd,
         windowsHide: true,
         shell: this.win32 ? "cmd.exe" : "bash",
       },
@@ -371,14 +385,25 @@ export class ReplConnection {
     );
   }
 
+  // Killing an already exited process throws on Windows, where the tree kill
+  // shells out to taskkill, so failures are logged instead of propagated.
+  private killProcess(signal: string) {
+    if (!this.process.pid) return;
+    try {
+      kill(this.process.pid, signal, true);
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
+    }
+  }
+
   private stopExecution() {
     this.stopped = this.win32;
-    if (this.process.pid) kill(this.process.pid, "SIGINT", true);
+    this.killProcess("SIGINT");
   }
 
   private stopProcess(restart = false) {
     this.stopped = restart;
-    if (this.process.pid) kill(this.process.pid, "SIGKILL", true);
+    this.killProcess("SIGKILL");
   }
 
   private runQuery(data: string) {
@@ -760,9 +785,7 @@ export class ReplConnection {
         if (/(?:\r\n|[\r\n])/s.test(data)) {
           if (notEnvironment(data)) {
             if (path.isAbsolute(data))
-              this.runQuery(
-                `\\l ${path.relative(path.resolve(this.env.qBinPath, ".."), this.clean(data))}`,
-              );
+              this.runQuery(`\\l ${this.loadPath(this.clean(data))}`);
             else this.runQuery(data);
           }
           break;
