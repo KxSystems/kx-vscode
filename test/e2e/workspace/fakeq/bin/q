@@ -22,13 +22,28 @@ const path = require("node:path");
 // is based in, so a folder REPL records separately from the workspace REPL.
 const TRANSCRIPT = path.join(process.cwd(), ".transcript.log");
 const HANDLER = /\.z\.pi:/;
+// A statement carrying this takes that many milliseconds to answer, which is
+// the window a test needs to interrupt one.
+const SLEEP = /SLEEP_(\d+)/;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
 
 let identity;
 let pending = "";
+let sleeping;
 
 function token() {
   return `${identity}@.@`;
+}
+
+// Stand in for `show value x`, so a caller sees deterministic output, then
+// release the statement.
+function answer(line) {
+  if (!identity) {
+    return;
+  }
+  process.stdout.write(`${line}\n`);
+  process.stdout.write(token());
+  process.stdout.write(token());
 }
 
 function handle(line) {
@@ -39,20 +54,28 @@ function handle(line) {
   if (HANDLER.test(line)) {
     // The handler carries the uuid this REPL expects to see echoed back. It is
     // resent on a context switch, so keep taking the latest one.
-    identity = UUID.exec(line)?.[0];
+    // Switching to k mode reinstalls the handler without a uuid in it; keep
+    // the last one so the REPL still gets its tokens.
+    identity = UUID.exec(line)?.[0] ?? identity;
     return;
   }
 
   fs.appendFileSync(TRANSCRIPT, `${line}\n`);
 
-  if (identity) {
-    // Stand in for `show value x`, so a caller sees deterministic output, then
-    // release the statement.
-    process.stdout.write(`${line}\n`);
-    process.stdout.write(token());
-    process.stdout.write(token());
+  const delay = SLEEP.exec(line);
+  if (delay) {
+    sleeping = setTimeout(() => {
+      sleeping = undefined;
+      answer(line);
+    }, Number(delay[1]));
+    return;
   }
+
+  answer(line);
 }
+
+// Recorded so a test can see the process being replaced, as Ctrl+D does.
+fs.appendFileSync(TRANSCRIPT, "SPAWN\n");
 
 process.stdin.on("data", (chunk) => {
   pending += chunk.toString("utf8");
@@ -68,6 +91,12 @@ process.stdin.on("end", () => process.exit(0));
 // The extension interrupts a running query with SIGINT and waits for q's
 // timestamped error before it treats the execution as cancelled.
 process.on("SIGINT", () => {
+  if (sleeping) {
+    clearTimeout(sleeping);
+    sleeping = undefined;
+  }
+  // Recorded so a test can wait for the interrupt to land rather than sleep.
+  fs.appendFileSync(TRANSCRIPT, "SIGINT\n");
   process.stdout.write(`'${new Date().toISOString().replace(/-/g, ".")}\n`);
   if (identity) {
     process.stdout.write(token());

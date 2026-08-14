@@ -15,31 +15,27 @@ import * as assert from "node:assert";
 import * as vscode from "vscode";
 
 import { CONSOLE, kdb, start } from "./connection";
-import { activate, file, focus, mark, since, until } from "./utils";
+import {
+  activate,
+  file,
+  focus,
+  mark,
+  reveal,
+  since,
+  terminal,
+  until,
+} from "./utils";
 
 // Unassigned, so nothing in kdb.connectionMap decides where it runs.
 const ACTIVE_FILE = file("active.q");
 const QUERY = '"ACTIVE_TARGET"';
 
+// Assigned to the REPL in kdb.connectionMap, which outranks the active target.
+const PINNED_FILE = file("pinned.q");
+const PINNED = '"PINNED_REPL"';
+
 // ReplConnection names its terminal after the folder it is based in.
 const REPL = "KX REPL";
-
-function terminal(name: string) {
-  return vscode.window.terminals.find((found) => found.name.startsWith(name));
-}
-
-// Focusing a KX terminal is what makes its target active, so wait for VS Code
-// to actually hand it focus before running anything.
-async function reveal(name: string) {
-  const found = terminal(name);
-  assert.ok(found, `no ${name} terminal is open`);
-  found.show();
-  await until(
-    () => vscode.window.activeTerminal?.name.startsWith(name) === true,
-    `${name} to be the active terminal`,
-  );
-  return found;
-}
 
 describe("Routing to the active target", () => {
   before(async function () {
@@ -117,6 +113,25 @@ describe("Routing to the active target", () => {
       kdb.queries().map((request) => request.args?.code),
       [],
       "the connection received it as well",
+    );
+  });
+
+  it("keeps a file assigned to the REPL there while a connection is active", async () => {
+    await reveal(CONSOLE);
+    await focus(PINNED_FILE);
+
+    kdb.clear();
+    const from = mark();
+    await vscode.commands.executeCommand("kdb.execute.fileQuery");
+
+    assert.ok(
+      since(from).includes(PINNED),
+      `the REPL did not receive it:\n${since(from)}`,
+    );
+    assert.deepStrictEqual(
+      kdb.queries().map((request) => request.args?.code),
+      [],
+      "the active connection received it instead",
     );
   });
 });

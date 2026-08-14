@@ -51,6 +51,55 @@ export async function runOnRepl(command: string, folder?: string) {
   return since(from, folder);
 }
 
+// A KX terminal by name prefix: the REPL's carries the folder it is based in,
+// a connection console the connection's short name.
+export function terminal(name: string) {
+  return vscode.window.terminals.find((found) => found.name.startsWith(name));
+}
+
+// Focusing a KX terminal is what makes its target active, so wait for VS Code
+// to actually hand it focus before running anything.
+export async function reveal(name: string) {
+  const found = terminal(name);
+  assert.ok(found, `no ${name} terminal is open`);
+  found.show();
+  await until(
+    () => vscode.window.activeTerminal?.name.startsWith(name) === true,
+    `${name} to be the active terminal`,
+  );
+  return found;
+}
+
+/**
+ * What a terminal is showing. VS Code exposes no API for a terminal's buffer,
+ * so this goes the way a user would: select all, copy, read it back. The
+ * clipboard is the system one, so whatever was in it is put back afterwards.
+ */
+export async function terminalText(name: string) {
+  const clipboard = await vscode.env.clipboard.readText();
+  await reveal(name);
+  await vscode.commands.executeCommand("workbench.action.terminal.selectAll");
+  await vscode.commands.executeCommand(
+    "workbench.action.terminal.copySelection",
+  );
+  const text = await vscode.env.clipboard.readText();
+  await vscode.env.clipboard.writeText(clipboard);
+  return text;
+}
+
+// Everything a notebook's cells are showing, decoded.
+export function outputs(notebook: vscode.NotebookDocument) {
+  return notebook
+    .getCells()
+    .map((cell) =>
+      cell.outputs
+        .flatMap((output) =>
+          output.items.map((item) => Buffer.from(item.data).toString("utf8")),
+        )
+        .join("\n"),
+    );
+}
+
 // Generous enough for a loaded CI runner; it only costs that long when
 // something is actually wrong.
 export async function until(condition: () => boolean, what: string) {
