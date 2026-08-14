@@ -354,6 +354,43 @@ describe("workspaceCommand", () => {
     });
   });
 
+  describe("getActiveFileUri", () => {
+    const notebookUri = vscode.Uri.file("notebook.kxnb");
+
+    function activeTab(input?: unknown) {
+      sinon.stub(vscode.window, "tabGroups").value({
+        activeTabGroup: { activeTab: input ? { input } : undefined },
+      });
+    }
+
+    it("should take the uri the notebook toolbar passes", () => {
+      activeTab();
+      const result = workspaceCommand.getActiveFileUri({
+        notebookEditor: { notebookUri },
+      });
+      assert.strictEqual(result, notebookUri);
+    });
+
+    it("should take the notebook showing in front, no cell focused", () => {
+      activeTab(new vscode.TabInputNotebook(notebookUri, "kx-notebook"));
+      const result = workspaceCommand.getActiveFileUri();
+      assert.strictEqual(result?.toString(), notebookUri.toString());
+    });
+
+    it("should take the active text editor otherwise", () => {
+      activeTab(new vscode.TabInputText(insightsUri));
+      const result = workspaceCommand.getActiveFileUri();
+      assert.strictEqual(result, insightsUri);
+    });
+
+    it("should return undefined without an editor", () => {
+      activeTab();
+      ext.activeTextEditor = undefined;
+      const result = workspaceCommand.getActiveFileUri();
+      assert.strictEqual(result, undefined);
+    });
+  });
+
   describe("getConnectionForUri", () => {
     it("should return node", async () => {
       workspaceCommand.getConnectionForUri(insightsUri);

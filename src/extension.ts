@@ -51,6 +51,7 @@ import { installKdbX, showWelcome } from "./commands/setupCommand";
 import {
   ConnectionLensProvider,
   connectWorkspaceCommands,
+  getActiveFileUri,
   importOldDSFiles,
   pickConnection,
   pickTarget,
@@ -993,28 +994,28 @@ function registerFileCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.file.pickConnection",
-      callback: async () => {
-        const editor = ext.activeTextEditor;
-        if (editor) {
-          await pickConnection(editor.document.uri);
+      callback: async (context?: unknown) => {
+        const uri = getActiveFileUri(context);
+        if (uri) {
+          await pickConnection(uri);
         }
       },
     },
     {
       command: "kdb.file.pickTarget",
       callback: async (cell?: vscode.NotebookCell) => {
-        const editor = ext.activeTextEditor;
-        if (editor) {
-          await pickTarget(editor.document.uri, cell);
+        const uri = cell ? cell.notebook.uri : getActiveFileUri();
+        if (uri) {
+          await pickTarget(uri, cell);
         }
       },
     },
     {
       command: "kdb.file.pickTimeout",
       callback: async () => {
-        const editor = ext.activeTextEditor;
-        if (editor) {
-          await pickTimeout(editor.document.uri);
+        const uri = getActiveFileUri();
+        if (uri) {
+          await pickTimeout(uri);
         }
       },
     },

@@ -23,6 +23,7 @@ import {
   QuickPickItemKind,
   Range,
   StatusBarAlignment,
+  TabInputNotebook,
   TextDocument,
   TextEditor,
   Uri,
@@ -81,6 +82,30 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   } else {
     ext.activeTextEditor = undefined;
   }
+}
+
+// What the notebook toolbar hands its commands.
+type NotebookToolbarContext = { notebookEditor?: { notebookUri?: Uri } };
+
+/**
+ * The file the connection, target and timeout pickers act on. A notebook has
+ * no active text editor until one of its cells is focused, so the toolbar
+ * context it passes comes first, then the frontmost tab, and only then the
+ * active text editor.
+ */
+export function getActiveFileUri(context?: unknown): Uri | undefined {
+  const fromToolbar = (context as NotebookToolbarContext)?.notebookEditor
+    ?.notebookUri;
+  if (fromToolbar) {
+    return fromToolbar;
+  }
+
+  const tab = window.tabGroups.activeTabGroup.activeTab?.input;
+  if (tab instanceof TabInputNotebook) {
+    return tab.uri;
+  }
+
+  return ext.activeTextEditor?.document.uri;
 }
 
 function activeEditorChanged(editor?: TextEditor | undefined) {
