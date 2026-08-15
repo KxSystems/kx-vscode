@@ -114,9 +114,9 @@ export async function dial(label: string, target: FakeQ) {
  * Starts the stand-in process and connects the extension to it.
  *
  * kdb.servers is machine scoped, so it lives in whichever user profile the
- * window happens to run under — and the debug launcher ignores the profile the
- * command line run prepares. Rather than depend on one being ready, the
- * connection is added the way the UI adds it and removed again afterwards.
+ * window happens to run under, and the window runs under a throwaway one that
+ * starts empty. So the connection is added the way the UI adds it, and removed
+ * again afterwards for whatever profile is in force.
  */
 export async function start() {
   if (started) {

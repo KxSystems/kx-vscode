@@ -38,9 +38,7 @@ const PINNED = '"PINNED_REPL"';
 const REPL = "KX REPL";
 
 describe("Routing to the active target", () => {
-  before(async function () {
-    this.timeout(60_000);
-
+  before(async () => {
     await activate();
     await start();
 

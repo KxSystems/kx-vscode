@@ -869,8 +869,7 @@ export async function disconnect(connLabel: string): Promise<void> {
   connMngService.disconnect(connLabel);
 
   if (ext.connectedConnectionList.length === 0) {
-    const queryConsole = ExecutionConsole.start();
-    queryConsole.dispose();
+    ExecutionConsole.current?.dispose();
     DataSourcesPanel.close();
     ext.serverProvider.reload();
   }

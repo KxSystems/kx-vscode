@@ -112,9 +112,7 @@ async function run(command: string) {
 }
 
 describe("Executing on a kdb+ connection", () => {
-  before(async function () {
-    this.timeout(60_000);
-
+  before(async () => {
     await activate();
 
     for (const [source, assigned] of ASSIGNED) {
@@ -322,8 +320,7 @@ describe("Executing on a kdb+ connection", () => {
   });
 
   describe("on a process without the .vscode namespace", () => {
-    before(async function () {
-      this.timeout(60_000);
+    before(async () => {
       await startPlain();
     });
 
@@ -442,6 +439,19 @@ describe("Executing on a kdb+ connection", () => {
 
     const printed = (text: string) => text.split(RESULT).length - 1;
 
+    // The command resolving only means the query came back; the console is
+    // painted after that, so the count has to be waited for rather than read
+    // once. Each read round trips the clipboard, so this polls slowly.
+    async function untilPrinted(count: number) {
+      for (let attempt = 0; attempt < 50; attempt++) {
+        if (printed(await terminalText(CONSOLE)) === count) {
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      assert.fail(`the console did not print the result ${count} times`);
+    }
+
     it("asks for text and prints to the console for the terminal", async () => {
       await vscode.commands.executeCommand("kdb.results.destination.terminal");
       await focus(Q_FILE);
@@ -451,11 +461,7 @@ describe("Executing on a kdb+ connection", () => {
       await vscode.commands.executeCommand("kdb.execute.fileQuery");
 
       assert.strictEqual(kdb.queries()[0].args?.returnFormat, "text");
-      assert.strictEqual(
-        printed(await terminalText(CONSOLE)),
-        before + 1,
-        "the console did not print the result",
-      );
+      await untilPrinted(before + 1);
     });
 
     it("asks for structured text and leaves the console alone for the view", async () => {

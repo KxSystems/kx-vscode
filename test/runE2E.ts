@@ -14,8 +14,6 @@
 import { runTests } from "@vscode/test-electron";
 import * as path from "path";
 
-import { writeProfile } from "./e2e/profile";
-
 // A second VS Code window, opened on test/e2e/workspace so the extension sees
 // real workspace settings (including the stand-in q) and real files.
 async function main() {
@@ -35,7 +33,13 @@ async function main() {
       launchArgs: [
         path.join(extensionDevelopmentPath, "test", "e2e", "workspace"),
         "--disable-workspace-trust",
-        `--user-data-dir=${writeProfile()}`,
+        // Everything but the extension under development, which VS Code keeps
+        // loading, so nothing the developer or the runner happens to have
+        // installed can take part in a run.
+        "--disable-extensions",
+        // A profile of its own, thrown away afterwards, so a run neither reads
+        // the developer's settings nor leaves anything of its own behind.
+        "--profile-temp",
       ],
     });
   } catch (err) {

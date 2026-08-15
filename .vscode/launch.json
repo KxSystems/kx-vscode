@@ -33,6 +33,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
+        "--disable-extensions",
         "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"
@@ -47,7 +48,8 @@
       "args": [
         "${workspaceFolder}/test/e2e/workspace",
         "--disable-workspace-trust",
-        "--user-data-dir=${workspaceFolder}/.vscode-test/e2e-user-data",
+        "--disable-extensions",
+        "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/e2e/index"
       ],
@@ -61,7 +63,8 @@
       "args": [
         "${workspaceFolder}/test/e2e/workspace",
         "--disable-workspace-trust",
-        "--user-data-dir=${workspaceFolder}/.vscode-test/e2e-user-data",
+        "--disable-extensions",
+        "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/e2e/index"
       ],
@@ -74,6 +77,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
+        "--disable-extensions",
         "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"

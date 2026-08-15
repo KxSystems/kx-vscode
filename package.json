@@ -1301,7 +1301,7 @@
     "test": "node ./out-test/test/runTest.js",
     "test:file": "cross-env TEST_FILE=$1 npm run test",
     "test:folder": "cross-env TEST_FOLDER=$1 npm run test",
-    "pretest:e2e": "npm run build && npm run pretest && node ./out-test/test/e2e/profile.js",
+    "pretest:e2e": "npm run build && npm run pretest",
     "test:e2e": "node ./out-test/test/runE2E.js",
     "coverage": "rimraf out && c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
     "q-test": "bash qcumber.sh -src test/q/main.q -test test/q/tests",

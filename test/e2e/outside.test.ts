@@ -79,9 +79,7 @@ function assigned() {
 }
 
 describe("A file outside the workspace", () => {
-  before(async function () {
-    this.timeout(60_000);
-
+  before(async () => {
     await activate();
     await start();
 
