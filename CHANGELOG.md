@@ -18,6 +18,10 @@ file.
   `(active)` and **Run on active** for these files, and the connection picker is
   offered for any `q`, `quke`, `py` or `sql` file rather than for workbooks
   alone.
+- The status bar connection and timeout selectors now follow **KX Notebooks**.
+  Opening a notebook shows the connection it is assigned to, `(active)` when it
+  has none, and the query timeout when that connection is an Insights one, in
+  the same way as for a q, `quke`, Python or SQL file.
 - Connections can now be chosen for files opened from outside the workspace.
   Previously picking one failed with _Document (…) is not in workspace_.
   Assignments for these files are kept in memory and are lost when VS Code
@@ -54,9 +58,15 @@ file.
   and are recorded in the query history.
 - The datasource notice for a missing database is now a warning rather than an
   error.
+- Fixed an issue where the status bar timeout selector stayed hidden after an
+  Insights connection was assigned to a file that had no connection, until
+  another editor was focused.
 
 ### Internal Improvements
 
+- Replaced the UI test suite with an end to end suite (`npm run test:e2e`) that
+  drives the extension through its real commands in its own VS Code window,
+  against stand-in Insights and q processes.
 - Added q unit tests covering `vscode.q` and `evaluatePy.q`, and split the
   evaluation and formatting parts of `evaluatePy.q`.
 - `secure.q` now loads the compiled `vscode.q` instead of the templated source.

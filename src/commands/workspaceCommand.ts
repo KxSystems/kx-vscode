@@ -111,10 +111,20 @@ export function getActiveFileUri(context?: unknown): Uri | undefined {
 function activeEditorChanged(editor?: TextEditor | undefined) {
   /* c8 ignore start */
   setRealActiveTextEditor(editor);
+  updateStatusBarItems();
+  /* c8 ignore stop */
+}
+
+/**
+ * Points the connection and timeout status bar items at the file in front,
+ * which is a notebook when its tab is frontmost and the active text editor
+ * otherwise.
+ */
+export async function updateStatusBarItems() {
+  const uri = getActiveFileUri();
   const runItem = ext.runScratchpadItem;
 
-  if (ext.activeTextEditor) {
-    const uri = ext.activeTextEditor.document.uri;
+  if (uri) {
     const server = getServerForUri(uri);
     if (server || isConnectableFile(uri)) {
       setRunScratchpadItemText(uri, server || "(active)");
@@ -123,12 +133,11 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
       runItem.hide();
     }
 
-    setTimeoutItem(uri);
+    await setTimeoutItem(uri);
   } else {
     runItem.hide();
     ext.pickTimeoutItem.hide();
   }
-  /* c8 ignore stop */
 }
 
 function setRunScratchpadItemText(uri: Uri, text: string) {
@@ -515,11 +524,7 @@ export async function pickConnection(uri: Uri) {
   }
   await setServerForUri(uri, picked);
 
-  if (server) {
-    setTimeoutItem(uri);
-  } else {
-    ext.pickTimeoutItem.hide();
-  }
+  await setTimeoutItem(uri);
 
   return picked;
   /* c8 ignore stop */
@@ -798,15 +803,16 @@ function isDataSource(uri: Uri | undefined) {
 }
 
 // A file that can be run against a connection (q/quke/Python/SQL, including
-// workbooks). Used to decide whether to offer the status-bar connection
-// selector, even when the file is not yet assigned to a connection.
+// workbooks, and notebooks). Used to decide whether to offer the status-bar
+// connection selector, even when the file is not yet assigned to a connection.
 function isConnectableFile(uri: Uri | undefined) {
   return (
     !!uri &&
     (uri.path.endsWith(".q") ||
       uri.path.endsWith(".quke") ||
       uri.path.endsWith(".py") ||
-      uri.path.endsWith(".sql"))
+      uri.path.endsWith(".sql") ||
+      uri.path.endsWith(".kxnb"))
   );
 }
 
@@ -1146,6 +1152,7 @@ export function connectWorkspaceCommands() {
     /* c8 ignore stop */
   });
   window.onDidChangeActiveTextEditor(activeEditorChanged);
+  window.onDidChangeActiveNotebookEditor(() => updateStatusBarItems());
   activeEditorChanged(window.activeTextEditor);
 }
 

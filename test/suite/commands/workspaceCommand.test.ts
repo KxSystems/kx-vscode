@@ -38,6 +38,7 @@ describe("workspaceCommand", () => {
   const insightsUri = vscode.Uri.file("tests.q");
   const pythonUri = vscode.Uri.file("test-python.q");
   const replUri = vscode.Uri.file("test-repl.q");
+  const notebookUri = vscode.Uri.file("test.kxnb");
 
   const updateConfStub = sinon.stub();
 
@@ -110,6 +111,7 @@ describe("workspaceCommand", () => {
                 [relativePath(pythonUri)]: "connection1",
                 [relativePath(insightsUri)]: "connection1",
                 [relativePath(replUri)]: ext.REPL,
+                [relativePath(notebookUri)]: "connection1",
               };
             case "targetMap":
               return {
@@ -159,6 +161,51 @@ describe("workspaceCommand", () => {
       assert.strictEqual(dsTree, true);
       cb2(vscode.Uri.file("test.kdb.q"));
       assert.strictEqual(wbTree, true);
+    });
+  });
+
+  describe("updateStatusBarItems", () => {
+    const stubActiveTab = (input?: unknown) =>
+      sinon.stub(vscode.window, "tabGroups").value({
+        activeTabGroup: { activeTab: input ? { input } : undefined },
+      });
+
+    it("should show the connection of the active notebook", async () => {
+      stubActiveTab(new vscode.TabInputNotebook(notebookUri, "kx-notebook"));
+      const spy = sinon.spy(ext.runScratchpadItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+      assert.strictEqual(ext.runScratchpadItem.text, "$(cloud) connection1");
+    });
+
+    it("should show the timeout of the active notebook", async () => {
+      stubActiveTab(new vscode.TabInputNotebook(notebookUri, "kx-notebook"));
+      const spy = sinon.spy(ext.pickTimeoutItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+    });
+
+    it("should offer the active connection for an unassigned notebook", async () => {
+      stubActiveTab(
+        new vscode.TabInputNotebook(
+          vscode.Uri.file("unassigned.kxnb"),
+          "kx-notebook",
+        ),
+      );
+      const spy = sinon.spy(ext.runScratchpadItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+      assert.strictEqual(ext.runScratchpadItem.text, "$(cloud) (active)");
+    });
+
+    it("should hide the items without an active file", async () => {
+      stubActiveTab();
+      ext.activeTextEditor = undefined;
+      const spy = sinon.spy(ext.runScratchpadItem, "hide");
+      const timeoutSpy = sinon.spy(ext.pickTimeoutItem, "hide");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+      sinon.assert.called(timeoutSpy);
     });
   });
 
