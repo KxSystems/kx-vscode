@@ -13,8 +13,8 @@
 
 import * as vscode from "vscode";
 
+import { until } from "./index";
 import { FakeQ } from "./qserver";
-import { until } from "./utils";
 
 // The stand-in kdb+ process the connection tests run against.
 export const SERVER = {

@@ -15,9 +15,6 @@ import * as assert from "node:assert";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
 
-import { ASSEMBLY, TIER } from "./fixtures";
-import { CONSOLE, dial, ensure, insights, instanceAt, start } from "./insights";
-import { FAILURE, FakeInsights, Request, RESULT } from "./insightsServer";
 import {
   activate,
   caretAt,
@@ -28,6 +25,16 @@ import {
   terminalText,
   until,
 } from "./utils";
+import { ASSEMBLY, TIER } from "./utils/fixtures";
+import {
+  CONSOLE,
+  dial,
+  ensure,
+  insights,
+  instanceAt,
+  start,
+} from "./utils/insights";
+import { FAILURE, FakeInsights, Request, RESULT } from "./utils/insightsServer";
 
 // Copies of the main fixtures under the paths the workspace settings assign to
 // the Insights connections. They need their own paths because kdb.connectionMap

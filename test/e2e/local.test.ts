@@ -16,20 +16,6 @@ import * as fs from "node:fs";
 import * as vscode from "vscode";
 
 import {
-  CONNECTION,
-  CONSOLE,
-  dial,
-  ensure,
-  kdb,
-  labelOf,
-  plain,
-  redial,
-  SERVER,
-  start,
-  startPlain,
-} from "./connection";
-import { FAILURE, FakeQ } from "./qserver";
-import {
   activate,
   caretAt,
   file,
@@ -41,6 +27,20 @@ import {
   until,
   waitForLanguageServer,
 } from "./utils";
+import {
+  CONNECTION,
+  CONSOLE,
+  dial,
+  ensure,
+  kdb,
+  labelOf,
+  plain,
+  redial,
+  SERVER,
+  start,
+  startPlain,
+} from "./utils/connection";
+import { FAILURE, FakeQ } from "./utils/qserver";
 
 // Copies of the main fixtures, under the paths the workspace settings assign
 // to TESTLOCAL. They need their own paths because kdb.connectionMap is keyed

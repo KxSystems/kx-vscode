@@ -14,7 +14,6 @@
 import * as assert from "node:assert";
 import * as vscode from "vscode";
 
-import { CONSOLE, kdb, start } from "./connection";
 import {
   activate,
   file,
@@ -25,6 +24,7 @@ import {
   terminal,
   until,
 } from "./utils";
+import { CONSOLE, kdb, start } from "./utils/connection";
 
 // Unassigned, so nothing in kdb.connectionMap decides where it runs.
 const ACTIVE_FILE = file("active.q");

@@ -14,7 +14,7 @@
 import * as assert from "node:assert";
 
 import { activate } from "./utils";
-import { Webview, webview } from "./webview";
+import { Webview, webview } from "./utils/webview";
 
 /**
  * The results view only ever receives: the panel posts what a query returned

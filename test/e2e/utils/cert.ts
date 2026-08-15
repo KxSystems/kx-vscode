@@ -17,7 +17,16 @@ import * as path from "node:path";
 
 // Kept beside the sources rather than under out-test, which pretest wipes, so
 // openssl only runs on the very first end to end run.
-const certs = path.resolve(__dirname, "..", "..", "..", "test", "e2e", "certs");
+const certs = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "test",
+  "e2e",
+  "certs",
+);
 const keyPath = path.join(certs, "key.pem");
 const certPath = path.join(certs, "cert.pem");
 

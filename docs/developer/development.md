@@ -65,6 +65,11 @@ Single test file can also be debugged by clicking run button from the editor too
 and drives the extension the way a user does: real commands, real workspace
 settings, the real language server. Nothing is stubbed.
 
+The test files sit directly in [test/e2e](https://github.com/KxSystems/kx-vscode/tree/dev/test/e2e);
+everything they are built out of — the stand-ins, the fixtures, the helpers that
+drive VS Code — lives in
+[test/e2e/utils](https://github.com/KxSystems/kx-vscode/tree/dev/test/e2e/utils).
+
 Stand-ins take the place of everything outside the extension, and each records
 what it is sent, which is what the tests assert on:
 

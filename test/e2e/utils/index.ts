@@ -22,6 +22,7 @@ export const WORKSPACE = path.resolve(
   "..",
   "..",
   "..",
+  "..",
   "test",
   "e2e",
   "workspace",

@@ -15,8 +15,8 @@ import * as http from "node:http";
 import * as https from "node:https";
 import * as vscode from "vscode";
 
+import { until } from "./index";
 import { FakeInsights } from "./insightsServer";
-import { until } from "./utils";
 
 // What the extension is told about an Insights instance, i.e. the arguments
 // kdb.connections.add.insights takes.

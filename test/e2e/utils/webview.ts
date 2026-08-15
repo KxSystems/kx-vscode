@@ -59,7 +59,7 @@ const DRIVER = /* javascript */ `
     document.execCommand("insertText", false, text);
   };
 
-  // Waits for the page to catch up, the way test/e2e/utils.ts waits for the
+  // Waits for the page to catch up, the way test/e2e/utils/index.ts waits for the
   // extension host: a message from the panel is rendered a frame or two later.
   window.__until = async (condition, what) => {
     for (let attempt = 0; attempt < 100; attempt++) {

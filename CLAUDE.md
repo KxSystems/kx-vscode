@@ -48,16 +48,16 @@ with `env -u ELECTRON_RUN_AS_NODE`.
 
 `test:e2e` opens its own VS Code window on `test/e2e/workspace` and drives the
 extension through its real commands with nothing stubbed — real workspace
-settings, real language server. Stand-ins replace everything outside the
-extension and record what they are sent: `fakeq/bin/q` for the REPL (reached
+settings, real language server. The test files sit in `test/e2e/`, everything
+they are built out of in `test/e2e/utils/`. Stand-ins replace everything outside
+the extension and record what they are sent: `fakeq/bin/q` for the REPL (reached
 through `kdb.qHomeDirectoryWorkspace`, writing a `.transcript.log` per REPL),
-`test/e2e/qserver.ts`, an in-process kdb+ IPC server for connections, and
-`test/e2e/insightsServer.ts`, an Insights instance over HTTPS with a
-self-signed certificate (`test/e2e/certs/`, generated on the first run) whose
-reported version selects the endpoint group under test — with the browser the
-OAuth code flow opens replaced in `test/e2e/insights.ts`. macOS and Linux only
-— on Windows the REPL spawns q through `cmd.exe`, which cannot run the
-stand-in. See
+`utils/qserver.ts`, an in-process kdb+ IPC server for connections, and
+`utils/insightsServer.ts`, an Insights instance over HTTPS with a self-signed
+certificate (`test/e2e/certs/`, generated on the first run) whose reported
+version selects the endpoint group under test — with the browser the OAuth code
+flow opens replaced in `utils/insights.ts`. macOS and Linux only — on Windows
+the REPL spawns q through `cmd.exe`, which cannot run the stand-in. See
 [docs/developer/development.md](docs/developer/development.md).
 
 `q-test` wraps [qcumber.sh](qcumber.sh), which runs the tests in the `qpbuild`

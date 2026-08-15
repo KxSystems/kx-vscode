@@ -14,7 +14,7 @@
 import * as assert from "node:assert";
 
 import { activate } from "./utils";
-import { Webview, webview } from "./webview";
+import { Webview, webview } from "./utils/webview";
 
 /**
  * The new connection view, driven the way a user drives it: real typing into

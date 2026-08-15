@@ -17,8 +17,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
 
-import { kdb, SERVER, start } from "./connection";
 import { activate, focus, mark, reveal, since, terminal, until } from "./utils";
+import { kdb, SERVER, start } from "./utils/connection";
 
 const REPL = "KX REPL";
 
