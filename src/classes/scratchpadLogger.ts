@@ -106,6 +106,10 @@ export class ScratchpadLogger {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
       },
+      // The REST calls go through getHttpsAgent, so without this an instance
+      // presenting a self-signed certificate connects but never delivers the
+      // stdout the console and the plots are rendered from.
+      rejectUnauthorized: !insecure,
     });
 
     this.ws.on("upgrade", (response) => {

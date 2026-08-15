@@ -65,8 +65,8 @@ Single test file can also be debugged by clicking run button from the editor too
 and drives the extension the way a user does: real commands, real workspace
 settings, the real language server. Nothing is stubbed.
 
-Two stand-ins take the place of a q installation, and both record what the
-extension sends them, which is what the tests assert on:
+Stand-ins take the place of everything outside the extension, and each records
+what it is sent, which is what the tests assert on:
 
 - `fakeq/bin/q`, spawned by the REPL because the workspace points
   `kdb.qHomeDirectoryWorkspace` at it. It answers the REPL handshake and writes
@@ -74,6 +74,20 @@ extension sends them, which is what the tests assert on:
 - `qserver.ts`, a kdb+ IPC server the connection tests run in process. It uses
   the same codec as `node-q`, and the suite adds and removes its connection
   itself, so no connection has to be prepared beforehand.
+- `insightsServer.ts`, a KDB Insights instance, over HTTPS with a self-signed
+  certificate generated into `test/e2e/certs/` on the first run — Insights
+  connections must be `https://`, and a certificate no CA vouches for is what
+  the connection's "insecure" flag exists for. It answers the OAuth code flow,
+  the configuration, meta, scratchpad and service gateway endpoints, and the
+  scratchpad log websocket. Which endpoints the extension picks depends on the
+  version the instance reports, so `version` and `queryEnvironments` are
+  settings on it and a test can stand up an older instance by changing them.
+- the browser the OAuth code flow opens, replaced in `insights.ts` by a
+  function that walks the authorization redirect back to the extension's own
+  local server. It is the only stand-in that replaces a VS Code API rather than
+  a process, and it exists because there is no one in a test window to open the
+  URL — the code flow, the token request and the certificate handling all still
+  run for real.
 
 Both suites can be debugged with the `E2E Tests` and `E2E Test Selected File`
 targets in the run and debug tab.

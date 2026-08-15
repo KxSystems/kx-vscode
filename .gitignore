@@ -24,7 +24,9 @@ test/suite/ui/fixtures/exec.kdb.*
 /lib
 /venv
 
-scripts/mock-insights-server/certs/
+# The certificate the stand-in Insights instance presents, generated on the
+# first end to end run
+test/e2e/certs/
 
 .claude
 
@@ -34,3 +36,7 @@ scripts/mock-insights-server/certs/
 # Copies the end to end tests make from the main.* fixtures
 test/e2e/workspace/main.kdb.*
 test/e2e/workspace/local.*
+test/e2e/workspace/insights.*
+test/e2e/workspace/target.q
+test/e2e/workspace/old.*
+test/e2e/workspace/older.q

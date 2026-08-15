@@ -11,19 +11,25 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { execFileSync } from "child_process";
-import { existsSync, mkdirSync, readFileSync } from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import * as path from "node:path";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const certDir = join(here, "certs");
-const keyPath = join(certDir, "key.pem");
-const certPath = join(certDir, "cert.pem");
+// Kept beside the sources rather than under out-test, which pretest wipes, so
+// openssl only runs on the very first end to end run.
+const certs = path.resolve(__dirname, "..", "..", "..", "test", "e2e", "certs");
+const keyPath = path.join(certs, "key.pem");
+const certPath = path.join(certs, "cert.pem");
 
-export function loadOrCreateSelfSignedCert(): { key: string; cert: string } {
+/**
+ * The certificate the stand-in Insights instance presents. It is self-signed on
+ * purpose: an instance with a certificate no CA vouches for is exactly what the
+ * connection's "insecure" flag exists for, so this is what proves the flag is
+ * honored on every leg of the connection.
+ */
+export function selfSignedCert(): { key: string; cert: string } {
   if (!existsSync(keyPath) || !existsSync(certPath)) {
-    mkdirSync(certDir, { recursive: true });
+    mkdirSync(certs, { recursive: true });
     execFileSync("openssl", [
       "req",
       "-x509",

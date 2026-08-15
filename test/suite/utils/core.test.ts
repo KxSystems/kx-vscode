@@ -26,6 +26,7 @@ import {
 import * as coreUtils from "../../../src/utils/core";
 import * as cpUtils from "../../../src/utils/cpUtils";
 import * as loggers from "../../../src/utils/loggers";
+import * as shellUtils from "../../../src/utils/shell";
 
 describe("core", () => {
   describe("checkOpenSslInstalled", () => {
@@ -1026,6 +1027,14 @@ describe("core", () => {
   });
 
   describe("getEnvironment", () => {
+    beforeEach(() => {
+      // Without a q home to resolve, getEnvironment looks q up on the PATH,
+      // which shells out to where.exe on Windows: too slow for the suite's two
+      // second timeout, and it would make the result depend on whether the
+      // machine running the tests happens to have q installed.
+      sinon.stub(shellUtils, "which").returns([]);
+    });
+
     afterEach(() => {
       sinon.restore();
     });

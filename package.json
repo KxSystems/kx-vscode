@@ -1304,8 +1304,7 @@
     "pretest:e2e": "npm run build && npm run pretest",
     "test:e2e": "node ./out-test/test/runE2E.js",
     "coverage": "rimraf out && c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
-    "q-test": "bash qcumber.sh -src test/q/main.q -test test/q/tests",
-    "mock-insights-server": "node --experimental-strip-types scripts/mock-insights-server/server.ts"
+    "q-test": "bash qcumber.sh -src test/q/main.q -test test/q/tests"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

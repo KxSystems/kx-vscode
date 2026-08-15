@@ -271,8 +271,15 @@ export class InsightsConnection {
   }
 
   public async getApiConfig() {
+    if (!this.connected) {
+      return undefined;
+    }
+
+    // The endpoint itself only exists from 1.13; all it decides is whether the
+    // query environment prefix is used. The endpoints are resolved either way —
+    // an older instance has its own set, and until they are defined nothing,
+    // not even the meta, can be requested.
     if (
-      this.connected &&
       this.insightsVersion &&
       isBaseVersionGreaterOrEqual(this.insightsVersion, "1.13")
     ) {
@@ -287,20 +294,19 @@ export class InsightsConnection {
         configUrl.toString(),
       );
 
-      if (options === undefined) {
-        return undefined;
+      if (options !== undefined) {
+        notify("REST", MessageKind.DEBUG, {
+          logger,
+          params: { url: options.url },
+        });
+
+        const configResponse = await axios(options);
+
+        this.apiConfig = configResponse.data;
       }
-
-      notify("REST", MessageKind.DEBUG, {
-        logger,
-        params: { url: options.url },
-      });
-
-      const configResponse = await axios(options);
-
-      this.apiConfig = configResponse.data;
-      this.defineEndpoints();
     }
+
+    this.defineEndpoints();
   }
 
   public async getConfig() {
