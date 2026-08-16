@@ -257,8 +257,15 @@ export function convertRows(rows: any[]): any {
 // with it and leave every column after it hanging. A console table keeps one
 // row to one line.
 function flatten(value: string) {
-  return String(value ?? "")
-    .replace(/\s*\n\s*/g, " ")
+  const parts = String(value ?? "").split("\n");
+  const last = parts.length - 1;
+  return parts
+    .map((part, index) => {
+      const head = index === 0 ? part.trimEnd() : part.trimStart();
+      return index === last ? head : head.trimEnd();
+    })
+    .filter((part, index) => index === 0 || part)
+    .join(" ")
     .trimEnd();
 }
 
