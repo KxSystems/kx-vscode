@@ -1116,12 +1116,12 @@
         {
           "submenu": "kdb.results.destination.terminalMenu",
           "group": "navigation@-0.5",
-          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py)$/i && !kdb.showResultsInView"
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py|kdb\\.json)$/i && !kdb.showResultsInView"
         },
         {
           "submenu": "kdb.results.destination.viewMenu",
           "group": "navigation@-0.5",
-          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py)$/i && kdb.showResultsInView"
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py|kdb\\.json)$/i && kdb.showResultsInView"
         }
       ],
       "kdb.results.destination.terminalMenu": [
