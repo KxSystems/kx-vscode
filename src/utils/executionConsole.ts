@@ -33,6 +33,8 @@ const logger = "executionConsole";
 // terminal (when one exists for the connLabel) or the shared fallback channel.
 interface ConsoleSink {
   appendLine: (value: string) => void;
+  // Result lines, which a terminal sink cuts to its width instead of wrapping.
+  appendResult: (lines: string[]) => void;
   reveal: () => void;
 }
 
@@ -66,11 +68,14 @@ export class ExecutionConsole {
     if (console) {
       return {
         appendLine: (value) => console.appendLine(value),
+        appendResult: (lines) => console.appendResult(lines),
         reveal: () => console.terminal.show(true),
       };
     }
     return {
       appendLine: (value) => this._console.appendLine(value),
+      appendResult: (lines) =>
+        lines.forEach((line) => this._console.appendLine(line)),
       reveal: () => this._console.show(true),
     };
   }
@@ -149,13 +154,12 @@ export class ExecutionConsole {
       this.appendQuery(sink, query);
     }
     if (Array.isArray(output) && type === undefined) {
-      sink.appendLine(output[0]);
-      output.forEach((o) => sink.appendLine(o));
+      sink.appendResult([output[0], ...output]);
     } else if (dataSourceRes.length > 0) {
-      dataSourceRes.forEach((o) => sink.appendLine(o));
+      sink.appendResult(dataSourceRes);
     } else {
       output = Array.isArray(output) ? output.join("\n") : output;
-      sink.appendLine(output);
+      sink.appendResult(output.split("\n"));
     }
     if (!hideDetails) {
       sink.appendLine(`<<<\n`);

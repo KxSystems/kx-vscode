@@ -252,6 +252,16 @@ export function convertRows(rows: any[]): any {
   return convertRowsToConsole(result).join("\n") + "\n\n";
 }
 
+// A cell that arrives with newlines in it — a nested list, rendered down the
+// page by whatever produced it — would otherwise carry the rest of its row
+// with it and leave every column after it hanging. A console table keeps one
+// row to one line.
+function flatten(value: string) {
+  return String(value ?? "")
+    .replace(/\s*\n\s*/g, " ")
+    .trimEnd();
+}
+
 export function convertRowsToConsole(rows: string[]): string[] {
   if (rows.length === 0) {
     return [];
@@ -259,19 +269,17 @@ export function convertRowsToConsole(rows: string[]): string[] {
   const haveHeader = rows[0].includes("#$#;header;#$#");
   let header;
   if (haveHeader) {
-    header = rows[0].split("#$#;header;#$#");
+    header = rows[0].split("#$#;header;#$#").map(flatten);
     rows.shift();
   }
-  const vector = rows.map((row) => row.split("#$#;#$#"));
+  const vector = rows.map((row) => row.split("#$#;#$#").map(flatten));
   if (header) {
     vector.unshift(header);
   }
 
   const columnCounters = vector[0].reduce((counters: number[], _, j) => {
-    // get max width of column, splitting values by new line
     const maxLength = vector.reduce(
-      (max, row) =>
-        Math.max(max, Math.max(...row[j].split("\n").map((l) => l.length))),
+      (max, row) => Math.max(max, (row[j] || "").length),
       0,
     );
     counters.push(maxLength + 2);
@@ -281,29 +289,14 @@ export function convertRowsToConsole(rows: string[]): string[] {
   vector.forEach((row) => {
     row.forEach((value, j) => {
       const counter = columnCounters[j];
-      const lines = value.split("\n");
-      row[j] = "";
-
-      lines.forEach((line, lineIndex) => {
-        if (lineIndex > 0) {
-          // prepend spacing to align lines within the same cell
-          const prevCol = columnCounters[j - 1];
-          if (prevCol) {
-            row[j] += "\n" + " ".repeat(prevCol);
-          } else {
-            row[j] += "\n";
-          }
+      const diff = counter - value.length;
+      if (diff > 0) {
+        if (!haveHeader && j !== columnCounters.length - 1) {
+          row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
+        } else {
+          row[j] = value + " ".repeat(diff);
         }
-
-        const diff = counter - line.length;
-        if (diff > 0) {
-          if (!haveHeader && j !== columnCounters.length - 1) {
-            row[j] += line + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
-          } else {
-            row[j] += line + " ".repeat(diff);
-          }
-        }
-      });
+      }
     });
   });
 

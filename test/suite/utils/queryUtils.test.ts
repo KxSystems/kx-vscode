@@ -105,13 +105,29 @@ describe("queryUtils", () => {
       assert.deepEqual(result, expectedRes);
     });
 
-    it("should work with rows with newlines", () => {
+    it("should keep a column list on one line", () => {
+      const rows = [
+        "id#$#;header;#$#components",
+        '"KXI-1"#$#;#$#"Insights UI"\n"Scratchpad"',
+        '"KXI-2"#$#;#$#"Pipeline UI"',
+      ];
+      const result = queryUtils.convertRowsToConsole(rows);
+
+      assert.deepEqual(result, [
+        "id       components                  ",
+        "-------------------------------------",
+        '"KXI-1"  "Insights UI" "Scratchpad"  ',
+        '"KXI-2"  "Pipeline UI"               ',
+      ]);
+    });
+
+    it("should keep a row with newlines in it on one line", () => {
       const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
       const expectedRes = [
-        "a   b   ",
-        "--------",
-        "a1  \na2  b1  \n    b2  ",
-        "3   4   ",
+        "a      b      ",
+        "--------------",
+        "a1 a2  b1 b2  ",
+        "3      4      ",
       ];
       const result = queryUtils.convertRowsToConsole(rows);
 

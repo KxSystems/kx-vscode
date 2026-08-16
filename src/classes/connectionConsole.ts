@@ -54,6 +54,9 @@ export class ConnectionConsole {
   // in open() and then left undefined so writes go straight to the emitter.
   private buffer?: string[] = [];
   private _exited = false;
+  // How wide the terminal is, as VS Code reports it. A result row wider than
+  // this wraps, and a wrapped table is unreadable — see appendResult.
+  private columns = 0;
   // True while we are tearing the console down programmatically (dispose), so
   // the pty close handler can tell a user-initiated close apart from our own.
   private disposing = false;
@@ -75,7 +78,9 @@ export class ConnectionConsole {
         onDidWrite: this.onDidWrite.event,
         open: this.open.bind(this),
         close: this.close.bind(this),
-        setDimensions: () => {},
+        setDimensions: (dimensions: vscode.TerminalDimensions) => {
+          this.columns = dimensions.columns;
+        },
         handleInput: this.handleInput.bind(this),
       },
     });
@@ -137,6 +142,30 @@ export class ConnectionConsole {
 
   appendLine(text = ""): void {
     this.send(this.normalize(text) + ANSI.CRLF);
+  }
+
+  /**
+   * Writes the lines of a result, each cut to the width of the terminal rather
+   * than left to wrap — a table whose rows wrap loses the columns that make it
+   * a table. A cut line ends in `..`, as a q console marks one.
+   */
+  appendResult(lines: string[]): void {
+    for (const line of lines) {
+      this.appendLine(this.fit(line));
+    }
+  }
+
+  private fit(line: string): string {
+    // Escape sequences are not characters on screen; a line carrying them is
+    // ours (a banner, a hint) and short enough to leave alone.
+    if (
+      !this.columns ||
+      line.includes("\u001b") ||
+      line.length <= this.columns
+    ) {
+      return line;
+    }
+    return line.slice(0, Math.max(0, this.columns - 2)) + "..";
   }
 
   clear(): void {

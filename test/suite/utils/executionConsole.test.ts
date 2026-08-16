@@ -226,13 +226,16 @@ describe("executionConsole", () => {
     describe("resolveSink", () => {
       const connLabel = "consoleServer";
       let appendLine: sinon.SinonStub;
+      let appendResult: sinon.SinonStub;
       let show: sinon.SinonStub;
 
       beforeEach(() => {
         appendLine = sinon.stub();
+        appendResult = sinon.stub();
         show = sinon.stub();
         ext.connectionConsoles.set(connLabel, <any>{
           appendLine,
+          appendResult,
           terminal: { show },
         });
         getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
@@ -250,7 +253,7 @@ describe("executionConsole", () => {
       it("should write to the connection console and reveal its terminal", () => {
         queryConsole.append("test", "a:1", "fileName", connLabel);
 
-        sinon.assert.calledWith(appendLine, "test");
+        sinon.assert.calledWith(appendResult, ["test"]);
         sinon.assert.calledWith(show, true);
       });
 

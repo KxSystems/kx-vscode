@@ -102,17 +102,11 @@ describe("insightsConnection", () => {
 
     it("should use the error message when there is no response (dropped socket)", () => {
       const error = { message: "socket hang up" };
-      assert.strictEqual(
-        extractInsightsRequestError(error),
-        "socket hang up",
-      );
+      assert.strictEqual(extractInsightsRequestError(error), "socket hang up");
     });
 
     it("should stringify an unknown error with no message or response", () => {
-      assert.strictEqual(
-        extractInsightsRequestError("boom"),
-        "boom",
-      );
+      assert.strictEqual(extractInsightsRequestError("boom"), "boom");
     });
   });
 });
