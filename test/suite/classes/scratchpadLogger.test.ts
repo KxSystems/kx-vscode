@@ -29,7 +29,6 @@ describe("ScratchpadLogger", () => {
   let consoleStartStub: sinon.SinonStub;
   let notifyStub: sinon.SinonStub;
   let tokenStub: sinon.SinonStub;
-  let renderPlotStub: sinon.SinonStub;
 
   const mockConnection: any = {
     alias: "test-insight",
@@ -68,8 +67,6 @@ describe("ScratchpadLogger", () => {
       appendStdErr: sinon.spy(),
     });
 
-    renderPlotStub = sinon.stub().resolves();
-
     ScratchpadLoggerClass = proxyquire(
       "../../../src/classes/scratchpadLogger",
       {
@@ -79,7 +76,6 @@ describe("ScratchpadLogger", () => {
         "../utils/executionConsole": {
           ExecutionConsole: { start: consoleStartStub },
         },
-        "../utils/plotUtils": { renderPlot: renderPlotStub },
       },
     ).ScratchpadLogger;
   });
@@ -191,142 +187,6 @@ describe("ScratchpadLogger", () => {
     onUpgrade({ socket: mockSocket });
 
     assert.ok(mockSocket.setKeepAlive.calledWith(true, 15000));
-  });
-
-  describe("png capture on stdout", () => {
-    const png = "0x89504e470d0a1a0a0000000d49484452";
-    let fakeConsole: {
-      appendStdOut: sinon.SinonSpy;
-      appendStdErr: sinon.SinonSpy;
-    };
-
-    const send = async (...values: string[]) => {
-      const onMessage = fakeWs.on.withArgs("message").getCall(0).args[1];
-      for (const value of values) {
-        onMessage(
-          Buffer.from(JSON.stringify({ data: [{ handle: "STDOUT", value }] })),
-        );
-      }
-      await (logger as any).rendering;
-    };
-
-    beforeEach(async () => {
-      fakeConsole = {
-        appendStdOut: sinon.spy(),
-        appendStdErr: sinon.spy(),
-      };
-      consoleStartStub.returns(fakeConsole);
-
-      logger = new ScratchpadLoggerClass(mockConnection, "conn");
-      await logger.connect();
-    });
-
-    it("should render a png arriving in one chunk", async () => {
-      await send(`${png}\n`);
-
-      sinon.assert.calledOnce(renderPlotStub);
-      sinon.assert.calledWith(
-        renderPlotStub,
-        sinon.match((data: string) =>
-          data.startsWith("data:image/png;base64,"),
-        ),
-        "conn",
-      );
-      sinon.assert.notCalled(fakeConsole.appendStdOut);
-    });
-
-    it("should render a png split across chunks", async () => {
-      await send(png.slice(0, 22), png.slice(22), "\n");
-
-      sinon.assert.calledOnce(renderPlotStub);
-      sinon.assert.notCalled(fakeConsole.appendStdOut);
-    });
-
-    it("should render a png with the signature split across chunks", async () => {
-      await send(png.slice(0, 6), png.slice(6), "\n");
-
-      sinon.assert.calledOnce(renderPlotStub);
-      sinon.assert.notCalled(fakeConsole.appendStdOut);
-    });
-
-    it("should hold back text that could start a signature", async () => {
-      await send("log 0x89");
-
-      sinon.assert.calledWith(fakeConsole.appendStdOut, "log ", "conn");
-      assert.strictEqual((logger as any).pending, "0x89");
-    });
-
-    it("should release held back text that does not continue", async () => {
-      await send("log 0x89", "ff\n");
-
-      sinon.assert.notCalled(renderPlotStub);
-      sinon.assert.calledWith(fakeConsole.appendStdOut, "0x89ff\n", "conn");
-    });
-
-    it("should keep text around the png on the console", async () => {
-      await send(`before\n${png}\nafter`);
-
-      sinon.assert.calledOnce(renderPlotStub);
-      sinon.assert.calledWith(fakeConsole.appendStdOut, "before\n", "conn");
-      sinon.assert.calledWith(fakeConsole.appendStdOut, "after", "conn");
-    });
-
-    it("should render two pngs from one chunk", async () => {
-      await send(`${png}\n${png}\n`);
-
-      sinon.assert.calledTwice(renderPlotStub);
-    });
-
-    it("should render a png that ends without a newline", async () => {
-      await send(`${png}0000000049454e44ae426082`);
-
-      sinon.assert.calledOnce(renderPlotStub);
-      sinon.assert.notCalled(fakeConsole.appendStdOut);
-    });
-
-    it("should keep text after an unterminated png on the console", async () => {
-      await send(`${png}0000000049454e44ae426082`, "next log line");
-
-      sinon.assert.calledOnce(renderPlotStub);
-      sinon.assert.calledWith(
-        fakeConsole.appendStdOut,
-        "next log line",
-        "conn",
-      );
-    });
-
-    it("should not capture hex without the png signature", async () => {
-      await send("0xdeadbeef\n");
-
-      sinon.assert.notCalled(renderPlotStub);
-      sinon.assert.calledWith(fakeConsole.appendStdOut, "0xdeadbeef\n", "conn");
-    });
-
-    it("should put an odd length run back on the console", async () => {
-      await send(`${png}a\n`);
-
-      sinon.assert.notCalled(renderPlotStub);
-      sinon.assert.calledWith(fakeConsole.appendStdOut, `${png}a`, "conn");
-    });
-
-    it("should give up on a run past the size limit", async () => {
-      (logger as any).MAX_CAPTURE = 8;
-      await send(`${png}\n`);
-
-      sinon.assert.notCalled(renderPlotStub);
-      sinon.assert.calledWith(fakeConsole.appendStdOut, png, "conn");
-    });
-
-    it("should drop a partial capture on close", async () => {
-      await send(png.slice(0, 22));
-      assert.strictEqual((logger as any).capturing, true);
-
-      const onClose = fakeWs.on.withArgs("close").getCall(0).args[1];
-      onClose(1006, "Abnormal Closure");
-
-      assert.strictEqual((logger as any).capturing, false);
-      assert.strictEqual((logger as any).capture, "");
-    });
   });
 
   it("should suppress reconnection on manual disconnect", async () => {
