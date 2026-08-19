@@ -15,7 +15,7 @@ timestamp: 2026-07-10
 
 ![Select virtual environment](../images/pykx-select-venv.png)
 
-5. Create a [`.env` file](env-files.md) in the root of the workspace with the following:
+5. Create a `.env` file in the root of the workspace with the following:
 
 ```
 PYKX_USE_FIND_LIBPYTHON="true"

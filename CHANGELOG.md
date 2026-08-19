@@ -11,7 +11,7 @@ file.
   panel. Query results, and the Insights scratchpad log, are written to the
   console of the connection that produced them instead of to a single shared
   output channel. Each console links to the **kdb Results View** for the results
-  of the last query.
+  the console prints a link to open it.
 - Files that are not assigned to a connection now run on the **active target** —
   the KX terminal last started or focused, whether that is a REPL or a
   connection's output console. The status bar item and the code lens read
@@ -23,12 +23,12 @@ file.
   has none, and the query timeout when that connection is an Insights one, in
   the same way as for a q, `quke`, `Python` or `SQL` file.
 - Connections can now be chosen for files opened from outside the workspace.
-  Previously picking one failed with _Document (…) is not in workspace_.
+  Previously, selecting one failed with _Document (…) is not in workspace_.
   Assignments for these files are kept in memory and are lost when VS Code
   restarts.
-- Added a results destination selector to the editor toolbar for `q`, `quke`,
-  `py` and `sql` files, to send query results either to the terminal or to the
-  **kdb Results View**.
+- Added an Output Destination selector to the editor toolbar for `q`, `quke`,
+  `py`, `sql` and datasource (`kdb.json`) files, to send query results either to
+  the terminal or to the **kdb Results View**.
 - Images returned by a process, such as a plot, are now written to their own
   `.plot` file and opened in the chart editor, so a process emitting several
   images produces one chart view apiece.
@@ -54,9 +54,8 @@ file.
 - Fixed the syntax highlighting of the `by` clause.
 - Fixed an issue where a PNG returned as an array of bytes was not recognised as
   an image.
-- Insights queries whose coordinator or gateway connection drops mid-request,
-  and scratchpad populates that fail mid-request, now report a readable error
-  and are recorded in the query history.
+- Fixed an issue where Insights queries and scratchpad populate requests that
+  failed mid-request
 - The datasource notice for a missing database is now a warning rather than an
   error.
 - Fixed an issue where the status bar timeout selector stayed hidden after an
