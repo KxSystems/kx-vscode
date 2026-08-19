@@ -21,14 +21,14 @@ import {
 const ANSI = {
   CRLF: "\r\n",
   CLEAR: "\x1b[2J\x1b[3J\x1b[H",
-  FAINTON: "\x1b[2m",
-  FAINTOFF: "\x1b[22m",
-  BOLDON: "\x1b[1m",
-  BOLDOFF: "\x1b[22m",
+  FAINT_ON: "\x1b[2m",
+  FAINT_OFF: "\x1b[22m",
+  BOLD_ON: "\x1b[1m",
+  BOLD_OFF: "\x1b[22m",
 };
 
 const KEY = {
-  CTRLL: "\x0c",
+  CTRL_L: "\x0c",
 };
 
 /**
@@ -109,9 +109,9 @@ export class ConnectionConsole {
   private open(): void {
     // Banner identifying which connection this output console belongs to.
     this.onDidWrite.fire(
-      ANSI.BOLDON +
+      ANSI.BOLD_ON +
         `KX ${getConnShortName(this.connLabel)}` +
-        ANSI.BOLDOFF +
+        ANSI.BOLD_OFF +
         ANSI.CRLF +
         ANSI.CRLF,
     );
@@ -131,7 +131,7 @@ export class ConnectionConsole {
 
   // Output-only: the only accepted key is Ctrl+L to clear the screen.
   private handleInput(data: string): void {
-    if (data === KEY.CTRLL) {
+    if (data === KEY.CTRL_L) {
       this.send(ANSI.CLEAR);
     }
   }
@@ -179,9 +179,9 @@ export class ConnectionConsole {
    */
   appendResultsPointer(): void {
     this.send(
-      ANSI.FAINTON +
+      ANSI.FAINT_ON +
         "Query results are shown in " +
-        ANSI.FAINTOFF +
+        ANSI.FAINT_OFF +
         OPEN_RESULTS_HINT +
         " ↗" +
         ANSI.CRLF,

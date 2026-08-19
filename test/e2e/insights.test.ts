@@ -105,6 +105,19 @@ async function run(command: string) {
   return insights.queries()[0];
 }
 
+// The console is painted after the command that fills it has resolved, so what
+// it shows has to be waited for rather than read once. Each read round trips
+// the clipboard, so this polls slowly.
+async function untilConsoleShows(text: string, what: string) {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if ((await terminalText(CONSOLE)).includes(text)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.fail(`timed out waiting for ${what}`);
+}
+
 describe("Executing on an Insights connection", () => {
   before(async () => {
     await activate();
@@ -188,12 +201,7 @@ describe("Executing on an Insights connection", () => {
       const marker = "LOGGED_BY_THE_WEBSOCKET";
       insights.log(`${marker}\n`);
 
-      for (let attempt = 0; attempt < 50; attempt++) {
-        if ((await terminalText(CONSOLE)).includes(marker)) {
-          return;
-        }
-      }
-      assert.fail("the log line never reached the console");
+      await untilConsoleShows(marker, "the log line to reach the console");
     });
   });
 
@@ -486,12 +494,7 @@ describe("Executing on an Insights connection", () => {
 
       assert.strictEqual(request.body.returnFormat, "text");
 
-      for (let attempt = 0; attempt < 50; attempt++) {
-        if ((await terminalText(CONSOLE)).includes(RESULT)) {
-          return;
-        }
-      }
-      assert.fail("the result was not printed to the console");
+      await untilConsoleShows(RESULT, "the result to be printed to the console");
     });
 
     it("asks for structured text for the view", async () => {
@@ -508,12 +511,7 @@ describe("Executing on an Insights connection", () => {
       await focus(FAILING_FILE);
       await run("kdb.execute.fileQuery");
 
-      for (let attempt = 0; attempt < 50; attempt++) {
-        if ((await terminalText(CONSOLE)).includes(FAILURE)) {
-          return;
-        }
-      }
-      assert.fail("the error was not shown in the console");
+      await untilConsoleShows(FAILURE, "the error to be shown in the console");
     });
   });
 

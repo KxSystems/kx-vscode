@@ -21,14 +21,14 @@ file.
 - The status bar connection and timeout selectors now follow **KX Notebooks**.
   Opening a notebook shows the connection it is assigned to, `(active)` when it
   has none, and the query timeout when that connection is an Insights one, in
-  the same way as for a q, `quke`, Python or SQL file.
+  the same way as for a q, `quke`, `Python` or `SQL` file.
 - Connections can now be chosen for files opened from outside the workspace.
   Previously picking one failed with _Document (…) is not in workspace_.
   Assignments for these files are kept in memory and are lost when VS Code
   restarts.
-- Added a results destination selector to the editor context menu for `q`,
-  `quke`, `py` and `sql` files, to send query results either to the terminal or
-  to the **kdb Results View**.
+- Added a results destination selector to the editor toolbar for `q`, `quke`,
+  `py` and `sql` files, to send query results either to the terminal or to the
+  **kdb Results View**.
 - Images returned by a process, such as a plot, are now written to their own
   `.plot` file and opened in the chart editor, so a process emitting several
   images produces one chart view apiece.
@@ -43,13 +43,14 @@ file.
 - Connection form fields are now marked as required, and validation messages
   name the field they refer to (for example _Port number is required._ rather
   than _Input value must be a number._).
-- `vscode.q`, the API injected into connected q processes, is now published as
-  an asset with each release.
+- For users using `vscode.q` to connect the extension to processes that don't
+  allow calls to anonymous lambdas, the `vscode.q` file is now published as an
+  asset with each release."
 
 ### Fixes
 
 - Fixed an issue where evaluating a single character Python query threw a type
-  error, because the query was incorrectly enlisted.
+  error.
 - Fixed the syntax highlighting of the `by` clause.
 - Fixed an issue where a PNG returned as an array of bytes was not recognised as
   an image.
