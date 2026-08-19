@@ -7,64 +7,67 @@ file.
 
 ### Enhancements
 
-- Every connected connection now has its own output console in the terminal
-  panel. Query results, and the Insights scratchpad log, are written to the
-  console of the connection that produced them instead of to a single shared
-  output channel. Each console links to the **kdb Results View** for the results
-  the console prints a link to open it.
+- Every connected connection now has its own
+  [output console](https://code.kx.com/vscode/guides/views/results.html#output-console)
+  in the **Terminal** panel. Query results, and the kdb Insights Enterprise
+  scratchpad log, are written to the console of the connection that produced
+  them instead of to a single shared output channel. When results are sent to
+  the **KDB RESULTS** view, the console prints a link to open it.
 - Files that are not assigned to a connection now run on the **active target** —
-  the KX terminal last started or focused, whether that is a REPL or a
-  connection's output console. The status bar item and the code lens read
-  `(active)` and **Run on active** for these files, and the connection picker is
-  offered for any `q`, `quke`, `py` or `sql` file rather than for workbooks
-  alone.
+  the KX terminal last started or focused, whether that is a
+  [REPL](https://code.kx.com/vscode/get-started/repl.html) or a connection's
+  output console. The status bar item and the code lens are now offered for any
+  `q`, `quke`, `py`, or `sql` file rather than for workbooks alone.
 - The status bar connection and timeout selectors now follow **KX Notebooks**.
   Opening a notebook shows the connection it is assigned to, `(active)` when it
   has none, and the query timeout when that connection is an Insights one, in
-  the same way as for a q, `quke`, `Python` or `SQL` file.
+  the same way as for a `q`, `quke`, `Python` or `sql` file.
 - Connections can now be chosen for files opened from outside the workspace.
-  Previously, selecting one failed with _Document (…) is not in workspace_.
-  Assignments for these files are kept in memory and are lost when VS Code
-  restarts.
-- Added an Output Destination selector to the editor toolbar for `q`, `quke`,
-  `py`, `sql` and datasource (`kdb.json`) files, to send query results either to
-  the terminal or to the **kdb Results View**.
+  Previously, selecting one failed with the error _Document (…) is not in
+  workspace_. Assignments for these files are kept in memory and are lost when
+  VS Code restarts.
+- Added an
+  [**Output Destination**](https://code.kx.com/vscode/guides/views/results.md#output-destination)
+  selector to the editor title bar for `q`, `quke`, `py`, `sql`, and datasource
+  (`kdb.json`) files, so that you can send query results either to the
+  connection's output console or to the **KDB RESULTS** view.
 - Images returned by a process, such as a plot, are now written to their own
-  `.plot` file and opened in the chart editor, so a process emitting several
-  images produces one chart view apiece.
+  `.plot` file and opened in the chart editor, so that a process that emits
+  several images produces a separate chart view for each image.
 - Errors raised by a custom evaluator now come back with a stack trace rather
-  than the error message alone. As the extension does not format errors
-  differently to results, the call stack is what indicates that a result is an
+  than the error message alone. Because the extension does not format errors
+  differently from results, the call stack is what indicates that a result is an
   error.
-- Insights connection addresses must now be secure `https://` URLs, and are
-  reported as a validation error when they are not. The address placeholder in
-  the connection form now uses `example.com`, and the login flow follows
-  authentication redirects.
+- Insights connection addresses must now be secure `https://` URLs. The
+  extension reports a validation error for any other address. The address
+  placeholder in the connection form now uses `example.com`, and the login flow
+  follows authentication redirects.
 - Connection form fields are now marked as required, and validation messages
   name the field they refer to (for example _Port number is required._ rather
   than _Input value must be a number._).
-- For users using `vscode.q` to connect the extension to processes that don't
-  allow calls to anonymous lambdas, the `vscode.q` file is now published as an
-  asset with each release."
+- `vscode.q`, the API injected into connected q processes, is now published as
+  an asset with each release.
 
 ### Fixes
 
-- Fixed an issue where evaluating a single character Python query threw a type
+- Fixed an issue where evaluating a single-character Python query threw a type
   error.
 - Fixed the syntax highlighting of the `by` clause.
-- Fixed an issue where a PNG returned as an array of bytes was not recognised as
+- Fixed an issue where a PNG returned as an array of bytes was not recognized as
   an image.
-- Fixed an issue where Insights queries and scratchpad populate requests that
-  failed mid-request
+- Fixed an issue where Insights queries and scratchpad populates did not report
+  a readable error if the coordinator or gateway connection dropped mid-request.
+  These now report the error and are recorded in the
+  [query history](https://code.kx.com/vscode/guides/views/query-history.html).
 - The datasource notice for a missing database is now a warning rather than an
   error.
 - Fixed an issue where the status bar timeout selector stayed hidden after an
   Insights connection was assigned to a file that had no connection, until
   another editor was focused.
 
-### Internal Improvements
+### Internal improvements
 
-- Replaced the UI test suite with an end to end suite (`npm run test:e2e`) that
+- Replaced the UI test suite with an end-to-end suite (`npm run test:e2e`) that
   drives the extension through its real commands in its own VS Code window,
   against stand-in Insights and q processes.
 - Added q unit tests covering `vscode.q` and `evaluatePy.q`, and split the
