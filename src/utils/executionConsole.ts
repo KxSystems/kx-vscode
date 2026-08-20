@@ -33,7 +33,7 @@ const logger = "executionConsole";
 // terminal (when one exists for the connLabel) or the shared fallback channel.
 interface ConsoleSink {
   appendLine: (value: string) => void;
-  // Result lines, which a terminal sink cuts to its width instead of wrapping.
+  // The lines of a result, kept apart from the banner lines around them.
   appendResult: (lines: string[]) => void;
   reveal: () => void;
 }

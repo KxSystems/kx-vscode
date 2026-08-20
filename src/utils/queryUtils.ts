@@ -232,7 +232,7 @@ export function getSQLWrapper(query: string): string {
   return `s)${query.replace(/(?:\r\n|\n)/g, " ")}`;
 }
 
-export function convertRows(rows: any[]): any {
+export function convertRows(rows: any[], width = 0): any {
   if (rows.length === 0) {
     return [];
   }
@@ -249,7 +249,28 @@ export function convertRows(rows: any[]): any {
     });
     result.push(values.join("#$#;#$#"));
   }
-  return convertRowsToConsole(result).join("\n") + "\n\n";
+  return convertRowsToConsole(result, width).join("\n") + "\n\n";
+}
+
+// Marks a table the console could not show in full, as a q console marks one.
+const CUT = "..";
+
+// How many whole columns fit in the given width. A table that loses columns is
+// still a table; one whose rows wrap, or get sliced mid-cell, is not. A width
+// of 0 means no limit — the shared output channel scrolls horizontally, where
+// a terminal only wraps.
+function fitColumns(counters: number[], width: number): number {
+  const budget = width - CUT.length;
+  let used = 0;
+  let keep = 0;
+  for (const counter of counters) {
+    if (used + counter > budget) {
+      break;
+    }
+    used += counter;
+    keep++;
+  }
+  return Math.max(1, keep);
 }
 
 // A cell that arrives with newlines in it — a nested list, rendered down the
@@ -269,7 +290,7 @@ function flatten(value: string) {
     .trimEnd();
 }
 
-export function convertRowsToConsole(rows: string[]): string[] {
+export function convertRowsToConsole(rows: string[], width = 0): string[] {
   if (rows.length === 0) {
     return [];
   }
@@ -307,12 +328,19 @@ export function convertRowsToConsole(rows: string[]): string[] {
     });
   });
 
-  const result = vector.map((row) => row.join(""));
-
   const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
-  const totalCounter = "-".repeat(totalCount);
+  const cut = width > 0 && totalCount > width;
+  const keep = cut ? fitColumns(columnCounters, width) : columnCounters.length;
+
+  const result = vector.map((row) => {
+    const line = row.slice(0, keep).join("");
+    // The single kept column can still be wider than the width on its own,
+    // which is the one case a cell is cut rather than a column dropped.
+    return cut ? line.slice(0, Math.max(0, width - CUT.length)) + CUT : line;
+  });
+
   if (haveHeader) {
-    result.splice(1, 0, totalCounter);
+    result.splice(1, 0, "-".repeat(result[0].length));
   }
 
   return result;

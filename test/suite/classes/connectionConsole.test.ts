@@ -46,40 +46,20 @@ describe("ConnectionConsole", () => {
     return console;
   }
 
-  it("should leave a result that fits alone", () => {
-    const console = open(40);
-    console.appendResult(["a  b  ", "------", "1  2  "]);
-    assert.deepStrictEqual(
-      written.map((line) => line.replace(/\r\n/g, "")),
-      ["a  b  ", "------", "1  2  "],
-    );
-  });
-
-  it("should cut a row that would wrap", () => {
+  it("should write the lines of a result as they are", () => {
     const console = open(10);
-    console.appendResult(["0123456789abcdef"]);
+    console.appendResult(["a  b  ", "------", "0123456789abcdef"]);
     assert.deepStrictEqual(
       written.map((line) => line.replace(/\r\n/g, "")),
-      ["01234567.."],
+      ["a  b  ", "------", "0123456789abcdef"],
     );
   });
 
-  it("should leave every row alone until the width is known", () => {
-    const console = open(0);
-    console.appendResult(["0123456789abcdef"]);
-    assert.deepStrictEqual(
-      written.map((line) => line.replace(/\r\n/g, "")),
-      ["0123456789abcdef"],
-    );
+  it("should report the width the terminal was given", () => {
+    assert.strictEqual(open(40).columns, 40);
   });
 
-  it("should not cut a line carrying escape sequences", () => {
-    const console = open(10);
-    const line = "[1mheading that is far too wide[0m";
-    console.appendResult([line]);
-    assert.deepStrictEqual(
-      written.map((value) => value.replace(/\r\n/g, "")),
-      [line],
-    );
+  it("should report no width until the terminal is measured", () => {
+    assert.strictEqual(open(0).columns, 0);
   });
 });

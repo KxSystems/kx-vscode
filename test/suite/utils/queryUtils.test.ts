@@ -121,6 +121,30 @@ describe("queryUtils", () => {
       ]);
     });
 
+    it("should drop the columns that do not fit the width", () => {
+      const rows = [
+        "aa#$#;header;#$#bb#$#;header;#$#cc",
+        "11#$#;#$#22#$#;#$#33",
+      ];
+      const result = queryUtils.convertRowsToConsole(rows, 10);
+
+      assert.deepEqual(result, ["aa  bb  ..", "----------", "11  22  .."]);
+    });
+
+    it("should keep every column when they all fit the width", () => {
+      const rows = ["a#$#;header;#$#b", "1#$#;#$#2"];
+      const result = queryUtils.convertRowsToConsole(rows, 40);
+
+      assert.deepEqual(result, ["a  b  ", "------", "1  2  "]);
+    });
+
+    it("should cut the cells of a single column too wide to fit", () => {
+      const rows = ["header#$#;header;#$#", "0123456789abcdef"];
+      const result = queryUtils.convertRowsToConsole(rows, 10);
+
+      assert.deepEqual(result, ["header  ..", "----------", "01234567.."]);
+    });
+
     it("should keep a row with newlines in it on one line", () => {
       const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
       const expectedRes = [
