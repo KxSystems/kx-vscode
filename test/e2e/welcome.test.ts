@@ -46,7 +46,10 @@ describe("Welcome", () => {
 
     const open = async () => {
       await vscode.commands.executeCommand("kdb.show.welcome");
-      await until(() => panels().length === 1, "the welcome panel");
+      await until(
+        () => panels()[0]?.isActive === true,
+        "the welcome panel to open",
+      );
       return panels()[0];
     };
 

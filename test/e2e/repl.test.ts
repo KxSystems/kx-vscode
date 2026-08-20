@@ -37,9 +37,6 @@ import {
 const Q_FILE = file("main.q");
 const SQL_FILE = file("main.sql");
 const PY_FILE = file("main.py");
-const QUKE_FILE = file("main.quke");
-const NOTEBOOK = file("main.kxnb");
-const CANCEL_NOTEBOOK = file("cancel.kxnb");
 
 const Q_WORKBOOK = file("main.kdb.q");
 const SQL_WORKBOOK = file("main.kdb.sql");
@@ -55,9 +52,9 @@ const IN_BLOCK_COMMENT = "BLOCK_COMMENT_MARKER";
 const BELOW_EXIT_COMMENT = "EXIT_COMMENT_MARKER";
 
 const TWO_STATEMENTS = "notional:px*qty;notional";
-const OPENS_JOINED = '"NOT",';
-const SELECTABLE = "px*qty";
-const JOINED = '"IONAL"';
+const EXPRESSION_FIRST_LINE = '"NOT",';
+const SELECTABLE_TERM = "px*qty";
+const EXPRESSION_CONTINUATION = '"IONAL"';
 const LAST_STATEMENT = "sym";
 const LAST_STATEMENT_COMMENT = "/ prints the symbol";
 
@@ -69,22 +66,10 @@ const PY_MARKER = "ALPHA_PY";
 const PY_OTHER = "BRAVO_PY";
 const PY_BRIDGE = "pystruct_run";
 
-const QUKE_SELECTED = '"QUKE_SELECTED"';
-const QUKE_LINE = '"QUKE_LINE"';
-
 // ReplConnection names its terminal after the folder it is based in.
 const REPL = "KX REPL";
 
-const TYPED = '"TYPED_AT_PROMPT"';
 const SLEEPS = "SLEEP_2000";
-const AFTER_CANCEL = '"AFTER_CANCEL"';
-
-const NOTEBOOK_Q = '"NOTEBOOK_Q"';
-const NOTEBOOK_SQL = "s)select sym, px from nbtrades where px > 200";
-
-const FOLDER_A_FILE = file(path.join("folderA", "a.q"));
-const FOLDER_A_QUERY = '"FOLDER_A"';
-const FOLDER_B = path.join(WORKSPACE, "folderB");
 
 describe("Executing on the REPL", () => {
   before(async () => {
@@ -109,7 +94,10 @@ describe("Executing on the REPL", () => {
       const sent = await run("kdb.execute.fileQuery");
 
       assert.ok(sent.includes(TWO_STATEMENTS), `two statements:\n${sent}`);
-      assert.ok(sent.includes(JOINED), `joined expression:\n${sent}`);
+      assert.ok(
+        sent.includes(EXPRESSION_CONTINUATION),
+        `joined expression:\n${sent}`,
+      );
     });
 
     it("evaluates nothing inside a block or exit comment", async () => {
@@ -127,11 +115,14 @@ describe("Executing on the REPL", () => {
     });
 
     it("sends only the selection", async () => {
-      await selectionOf(target(), SELECTABLE);
+      await selectionOf(target(), SELECTABLE_TERM);
       const sent = await run("kdb.execute.selectedQuery");
 
-      assert.ok(sent.includes(SELECTABLE), `selection:\n${sent}`);
-      assert.ok(!sent.includes(JOINED), `${JOINED} also sent:\n${sent}`);
+      assert.ok(sent.includes(SELECTABLE_TERM), `selection:\n${sent}`);
+      assert.ok(
+        !sent.includes(EXPRESSION_CONTINUATION),
+        `${EXPRESSION_CONTINUATION} also sent:\n${sent}`,
+      );
     });
 
     it("sends the current line when nothing is selected", async () => {
@@ -139,7 +130,10 @@ describe("Executing on the REPL", () => {
       const sent = await run("kdb.execute.selectedQuery");
 
       assert.ok(sent.includes(TWO_STATEMENTS), `line:\n${sent}`);
-      assert.ok(!sent.includes(JOINED), `${JOINED} also sent:\n${sent}`);
+      assert.ok(
+        !sent.includes(EXPRESSION_CONTINUATION),
+        `${EXPRESSION_CONTINUATION} also sent:\n${sent}`,
+      );
     });
 
     it("sends the last statement without its trailing comment", async () => {
@@ -159,10 +153,13 @@ describe("Executing on the REPL", () => {
     });
 
     it("sends the whole multi-line expression for a block", async () => {
-      await caretAt(target(), OPENS_JOINED);
+      await caretAt(target(), EXPRESSION_FIRST_LINE);
       const sent = await run("kdb.execute.block");
 
-      assert.ok(sent.includes(JOINED), `continuation line:\n${sent}`);
+      assert.ok(
+        sent.includes(EXPRESSION_CONTINUATION),
+        `continuation line:\n${sent}`,
+      );
       assert.ok(
         !sent.includes(TWO_STATEMENTS),
         `${TWO_STATEMENTS} also sent:\n${sent}`,
@@ -281,6 +278,10 @@ describe("Executing on the REPL", () => {
   });
 
   describe("from a quke file", () => {
+    const QUKE_FILE = file("main.quke");
+    const QUKE_SELECTED = '"QUKE_SELECTED"';
+    const QUKE_LINE = '"QUKE_LINE"';
+
     it("sends only the selection", async () => {
       await selectionOf(QUKE_FILE, QUKE_SELECTED);
       const sent = await run("kdb.execute.selectedQuery");
@@ -312,6 +313,10 @@ describe("Executing on the REPL", () => {
   });
 
   describe("from a notebook", () => {
+    const NOTEBOOK = file("main.kxnb");
+    const NOTEBOOK_Q = '"NOTEBOOK_Q"';
+    const NOTEBOOK_SQL = "s)select sym, px from nbtrades where px > 200";
+
     it("runs every cell on the REPL, each in its own language", async () => {
       const notebook = await vscode.workspace.openNotebookDocument(NOTEBOOK);
       await vscode.window.showNotebookDocument(notebook);
@@ -371,6 +376,15 @@ describe("Executing on the REPL", () => {
   });
 
   describe("typing at the REPL prompt", () => {
+    const TYPED = '"TYPED_AT_PROMPT"';
+
+    const KEY = {
+      UP: "\x1b[A",
+      CTRL_C: "\x03",
+      CTRL_D: "\x04",
+      CTRL_L: "\x0c",
+    };
+
     // Pasted text lands in the input buffer; a lone carriage return is what
     // ReplConnection treats as Enter.
     function type(text: string) {
@@ -428,7 +442,7 @@ describe("Executing on the REPL", () => {
 
     it("runs the previous statement again when recalled", async () => {
       const from = mark();
-      type("\x1b[A");
+      type(KEY.UP);
       type("\r");
 
       await until(
@@ -441,9 +455,11 @@ describe("Executing on the REPL", () => {
       const before = await terminalText(REPL);
       assert.ok(before.includes(TYPED), `nothing to clear:\n${before}`);
 
-      type("\x0c");
+      type(KEY.CTRL_L);
 
-      // 2J clears the screen and 3J the scrollback, so nothing is left to copy.
+      // Ctrl+L makes the REPL send ANSI.CLEAR: the escape sequence ESC[2J
+      // erases the screen and ESC[3J the scrollback, so nothing is left
+      // to copy.
       await untilShows(TYPED, false);
     });
 
@@ -459,7 +475,7 @@ describe("Executing on the REPL", () => {
 
     it("restarts the process with Ctrl+D", async () => {
       const from = mark();
-      type("\x04");
+      type(KEY.CTRL_D);
       await until(
         () => since(from).includes("SPAWN"),
         `the process to be replaced:\n${since(from)}`,
@@ -493,7 +509,7 @@ describe("Executing on the REPL", () => {
         "the statement to reach the process",
       );
 
-      type("\x03");
+      type(KEY.CTRL_C);
       await until(
         () => since(from).includes("SIGINT"),
         `the interrupt to reach the process:\n${since(from)}`,
@@ -502,6 +518,9 @@ describe("Executing on the REPL", () => {
   });
 
   describe("interrupting a notebook", () => {
+    const CANCEL_NOTEBOOK = file("cancel.kxnb");
+    const AFTER_CANCEL = '"AFTER_CANCEL"';
+
     it("stops the running cell and the ones after it", async () => {
       const notebook =
         await vscode.workspace.openNotebookDocument(CANCEL_NOTEBOOK);
@@ -547,6 +566,10 @@ describe("Executing on the REPL", () => {
 
   // Last, because starting a REPL here leaves it as the active one.
   describe("with several REPLs", () => {
+    const FOLDER_A_FILE = file(path.join("folderA", "a.q"));
+    const FOLDER_A_QUERY = '"FOLDER_A"';
+    const FOLDER_B = path.join(WORKSPACE, "folderB");
+
     it("runs on the active REPL, whatever folder the file is in", async () => {
       await vscode.commands.executeCommand(
         "kdb.repl.openFolder",
