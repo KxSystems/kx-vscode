@@ -570,10 +570,7 @@ describe("qLangServer", () => {
     // file (out-test/test/suite/server) rather than process.cwd(), which is not
     // the repo root on all platforms (e.g. the .vscode-test dir on Windows).
     // Fixtures are not copied into out-test, so point back at the source tree.
-    const folder = join(
-      __dirname,
-      "../../../../test/suite/server/fixtures",
-    );
+    const folder = join(__dirname, "../../../../test/suite/server/fixtures");
     const moduleUri = pathToFileURL(join(folder, "mod/bar.q")).toString();
 
     function createMain(content: string, offset?: number) {
@@ -653,7 +650,9 @@ describe("qLangServer", () => {
     it("should complete submodule members under the alias", async () => {
       const params = createMain("pcre2:use`kx.fusion:pcre2\npcre2.");
       const result = await server.onCompletion(params);
-      assert.ok(result.some((item) => item.textEdit?.newText === "pcre2.match"));
+      assert.ok(
+        result.some((item) => item.textEdit?.newText === "pcre2.match"),
+      );
       assert.ok(
         result.some((item) => item.textEdit?.newText === "pcre2.replace"),
       );

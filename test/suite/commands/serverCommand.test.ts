@@ -1312,6 +1312,9 @@ describe("serverCommand", () => {
     beforeEach(() => {
       windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");
       retrieveConnectionStub = sinon.stub(connService, "retrieveConnection");
+      // connect() starts the console for real, which opens a fresh output
+      // channel on a host that is no longer accepting them.
+      sinon.stub(ExecutionConsole, "start").returns(_executionConsole);
     });
 
     afterEach(() => {

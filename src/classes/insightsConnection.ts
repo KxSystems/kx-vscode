@@ -96,33 +96,52 @@ export class InsightsConnection {
       await this.getConfig();
       await this.getApiConfig();
       await this.getMeta();
+      this.startLogger();
     } else this.connected = false;
     return this.connected;
   }
 
   public disconnect(): boolean {
     ext.context.secrets.delete(this.node.details.alias);
+    if (this.scratchpadLogger) {
+      this.scratchpadLogger.disconnect();
+      this.scratchpadLogger = undefined;
+    }
     this.connected = false;
     return this.connected;
   }
 
-  public async setActive() {
+  /**
+   * Opens the scratchpad log websocket, which carries the stdout the extension
+   * renders as images. Bound to the connection rather than to which connection
+   * is active, because notebooks and workbooks run against the connection they
+   * are mapped to — closing this when another connection became active meant
+   * their output never arrived. Safe to call repeatedly.
+   */
+  private startLogger() {
     if (
       this.insightsVersion &&
       isBaseVersionGreaterOrEqual(this.insightsVersion, "1.18")
     ) {
       if (!this.scratchpadLogger) {
-        this.scratchpadLogger = new ScratchpadLogger(this.node.details);
+        this.scratchpadLogger = new ScratchpadLogger(
+          this.node.details,
+          this.connLabel,
+        );
       }
 
       this.scratchpadLogger.connect();
     }
   }
 
+  public async setActive() {
+    // A safety net only: the logger normally starts on connect. Still called
+    // here for connections that were established before the version was known.
+    this.startLogger();
+  }
+
   public setInactive() {
-    if (this.scratchpadLogger) {
-      this.scratchpadLogger.disconnect();
-    }
+    // Deliberately does not close the log websocket — see startLogger().
   }
 
   public update() {
@@ -252,8 +271,15 @@ export class InsightsConnection {
   }
 
   public async getApiConfig() {
+    if (!this.connected) {
+      return undefined;
+    }
+
+    // The endpoint itself only exists from 1.13; all it decides is whether the
+    // query environment prefix is used. The endpoints are resolved either way —
+    // an older instance has its own set, and until they are defined nothing,
+    // not even the meta, can be requested.
     if (
-      this.connected &&
       this.insightsVersion &&
       isBaseVersionGreaterOrEqual(this.insightsVersion, "1.13")
     ) {
@@ -268,20 +294,19 @@ export class InsightsConnection {
         configUrl.toString(),
       );
 
-      if (options === undefined) {
-        return undefined;
+      if (options !== undefined) {
+        notify("REST", MessageKind.DEBUG, {
+          logger,
+          params: { url: options.url },
+        });
+
+        const configResponse = await axios(options);
+
+        this.apiConfig = configResponse.data;
       }
-
-      notify("REST", MessageKind.DEBUG, {
-        logger,
-        params: { url: options.url },
-      });
-
-      const configResponse = await axios(options);
-
-      this.apiConfig = configResponse.data;
-      this.defineEndpoints();
     }
+
+    this.defineEndpoints();
   }
 
   public async getConfig() {

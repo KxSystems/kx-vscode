@@ -1,22 +1,16 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with
-code in this repository.
-
 ## Overview
 
-This is the **kdb VS Code extension** (`KX.kdb`) — an IDE for the q programming
-language and the kdb product suite (KDB-X, kdb Insights Enterprise, kdb+
-Personal Edition). It lets users edit q/Python/SQL, connect to multiple kdb
-processes, run queries, and view results.
+The **kdb VS Code extension** (`KX.kdb`) — an IDE for the q language and the kdb
+product suite (KDB-X, kdb Insights Enterprise, kdb+ Personal Edition): edit
+q/Python/SQL, connect to multiple kdb processes, run queries, view results.
 
 ## Build & Development Commands
 
-Dependencies are pinned in `package-lock.json` — install with `npm ci` (respects
-the lockfile exactly) rather than `npm install`. Every dependency in
-[package.json](package.json) is an **absolute version** (e.g.
-`"eslint": "9.39.4"`) — no `^`/`~` semver ranges. `update-deps` bumps only
-patch-level versions.
+Install with `npm ci`, not `npm install` — [package.json](package.json) pins
+every dependency to an absolute version and the lockfile is authoritative.
+`update-deps` bumps patch levels only.
 
 ```bash
 npm ci                 # Install locked dependencies
@@ -27,40 +21,54 @@ npm run format         # prettier --write "**/*.ts"
 npm run package        # vsce package → .vsix
 ```
 
-Press F5 in VS Code to launch the Extension Development Host (requires a prior
-`npm run build` or `npm run watch`).
+F5 launches the Extension Development Host (needs a prior `build` or `watch`).
 
 ### Tests
 
-The primary test suite runs inside a real VS Code instance via
-`@vscode/test-electron`. Tests must be compiled first (`pretest`/`tsc` →
-`out-test/`), then run:
+**Mocha**, with **Sinon** for stubs and **proxyquire**/**mock-fs** for module
+and filesystem mocking. Tests compile first (`pretest`/`tsc` → `out-test/`) and
+run inside a real VS Code instance via `@vscode/test-electron`; `test/suite/`
+mirrors the `src/` layout.
 
 ```bash
 npm run test                      # Full integration suite (test/suite/**)
 npm run test:file <path>          # Single test file (TEST_FILE env)
 npm run test:folder <path>        # A folder of tests (TEST_FOLDER env)
+npm run test:e2e                  # End to end suite (test/e2e/**), TEST_FILE env narrows it
 npm run coverage                  # Same suite under c8 coverage
-npm run ui-test                   # End-to-end UI tests via vscode-extension-tester (test/ui/**)
 npm run q-test                    # q-language unit tests — runs in the qpbuild docker image (no local q needed)
 ```
 
-`q-test` wraps [qcumber.sh](qcumber.sh), which runs the tests inside the
-`qpbuild` image and sets up pykx via `test/q/preTest.sh`. The image lives in a
-private GitLab registry — if it isn't already local, the script pulls it,
-relying on whatever credentials docker already has (this is how CI authenticates
-— a `docker/login-action` step runs before `qcumber.sh`). Only if that pull
-fails does it authenticate itself — from `GITLAB_TOKEN` (a GitLab PAT with the
-`read_registry` scope) or an interactive prompt — and retry once. It also needs
-a kdb+ license passed to the container as `KDB_K4LICENSE_B64` (this is how CI
-passes it, from a secret). If that env var is unset, `qcumber.sh` base64-encodes
-a `k4.lic` file, looked up as `$QLIC/k4.lic`, `$QHOME/k4.lic`, then
-`~/.kx/k4.lic` — so if you already have `$QLIC`/`$QHOME` set there's nothing to
-configure. (A `kc.lic` will not work; the tests need a `k4.lic`.)
+Every suite that launches VS Code (all but `q-test`) needs
+`ELECTRON_RUN_AS_NODE` **unset** — some terminals export it, and Electron then
+starts as plain node and fails in a way that hides the cause:
+`bad option: --no-sandbox` (exit 9), or
+`Cannot find module .../test/e2e/workspace` for `test:e2e`. Prefix the command
+with `env -u ELECTRON_RUN_AS_NODE`.
 
-Test framework is **Mocha** with **Sinon** for stubs and
-**proxyquire**/**mock-fs** for module and filesystem mocking. Tests mirror the
-`src/` layout under `test/suite/`.
+`test:e2e` opens its own VS Code window on `test/e2e/workspace` and drives the
+extension through its real commands with nothing stubbed — real workspace
+settings, real language server. The test files sit in `test/e2e/`, everything
+they are built out of in `test/e2e/utils/`. Stand-ins replace everything outside
+the extension and record what they are sent: `fakeq/bin/q` for the REPL (reached
+through `kdb.qHomeDirectoryWorkspace`, writing a `.transcript.log` per REPL),
+`utils/qserver.ts`, an in-process kdb+ IPC server for connections, and
+`utils/insightsServer.ts`, an Insights instance over HTTPS with a self-signed
+certificate (`test/e2e/certs/`, generated on the first run) whose reported
+version selects the endpoint group under test — with the browser the OAuth code
+flow opens replaced in `utils/insights.ts`. macOS and Linux only — on Windows
+the REPL spawns q through `cmd.exe`, which cannot run the stand-in. See
+[docs/developer/development.md](docs/developer/development.md).
+
+`q-test` wraps [qcumber.sh](qcumber.sh), which runs the tests in the `qpbuild`
+image (pykx set up by `test/q/preTest.sh`). The image lives in a private GitLab
+registry: the script pulls with whatever credentials docker already has (in CI,
+a `docker/login-action` step), and only on failure authenticates from
+`GITLAB_TOKEN` (a PAT with `read_registry`) or an interactive prompt and retries
+once. It also needs a kdb+ license as `KDB_K4LICENSE_B64` (a CI secret); if that
+is unset, `qcumber.sh` encodes a `k4.lic` found at `$QLIC/`, `$QHOME/`, then
+`~/.kx/` — so an existing `$QLIC`/`$QHOME` needs no setup. A `kc.lic` will not
+work.
 
 ## Architecture
 
@@ -77,43 +85,37 @@ outputting to `out/`:
 
 ### Extension host (`src/`)
 
-- **[extension.ts](src/extension.ts)** — `activate()` wires up everything: tree
-  providers, webview providers, custom editors, notebook controller, the LSP
-  client, and all commands. Commands are declared as `CommandRegistration[]`
-  arrays grouped by domain (`registerConnectionsCommands`,
-  `registerScratchpadCommands`, etc.) and registered in bulk. Command
-  _implementations_ live in `src/commands/`.
+- **[extension.ts](src/extension.ts)** — `activate()` wires up tree providers,
+  webview providers, custom editors, the notebook controller, the LSP client and
+  all commands. Commands are declared as `CommandRegistration[]` arrays grouped
+  by domain (`registerConnectionsCommands`, `registerScratchpadCommands`, …) and
+  registered in bulk; the _implementations_ live in `src/commands/`.
 - **[extensionVariables.ts](src/extensionVariables.ts)** — the `ext` namespace,
   a global singleton holding shared state (active connections, tree providers,
   telemetry, secret storage, output channel). Referenced pervasively; treat it
   as the extension's service locator.
 - **`src/classes/`** — connection implementations: `LocalConnection` (q/kdb+
-  process over IPC via `node-q`), `InsightsConnection` (kdb Insights Enterprise
-  over REST/WebSocket), `ReplConnection`.
-- **`src/services/`** — VS Code providers: tree data providers
-  (`kdbTreeProvider`, `workspaceTreeProvider`), webview/custom-editor providers
-  (`dataSourceEditorProvider`, `chartEditorProvider`, `resultsPanelProvider`),
-  notebook providers, completion/quickfix providers.
-- **`src/commands/`** — command handler logic (server, workspace, datasource,
-  client/LSP, buildtools, setup).
-- **`src/models/`**, **`src/utils/`**, **`src/validators/`** — data models,
-  helpers (config, telemetry, secret storage, execution console), and input
-  validators.
+  over IPC via `node-q`), `InsightsConnection` (kdb Insights Enterprise over
+  REST/WebSocket), `ReplConnection`.
+- **`src/services/`** — VS Code providers: tree data, webview/custom-editor,
+  notebook, completion/quickfix.
+- **`src/commands/`**, **`src/models/`**, **`src/utils/`**,
+  **`src/validators/`** — command handlers, data models, helpers (config,
+  telemetry, secret storage, execution console) and input validators.
 
 ### Language server (`server/src/`)
 
-An LSP server providing q language features. Parsing is done with **Chevrotain**
-in `server/src/parser/` (lexer, tokens, parser, semantic checks). Linting rules
-for `qlint` live in `server/src/linter/`. The client connects to it in
-`extension.ts` (`documentSelector` = language `q`, including q cells in
-`kx-notebook`).
+q language features over LSP. Parsing uses **Chevrotain** in
+`server/src/parser/` (lexer, tokens, parser, semantic checks); `qlint` rules
+live in `server/src/linter/`. The client connects in `extension.ts`
+(`documentSelector` = language `q`, including q cells in `kx-notebook`).
 
 ### q runtime scripts (`resources/q/`)
 
-`.q` scripts (`vscode.q`, `evaluateQ.q`, `evaluatePy.q`, `secure.q`, etc.) are
+`.q` scripts (`vscode.q`, `evaluateQ.q`, `evaluatePy.q`, `secure.q`, …) are
 injected into connected q processes to define the API the extension calls.
 [build-api.js](build-api.js) assembles `out/vscode.q` from `vscode.q`, inlining
-other scripts via `//{{path/to/file.q}}` placeholders. See
+the others via `//{{path/to/file.q}}` placeholders. See
 [secure-processes.md](secure-processes.md) for the `.vscode` namespace security
 model used by locked-down processes.
 
@@ -126,42 +128,35 @@ execution target via the `kdb.connectionMap`/`kdb.targetMap` workspace settings.
 
 ### Documentation (`docs/`)
 
-In-tree docs, ported from the (now-superseded) GitHub wiki and structured in the
+In-tree docs in the
 [Open Knowledge Format](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/):
-plain markdown files with YAML frontmatter (`type` required; `title`,
-`description`, `tags`, `timestamp` optional), an `index.md` per folder for
-navigation, and relative markdown cross-links. Split into
-[docs/user/](docs/user/) (reference card, q home directory, PyKX-in-REPL, sample
-notebooks) and [docs/developer/](docs/developer/) (setup, notifications,
-execution flow, telemetry), with screenshots under `docs/images/`. The
-end-user product documentation is hosted separately at
-`https://gitlab.com/kxdev/documentation/vscode-docs/`.
+markdown with YAML frontmatter (`type` required; `title`, `description`, `tags`,
+`timestamp` optional), an `index.md` per folder, relative cross-links (not
+`github.com/.../wiki/` URLs — these pages superseded the wiki). Split into
+[docs/user/](docs/user/) and [docs/developer/](docs/developer/), screenshots
+under `docs/images/`. End-user product documentation is hosted separately at
+`https://code.kx.com/vscode/`.
 
-- [docs/user/reference-card.md](docs/user/reference-card.md) is the canonical
-  reference card (command palette, keybindings, settings, execution matrix,
-  telemetry events) — it replaced the former root `ref_card.md`. Keep it in sync
-  when commands, keybindings, settings, or telemetry events change.
-- When adding a page, give it OKF frontmatter and link it from the enclosing
-  `index.md`. Use relative links between pages, not `github.com/.../wiki/` URLs.
+New pages need OKF frontmatter and a link from the enclosing `index.md`. Keep
+[docs/user/reference-card.md](docs/user/reference-card.md) — the canonical
+reference card — in sync when commands, keybindings, settings or telemetry
+events change.
 
 ## Conventions
 
 - **License header**: every `.ts` file must start with the Apache 2.0 header
-  block (ESLint `license-header/header` enforces it, with the current year). New
-  files will fail lint without it — copy the header from any existing source
-  file.
+  block, with the current year (ESLint `license-header/header`) — copy it from
+  any existing source file.
 - **Imports**: ESLint enforces `import/order` — builtin/external first, then
-  internal, alphabetized, with newlines between groups. Run `npm run lint`
-  before committing.
+  internal, alphabetized, newline between groups. Run `npm run lint` before
+  committing.
 - **Formatting**: Prettier (`printWidth: 80`, `bracketSameLine: true`).
-- **Dependencies**: pin every package to an absolute version (no `^`/`~` ranges)
-  and commit the updated `package-lock.json`.
+- **Dependencies**: pin every package to an absolute version (no `^`/`~`) and
+  commit the updated `package-lock.json`.
 - **Branching**: PRs target `dev` (the default branch), not `main`.
-- **Commit messages**: a single line, no body/newlines and no `Co-Authored-By`
-  trailer. Lead with the affected area, then a comma-separated summary of what
-  changed, e.g.
+- **Commit messages**: a single line, no body and no `Co-Authored-By` trailer.
+  Lead with the affected area, then a comma-separated summary, e.g.
   `REPL: add word nav/delete keys, route orphan files to active REPL, dedupe query normalization`.
-- **Squashing**: interactive rebase isn't available here — squash with a soft
-  reset instead, then re-commit in the style above, e.g.
-  `git reset --soft HEAD~4 && git commit -m "REPL: add word nav/delete keys, route orphan files to active REPL, dedupe query normalization"`.
+- **Squashing**: interactive rebase isn't available here — soft-reset instead,
+  e.g. `git reset --soft HEAD~4 && git commit -m "REPL: …"`.
 - Versions containing `rc` (e.g. `1.19.0-rc`) disable telemetry automatically.

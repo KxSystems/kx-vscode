@@ -12,10 +12,65 @@
  */
 
 import assert from "assert";
+import * as sinon from "sinon";
 
-import { extractInsightsRequestError } from "../../../src/classes/insightsConnection";
+import {
+  extractInsightsRequestError,
+  InsightsConnection,
+} from "../../../src/classes/insightsConnection";
+import { ext } from "../../../src/extensionVariables";
 
 describe("insightsConnection", () => {
+  describe("scratchpad logger lifecycle", () => {
+    const withLogger = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn" },
+        label: "conn",
+      });
+      const logger = { connect: sinon.spy(), disconnect: sinon.spy() };
+      (<any>conn).scratchpadLogger = logger;
+      return { conn, logger };
+    };
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should keep streaming when another connection becomes active", () => {
+      const { conn, logger } = withLogger();
+
+      conn.setInactive();
+
+      // Notebooks and workbooks run against the connection they are mapped to,
+      // not the active one, so their output must keep arriving.
+      sinon.assert.notCalled(logger.disconnect);
+    });
+
+    it("should start the logger when the connection becomes active", async () => {
+      const { conn, logger } = withLogger();
+      conn.insightsVersion = "1.18";
+
+      await conn.setActive();
+
+      sinon.assert.calledOnce(logger.connect);
+    });
+
+    it("should stop streaming on disconnect", () => {
+      const { conn, logger } = withLogger();
+      const context = ext.context;
+      ext.context = <any>{ secrets: { delete: sinon.stub() } };
+
+      try {
+        conn.disconnect();
+      } finally {
+        ext.context = context;
+      }
+
+      sinon.assert.calledOnce(logger.disconnect);
+      assert.strictEqual((<any>conn).scratchpadLogger, undefined);
+    });
+  });
+
   describe("extractInsightsRequestError", () => {
     it("should surface a plain-text 500 body (coordinator killed)", () => {
       const error = {
@@ -47,17 +102,11 @@ describe("insightsConnection", () => {
 
     it("should use the error message when there is no response (dropped socket)", () => {
       const error = { message: "socket hang up" };
-      assert.strictEqual(
-        extractInsightsRequestError(error),
-        "socket hang up",
-      );
+      assert.strictEqual(extractInsightsRequestError(error), "socket hang up");
     });
 
     it("should stringify an unknown error with no message or response", () => {
-      assert.strictEqual(
-        extractInsightsRequestError("boom"),
-        "boom",
-      );
+      assert.strictEqual(extractInsightsRequestError("boom"), "boom");
     });
   });
 });

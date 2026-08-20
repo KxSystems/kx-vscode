@@ -13,6 +13,7 @@
 
 import { ChildProcess, execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 import { ICommandResult, tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
@@ -50,8 +51,18 @@ function killPidCommand(pid: number): string {
 
 export function which(cmd: string): string[] {
   /* c8 ignore start */
-  // This works on WSL, MacOS, Linux
-  const res = execFileSync("/usr/bin/which", ["-a", cmd]);
+  // where.exe on Windows, /usr/bin/which on WSL, MacOS, Linux, both located by
+  // absolute path so the lookup itself cannot be resolved through PATH
+  const res = isWin
+    ? execFileSync(
+        path.join(
+          process.env.SystemRoot ?? "C:\\Windows",
+          "System32",
+          "where.exe",
+        ),
+        [cmd],
+      )
+    : execFileSync("/usr/bin/which", ["-a", cmd]);
   return new TextDecoder().decode(res).split(/(?:\r\n|[\r\n])/gs);
   /* c8 ignore stop */
 }

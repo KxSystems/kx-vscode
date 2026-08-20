@@ -160,6 +160,7 @@ export class KdbNewConnectionView extends LitElement {
     return serverType === ServerType.KDB
       ? html`<sl-input
           class="text-field larger option-title"
+          required
           placeholder="Server-1"
           value="${live(this.kdbServer.serverAlias)}"
           @input="${(event: Event) =>
@@ -169,6 +170,7 @@ export class KdbNewConnectionView extends LitElement {
           label="Server Name"></sl-input>`
       : html`<sl-input
           class="text-field larger option-title"
+          required
           placeholder="Insights-1"
           value="${live(this.insightsServer.alias)}"
           @input="${(event: Event) =>
@@ -202,6 +204,8 @@ export class KdbNewConnectionView extends LitElement {
       <div class="row">
         <sl-input
           class="text-field larger option-title"
+          required
+          placeholder="5001"
           value="${live(this.kdbServer.serverPort)}"
           @input="${(event: Event) => {
             const value = (event.target as HTMLInputElement).value;
@@ -229,6 +233,7 @@ export class KdbNewConnectionView extends LitElement {
       <div class="row">
         <sl-input
           class="text-field larger option-title"
+          required
           placeholder="${serverType === ServerType.KDB
             ? "127.0.0.1 or localhost"
             : `https://myinsights.example.com`}"

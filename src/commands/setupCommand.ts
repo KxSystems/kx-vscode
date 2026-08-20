@@ -33,8 +33,29 @@ let panel: vscode.WebviewPanel | undefined;
 
 export async function showSetupError(workspace?: vscode.WorkspaceFolder) {
   /* c8 ignore start */
+  const scope = workspace ? " for workspace " + workspace.name : "";
+
+  // KDB-X has no native Windows build, so point at an existing kdb+ install
+  // instead of offering an installation that cannot run.
+  if (process.platform === "win32") {
+    const res = await notify(
+      `KDB installation not found${scope}. Set the q home directory to a kdb+ installation.`,
+      MessageKind.WARNING,
+      { logger, params: workspace?.name },
+      "Set q Home Directory",
+      "Dismiss",
+    );
+    if (res === "Set q Home Directory") {
+      await vscode.commands.executeCommand(
+        "workbench.action.openSettings",
+        "kdb.qHomeDirectory",
+      );
+    }
+    return;
+  }
+
   const res = await notify(
-    `KDB intallation not found${workspace ? " for workspace " + workspace.name : ""}.`,
+    `KDB installation not found${scope}.`,
     MessageKind.WARNING,
     { logger, params: workspace?.name },
     "Install KDB-X",

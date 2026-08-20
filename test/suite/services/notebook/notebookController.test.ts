@@ -16,12 +16,14 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 
 import * as notebookTestUtils from "./notebookTest.utils.test";
+import { setActiveTarget } from "../../../../src/classes/activeTarget";
 import { InsightsConnection } from "../../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../../src/classes/localConnection";
 import { ReplConnection } from "../../../../src/classes/replConnection";
 import * as dataSourceCommand from "../../../../src/commands/dataSourceCommand";
 import * as serverCommand from "../../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
+import { ext } from "../../../../src/extensionVariables";
 import { ConnectionManagementService } from "../../../../src/services/connectionManagerService";
 import { KdbNode } from "../../../../src/services/kdbTreeProvider";
 import * as controlller from "../../../../src/services/notebookController";
@@ -64,6 +66,7 @@ describe("Controller", () => {
           },
           replaceOutput(_) {},
           executionOrder: 0,
+          token: new vscode.CancellationTokenSource().token,
         };
       },
     };
@@ -126,12 +129,89 @@ describe("Controller", () => {
         });
       });
     });
+
+    describe("interrupt", () => {
+      it("should cancel the REPL query when the cell is interrupted", async () => {
+        const cancelStub = sinon.stub(ReplConnection.prototype, "cancel");
+        const source = new vscode.CancellationTokenSource();
+
+        // Interrupt while the query is in flight; a token cancelled up front
+        // would fire after the listener is disposed.
+        (<sinon.SinonStub>ReplConnection.prototype.executeQuery).callsFake(
+          async () => {
+            source.cancel();
+            return { output: "" };
+          },
+        );
+
+        await instance.execute(
+          [notebookTestUtils.createCell("q")],
+          notebookTestUtils.createNotebook(),
+          <vscode.NotebookController>{
+            createNotebookCellExecution(_) {
+              return <vscode.NotebookCellExecution>(<unknown>{
+                start() {},
+                end() {},
+                replaceOutput(_) {},
+                executionOrder: 0,
+                token: source.token,
+              });
+            },
+          },
+        );
+
+        sinon.assert.calledOnce(cancelStub);
+      });
+    });
+  });
+
+  describe("Unassigned notebook", () => {
+    const connLabel = "activeConnection";
+
+    afterEach(() => {
+      setActiveTarget(undefined);
+      ext.connectionConsoles.delete(connLabel);
+    });
+
+    it("should run on the active connection", async () => {
+      const conn = new LocalConnection("127.0.0.1:5001", connLabel, []);
+      sinon
+        .stub(
+          ConnectionManagementService.prototype,
+          "retrieveConnectedConnection",
+        )
+        .returns(conn);
+      // getActiveTarget drops a connection target without a live console.
+      ext.connectionConsoles.set(connLabel, <any>{});
+      setActiveTarget({ kind: "connection", connLabel });
+
+      const replStub = sinon.stub(ReplConnection.prototype, "executeQuery");
+      executeQueryStub.resolves(result.text);
+      createInstance();
+
+      await instance.execute(
+        [notebookTestUtils.createCell("q")],
+        notebookTestUtils.createNotebook(),
+        createController(),
+      );
+
+      sinon.assert.calledOnce(executeQueryStub);
+      sinon.assert.notCalled(replStub);
+      assert.strictEqual(success, true);
+    });
   });
 
   describe("Connection Picked", () => {
-    beforeEach(() => {
-      sinon.stub(workspaceCommand, "getServerForUri").returns("picked");
-    });
+    // resolveRunTarget resolves the assignment, the active target and the
+    // REPL fallback, so it is the seam the controller routes through.
+    const runOn = (conn: unknown) =>
+      sinon
+        .stub(workspaceCommand, "resolveRunTarget")
+        .resolves(
+          conn
+            ? <workspaceCommand.RunTarget>{ kind: "connection", conn }
+            : undefined,
+        );
 
     describe("Connected", () => {
       describe("Insights Connection", () => {
@@ -146,7 +226,7 @@ describe("Controller", () => {
 
         describe("Connection Not Exists", () => {
           beforeEach(() => {
-            sinon.stub(workspaceCommand, "findConnection").resolves(undefined);
+            runOn(undefined);
 
             createInstance();
           });
@@ -163,9 +243,7 @@ describe("Controller", () => {
 
         describe("Connection Exists", () => {
           beforeEach(() => {
-            sinon
-              .stub(workspaceCommand, "findConnection")
-              .resolves(sinon.createStubInstance(InsightsConnection));
+            runOn(sinon.createStubInstance(InsightsConnection));
 
             createInstance();
           });
@@ -184,9 +262,7 @@ describe("Controller", () => {
           let populateScratchpadStub: sinon.SinonStub;
 
           beforeEach(() => {
-            sinon
-              .stub(workspaceCommand, "findConnection")
-              .resolves(sinon.createStubInstance(InsightsConnection));
+            runOn(sinon.createStubInstance(InsightsConnection));
 
             populateScratchpadStub = sinon.stub(
               dataSourceCommand,
@@ -246,9 +322,7 @@ describe("Controller", () => {
             sinon
               .stub(workspaceCommand, "getConnectionForServer")
               .resolves(mockNode);
-            sinon
-              .stub(workspaceCommand, "findConnection")
-              .resolves(mockConnection);
+            runOn(mockConnection);
 
             createInstance();
           });
@@ -302,7 +376,18 @@ describe("Controller", () => {
           });
 
           describe("sql cell", () => {
-            it("should display not supported", async () => {
+            it("should display table results", async () => {
+              executeQueryStub.resolves(result.table);
+              await instance.execute(
+                [notebookTestUtils.createCell("sql")],
+                notebookTestUtils.createNotebook(),
+                createController(),
+              );
+              sinon.assert.calledOnce(notifyStub);
+              assert.strictEqual(success, true);
+            });
+
+            it("should display an error for an unrenderable result", async () => {
               executeQueryStub.resolves({});
               await instance.execute(
                 [notebookTestUtils.createCell("sql")],
@@ -317,7 +402,7 @@ describe("Controller", () => {
 
         describe("Connection Not Exists", () => {
           beforeEach(() => {
-            sinon.stub(workspaceCommand, "findConnection").resolves(undefined);
+            runOn(undefined);
 
             createInstance();
           });

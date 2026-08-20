@@ -31,7 +31,7 @@ export function validateServerAlias(
       return "Input value cannot start with a space.";
     }
     if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
-      return `Input value must be between 1 and ${MAX_STR_LEN} alphanumeric characters in length.`;
+      return `Server Name must be between 1 and ${MAX_STR_LEN} characters in length.`;
     }
     if (!validateUtils.isAlphanumericWithHypens(input)) {
       return "Input value must contain only alphanumeric characters and hypens";
@@ -52,8 +52,11 @@ export function validateServerName(
   input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
+    if (input.trim() === "") {
+      return "Connection address is required (for example, 127.0.0.1 or localhost).";
+    }
     if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
-      return `Input value must be between 1 and ${MAX_STR_LEN} alphanumeric characters in length.`;
+      return `Connection address must be between 1 and ${MAX_STR_LEN} characters in length.`;
     }
   }
   return undefined;
@@ -63,8 +66,11 @@ export function validateServerPort(
   input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
+    if (input.trim() === "") {
+      return "Port number is required.";
+    }
     if (!validateUtils.isNumber(input)) {
-      return "Input value must be a number.";
+      return "Port number must be a number.";
     }
     const parsedNumber = Number(input);
     return parsedNumber > 0 && parsedNumber < 65537
@@ -79,7 +85,7 @@ export function validateServerUsername(
 ): string | undefined {
   if (input !== undefined && input !== "") {
     if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
-      return `Input value must be between 1 and ${MAX_STR_LEN} alphanumeric characters in length.`;
+      return `Username must be between 1 and ${MAX_STR_LEN} characters in length.`;
     }
   }
   return undefined;
@@ -90,7 +96,7 @@ export function validateServerPassword(
 ): string | undefined {
   if (input !== undefined) {
     if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
-      return `Input value must be between 1 and ${MAX_STR_LEN} alphanumeric characters in length.`;
+      return `Password must be between 1 and ${MAX_STR_LEN} characters in length.`;
     }
   }
   return undefined;

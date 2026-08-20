@@ -131,6 +131,51 @@ export function getPlatformFolder(
   return undefined;
 }
 
+export function resolveQHome(
+  home: string,
+  platform: string = process.platform,
+  arch?: string,
+  exists: (target: string) => boolean = stat,
+): { path: string; kdbx: boolean } | undefined {
+  const kdbx = path.resolve(home, "bin", "q");
+  if (exists(kdbx)) {
+    return { path: kdbx, kdbx: true };
+  }
+  const folder = getPlatformFolder(platform, arch);
+  if (folder) {
+    for (const name of ["q", "q.exe"]) {
+      const target = path.resolve(home, folder, name);
+      if (exists(target)) {
+        return { path: target, kdbx: false };
+      }
+    }
+  }
+  return undefined;
+}
+
+export function classifyQBinary(
+  target: string,
+  platform: string = process.platform,
+  arch?: string,
+): { home: string; kdbx: boolean } | undefined {
+  const parsed = path.parse(target.trim());
+  if (parsed.name !== "q") {
+    return undefined;
+  }
+  const folder = path.basename(parsed.dir);
+  const home = path.resolve(parsed.dir, "..");
+  if (folder === "bin" && !parsed.ext) {
+    return { home, kdbx: true };
+  }
+  if (
+    folder === getPlatformFolder(platform, arch) &&
+    (!parsed.ext || parsed.ext.toLowerCase() === ".exe")
+  ) {
+    return { home, kdbx: false };
+  }
+  return undefined;
+}
+
 function loadEnvironment(folder: string, env: { [key: string]: string }) {
   /* c8 ignore start */
   const data = readTextFile(path.resolve(folder, ".env"));
@@ -197,27 +242,11 @@ export function getEnvironment(resource?: WorkspaceFolder): {
   let home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
 
   if (home) {
-    let q = path.resolve(home, "bin", "q");
-    let exists = stat(q);
-
-    if (!exists) {
-      env.qBinKdbX = "";
-      const folder = getPlatformFolder(process.platform, process.arch);
-      if (folder) {
-        if (!exists) {
-          q = path.resolve(home, folder, "q");
-          exists = stat(q);
-        }
-        if (!exists) {
-          q = path.resolve(home, folder, "q.exe");
-          exists = stat(q);
-        }
-      }
-    }
-
-    if (exists) {
+    const found = resolveQHome(home, process.platform, process.arch);
+    if (found) {
+      env.qBinKdbX = found.kdbx ? "true" : "";
       env.QHOME = home;
-      env.qBinPath = q;
+      env.qBinPath = found.path;
       return env;
     }
   }
@@ -234,10 +263,13 @@ export function getEnvironment(resource?: WorkspaceFolder): {
   }
 
   try {
-    for (const target of which("q")) {
-      if (target.endsWith(path.join("bin", "q"))) {
+    for (const found of which("q")) {
+      const binary = classifyQBinary(found, process.platform, process.arch);
+      if (binary) {
+        const target = found.trim();
         if (stat(target)) {
-          env.QHOME = path.resolve(path.parse(target).dir, "..");
+          env.qBinKdbX = binary.kdbx ? "true" : "";
+          env.QHOME = binary.home;
           env.qBinPath = target;
           break;
         }
@@ -364,6 +396,17 @@ export function getServerName(server: ServerDetails): string {
   return server.serverAlias != ""
     ? `${server.serverAlias} [${server.serverName}:${server.serverPort}]`
     : `[${server.serverName}:${server.serverPort}]`;
+}
+
+/**
+ * The short display name of a connection label — the inverse of
+ * {@link getServerName}. KDB labels carry a " [host:port]" suffix; strip it to
+ * get the serverAlias. Insights labels and the REPL have no suffix and pass
+ * through unchanged.
+ */
+export function getConnShortName(connLabel: string): string {
+  const suffix = connLabel.lastIndexOf(" [");
+  return suffix > 0 ? connLabel.slice(0, suffix) : connLabel;
 }
 
 export function getServerAlias(serverList: ServerDetails[]): void {

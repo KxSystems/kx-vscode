@@ -93,6 +93,30 @@ describe("ScratchpadLogger", () => {
     );
   });
 
+  it("should not open a second socket when connect is called again", async () => {
+    logger = new ScratchpadLoggerClass(mockConnection);
+
+    // Started on connect and again when the connection becomes active; a
+    // second socket would duplicate every log line and leak the first.
+    await logger.connect();
+    await logger.connect();
+
+    sinon.assert.calledOnce(wsStub);
+  });
+
+  it("should open a new socket after the previous one closed", async () => {
+    logger = new ScratchpadLoggerClass(mockConnection);
+    await logger.connect();
+
+    const onClose = fakeWs.on.withArgs("close").getCall(0).args[1];
+    logger.disconnect();
+    onClose(1000, Buffer.from("done"));
+
+    await logger.connect();
+
+    sinon.assert.calledTwice(wsStub);
+  });
+
   it("should send pings every 30s after opening", async () => {
     logger = new ScratchpadLoggerClass(mockConnection);
     await logger.connect();

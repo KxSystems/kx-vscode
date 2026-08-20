@@ -12,7 +12,7 @@ Architecture and contributor notes for the kdb VS Code extension. See also the
 [user notes](../user/index.md).
 
 > The end-user product documentation is hosted separately at
-> <https://gitlab.com/kxdev/documentation/vscode-docs/>.
+> <https://code.kx.com/vscode/>.
 
 - [Development](development.md) — setup, recommended extensions, scripts, debugging, releasing.
 - [Log, Telemetry and User Notifications](log-telemetry-and-user-notifications.md) — the single notification entry point.
