@@ -1333,7 +1333,6 @@
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-license-header": "0.8.0",
     "eslint-plugin-unused-imports": "4.3.0",
-    "extract-zip": "2.0.1",
     "fs-extra": "11.3.6",
     "glob": "13.0.6",
     "jsdom": "29.1.1",
