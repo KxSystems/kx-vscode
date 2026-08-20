@@ -34,10 +34,9 @@ file.
 - Images returned by a process, such as a plot, are now written to their own
   `.plot` file and opened in the chart editor, so that a process that emits
   several images produces a separate chart view for each image.
-- Errors raised by a custom evaluator now come back with a stack trace rather
-  than the error message alone. Because the extension does not format errors
-  differently from results, the call stack is what indicates that a result is an
-  error.
+- When connected to a process that uses vscode.q and has
+  .vscode.customQEvaluator defined, any error messages thrown by the
+  customQEvaluator will now include the call stack.
 - Insights connection addresses must now be secure `https://` URLs. The
   extension reports a validation error for any other address. The address
   placeholder in the connection form now uses `example.com`, and the login flow
