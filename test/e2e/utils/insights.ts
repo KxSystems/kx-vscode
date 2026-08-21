@@ -16,7 +16,7 @@ import * as https from "node:https";
 import * as vscode from "vscode";
 
 import { until } from "./index";
-import { FakeInsights } from "./insightsServer";
+import { FakeInsights, Request } from "./insightsServer";
 
 // What the extension is told about an Insights instance, i.e. the arguments
 // kdb.connections.add.insights takes.
@@ -50,6 +50,14 @@ export const CONSOLE = `KX ${INSIGHTS.alias}`;
 // ext.kdbConnectionAliasList until the tree renders again, and validateServerAlias
 // rejects it in the meantime.
 export const insights = new FakeInsights();
+
+/**
+ * Everything connecting asked for, kept as it happens. Whichever suite runs
+ * first is the one that connects, and every suite after it clears the
+ * recording as it goes, so the handshake has to be held on to here rather than
+ * read back later.
+ */
+export const handshake: Request[] = [];
 
 const added: string[] = [];
 let started = false;
@@ -161,6 +169,8 @@ export async function start() {
   await insights.listen(PORT);
   await ensure(INSIGHTS);
   await dial(CONNECTION, insights);
+
+  handshake.push(...insights.requests);
 }
 
 // Torn down once, after every suite in the window has run.

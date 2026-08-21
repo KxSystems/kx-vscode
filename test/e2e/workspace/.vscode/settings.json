@@ -11,6 +11,8 @@
     "local.kdb.py": "TESTLOCAL",
     "local.kxnb": "TESTLOCAL",
     "plain.q": "TESTPLAIN",
+    "csv.q": "TESTLOCAL",
+    "offer.q": "TESTOFFER",
     "error.kxnb": "TESTLOCAL",
     "pinned.q": "REPL",
     "insights.q": "TESTINSIGHTS",
@@ -24,11 +26,23 @@
     "insights.error.q": "TESTINSIGHTS",
     "target.q": "TESTINSIGHTS",
     "populate.kxnb": "TESTINSIGHTS",
+    "timeout.q": "TESTINSIGHTS",
+    "timeout.target.q": "TESTINSIGHTS",
+    "recent.q": "TESTRECENT",
+    "recent.sql": "TESTRECENT",
     "old.q": "TESTOLD",
     "old.sql": "TESTOLD",
     "older.q": "TESTOLDER"
   },
   "kdb.targetMap": {
-    "target.q": "e2e-assembly tp"
-  }
+    "target.q": "e2e-assembly tp",
+    "timeout.target.q": "e2e-assembly tp"
+  },
+  "kdb.timeoutMap": {
+    "timeout.q": 5
+  },
+  "files.simpleDialog.enable": true,
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "explorer.confirmPasteNative": false
 }

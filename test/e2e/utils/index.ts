@@ -101,6 +101,34 @@ export function outputs(notebook: vscode.NotebookDocument) {
     );
 }
 
+/**
+ * What the completion list at a position offers, as plain strings. The
+ * language server and the connected process both contribute to it, so this is
+ * the merged list a user is shown.
+ */
+export async function completions(
+  uri: vscode.Uri,
+  position = new vscode.Position(0, 0),
+) {
+  const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+    "vscode.executeCompletionItemProvider",
+    uri,
+    position,
+  );
+  return (list?.items ?? []).map((item) =>
+    typeof item.label === "string" ? item.label : item.label.label,
+  );
+}
+
+/**
+ * Long enough for something that should not happen to have happened.
+ *
+ * A test proving a negative — nothing was sent, nothing connected — has
+ * nothing to wait for, so it waits for the command to have been able to do it
+ * before deciding it did not.
+ */
+export const settle = () => new Promise((resolve) => setTimeout(resolve, 250));
+
 // Generous enough for a loaded CI runner; it only costs that long when
 // something is actually wrong.
 export async function until(condition: () => boolean, what: string) {
