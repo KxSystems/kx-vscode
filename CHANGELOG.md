@@ -34,10 +34,9 @@ file.
 - Images returned by a process, such as a plot, are now written to their own
   `.plot` file and opened in the chart editor, so that a process that emits
   several images produces a separate chart view for each image.
-- Images an Insights connection's scratchpad emits over its websocket, rather
-  than as a query result, are now rendered. In a KX Notebook, the image is
-  appended to the output of the cell that produced it; anywhere else it opens in
-  the chart viewer.
+- Images emitted by an Insights connection's scratchpad over its WebSocket are
+  now rendered. In a KX Notebook, the image is appended to the output of the
+  cell that produced it. Elsewhere, the image opens in the chart viewer.
 - When connected to a process that uses `vscode.q` and defines
   `.vscode.customQEvaluator`, error messages thrown by the `customQEvaluator`
   now include the call stack.
