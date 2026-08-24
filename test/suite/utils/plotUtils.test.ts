@@ -13,7 +13,7 @@
 
 import assert from "assert";
 import * as sinon from "sinon";
-import { Uri } from "vscode";
+import { Uri, window, workspace } from "vscode";
 
 import { ext } from "../../../src/extensionVariables";
 import * as plotUtils from "../../../src/utils/plotUtils";
@@ -23,13 +23,28 @@ describe("plotUtils", () => {
   const data = "data:image/png;base64,iVBORw0KGgo=";
 
   beforeEach(() => {
+    ext.outputChannel = window.createOutputChannel("kdb", { log: true });
     ext.activeTextEditor = undefined;
+    ext.pendingImageTargets.clear();
   });
 
   afterEach(() => {
     sinon.restore();
     ext.activeTextEditor = undefined;
+    ext.pendingImageTargets.clear();
   });
+
+  function makeCell(): any {
+    return {
+      kind: 2,
+      index: 0,
+      metadata: {},
+      executionSummary: undefined,
+      outputs: [],
+      document: { getText: () => "1+1", languageId: "q" },
+      notebook: { uri: Uri.file("/tmp/a.kxnb") },
+    };
+  }
 
   describe("writePlotToFile", () => {
     it("should write without an active editor", async () => {
@@ -91,6 +106,138 @@ describe("plotUtils", () => {
       assert.deepStrictEqual(JSON.parse(setUriContent.getCall(0).args[1]), {
         charts: [{ data }],
       });
+    });
+  });
+
+  describe("registerImageTarget", () => {
+    it("should retire an entry once it can no longer receive an image", () => {
+      const clock = sinon.useFakeTimers();
+      try {
+        const stale = plotUtils.registerImageTarget("old", <any>{}, makeCell());
+        stale.endedAt = Date.now();
+
+        clock.tick(30000);
+        plotUtils.registerImageTarget("new", <any>{}, makeCell());
+
+        assert.ok(!ext.pendingImageTargets.has("old"));
+        assert.ok(ext.pendingImageTargets.has("new"));
+      } finally {
+        clock.restore();
+      }
+    });
+
+    it("should keep an entry whose cell can still receive an image", () => {
+      const clock = sinon.useFakeTimers();
+      try {
+        const recent = plotUtils.registerImageTarget(
+          "old",
+          <any>{},
+          makeCell(),
+        );
+        recent.endedAt = Date.now();
+
+        clock.tick(1000);
+        plotUtils.registerImageTarget("new", <any>{}, makeCell());
+
+        assert.ok(ext.pendingImageTargets.has("old"));
+      } finally {
+        clock.restore();
+      }
+    });
+
+    it("should bound how many entries are held at once", () => {
+      for (let i = 0; i < 120; i++) {
+        plotUtils.registerImageTarget(`req-${i}`, <any>{}, makeCell());
+      }
+
+      assert.ok(ext.pendingImageTargets.size <= 100);
+      assert.ok(ext.pendingImageTargets.has("req-119"));
+      assert.ok(!ext.pendingImageTargets.has("req-0"));
+    });
+  });
+
+  describe("renderImage", () => {
+    it("should append to the cell that is still executing", async () => {
+      const appendOutput = sinon.spy();
+      const target = plotUtils.registerImageTarget(
+        "req-1",
+        <any>{ appendOutput },
+        makeCell(),
+      );
+      const addWorkspaceFile = sinon.stub(workspaceUtils, "addWorkspaceFile");
+
+      await plotUtils.renderImage("req-1", data);
+
+      sinon.assert.calledOnce(appendOutput);
+      assert.strictEqual(
+        appendOutput.getCall(0).args[0].items[0].mime,
+        "text/html",
+      );
+      assert.strictEqual(target.plotted, true);
+      sinon.assert.notCalled(addWorkspaceFile);
+    });
+
+    it("should edit the document when the cell has already ended", async () => {
+      const cell = makeCell();
+      const target = plotUtils.registerImageTarget("req-1", <any>{}, cell);
+      target.endedAt = Date.now();
+      const applyEdit = sinon.stub(workspace, "applyEdit").resolves(true);
+      const addWorkspaceFile = sinon.stub(workspaceUtils, "addWorkspaceFile");
+
+      await plotUtils.renderImage("req-1", data);
+
+      sinon.assert.calledOnce(applyEdit);
+      sinon.assert.notCalled(addWorkspaceFile);
+    });
+
+    it("should fall back to a file for an unknown requestID", async () => {
+      sinon
+        .stub(workspaceUtils, "addWorkspaceFile")
+        .resolves(Uri.file("/tmp/plot-1.plot"));
+      sinon.stub(workspaceUtils, "workspaceHas").returns(true);
+      const setUriContent = sinon.stub(workspaceUtils, "setUriContent");
+
+      await plotUtils.renderImage("no-such-request", data);
+
+      sinon.assert.calledOnce(setUriContent);
+    });
+
+    it("should fall back to a file when the process echoed no id", async () => {
+      plotUtils.registerImageTarget(
+        "req-1",
+        <any>{ appendOutput: sinon.spy() },
+        makeCell(),
+      );
+      sinon
+        .stub(workspaceUtils, "addWorkspaceFile")
+        .resolves(Uri.file("/tmp/plot-1.plot"));
+      sinon.stub(workspaceUtils, "workspaceHas").returns(true);
+      const setUriContent = sinon.stub(workspaceUtils, "setUriContent");
+
+      await plotUtils.renderImage("", data);
+
+      sinon.assert.calledOnce(setUriContent);
+    });
+
+    it("should fall back to a file when appending to the cell throws", async () => {
+      plotUtils.registerImageTarget(
+        "req-1",
+        <any>{
+          appendOutput: () => {
+            throw new Error("execution ended");
+          },
+        },
+        makeCell(),
+      );
+      sinon
+        .stub(workspaceUtils, "addWorkspaceFile")
+        .resolves(Uri.file("/tmp/plot-1.plot"));
+      sinon.stub(workspaceUtils, "workspaceHas").returns(true);
+      const setUriContent = sinon.stub(workspaceUtils, "setUriContent");
+
+      await plotUtils.renderImage("req-1", data);
+
+      sinon.assert.calledOnce(setUriContent);
     });
   });
 });

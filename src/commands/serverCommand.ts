@@ -885,6 +885,7 @@ export async function executeQuery(
   isFromConnTree?: boolean,
   token?: CancellationToken,
   timeout?: number,
+  requestID?: string,
 ): Promise<any> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
@@ -936,6 +937,7 @@ export async function executeQuery(
     isStringfy,
     isPython,
     timeout,
+    requestID,
   );
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();

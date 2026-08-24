@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as crypto from "crypto";
 import * as vscode from "vscode";
 
 import { getCellKind } from "./notebookProviders";
@@ -27,9 +28,11 @@ import {
   getTimeoutForUri,
   resolveRunTarget,
 } from "../commands/workspaceCommand";
+import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";
 import { getBasename, isQuickAlias } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
+import { registerImageTarget } from "../utils/plotUtils";
 import {
   resultToBase64,
   needsScratchpad,
@@ -142,6 +145,9 @@ export class KxNotebookController {
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
+      const requestID = crypto.randomUUID();
+      const cellTarget = registerImageTarget(requestID, execution, cell);
+
       let success = false;
       let cancellationDisposable: vscode.Disposable | undefined;
 
@@ -166,6 +172,7 @@ export class KxNotebookController {
           execution,
           cell,
           kind,
+          requestID,
           target,
           variable,
         );
@@ -210,7 +217,7 @@ export class KxNotebookController {
                 connVersion,
               );
 
-        this.replaceOutput(execution, rendered);
+        this.replaceOutput(execution, rendered, cellTarget);
         success = true;
       } catch (error) {
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
@@ -223,6 +230,7 @@ export class KxNotebookController {
         });
         break;
       } finally {
+        cellTarget.endedAt = Date.now();
         cancellationDisposable?.dispose();
         execution.end(success, Date.now());
       }
@@ -271,6 +279,7 @@ export class KxNotebookController {
     execution: vscode.NotebookCellExecution,
     cell: vscode.NotebookCell,
     kind: CellKind,
+    requestID?: string,
     target?: string,
     variable?: string,
   ): Promise<any> {
@@ -322,6 +331,7 @@ export class KxNotebookController {
         false,
         execution.token,
         timeout,
+        requestID,
       );
     }
   }
@@ -329,12 +339,17 @@ export class KxNotebookController {
   replaceOutput(
     execution: vscode.NotebookCellExecution,
     rendered: Rendered,
+    target?: ext.CellExecutionTarget,
   ): void {
-    execution.replaceOutput([
-      new vscode.NotebookCellOutput([
-        vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
-      ]),
+    const output = new vscode.NotebookCellOutput([
+      vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
     ]);
+
+    if (target?.plotted) {
+      execution.appendOutput(output);
+    } else {
+      execution.replaceOutput([output]);
+    }
   }
 }
 

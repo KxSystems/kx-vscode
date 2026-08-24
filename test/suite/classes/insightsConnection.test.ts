@@ -109,4 +109,46 @@ describe("insightsConnection", () => {
       assert.strictEqual(extractInsightsRequestError("boom"), "boom");
     });
   });
+
+  describe("getScratchpadQuery", () => {
+    const withConnection = (requestID?: string) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        scratchpad: { scratchpad: "scratchpadmanager/scratchpad/display" },
+      };
+      const getOptions = sinon
+        .stub(<any>conn, "getOptions")
+        .resolves(undefined);
+
+      return conn
+        .getScratchpadQuery("1+1", ".", false, false, undefined, requestID)
+        .then(() => getOptions.getCall(0).args[4] as any);
+    };
+
+    afterEach(() => sinon.restore());
+
+    it("should send the caller's requestID", async () => {
+      const body = await withConnection("req-1");
+
+      assert.strictEqual(body.requestID, "req-1");
+    });
+
+    it("should send a requestID even when the caller has none", async () => {
+      const body = await withConnection();
+
+      assert.ok(body.requestID);
+    });
+
+    it("should send a different requestID on each query", async () => {
+      const first = await withConnection();
+      sinon.restore();
+      const second = await withConnection();
+
+      assert.notStrictEqual(first.requestID, second.requestID);
+    });
+  });
 });

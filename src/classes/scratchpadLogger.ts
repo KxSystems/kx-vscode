@@ -19,6 +19,7 @@ import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { MessageKind, notify } from "../utils/notifications";
+import { renderImage } from "../utils/plotUtils";
 import { errorMessage } from "../utils/shared";
 
 const logger = "scratchpadLogger";
@@ -28,6 +29,16 @@ interface LogMessage {
   data: Array<{ handle: "STDOUT" | "STDERR"; value: string }>;
 }
 
+interface ImageMessage {
+  channel: "image";
+  data: {
+    format: string;
+    encoding: string;
+    requestID: string;
+    data: string;
+  };
+}
+
 export class ScratchpadLogger {
   private connecting = false;
   private isManualClose = false;
@@ -35,6 +46,8 @@ export class ScratchpadLogger {
   private reconnectAttempts = 0;
   private url = "";
   private ws: WebSocket | null = null;
+
+  private rendering: Promise<void> = Promise.resolve();
 
   private readonly MAX_DELAY = 30000;
   private readonly PING_MS = 30000;
@@ -113,7 +126,11 @@ export class ScratchpadLogger {
       const msgString = data.toString();
       try {
         const msg = JSON.parse(msgString);
-        this.processLogs(msg.data);
+        if (msg?.channel === "image") {
+          this.processImage(msg.data);
+        } else {
+          this.processLogs(msg.data);
+        }
       } catch (error) {
         notify(errorMessage(error), MessageKind.DEBUG, { logger });
       }
@@ -166,6 +183,36 @@ export class ScratchpadLogger {
         queryConsole.appendStdOut(decodeQUTF(value), this.connLabel);
       }
     });
+  }
+
+  /**
+   * Renders an image the process emitted with .com_kx_edi.showImage, which
+   * reaches the extension here rather than in the query response. The payload
+   * is already base64, so it only needs the data URI prefix.
+   * @param image The image frame's data
+   */
+  private processImage(image: ImageMessage["data"]) {
+    if (image?.format !== "PNG" || image.encoding !== "base64" || !image.data) {
+      notify(
+        `Unsupported image on ${this.connection.alias}: ${image?.format} ${image?.encoding}`,
+        MessageKind.DEBUG,
+        { logger },
+      );
+      return;
+    }
+
+    notify("GG Plot displayed", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Results.Graphics.Displayed.ie.ws",
+    });
+
+    this.rendering = this.rendering
+      .then(() =>
+        renderImage(image.requestID, `data:image/png;base64,${image.data}`),
+      )
+      .catch((error) => {
+        notify(errorMessage(error), MessageKind.DEBUG, { logger });
+      });
   }
 
   public disconnect() {

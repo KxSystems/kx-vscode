@@ -166,6 +166,16 @@ export class FakeInsights {
     }
   }
 
+  image(data: string, requestID = "") {
+    const message = JSON.stringify({
+      channel: "image",
+      data: { format: "PNG", encoding: "base64", requestID, data },
+    });
+    for (const socket of this.sockets) {
+      socket.send(message);
+    }
+  }
+
   private async serve(req: IncomingMessage, res: ServerResponse) {
     const parsed = url.parse(req.url || "", true);
     const path = (parsed.pathname || "").replace(/\/+$/, "") || "/";

@@ -12,6 +12,7 @@
  */
 
 import axios, { AxiosRequestConfig } from "axios";
+import * as crypto from "crypto";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
 import { CancellationToken } from "vscode-languageclient";
@@ -794,6 +795,7 @@ export class InsightsConnection {
     isPython?: boolean,
     isTableView?: boolean,
     timeout?: number,
+    requestID?: string,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       if (isTableView === undefined) {
@@ -809,6 +811,7 @@ export class InsightsConnection {
         context: context || ".",
         sampleFn: "first",
         sampleSize: 10000,
+        requestID: requestID || crypto.randomUUID(),
       };
 
       if (this.insightsVersion) {

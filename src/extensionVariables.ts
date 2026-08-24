@@ -15,6 +15,8 @@ import {
   ExtensionContext,
   languages,
   LogOutputChannel,
+  NotebookCell,
+  NotebookCellExecution,
   OutputChannel,
   StatusBarItem,
   TextEditor,
@@ -80,6 +82,13 @@ export namespace ext {
   // One output-only console terminal per connected connection, keyed by
   // connLabel. Created on connect, disposed on disconnect.
   export const connectionConsoles = new Map<string, ConnectionConsole>();
+  export interface CellExecutionTarget {
+    execution: NotebookCellExecution;
+    cell: NotebookCell;
+    plotted: boolean;
+    endedAt?: number;
+  }
+  export const pendingImageTargets = new Map<string, CellExecutionTarget>();
   export const connectedContextStrings: Array<string> = [];
   export const queryHistoryAvailableToCopy: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
