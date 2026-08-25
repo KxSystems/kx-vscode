@@ -17,6 +17,7 @@ import {
   LogOutputChannel,
   NotebookCell,
   NotebookCellExecution,
+  NotebookCellOutput,
   OutputChannel,
   StatusBarItem,
   TextEditor,
@@ -85,7 +86,8 @@ export namespace ext {
   export interface CellExecutionTarget {
     execution: NotebookCellExecution;
     cell: NotebookCell;
-    plotted: boolean;
+    outputs: NotebookCellOutput[];
+    applied?: Thenable<void>;
     endedAt?: number;
   }
   export const pendingImageTargets = new Map<string, CellExecutionTarget>();

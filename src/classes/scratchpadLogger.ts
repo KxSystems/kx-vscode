@@ -128,7 +128,7 @@ export class ScratchpadLogger {
         const msg = JSON.parse(msgString);
         if (msg?.channel === "image") {
           this.processImage(msg.data);
-        } else {
+        } else if (msg?.channel === "logging") {
           this.processLogs(msg.data);
         }
       } catch (error) {

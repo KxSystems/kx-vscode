@@ -155,6 +155,7 @@ describe("ScratchpadLogger", () => {
 
     const onMessage = fakeWs.on.withArgs("message").getCall(0).args[1];
     const payload = JSON.stringify({
+      channel: "logging",
       data: [
         { handle: "STDOUT", value: "Log A" },
         { handle: "STDERR", value: "Error B" },
@@ -283,6 +284,15 @@ describe("ScratchpadLogger", () => {
         },
       });
 
+      sinon.assert.notCalled(renderImageStub);
+    });
+
+    it("should not treat a frame on another channel as console output", async () => {
+      consoleStartStub.resetHistory();
+
+      await send({ channel: "status", data: { state: "ready" } });
+
+      sinon.assert.notCalled(consoleStartStub);
       sinon.assert.notCalled(renderImageStub);
     });
 

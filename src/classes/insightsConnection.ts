@@ -45,7 +45,7 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { getHeaders } from "../utils/queryUtils";
+import { getHeaders, isEncodedPng } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
@@ -854,7 +854,7 @@ export class InsightsConnection {
               logger,
             });
             if (!response.data.error) {
-              if (isTableView) {
+              if (isTableView && !isEncodedPng(response.data.data)) {
                 if (
                   this.insightsVersion &&
                   isBaseVersionGreaterOrEqual(this.insightsVersion, "1.12")

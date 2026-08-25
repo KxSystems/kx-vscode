@@ -12,7 +12,9 @@
  */
 
 import assert from "assert";
+import axios from "axios";
 import * as sinon from "sinon";
+import { window } from "vscode";
 
 import {
   extractInsightsRequestError,
@@ -149,6 +151,81 @@ describe("insightsConnection", () => {
       const second = await withConnection();
 
       assert.notStrictEqual(first.requestID, second.requestID);
+    });
+  });
+
+  describe("getScratchpadQuery results", () => {
+    const encoded =
+      "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAYAAAALpr0TAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABISURBVChTzczBCQAwCAPAbOcsjuJczuEsKfEhfbR9NyAKnoIkAag90+IGM5Nm1vMT7hkYEd1V7t7L40fBuQZYVWe4R0uhT+ACr2QebHdL0JYAAAAASUVORK5CYII=";
+
+    let adapter: any;
+
+    const respondWith = (data: unknown) => {
+      axios.defaults.adapter = async (config: any) =>
+        <any>{
+          data,
+          status: 200,
+          statusText: "OK",
+          headers: {},
+          config,
+        };
+    };
+
+    const withConnection = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      conn.insightsVersion = "1.12";
+      (<any>conn).connEndpoints = {
+        scratchpad: { scratchpad: "scratchpadmanager/scratchpad/display" },
+      };
+      sinon
+        .stub(<any>conn, "getOptions")
+        .resolves({ url: "https://test.kx.com/scratchpad", method: "POST" });
+      return conn;
+    };
+
+    beforeEach(() => {
+      ext.outputChannel = window.createOutputChannel("kdb", { log: true });
+      adapter = axios.defaults.adapter;
+    });
+
+    afterEach(() => {
+      axios.defaults.adapter = adapter;
+      sinon.restore();
+    });
+
+    it("should parse a structured text payload", async () => {
+      respondWith({
+        error: false,
+        errorMsg: "",
+        data: JSON.stringify({ count: 1, columns: [] }),
+      });
+
+      const result = await withConnection().getScratchpadQuery(
+        "1+1",
+        ".",
+        false,
+        true,
+      );
+
+      assert.deepStrictEqual(result, { count: 1, columns: [] });
+    });
+
+    it("should keep an encoded png payload as it arrived", async () => {
+      respondWith({ error: false, errorMsg: "", data: encoded });
+
+      const result = await withConnection().getScratchpadQuery(
+        "image",
+        ".",
+        false,
+        true,
+      );
+
+      assert.strictEqual(result.error, false);
+      assert.strictEqual(result.data, encoded);
     });
   });
 });

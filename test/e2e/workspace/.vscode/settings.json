@@ -24,6 +24,7 @@
     "insights.error.q": "TESTINSIGHTS",
     "target.q": "TESTINSIGHTS",
     "populate.kxnb": "TESTINSIGHTS",
+    "image.kxnb": "TESTINSIGHTS",
     "old.q": "TESTOLD",
     "old.sql": "TESTOLD",
     "older.q": "TESTOLDER"

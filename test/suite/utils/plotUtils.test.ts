@@ -173,7 +173,7 @@ describe("plotUtils", () => {
         appendOutput.getCall(0).args[0].items[0].mime,
         "text/html",
       );
-      assert.strictEqual(target.plotted, true);
+      assert.strictEqual(target.outputs.length, 1);
       sinon.assert.notCalled(addWorkspaceFile);
     });
 

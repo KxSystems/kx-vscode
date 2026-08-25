@@ -91,23 +91,23 @@ export function registerImageTarget(
     ext.pendingImageTargets.delete(oldest.value);
   }
 
-  const target: ext.CellExecutionTarget = { execution, cell, plotted: false };
+  const target: ext.CellExecutionTarget = { execution, cell, outputs: [] };
   ext.pendingImageTargets.set(requestID, target);
   return target;
 }
 
 /**
- * Appends an output to a cell that is no longer executing, which has to go
- * through the document rather than the finished execution. There is no edit for
- * outputs alone, so the cell is rewritten with its content, metadata and
- * execution summary preserved.
- * @param cell The cell to append to
- * @param output The output to append
+ * Writes outputs to a cell that is no longer executing, which has to go through
+ * the document rather than the finished execution. There is no edit for outputs
+ * alone, so the cell is rewritten with its content, metadata and execution
+ * summary preserved.
+ * @param cell The cell to write to
+ * @param outputs The outputs the cell ends up with
  * @returns Whether the edit was applied
  */
-async function appendToCell(
+async function writeToCell(
   cell: NotebookCell,
-  output: NotebookCellOutput,
+  outputs: NotebookCellOutput[],
 ): Promise<boolean> {
   const replacement = new NotebookCellData(
     cell.kind,
@@ -116,7 +116,7 @@ async function appendToCell(
   );
   replacement.metadata = cell.metadata;
   replacement.executionSummary = cell.executionSummary;
-  replacement.outputs = [...cell.outputs, output];
+  replacement.outputs = outputs;
 
   const edit = new WorkspaceEdit();
   edit.set(cell.notebook.uri, [
@@ -150,11 +150,13 @@ export async function renderImage(
     try {
       if (target.endedAt === undefined) {
         target.execution.appendOutput(output);
-        target.plotted = true;
+        target.outputs.push(output);
         return;
       }
       if (Date.now() - target.endedAt < LATE_OUTPUT_MS) {
-        if (await appendToCell(target.cell, output)) {
+        await target.applied;
+        if (await writeToCell(target.cell, [...target.outputs, output])) {
+          target.outputs.push(output);
           return;
         }
       }

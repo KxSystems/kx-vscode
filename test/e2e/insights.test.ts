@@ -34,7 +34,13 @@ import {
   instanceAt,
   start,
 } from "./utils/insights";
-import { FAILURE, FakeInsights, Request, RESULT } from "./utils/insightsServer";
+import {
+  FAILURE,
+  FakeInsights,
+  PNG,
+  Request,
+  RESULT,
+} from "./utils/insightsServer";
 
 // Copies of the main fixtures under the paths the workspace settings assign to
 // the Insights connections. They need their own paths because kdb.connectionMap
@@ -47,6 +53,7 @@ const Q_WORKBOOK = file("insights.kdb.q");
 const PY_WORKBOOK = file("insights.kdb.py");
 const SQL_WORKBOOK = file("insights.kdb.sql");
 const NOTEBOOK = file("insights.kxnb");
+const IMAGE_NOTEBOOK = file("image.kxnb");
 const TARGET_FILE = file("target.q");
 const OLD_FILE = file("old.q");
 const OLD_SQL_FILE = file("old.sql");
@@ -375,6 +382,74 @@ describe("Executing on an Insights connection", () => {
     });
   });
 
+  describe("showing an image from a notebook", () => {
+    let notebook: vscode.NotebookDocument;
+
+    const cell = () => notebook.cellAt(0);
+
+    const shown = () =>
+      cell()
+        .outputs.flatMap((output) =>
+          output.items.map((item) => Buffer.from(item.data).toString("utf8")),
+        )
+        .join("\n");
+
+    before(async () => {
+      notebook = await vscode.workspace.openNotebookDocument(IMAGE_NOTEBOOK);
+      await vscode.window.showNotebookDocument(notebook);
+      await vscode.commands.executeCommand("notebook.selectKernel", {
+        id: "kx-notebook-1",
+        extension: "KX.kdb",
+      });
+    });
+
+    async function runCell() {
+      const ran = cell().executionSummary?.executionOrder;
+
+      insights.clear();
+      await vscode.commands.executeCommand("notebook.execute");
+      await until(
+        () => cell().executionSummary?.executionOrder !== ran,
+        "the cell to finish",
+      );
+    }
+
+    it("shows the image next to the result", async () => {
+      await runCell();
+      await until(
+        () => cell().outputs.length === 2,
+        `the image and the result:\n${shown()}`,
+      );
+
+      assert.ok(
+        shown().includes(`<img src="data:image/png;base64,${PNG}"/>`),
+        `the image:\n${shown()}`,
+      );
+      assert.ok(shown().includes("<table>"), `the result:\n${shown()}`);
+    });
+
+    it("shows one of each when the cell is run again", async () => {
+      await runCell();
+      await until(
+        () => shown().includes("<table>") && shown().includes("<img"),
+        `the image and the result:\n${shown()}`,
+      );
+
+      assert.strictEqual(cell().outputs.length, 2, `outputs:\n${shown()}`);
+      assert.strictEqual(shown().split("<img").length - 1, 1);
+    });
+
+    it("shows an image that arrives once the cell has ended", async () => {
+      const { requestID } = insights.queries()[0].body;
+      insights.image(PNG, requestID);
+
+      await until(
+        () => cell().outputs.length === 3,
+        `the late image:\n${shown()}`,
+      );
+    });
+  });
+
   describe("with a target assigned", () => {
     it("runs qsql against the assembly and tier", async () => {
       await focus(TARGET_FILE);
@@ -494,7 +569,10 @@ describe("Executing on an Insights connection", () => {
 
       assert.strictEqual(request.body.returnFormat, "text");
 
-      await untilConsoleShows(RESULT, "the result to be printed to the console");
+      await untilConsoleShows(
+        RESULT,
+        "the result to be printed to the console",
+      );
     });
 
     it("asks for structured text for the view", async () => {

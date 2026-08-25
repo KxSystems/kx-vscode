@@ -81,6 +81,7 @@ export class KxNotebookController {
 
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
+      execution.clearOutput();
 
       let success = false;
       const cancellation = execution.token.onCancellationRequested(() =>
@@ -94,7 +95,7 @@ export class KxNotebookController {
           // Nothing to run. Checked before wrapping, because the SQL and
           // Python wrappers turn an empty cell into a statement the REPL
           // would send.
-          this.replaceOutput(execution, { text: "", mime: "text/plain" });
+          this.writeOutput(execution, { text: "", mime: "text/plain" });
           success = true;
           continue;
         }
@@ -105,14 +106,14 @@ export class KxNotebookController {
               ? getSQLWrapper(text)
               : text,
         );
-        this.replaceOutput(execution, {
+        this.writeOutput(execution, {
           text: result.output || "",
           mime: "text/plain",
         });
         if (result.cancelled) break;
         else success = true;
       } catch (error) {
-        this.replaceOutput(execution, { text: `${error}`, mime: "text/plain" });
+        this.writeOutput(execution, { text: `${error}`, mime: "text/plain" });
         break;
       } finally {
         cancellation.dispose();
@@ -147,6 +148,7 @@ export class KxNotebookController {
 
       const requestID = crypto.randomUUID();
       const cellTarget = registerImageTarget(requestID, execution, cell);
+      cellTarget.applied = execution.clearOutput();
 
       let success = false;
       let cancellationDisposable: vscode.Disposable | undefined;
@@ -155,7 +157,11 @@ export class KxNotebookController {
         const kind = getCellKind(cell);
 
         if (!cell.document.getText().trim()) {
-          this.replaceOutput(execution, { text: "", mime: "text/plain" });
+          this.writeOutput(
+            execution,
+            { text: "", mime: "text/plain" },
+            cellTarget,
+          );
           success = true;
           continue;
         }
@@ -217,17 +223,21 @@ export class KxNotebookController {
                 connVersion,
               );
 
-        this.replaceOutput(execution, rendered, cellTarget);
+        this.writeOutput(execution, rendered, cellTarget);
         success = true;
       } catch (error) {
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
           logger,
           params: error,
         });
-        this.replaceOutput(execution, {
-          text: `<p>Execution stopped.</p><p>${error instanceof Error ? error.message : error}</p>`,
-          mime: "text/html",
-        });
+        this.writeOutput(
+          execution,
+          {
+            text: `<p>Execution stopped.</p><p>${error instanceof Error ? error.message : error}</p>`,
+            mime: "text/html",
+          },
+          cellTarget,
+        );
         break;
       } finally {
         cellTarget.endedAt = Date.now();
@@ -336,7 +346,7 @@ export class KxNotebookController {
     }
   }
 
-  replaceOutput(
+  writeOutput(
     execution: vscode.NotebookCellExecution,
     rendered: Rendered,
     target?: ext.CellExecutionTarget,
@@ -345,10 +355,11 @@ export class KxNotebookController {
       vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
     ]);
 
-    if (target?.plotted) {
-      execution.appendOutput(output);
-    } else {
-      execution.replaceOutput([output]);
+    const applied = execution.appendOutput(output);
+
+    if (target) {
+      target.outputs.push(output);
+      target.applied = applied;
     }
   }
 }

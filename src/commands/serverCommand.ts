@@ -1396,6 +1396,17 @@ export async function writeScratchpadResult(
     return errorMsg ?? result;
   }
 
+  const plot = errorMsg ? undefined : resultToBase64(result);
+
+  if (plot) {
+    notify("GG Plot displayed", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Results.Graphics.Displayed.ie" + (isPython ? ".py" : ".q"),
+    });
+    await writePlotToFile(plot);
+    return;
+  }
+
   if (ext.isResultsTabVisible) {
     await writeQueryResultsToView(
       errorMsg ?? result,
