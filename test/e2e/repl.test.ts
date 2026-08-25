@@ -24,6 +24,7 @@ import {
   lastLineOf,
   mark,
   outputs,
+  reveal,
   runOnRepl as run,
   selectionOf,
   since,
@@ -79,6 +80,13 @@ describe("Executing on the REPL", () => {
       fs.copyFileSync(source.fsPath, workbook.fsPath);
     }
     await waitForLanguageServer(Q_FILE);
+
+    // An unassigned file runs on whichever KX terminal was focused last, so
+    // whatever a suite before this one left connected, the REPL has to be the
+    // one in front before any of these run.
+    await vscode.commands.executeCommand("kdb.repl.start");
+    await until(() => !!terminal(REPL), "the REPL terminal to open");
+    await reveal(REPL);
   });
 
   after(async () => {

@@ -30,6 +30,7 @@ import {
   CONSOLE,
   dial,
   ensure,
+  handshake,
   insights,
   instanceAt,
   start,
@@ -51,6 +52,8 @@ const TARGET_FILE = file("target.q");
 const OLD_FILE = file("old.q");
 const OLD_SQL_FILE = file("old.sql");
 const OLDER_FILE = file("older.q");
+const RECENT_FILE = file("recent.q");
+const RECENT_SQL_FILE = file("recent.sql");
 
 const ASSIGNED: [vscode.Uri, vscode.Uri][] = [
   [file("main.q"), Q_FILE],
@@ -65,6 +68,8 @@ const ASSIGNED: [vscode.Uri, vscode.Uri][] = [
   [file("main.q"), OLD_FILE],
   [file("main.sql"), OLD_SQL_FILE],
   [file("main.q"), OLDER_FILE],
+  [file("main.q"), RECENT_FILE],
+  [file("main.sql"), RECENT_SQL_FILE],
 ];
 
 // Written rather than copied: it exists to carry the marker the stand-in fails
@@ -90,9 +95,6 @@ const POPULATE_SQL = "where px > 300";
 const POPULATE_PY = "POPULATE_PY";
 
 const SCRATCHPAD = "/scratchpadmanager/scratchpad/display";
-
-// What connect() asked for, kept before any test clears the recording.
-let handshake: Request[] = [];
 
 // The first request a command sent, once it has arrived.
 async function run(command: string) {
@@ -128,7 +130,6 @@ describe("Executing on an Insights connection", () => {
     fs.writeFileSync(FAILING_FILE.fsPath, `${FakeInsights.FAILS}\n`);
 
     await start();
-    handshake = [...insights.requests];
   });
 
   after(async () => {
@@ -494,7 +495,10 @@ describe("Executing on an Insights connection", () => {
 
       assert.strictEqual(request.body.returnFormat, "text");
 
-      await untilConsoleShows(RESULT, "the result to be printed to the console");
+      await untilConsoleShows(
+        RESULT,
+        "the result to be printed to the console",
+      );
     });
 
     it("asks for structured text for the view", async () => {
@@ -523,6 +527,7 @@ describe("Executing on an Insights connection", () => {
   describe("against other instance versions", () => {
     const OLD = instanceAt(25201, "TESTOLD");
     const OLDER = instanceAt(25202, "TESTOLDER");
+    const RECENT = instanceAt(25204, "TESTRECENT");
 
     // 1.13 with query environments enabled: the endpoints gain a qe/ segment
     // and sql has no kxi/ one yet.
@@ -534,9 +539,16 @@ describe("Executing on an Insights connection", () => {
     const older = new FakeInsights();
     older.version = "1.10.0";
 
-    // Which endpoint each was asked for the meta on, kept before the queries
-    // below clear the recordings.
+    // The oldest instance still supported, which is on the current endpoints
+    // but has no scratchpad log websocket yet.
+    const recent = new FakeInsights();
+    recent.version = "1.17.0";
+
+    // Which endpoint each was asked for the meta on, and how often each was
+    // asked for the api configuration, kept before the queries below clear the
+    // recordings.
     let metas: { [alias: string]: string[] } = {};
+    let configs: { [alias: string]: number } = {};
 
     before(async () => {
       await old.listen(25201);
@@ -547,14 +559,25 @@ describe("Executing on an Insights connection", () => {
       await ensure(OLDER);
       await dial(OLDER.alias, older);
 
+      await recent.listen(25204);
+      await ensure(RECENT);
+      await dial(RECENT.alias, recent);
+
       metas = {
         [OLD.alias]: old.calls("/meta").map((request) => request.path),
         [OLDER.alias]: older.calls("/meta").map((request) => request.path),
+        [RECENT.alias]: recent.calls("/meta").map((request) => request.path),
+      };
+
+      configs = {
+        [OLD.alias]: old.calls("/api/config").length,
+        [OLDER.alias]: older.calls("/api/config").length,
+        [RECENT.alias]: recent.calls("/api/config").length,
       };
     });
 
     after(async () => {
-      for (const alias of [OLD.alias, OLDER.alias]) {
+      for (const alias of [OLD.alias, OLDER.alias, RECENT.alias]) {
         await vscode.commands.executeCommand(
           "kdb.connections.disconnect",
           alias,
@@ -562,6 +585,7 @@ describe("Executing on an Insights connection", () => {
       }
       await old.close();
       await older.close();
+      await recent.close();
     });
 
     async function runOn(target: FakeInsights, uri: vscode.Uri) {
@@ -603,6 +627,45 @@ describe("Executing on an Insights connection", () => {
 
       assert.strictEqual(request.body.returnFormat, undefined);
       assert.strictEqual(request.body.isTableView, false);
+    });
+
+    /**
+     * 1.17 is the oldest instance the extension still connects to, and it is
+     * already on the endpoints the current ones use — the only thing it is
+     * missing is the scratchpad log websocket, which arrived in 1.18.
+     */
+    describe("on 1.17, the oldest instance still supported", () => {
+      it("connects and asks for the meta where it now lives", () => {
+        assert.deepStrictEqual(metas[RECENT.alias], [
+          "/servicegateway/api/v3/meta",
+        ]);
+      });
+
+      it("runs the scratchpad and sql on the current endpoints", async () => {
+        const scratchpad = await runOn(recent, RECENT_FILE);
+        assert.strictEqual(scratchpad.path, SCRATCHPAD);
+
+        const sql = await runOn(recent, RECENT_SQL_FILE);
+        assert.strictEqual(sql.path, "/servicegateway/kxi/sql");
+      });
+
+      it("opens no scratchpad log websocket", () => {
+        // The 1.18 stand-in the rest of the suite runs against did open one,
+        // so this is the gate rather than a socket that never opens at all.
+        assert.ok(insights.upgrades.length > 0, "1.18 opened no log socket");
+        assert.deepStrictEqual(recent.upgrades, []);
+      });
+    });
+
+    /**
+     * The endpoint the query environment prefix is read from only exists from
+     * 1.13. Older instances resolve their endpoints without it, and are never
+     * asked.
+     */
+    it("asks for the api configuration only from 1.13", () => {
+      assert.strictEqual(configs[OLD.alias], 1);
+      assert.strictEqual(configs[RECENT.alias], 1);
+      assert.strictEqual(configs[OLDER.alias], 0);
     });
   });
 });

@@ -25,6 +25,24 @@ export interface Request {
   args?: { code?: string; ctx?: string; returnFormat?: string };
 }
 
+/**
+ * A row of what listMem.q answers with, i.e. one item in the process memory.
+ * `typeNum` is the q type of the value, which is what decides the category the
+ * item is filed under: 98 a table, 99 a dictionary or a keyed table, 100 a
+ * lambda, 104 a projection, 105 a composition, and anything below 98 a plain
+ * variable.
+ */
+export interface MemoryItem {
+  id: number;
+  pid: number;
+  name: string;
+  fname: string;
+  typeNum: number;
+  namespace: string;
+  context: string;
+  isNs: boolean;
+}
+
 // What a failing query reports back.
 export const FAILURE = "fake q failure";
 
@@ -59,6 +77,17 @@ export class FakeQ {
   // the evaluate lambda with every request, the way a plain kdb+ process is
   // driven.
   manifest = true;
+
+  // What the process reports having in memory, and which of those names are
+  // views. Both are empty until a test says otherwise, which is what every
+  // other suite wants: an empty listing leaves the tree with nothing to draw.
+  serverObjects: MemoryItem[] = [];
+  views: string[] = [];
+
+  // What a query answers with. A suite that renders the result rather than
+  // asserting on the request replaces it with something worth rendering — the
+  // structured text a real process answers a results view query with.
+  data: unknown = "OK";
 
   // Any query carrying this comes back as a q error instead of a result.
   static readonly FAILS = "FAIL_QUERY";
@@ -174,9 +203,21 @@ export class FakeQ {
     // Housekeeping calls carry no code: the manifest handshake, the globals
     // poll and the reserved words poll. Which of them arrives depends on
     // whether the .vscode namespace is in use — the lambda forms come through
-    // here too — and an empty list satisfies all but the manifest.
+    // here too — and an empty list satisfies all but the ones answered here.
     if (args?.code === undefined) {
-      return fn === ".vscode.getManifest" ? { version: "fake" } : [];
+      switch (fn) {
+        case ".vscode.getManifest":
+          return { version: "fake" };
+        // loadServerObjects() evals what comes back rather than parsing it, so
+        // the memory listing goes over the wire as a literal and not as a
+        // value.
+        case ".vscode.listMem":
+          return this.serverObjects;
+        case ".vscode.getViews":
+          return this.views;
+        default:
+          return [];
+      }
     }
 
     if (args.code.includes(FakeQ.FAILS)) {
@@ -185,6 +226,6 @@ export class FakeQ {
 
     // What LocalConnection.executeQuery expects: no error, and data it can
     // JSON.parse.
-    return { error: false, data: JSON.stringify("OK") };
+    return { error: false, data: JSON.stringify(this.data) };
   }
 }
