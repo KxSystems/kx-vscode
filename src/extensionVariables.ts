@@ -209,7 +209,18 @@ export namespace ext {
     // "Namespaces", removed to investigate
   ];
 
-  export const qNamespaceFilters = [".q", ".Q", ".h", ".z", ".o", ".j", ".m"];
+  // The namespaces a process keeps to itself, which are its own business
+  // rather than the user's and so are left out of the listing.
+  export const qNamespaceFilters = [
+    ".q",
+    ".Q",
+    ".h",
+    ".z",
+    ".o",
+    ".j",
+    ".m",
+    ".s",
+  ];
 
   export const constants = {
     names: [

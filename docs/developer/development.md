@@ -89,10 +89,31 @@ what it is sent, which is what the tests assert on:
   settings on it and a test can stand up an older instance by changing them.
 - the browser the OAuth code flow opens, replaced in `insights.ts` by a
   function that walks the authorization redirect back to the extension's own
-  local server. It is the only stand-in that replaces a VS Code API rather than
-  a process, and it exists because there is no one in a test window to open the
+  local server. It exists because there is no one in a test window to open the
   URL — the code flow, the token request and the certificate handling all still
   run for real.
+- the person a notification is addressed to, replaced in `prompt.ts`. A
+  notification's buttons are drawn by the workbench and no API presses one, so
+  a command that asks before it acts could otherwise not be driven to either
+  answer. Every notification is recorded, and one is answered only when a test
+  has said what to answer it with.
+
+The last two replace a VS Code API rather than a process, and both stand in for
+the user rather than for anything the extension talks to.
+
+What a tree view draws is the one thing these tests cannot reach: VS Code
+exposes no API for another extension's tree items, and the window loads the
+bundled extension, so a test cannot reach the providers either. Tree contents
+are covered in `test/suite` instead; what a tree item's command does when it is
+run is still driven from here, with the item the tree would hand it.
+
+The workspace also turns off everything the workbench would otherwise put in
+front of a test: `files.simpleDialog.enable` replaces the system file dialog
+with a quick pick a test can accept, and the `explorer.confirm*` settings drop
+the confirmations the explorer raises before it deletes or moves a file.
+`window.dialogStyle` is deliberately not among them — it is application scoped,
+so a workspace file cannot set it, and modal messages are answered through
+`prompt.ts` rather than by their style.
 
 Both suites can be debugged with the `E2E Tests` and `E2E Test Selected File`
 targets in the run and debug tab.
