@@ -55,8 +55,8 @@ export class ConnectionConsole {
   private buffer?: string[] = [];
   private _exited = false;
   // How wide the terminal is, as VS Code reports it — 0 until it is opened and
-  // measured. Read by whoever formats a result, so a table can be cut to whole
-  // columns before it gets here (see convertRowsToConsole).
+  // measured. Read by whoever formats a result, so a table can be cut to the
+  // width before it gets here (see convertRowsToConsole).
   private _columns = 0;
   // True while we are tearing the console down programmatically (dispose), so
   // the pty close handler can tell a user-initiated close apart from our own.

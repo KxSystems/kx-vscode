@@ -121,28 +121,32 @@ describe("queryUtils", () => {
       ]);
     });
 
-    it("should drop the columns that do not fit the width", () => {
+    it("should cut a row that does not fit the width", () => {
       const rows = [
         "aa#$#;header;#$#bb#$#;header;#$#cc",
         "11#$#;#$#22#$#;#$#33",
       ];
-      const result = queryUtils.convertRowsToConsole(rows, 10);
+      const result = queryUtils.convertRowsToConsole(rows, 11);
 
-      assert.deepEqual(result, ["aa  bb  ..", "----------", "11  22  .."]);
+      assert.deepEqual(result, ["aa  bb  c..", "-----------", "11  22  3.."]);
     });
 
-    it("should keep every column when they all fit the width", () => {
+    it("should leave a row that fits the width alone", () => {
       const rows = ["a#$#;header;#$#b", "1#$#;#$#2"];
       const result = queryUtils.convertRowsToConsole(rows, 40);
 
       assert.deepEqual(result, ["a  b  ", "------", "1  2  "]);
     });
 
-    it("should cut the cells of a single column too wide to fit", () => {
-      const rows = ["header#$#;header;#$#", "0123456789abcdef"];
-      const result = queryUtils.convertRowsToConsole(rows, 10);
+    it("should keep the start of a column too wide to fit", () => {
+      const rows = ["id#$#;header;#$#text", "1#$#;#$#0123456789abcdef"];
+      const result = queryUtils.convertRowsToConsole(rows, 12);
 
-      assert.deepEqual(result, ["header  ..", "----------", "01234567.."]);
+      assert.deepEqual(result, [
+        "id  text  ..",
+        "------------",
+        "1   012345..",
+      ]);
     });
 
     it("should keep a row with newlines in it on one line", () => {

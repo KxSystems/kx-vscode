@@ -252,25 +252,17 @@ export function convertRows(rows: any[], width = 0): any {
   return convertRowsToConsole(result, width).join("\n") + "\n\n";
 }
 
-// Marks a table the console could not show in full, as a q console marks one.
+// Marks a line the console could not show in full, as a q console marks one.
 const CUT = "..";
 
-// How many whole columns fit in the given width. A table that loses columns is
-// still a table; one whose rows wrap, or get sliced mid-cell, is not. A width
+// Cuts a line to the given width, as a q console cuts one to its `\c`. A width
 // of 0 means no limit — the shared output channel scrolls horizontally, where
-// a terminal only wraps.
-function fitColumns(counters: number[], width: number): number {
-  const budget = width - CUT.length;
-  let used = 0;
-  let keep = 0;
-  for (const counter of counters) {
-    if (used + counter > budget) {
-      break;
-    }
-    used += counter;
-    keep++;
+// a terminal only wraps, and a wrapped table is no longer a table.
+function fit(line: string, width: number): string {
+  if (!width || line.length <= width) {
+    return line;
   }
-  return Math.max(1, keep);
+  return line.slice(0, Math.max(0, width - CUT.length)) + CUT;
 }
 
 // A cell that arrives with newlines in it — a nested list, rendered down the
@@ -328,16 +320,7 @@ export function convertRowsToConsole(rows: string[], width = 0): string[] {
     });
   });
 
-  const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
-  const cut = width > 0 && totalCount > width;
-  const keep = cut ? fitColumns(columnCounters, width) : columnCounters.length;
-
-  const result = vector.map((row) => {
-    const line = row.slice(0, keep).join("");
-    // The single kept column can still be wider than the width on its own,
-    // which is the one case a cell is cut rather than a column dropped.
-    return cut ? line.slice(0, Math.max(0, width - CUT.length)) + CUT : line;
-  });
+  const result = vector.map((row) => fit(row.join(""), width));
 
   if (haveHeader) {
     result.splice(1, 0, "-".repeat(result[0].length));
