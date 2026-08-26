@@ -424,7 +424,7 @@ export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
 }
 
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-const PNG_BASE64 = "iVBORw0KGgo";
+const PNG_BASE64 = "iVBORw0KGg";
 
 /**
  * Tells whether a result is a PNG the process encoded with .Q.btoa, which the

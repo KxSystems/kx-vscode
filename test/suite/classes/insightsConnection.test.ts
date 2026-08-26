@@ -198,10 +198,23 @@ describe("insightsConnection", () => {
     });
 
     it("should parse a structured text payload", async () => {
+      const payload = {
+        count: 1,
+        columns: [
+          {
+            name: "values",
+            type: "long",
+            values: [["2"]],
+            order: [0],
+          },
+        ],
+        warnings: [],
+      };
+
       respondWith({
         error: false,
         errorMsg: "",
-        data: JSON.stringify({ count: 1, columns: [] }),
+        data: JSON.stringify(payload),
       });
 
       const result = await withConnection().getScratchpadQuery(
@@ -211,7 +224,7 @@ describe("insightsConnection", () => {
         true,
       );
 
-      assert.deepStrictEqual(result, { count: 1, columns: [] });
+      assert.deepStrictEqual(result, payload);
     });
 
     it("should keep an encoded png payload as it arrived", async () => {
