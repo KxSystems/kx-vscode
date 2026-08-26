@@ -12,7 +12,9 @@
  */
 
 import assert from "assert";
+import axios from "axios";
 import * as sinon from "sinon";
+import { window } from "vscode";
 
 import {
   extractInsightsRequestError,
@@ -107,6 +109,136 @@ describe("insightsConnection", () => {
 
     it("should stringify an unknown error with no message or response", () => {
       assert.strictEqual(extractInsightsRequestError("boom"), "boom");
+    });
+  });
+
+  describe("getScratchpadQuery", () => {
+    const withConnection = (requestID?: string) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        scratchpad: { scratchpad: "scratchpadmanager/scratchpad/display" },
+      };
+      const getOptions = sinon
+        .stub(<any>conn, "getOptions")
+        .resolves(undefined);
+
+      return conn
+        .getScratchpadQuery("1+1", ".", false, false, undefined, requestID)
+        .then(() => getOptions.getCall(0).args[4] as any);
+    };
+
+    afterEach(() => sinon.restore());
+
+    it("should send the caller's requestID", async () => {
+      const body = await withConnection("req-1");
+
+      assert.strictEqual(body.requestID, "req-1");
+    });
+
+    it("should send a requestID even when the caller has none", async () => {
+      const body = await withConnection();
+
+      assert.ok(body.requestID);
+    });
+
+    it("should send a different requestID on each query", async () => {
+      const first = await withConnection();
+      sinon.restore();
+      const second = await withConnection();
+
+      assert.notStrictEqual(first.requestID, second.requestID);
+    });
+  });
+
+  describe("getScratchpadQuery results", () => {
+    const encoded =
+      "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAYAAAALpr0TAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABISURBVChTzczBCQAwCAPAbOcsjuJczuEsKfEhfbR9NyAKnoIkAag90+IGM5Nm1vMT7hkYEd1V7t7L40fBuQZYVWe4R0uhT+ACr2QebHdL0JYAAAAASUVORK5CYII=";
+
+    let adapter: any;
+
+    const respondWith = (data: unknown) => {
+      axios.defaults.adapter = async (config: any) =>
+        <any>{
+          data,
+          status: 200,
+          statusText: "OK",
+          headers: {},
+          config,
+        };
+    };
+
+    const withConnection = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      conn.insightsVersion = "1.12";
+      (<any>conn).connEndpoints = {
+        scratchpad: { scratchpad: "scratchpadmanager/scratchpad/display" },
+      };
+      sinon
+        .stub(<any>conn, "getOptions")
+        .resolves({ url: "https://test.kx.com/scratchpad", method: "POST" });
+      return conn;
+    };
+
+    beforeEach(() => {
+      ext.outputChannel = window.createOutputChannel("kdb", { log: true });
+      adapter = axios.defaults.adapter;
+    });
+
+    afterEach(() => {
+      axios.defaults.adapter = adapter;
+      sinon.restore();
+    });
+
+    it("should parse a structured text payload", async () => {
+      const payload = {
+        count: 1,
+        columns: [
+          {
+            name: "values",
+            type: "long",
+            values: [["2"]],
+            order: [0],
+          },
+        ],
+        warnings: [],
+      };
+
+      respondWith({
+        error: false,
+        errorMsg: "",
+        data: JSON.stringify(payload),
+      });
+
+      const result = await withConnection().getScratchpadQuery(
+        "1+1",
+        ".",
+        false,
+        true,
+      );
+
+      assert.deepStrictEqual(result, payload);
+    });
+
+    it("should keep an encoded png payload as it arrived", async () => {
+      respondWith({ error: false, errorMsg: "", data: encoded });
+
+      const result = await withConnection().getScratchpadQuery(
+        "image",
+        ".",
+        false,
+        true,
+      );
+
+      assert.strictEqual(result.error, false);
+      assert.strictEqual(result.data, encoded);
     });
   });
 });

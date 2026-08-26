@@ -426,6 +426,44 @@ describe("queryUtils", () => {
 
       assert.ok(result);
     });
+
+    const encoded = Buffer.from(
+      [...png, ...img].map((value) => parseInt(value, 16)),
+    ).toString("base64");
+
+    it("should return base64 for an encoded png", () => {
+      const result = queryUtils.resultToBase64(encoded);
+
+      assert.strictEqual(result, `data:image/png;base64,${encoded}`);
+    });
+
+    it("should return base64 for a scratchpad result carrying an encoded png", () => {
+      const result = queryUtils.resultToBase64({
+        error: false,
+        errorMsg: "",
+        data: encoded,
+      });
+
+      assert.strictEqual(result, `data:image/png;base64,${encoded}`);
+    });
+
+    it("should return base64 for an encoded png with a non zero ninth byte", () => {
+      const bytes = [...png, ...img].map((value) => parseInt(value, 16));
+      bytes[8] = 0x80;
+      const other = Buffer.from(bytes).toString("base64");
+
+      assert.strictEqual(other[10], "q");
+      assert.strictEqual(
+        queryUtils.resultToBase64(other),
+        `data:image/png;base64,${other}`,
+      );
+    });
+
+    it("should return undefined for a string that is not a png", () => {
+      const result = queryUtils.resultToBase64("not an image");
+
+      assert.strictEqual(result, undefined);
+    });
   });
 
   describe("normalizeQuery", () => {

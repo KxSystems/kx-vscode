@@ -435,8 +435,30 @@ export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
 }
 
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const PNG_BASE64 = "iVBORw0KGg";
+
+/**
+ * Tells whether a result is a PNG the process encoded with .Q.btoa, which the
+ * Insights display API does for any image, whatever return format was asked
+ * for.
+ * @param result The result, or the data field of one
+ * @returns Whether it is a base64 encoded PNG
+ */
+export function isEncodedPng(result: any): result is string {
+  return typeof result === "string" && result.startsWith(PNG_BASE64);
+}
 
 export function resultToBase64(result: any): string | undefined {
+  const encoded = isEncodedPng(result)
+    ? result
+    : isEncodedPng(result?.data)
+      ? result.data
+      : undefined;
+
+  if (encoded) {
+    return `data:image/png;base64,${encoded}`;
+  }
+
   const bytes =
     (Array.isArray(result?.data?.rows) && result?.data?.rows[0].Value) ||
     (Array.isArray(result?.columns) && result.columns[0]?.values) ||

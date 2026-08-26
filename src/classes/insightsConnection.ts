@@ -12,6 +12,7 @@
  */
 
 import axios, { AxiosRequestConfig } from "axios";
+import * as crypto from "crypto";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
 import { CancellationToken } from "vscode-languageclient";
@@ -44,7 +45,7 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { getHeaders } from "../utils/queryUtils";
+import { getHeaders, isEncodedPng } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
@@ -794,6 +795,7 @@ export class InsightsConnection {
     isPython?: boolean,
     isTableView?: boolean,
     timeout?: number,
+    requestID?: string,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       if (isTableView === undefined) {
@@ -809,6 +811,7 @@ export class InsightsConnection {
         context: context || ".",
         sampleFn: "first",
         sampleSize: 10000,
+        requestID: requestID || crypto.randomUUID(),
       };
 
       if (this.insightsVersion) {
@@ -851,7 +854,7 @@ export class InsightsConnection {
               logger,
             });
             if (!response.data.error) {
-              if (isTableView) {
+              if (isTableView && !isEncodedPng(response.data.data)) {
                 if (
                   this.insightsVersion &&
                   isBaseVersionGreaterOrEqual(this.insightsVersion, "1.12")

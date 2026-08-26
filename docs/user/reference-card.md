@@ -209,6 +209,7 @@ whole file run.
 | Results.Graphics.Displayed.kdb.py |              | src/commands/serverCommand.ts            |
 | Results.Graphics.Displayed.ie.q   |              | src/commands/serverCommand.ts            |
 | Results.Graphics.Displayed.ie.py  |              | src/commands/serverCommand.ts            |
+| Results.Graphics.Displayed.ie.ws  |              | src/classes/scratchpadLogger.ts          |
 | ¦                                 |              |                                          |
 | Language.References               |              | server/src/qLangServer.ts                |
 | Language.Definition               |              | server/src/qLangServer.ts                |

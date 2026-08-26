@@ -359,6 +359,7 @@ export class ConnectionManagementService {
     stringify?: boolean,
     isPython?: boolean,
     timeout?: number,
+    requestID?: string,
   ): Promise<any> {
     let selectedConn;
     if (connLabel) {
@@ -387,6 +388,7 @@ export class ConnectionManagementService {
         isPython,
         !stringify,
         timeout,
+        requestID,
       );
     }
   }

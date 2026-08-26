@@ -29,6 +29,7 @@ describe("ScratchpadLogger", () => {
   let consoleStartStub: sinon.SinonStub;
   let notifyStub: sinon.SinonStub;
   let tokenStub: sinon.SinonStub;
+  let renderImageStub: sinon.SinonStub;
 
   const mockConnection: any = {
     alias: "test-insight",
@@ -67,6 +68,8 @@ describe("ScratchpadLogger", () => {
       appendStdErr: sinon.spy(),
     });
 
+    renderImageStub = sinon.stub().resolves();
+
     ScratchpadLoggerClass = proxyquire(
       "../../../src/classes/scratchpadLogger",
       {
@@ -76,6 +79,7 @@ describe("ScratchpadLogger", () => {
         "../utils/executionConsole": {
           ExecutionConsole: { start: consoleStartStub },
         },
+        "../utils/plotUtils": { renderImage: renderImageStub },
       },
     ).ScratchpadLogger;
   });
@@ -151,6 +155,7 @@ describe("ScratchpadLogger", () => {
 
     const onMessage = fakeWs.on.withArgs("message").getCall(0).args[1];
     const payload = JSON.stringify({
+      channel: "logging",
       data: [
         { handle: "STDOUT", value: "Log A" },
         { handle: "STDERR", value: "Error B" },
@@ -202,5 +207,116 @@ describe("ScratchpadLogger", () => {
     clock.tick(10000);
     // Should still only be 1 total call to get token
     sinon.assert.calledOnce(tokenStub);
+  });
+
+  describe("image channel", () => {
+    const png = "iVBORw0KGgo=";
+
+    async function send(frame: any) {
+      logger = new ScratchpadLoggerClass(mockConnection);
+      await logger.connect();
+      const onMessage = fakeWs.on.withArgs("message").getCall(0).args[1];
+      onMessage(Buffer.from(JSON.stringify(frame)));
+      await (logger as any).rendering;
+    }
+
+    it("should render an image frame as a data URI", async () => {
+      await send({
+        channel: "image",
+        data: {
+          format: "PNG",
+          encoding: "base64",
+          requestID: "req-1",
+          data: png,
+        },
+      });
+
+      sinon.assert.calledOnceWithExactly(
+        renderImageStub,
+        "req-1",
+        `data:image/png;base64,${png}`,
+      );
+    });
+
+    it("should not route an image frame to the console", async () => {
+      const fakeConsole = {
+        appendStdOut: sinon.spy(),
+        appendStdErr: sinon.spy(),
+      };
+      consoleStartStub.returns(fakeConsole);
+
+      await send({
+        channel: "image",
+        data: {
+          format: "PNG",
+          encoding: "base64",
+          requestID: "",
+          data: png,
+        },
+      });
+
+      sinon.assert.notCalled(fakeConsole.appendStdOut);
+      sinon.assert.notCalled(fakeConsole.appendStdErr);
+    });
+
+    it("should ignore a frame that is not a base64 PNG", async () => {
+      await send({
+        channel: "image",
+        data: {
+          format: "SVG",
+          encoding: "base64",
+          requestID: "req-1",
+          data: png,
+        },
+      });
+
+      sinon.assert.notCalled(renderImageStub);
+    });
+
+    it("should ignore an image frame carrying no data", async () => {
+      await send({
+        channel: "image",
+        data: {
+          format: "PNG",
+          encoding: "base64",
+          requestID: "req-1",
+          data: "",
+        },
+      });
+
+      sinon.assert.notCalled(renderImageStub);
+    });
+
+    it("should not treat a frame on another channel as console output", async () => {
+      consoleStartStub.resetHistory();
+
+      await send({ channel: "status", data: { state: "ready" } });
+
+      sinon.assert.notCalled(consoleStartStub);
+      sinon.assert.notCalled(renderImageStub);
+    });
+
+    it("should keep rendering after one image fails", async () => {
+      renderImageStub.onFirstCall().rejects(new Error("no workspace"));
+
+      logger = new ScratchpadLoggerClass(mockConnection);
+      await logger.connect();
+      const onMessage = fakeWs.on.withArgs("message").getCall(0).args[1];
+      const frame = JSON.stringify({
+        channel: "image",
+        data: {
+          format: "PNG",
+          encoding: "base64",
+          requestID: "req-1",
+          data: png,
+        },
+      });
+
+      onMessage(Buffer.from(frame));
+      onMessage(Buffer.from(frame));
+      await (logger as any).rendering;
+
+      sinon.assert.calledTwice(renderImageStub);
+    });
   });
 });

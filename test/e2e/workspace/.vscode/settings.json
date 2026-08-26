@@ -26,6 +26,7 @@
     "insights.error.q": "TESTINSIGHTS",
     "target.q": "TESTINSIGHTS",
     "populate.kxnb": "TESTINSIGHTS",
+    "image.kxnb": "TESTINSIGHTS",
     "timeout.q": "TESTINSIGHTS",
     "timeout.target.q": "TESTINSIGHTS",
     "recent.q": "TESTRECENT",

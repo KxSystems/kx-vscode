@@ -885,6 +885,7 @@ export async function executeQuery(
   isFromConnTree?: boolean,
   token?: CancellationToken,
   timeout?: number,
+  requestID?: string,
 ): Promise<any> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
@@ -936,6 +937,7 @@ export async function executeQuery(
     isStringfy,
     isPython,
     timeout,
+    requestID,
   );
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
@@ -1392,6 +1394,17 @@ export async function writeScratchpadResult(
 
   if (executorName.endsWith(".kxnb")) {
     return errorMsg ?? result;
+  }
+
+  const plot = errorMsg ? undefined : resultToBase64(result);
+
+  if (plot) {
+    notify("GG Plot displayed", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Results.Graphics.Displayed.ie" + (isPython ? ".py" : ".q"),
+    });
+    await writePlotToFile(plot);
+    return;
   }
 
   if (ext.isResultsTabVisible) {

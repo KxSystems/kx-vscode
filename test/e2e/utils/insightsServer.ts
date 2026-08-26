@@ -40,6 +40,11 @@ export const RESULT = "e2e insights result";
 // What a failing request reports back.
 export const FAILURE = "fake insights failure";
 
+// The image a query showing one pushes down the log websocket, base64 encoded
+// the way .com_kx_edi.showImage sends it.
+export const PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAYAAAALpr0TAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABISURBVChTzczBCQAwCAPAbOcsjuJczuEsKfEhfbR9NyAKnoIkAag90+IGM5Nm1vMT7hkYEd1V7t7L40fBuQZYVWe4R0uhT+ACr2QebHdL0JYAAAAASUVORK5CYII=";
+
 /**
  * A stand-in KDB Insights instance. It speaks the parts of the REST API an
  * InsightsConnection uses — the OAuth code flow, the two configuration
@@ -69,6 +74,16 @@ export class FakeInsights {
 
   // Any query carrying this comes back as a failure instead of a result.
   static readonly FAILS = "FAIL_QUERY";
+
+  // A query calling this shows an image on the way to its result, which reaches
+  // the extension on the log websocket rather than in the response.
+  static readonly SHOWS_IMAGE = "showImage";
+
+  static readonly SHOWS_IMAGE_LATE = "showImageLate";
+
+  imageDelay = 850;
+  imageBytes = 533000;
+  runs = 0;
 
   // The headers each scratchpad log websocket connected with, so a test can
   // tell that the socket was established and how it authenticated.
@@ -166,6 +181,16 @@ export class FakeInsights {
     }
   }
 
+  image(data: string, requestID = "") {
+    const message = JSON.stringify({
+      channel: "image",
+      data: { format: "PNG", encoding: "base64", requestID, data },
+    });
+    for (const socket of this.sockets) {
+      socket.send(message);
+    }
+  }
+
   private async serve(req: IncomingMessage, res: ServerResponse) {
     const parsed = url.parse(req.url || "", true);
     const path = (parsed.pathname || "").replace(/\/+$/, "") || "/";
@@ -230,6 +255,23 @@ export class FakeInsights {
       // The scratchpad the extension starts before the first query.
       if (expression === "") {
         return send(200, {});
+      }
+      if (expression.includes(FakeInsights.SHOWS_IMAGE_LATE)) {
+        const big = PNG + "A".repeat(this.imageBytes);
+        setTimeout(() => this.image(big, body.requestID), this.imageDelay);
+        // Each run gets its own result, so a test can tell which run the
+        // output on screen belongs to.
+        const run = `run-${++this.runs}`;
+        return send(200, {
+          data: JSON.stringify({
+            count: 1,
+            columns: [
+              { name: "run", type: "symbol", values: [run], order: [0] },
+            ],
+          }),
+        });
+      } else if (expression.includes(FakeInsights.SHOWS_IMAGE)) {
+        this.image(PNG, body.requestID);
       }
       return send(200, {
         data:
