@@ -55,6 +55,15 @@ const PY_WORKBOOK = file("insights.kdb.py");
 const SQL_WORKBOOK = file("insights.kdb.sql");
 const NOTEBOOK = file("insights.kxnb");
 const IMAGE_NOTEBOOK = file("image.kxnb");
+const LATE_IMAGE_NOTEBOOK = file("imageLate.kxnb");
+
+// The late image is half a megabyte; only the shape of the outputs is useful
+// in a failure message.
+const summary = (text: string) =>
+  text
+    .replace(/<img src="[^"]*"\/>/g, "<img/>")
+    .replace(/\s+/g, " ")
+    .slice(0, 300);
 const TARGET_FILE = file("target.q");
 const OLD_FILE = file("old.q");
 const OLD_SQL_FILE = file("old.sql");
@@ -448,6 +457,209 @@ describe("Executing on an Insights connection", () => {
         () => cell().outputs.length === 3,
         `the late image:\n${shown()}`,
       );
+    });
+  });
+
+  describe("an image landing well after the response", () => {
+    let notebook: vscode.NotebookDocument;
+
+    const shown = (index: number) =>
+      notebook
+        .cellAt(index)
+        .outputs.flatMap((output) =>
+          output.items.map((item) => Buffer.from(item.data).toString("utf8")),
+        )
+        .join("\n");
+
+    before(async () => {
+      notebook =
+        await vscode.workspace.openNotebookDocument(LATE_IMAGE_NOTEBOOK);
+      await vscode.window.showNotebookDocument(notebook);
+      await vscode.commands.executeCommand("notebook.selectKernel", {
+        id: "kx-notebook-1",
+        extension: "KX.kdb",
+      });
+    });
+
+    for (const [index, language] of [
+      [1, "q"],
+      [2, "python"],
+    ] as [number, string][]) {
+      it(`keeps the result of a ${language} cell`, async () => {
+        const cell = () => notebook.cellAt(index);
+        const ran = cell().executionSummary?.executionOrder;
+        insights.clear();
+        await vscode.window.showNotebookDocument(notebook, {
+          selections: [new vscode.NotebookRange(index, index + 1)],
+        });
+        await vscode.commands.executeCommand("notebook.cell.execute", {
+          ranges: [{ start: index, end: index + 1 }],
+        });
+        await until(
+          () => cell().executionSummary?.executionOrder !== ran,
+          "the cell to finish",
+        );
+        await until(() => shown(index).includes("<img"), "the image");
+
+        assert.ok(shown(index).includes("run-"), summary(shown(index)));
+      });
+    }
+  });
+
+  describe("a late image while the cell is run again", () => {
+    let notebook: vscode.NotebookDocument;
+
+    const cell = () => notebook.cellAt(1);
+    const shown = () =>
+      cell()
+        .outputs.flatMap((output) =>
+          output.items.map((item) => Buffer.from(item.data).toString("utf8")),
+        )
+        .join("\n");
+
+    before(async () => {
+      notebook =
+        await vscode.workspace.openNotebookDocument(LATE_IMAGE_NOTEBOOK);
+      await vscode.window.showNotebookDocument(notebook);
+      await vscode.commands.executeCommand("notebook.selectKernel", {
+        id: "kx-notebook-1",
+        extension: "KX.kdb",
+      });
+    });
+
+    it("keeps the result of the run that is on screen", async () => {
+      const ran = () => cell().executionSummary?.executionOrder;
+
+      const marker = () => shown().match(/run-\d+/)?.[0];
+
+      const first = ran();
+      await vscode.commands.executeCommand("notebook.execute");
+      await until(() => ran() !== first, "the first run to finish");
+      const stale = marker();
+
+      const second = ran();
+      await vscode.commands.executeCommand("notebook.execute");
+      await until(() => ran() !== second, "the second run to finish");
+      const current = marker();
+
+      assert.notStrictEqual(stale, current, "the runs to be distinguishable");
+
+      await until(() => shown().includes("<img"), "the image");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // The output on screen must be the second run's, not the first's
+      // restored by the image that was still in flight.
+      assert.strictEqual(marker(), current, summary(shown()));
+    });
+  });
+
+  describe("running each cell of a notebook in turn", () => {
+    let notebook: vscode.NotebookDocument;
+
+    const shown = (index: number) =>
+      notebook
+        .cellAt(index)
+        .outputs.flatMap((output) =>
+          output.items.map((item) => Buffer.from(item.data).toString("utf8")),
+        )
+        .join("\n");
+
+    before(async () => {
+      notebook =
+        await vscode.workspace.openNotebookDocument(LATE_IMAGE_NOTEBOOK);
+      await vscode.window.showNotebookDocument(notebook);
+      await vscode.commands.executeCommand("notebook.selectKernel", {
+        id: "kx-notebook-1",
+        extension: "KX.kdb",
+      });
+    });
+
+    it("keeps every cell and every image", async () => {
+      for (const index of [1, 2, 3]) {
+        const cell = () => notebook.cellAt(index);
+        const ran = cell().executionSummary?.executionOrder;
+        await vscode.window.showNotebookDocument(notebook, {
+          selections: [new vscode.NotebookRange(index, index + 1)],
+        });
+        await vscode.commands.executeCommand("notebook.cell.execute", {
+          ranges: [{ start: index, end: index + 1 }],
+        });
+        await until(
+          () => cell().executionSummary?.executionOrder !== ran,
+          `cell ${index} to finish`,
+        );
+      }
+
+      // Every image is a second or so behind its cell.
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      assert.strictEqual(notebook.cellCount, 4, "the notebook lost a cell");
+      for (const index of [1, 2, 3]) {
+        assert.ok(
+          shown(index).includes("<img"),
+          `cell ${index} image:\n${summary(shown(index))}`,
+        );
+        assert.ok(
+          shown(index).includes("run-"),
+          `cell ${index} result:\n${summary(shown(index))}`,
+        );
+      }
+    });
+  });
+
+  describe("running individual cells after a run all", () => {
+    let notebook: vscode.NotebookDocument;
+
+    const shown = (index: number) =>
+      notebook
+        .cellAt(index)
+        .outputs.flatMap((output) =>
+          output.items.map((item) => Buffer.from(item.data).toString("utf8")),
+        )
+        .join("\n");
+
+    before(async () => {
+      notebook =
+        await vscode.workspace.openNotebookDocument(LATE_IMAGE_NOTEBOOK);
+      await vscode.window.showNotebookDocument(notebook);
+      await vscode.commands.executeCommand("notebook.selectKernel", {
+        id: "kx-notebook-1",
+        extension: "KX.kdb",
+      });
+    });
+
+    it("keeps the result of a cell rerun on its own", async () => {
+      const ran = (index: number) =>
+        notebook.cellAt(index).executionSummary?.executionOrder;
+
+      const before = [1, 2, 3].map(ran);
+      await vscode.commands.executeCommand("notebook.execute");
+      await until(
+        () => [1, 2, 3].every((i) => ran(i) !== before[i - 1]),
+        "the run all to finish",
+      );
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      for (const index of [1, 2, 3]) {
+        assert.ok(
+          shown(index).includes("<img") && shown(index).includes("run-"),
+          `after run all, cell ${index}:\n${summary(shown(index))}`,
+        );
+      }
+
+      // Now the cell on its own, the way the notebook is actually worked in.
+      const was = ran(2);
+      await vscode.window.showNotebookDocument(notebook, {
+        selections: [new vscode.NotebookRange(2, 3)],
+      });
+      await vscode.commands.executeCommand("notebook.cell.execute", {
+        ranges: [{ start: 2, end: 3 }],
+      });
+      await until(() => ran(2) !== was, "the single cell to finish");
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      assert.ok(shown(2).includes("run-"), `the result:\n${summary(shown(2))}`);
+      assert.ok(shown(2).includes("<img"), `the image:\n${summary(shown(2))}`);
     });
   });
 

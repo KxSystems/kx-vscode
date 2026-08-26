@@ -79,6 +79,12 @@ export class FakeInsights {
   // the extension on the log websocket rather than in the response.
   static readonly SHOWS_IMAGE = "showImage";
 
+  static readonly SHOWS_IMAGE_LATE = "showImageLate";
+
+  imageDelay = 850;
+  imageBytes = 533000;
+  runs = 0;
+
   // The headers each scratchpad log websocket connected with, so a test can
   // tell that the socket was established and how it authenticated.
   readonly upgrades: IncomingHttpHeaders[] = [];
@@ -250,7 +256,21 @@ export class FakeInsights {
       if (expression === "") {
         return send(200, {});
       }
-      if (expression.includes(FakeInsights.SHOWS_IMAGE)) {
+      if (expression.includes(FakeInsights.SHOWS_IMAGE_LATE)) {
+        const big = PNG + "A".repeat(this.imageBytes);
+        setTimeout(() => this.image(big, body.requestID), this.imageDelay);
+        // Each run gets its own result, so a test can tell which run the
+        // output on screen belongs to.
+        const run = `run-${++this.runs}`;
+        return send(200, {
+          data: JSON.stringify({
+            count: 1,
+            columns: [
+              { name: "run", type: "symbol", values: [run], order: [0] },
+            ],
+          }),
+        });
+      } else if (expression.includes(FakeInsights.SHOWS_IMAGE)) {
         this.image(PNG, body.requestID);
       }
       return send(200, {

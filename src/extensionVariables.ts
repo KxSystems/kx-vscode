@@ -86,9 +86,11 @@ export namespace ext {
   export interface CellExecutionTarget {
     execution: NotebookCellExecution;
     cell: NotebookCell;
+    index: number;
     outputs: NotebookCellOutput[];
     applied?: Thenable<void>;
     endedAt?: number;
+    superseded?: boolean;
   }
   export const pendingImageTargets = new Map<string, CellExecutionTarget>();
   export const connectedContextStrings: Array<string> = [];

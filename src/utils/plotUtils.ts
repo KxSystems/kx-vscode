@@ -81,6 +81,14 @@ export function registerImageTarget(
       now - target.endedAt >= LATE_OUTPUT_MS
     ) {
       ext.pendingImageTargets.delete(id);
+    } else if (
+      target.index === cell.index &&
+      target.cell.notebook.uri.toString() === cell.notebook.uri.toString()
+    ) {
+      // A new run of the same cell owns its outputs from here on. An image
+      // still in flight from the run being replaced can no longer be written
+      // without restoring the outputs it was sent alongside.
+      target.superseded = true;
     }
   }
   while (ext.pendingImageTargets.size >= MAX_PENDING) {
@@ -91,7 +99,14 @@ export function registerImageTarget(
     ext.pendingImageTargets.delete(oldest.value);
   }
 
-  const target: ext.CellExecutionTarget = { execution, cell, outputs: [] };
+  const target: ext.CellExecutionTarget = {
+    execution,
+    cell,
+    // Captured now: once an image has been written the cell is replaced, and
+    // the object left behind reports an index of -1.
+    index: cell.index,
+    outputs: [],
+  };
   ext.pendingImageTargets.set(requestID, target);
   return target;
 }
@@ -116,7 +131,19 @@ async function writeToCell(
   );
   replacement.metadata = cell.metadata;
   replacement.executionSummary = cell.executionSummary;
-  replacement.outputs = outputs;
+  // Fresh instances: replaceCells destroys and recreates the cell, and outputs
+  // carried over from the cell being replaced keep the identity the renderer
+  // has already retired, so they end up in the document without ever being
+  // drawn.
+  replacement.outputs = outputs.map(
+    (output) =>
+      new NotebookCellOutput(
+        output.items.map(
+          (item) => new NotebookCellOutputItem(item.data, item.mime),
+        ),
+        output.metadata,
+      ),
+  );
 
   const edit = new WorkspaceEdit();
   edit.set(cell.notebook.uri, [
@@ -145,6 +172,15 @@ export async function renderImage(
   const output = new NotebookCellOutput([
     NotebookCellOutputItem.text(`<img src="${data}"/>`, "text/html"),
   ]);
+
+  if (target?.superseded) {
+    // Falling back to a file would open a chart for an image the cell it
+    // belongs to has already been rerun past.
+    notify(`Discarded an image from a superseded run.`, MessageKind.DEBUG, {
+      logger,
+    });
+    return;
+  }
 
   if (target) {
     try {

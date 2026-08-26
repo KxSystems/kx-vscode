@@ -1,0 +1,28 @@
+{
+  "cells": [
+    {
+      "kind": 1,
+      "languageId": "markdown",
+      "value": "# notes",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "q",
+      "value": "image:0x89504e470d0a1a0a\n.com_kx_edi.showImageLate[image; ::]\n\"NOTEBOOK_IMAGE\"",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "python",
+      "value": "showImageLate()\n\"NOTEBOOK_IMAGE\"",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "python",
+      "value": "showImageLate(300)\n\"NOTEBOOK_IMAGE\"",
+      "outputs": []
+    }
+  ]
+}
