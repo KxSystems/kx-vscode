@@ -95,7 +95,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  exportToCsv() {
+  async exportToCsv() {
     if (ext.resultPanelCSV === "") {
       notify("No results to export", MessageKind.ERROR, { logger });
       return;
@@ -108,7 +108,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       return;
     }
     const workspaceUri = workspaceFolders[0].uri;
-    utils.exportToCsv(workspaceUri);
+    await utils.exportToCsv(workspaceUri);
     notify("CSV exported.", MessageKind.DEBUG, {
       logger,
       telemetry: "Results.Export.csv",
