@@ -16,12 +16,14 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
+  EventEmitter,
   FileType,
   NotebookCell,
   QuickPickItem,
   QuickPickItemKind,
   Range,
   StatusBarAlignment,
+  TabInputNotebook,
   TextDocument,
   TextEditor,
   Uri,
@@ -36,6 +38,7 @@ import {
   runQuery,
   setQuickPassword,
 } from "./serverCommand";
+import { getActiveTarget } from "../classes/activeTarget";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
@@ -53,12 +56,7 @@ import {
   offerConnectAction,
 } from "../utils/core";
 import { importOldDsFiles } from "../utils/dataSource";
-import {
-  Cancellable,
-  MessageKind,
-  notify,
-  Runner,
-} from "../utils/notifications";
+import { MessageKind, notify, Runner } from "../utils/notifications";
 import {
   RunFlag,
   getPythonWrapper,
@@ -86,27 +84,60 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   }
 }
 
+// What the notebook toolbar hands its commands.
+type NotebookToolbarContext = { notebookEditor?: { notebookUri?: Uri } };
+
+/**
+ * The file the connection, target and timeout pickers act on. A notebook has
+ * no active text editor until one of its cells is focused, so the toolbar
+ * context it passes comes first, then the frontmost tab, and only then the
+ * active text editor.
+ */
+export function getActiveFileUri(context?: unknown): Uri | undefined {
+  const fromToolbar = (context as NotebookToolbarContext)?.notebookEditor
+    ?.notebookUri;
+  if (fromToolbar) {
+    return fromToolbar;
+  }
+
+  const tab = window.tabGroups.activeTabGroup.activeTab?.input;
+  if (tab instanceof TabInputNotebook) {
+    return tab.uri;
+  }
+
+  return ext.activeTextEditor?.document.uri;
+}
+
 function activeEditorChanged(editor?: TextEditor | undefined) {
   /* c8 ignore start */
   setRealActiveTextEditor(editor);
+  updateStatusBarItems();
+  /* c8 ignore stop */
+}
+
+/**
+ * Points the connection and timeout status bar items at the file in front,
+ * which is a notebook when its tab is frontmost and the active text editor
+ * otherwise.
+ */
+export async function updateStatusBarItems() {
+  const uri = getActiveFileUri();
   const runItem = ext.runScratchpadItem;
 
-  if (ext.activeTextEditor) {
-    const uri = ext.activeTextEditor.document.uri;
+  if (uri) {
     const server = getServerForUri(uri);
-    if (server) {
-      setRunScratchpadItemText(uri, server);
+    if (server || isConnectableFile(uri)) {
+      setRunScratchpadItemText(uri, server || "(active)");
       runItem.show();
     } else {
       runItem.hide();
     }
 
-    setTimeoutItem(uri);
+    await setTimeoutItem(uri);
   } else {
     runItem.hide();
     ext.pickTimeoutItem.hide();
   }
-  /* c8 ignore stop */
 }
 
 function setRunScratchpadItemText(uri: Uri, text: string) {
@@ -182,8 +213,11 @@ function getQuickServers(uri: Uri) {
   const conf = workspace.getConfiguration("kdb", uri);
   const connections = conf.get<{ [key: string]: string }>("connectionMap", {});
   const size = quickServers.length;
-  Object.keys(connections).forEach((key) => {
-    const target = connections[key];
+  const targets = [
+    ...Object.values(connections),
+    ...sessionConnectionMap.values(),
+  ];
+  targets.forEach((target) => {
     if (target.includes(":") && !quickServers.includes(target)) {
       quickServers.push(target);
     }
@@ -231,32 +265,70 @@ function relativePath(uri: Uri) {
   return workspace.asRelativePath(uri, false);
 }
 
+// Assignments for files outside the workspace cannot be persisted in the
+// kdb.connectionMap/targetMap/timeoutMap settings, which are keyed by
+// workspace relative path. They are kept in memory for the session instead.
+const sessionConnectionMap = new Map<string, string>();
+const sessionTargetMap = new Map<string, string>();
+const sessionTimeoutMap = new Map<string, number>();
+
+const sessionMapChangedEmitter = new EventEmitter<void>();
+
+// Session assignments don't change the configuration, so consumers relying on
+// kdb.connectionMap changes need this event to know when to refresh.
+export const onDidChangeSessionMaps = sessionMapChangedEmitter.event;
+
+function isOutsideWorkspace(uri: Uri) {
+  return !workspace.getWorkspaceFolder(uri);
+}
+
+function sessionKey(uri: Uri) {
+  return uri.toString();
+}
+
+function setSessionValue<T>(
+  map: Map<string, T>,
+  uri: Uri,
+  value: T | undefined,
+) {
+  if (value === undefined) {
+    map.delete(sessionKey(uri));
+  } else {
+    map.set(sessionKey(uri), value);
+  }
+  sessionMapChangedEmitter.fire();
+}
+
 export async function setServerForUri(uri: Uri, server: string | undefined) {
   uri = Uri.file(uri.path);
+  if (isOutsideWorkspace(uri)) {
+    setSessionValue(sessionConnectionMap, uri, server);
+    return;
+  }
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>(
     "connectionMap",
     {},
   );
-  const relative = relativePath(uri);
-  if (relative.startsWith("/")) {
-    notify(`Document (${uri.path}) is not in workspace.`, MessageKind.ERROR, {
-      logger,
-    });
-  } else {
-    map[relative] = server;
-    await conf.update("connectionMap", map);
-  }
+  map[relativePath(uri)] = server;
+  await conf.update("connectionMap", map);
 }
 
 export function getServerForUri(uri: Uri) {
   uri = Uri.file(uri.path);
-  const conf = workspace.getConfiguration("kdb", uri);
-  const map = conf.get<{ [key: string]: string | undefined }>(
-    "connectionMap",
-    {},
-  );
-  const server = map[relativePath(uri)];
+  let server: string | undefined;
+
+  if (isOutsideWorkspace(uri)) {
+    server = sessionConnectionMap.get(sessionKey(uri));
+  } else {
+    const conf = workspace.getConfiguration("kdb", uri);
+    const map = conf.get<{ [key: string]: string | undefined }>(
+      "connectionMap",
+      {},
+    );
+    server = map[relativePath(uri)];
+  }
+
   const servers = getServers();
 
   return isQuick(server) ||
@@ -267,6 +339,10 @@ export function getServerForUri(uri: Uri) {
 
 export async function setTargetForUri(uri: Uri, target: string | undefined) {
   uri = Uri.file(uri.path);
+  if (isOutsideWorkspace(uri)) {
+    setSessionValue(sessionTargetMap, uri, target);
+    return;
+  }
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
   map[relativePath(uri)] = target;
@@ -275,9 +351,19 @@ export async function setTargetForUri(uri: Uri, target: string | undefined) {
 
 export function getTargetForUri(uri: Uri) {
   uri = Uri.file(uri.path);
-  const conf = workspace.getConfiguration("kdb", uri);
-  const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
-  const target = map[relativePath(uri)];
+  let target: string | undefined;
+
+  if (isOutsideWorkspace(uri)) {
+    target = sessionTargetMap.get(sessionKey(uri));
+  } else {
+    const conf = workspace.getConfiguration("kdb", uri);
+    const map = conf.get<{ [key: string]: string | undefined }>(
+      "targetMap",
+      {},
+    );
+    target = map[relativePath(uri)];
+  }
+
   return target ? normalizeAssemblyTarget(target) : undefined;
 }
 
@@ -312,13 +398,17 @@ export async function setTimeoutForUri(uri: Uri, timeout: number | undefined) {
 
   if (apply) {
     uri = Uri.file(uri.path);
-    const conf = workspace.getConfiguration("kdb", uri);
-    const map = conf.get<{ [key: string]: number | undefined }>(
-      "timeoutMap",
-      {},
-    );
-    map[relativePath(uri)] = timeout;
-    await conf.update("timeoutMap", map);
+    if (isOutsideWorkspace(uri)) {
+      setSessionValue(sessionTimeoutMap, uri, timeout);
+    } else {
+      const conf = workspace.getConfiguration("kdb", uri);
+      const map = conf.get<{ [key: string]: number | undefined }>(
+        "timeoutMap",
+        {},
+      );
+      map[relativePath(uri)] = timeout;
+      await conf.update("timeoutMap", map);
+    }
     setTimeouttemText(uri, { source: "uri", value: timeout });
   }
 }
@@ -326,8 +416,17 @@ export async function setTimeoutForUri(uri: Uri, timeout: number | undefined) {
 export function getTimeoutForUri(uri: Uri) {
   uri = Uri.file(uri.path);
   const conf = workspace.getConfiguration("kdb", uri);
-  const map = conf.get<{ [key: string]: number | undefined }>("timeoutMap", {});
-  const uriTimeout = map[relativePath(uri)];
+  let uriTimeout: number | undefined;
+
+  if (isOutsideWorkspace(uri)) {
+    uriTimeout = sessionTimeoutMap.get(sessionKey(uri));
+  } else {
+    const map = conf.get<{ [key: string]: number | undefined }>(
+      "timeoutMap",
+      {},
+    );
+    uriTimeout = map[relativePath(uri)];
+  }
 
   if (uriTimeout) {
     return {
@@ -375,7 +474,12 @@ export function getConnectionForUri(uri: Uri) {
 export async function pickConnection(uri: Uri) {
   /* c8 ignore start */
   const server = getServerForUri(uri);
-  const items = ["(none)", ...getServers(), ...getQuickServers(uri)];
+  const items = [
+    "(active)",
+    ext.REPL,
+    ...getServers(),
+    ...getQuickServers(uri),
+  ];
 
   let picked = await showInputPicker(items, {
     title: `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
@@ -399,8 +503,11 @@ export async function pickConnection(uri: Uri) {
       });
       return undefined;
     }
-  } else if (picked === "(none)") {
+  } else if (picked === "(active)") {
     picked = undefined;
+    await setTargetForUri(uri, undefined);
+  } else if (picked === ext.REPL) {
+    // The REPL has no execution targets, drop any stale assignment.
     await setTargetForUri(uri, undefined);
   } else if (!items.includes(picked)) {
     notify(`Connection "${picked}" is not found.`, MessageKind.ERROR, {
@@ -409,19 +516,15 @@ export async function pickConnection(uri: Uri) {
     return undefined;
   }
 
-  if (picked) {
-    setRunScratchpadItemText(uri, picked);
+  if (picked || isConnectableFile(uri)) {
+    setRunScratchpadItemText(uri, picked || "(active)");
     ext.runScratchpadItem.show();
   } else {
     ext.runScratchpadItem.hide();
   }
   await setServerForUri(uri, picked);
 
-  if (server) {
-    setTimeoutItem(uri);
-  } else {
-    ext.pickTimeoutItem.hide();
-  }
+  await setTimeoutItem(uri);
 
   return picked;
   /* c8 ignore stop */
@@ -699,6 +802,20 @@ function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
 
+// A file that can be run against a connection (q/quke/Python/SQL, including
+// workbooks, and notebooks). Used to decide whether to offer the status-bar
+// connection selector, even when the file is not yet assigned to a connection.
+function isConnectableFile(uri: Uri | undefined) {
+  return (
+    !!uri &&
+    (uri.path.endsWith(".q") ||
+      uri.path.endsWith(".quke") ||
+      uri.path.endsWith(".py") ||
+      uri.path.endsWith(".sql") ||
+      uri.path.endsWith(".kxnb"))
+  );
+}
+
 function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
@@ -759,22 +876,22 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
       return;
   }
 
+  // Nothing to run. Checked before wrapping, because the SQL and Python
+  // wrappers turn empty text into a non-empty statement the REPL would send.
+  if (!text.trim()) {
+    return;
+  }
+
   try {
-    const runner = Runner.create(async (_, token) => {
-      const repl = await ReplConnection.getOrCreateInstance(uri);
-      repl.show();
-      return repl.executeQuery(
-        isPython(uri)
-          ? getPythonWrapper(text, "serialized")
-          : isSql(uri)
-            ? getSQLWrapper(text)
-            : text,
-        token,
-      );
-    });
-    runner.cancellable = Cancellable.EXECUTOR;
-    runner.title = `Executing ${basename} on ${ext.REPL}.`;
-    await runner.execute();
+    const repl = await ReplConnection.getOrCreateInstance(uri);
+    repl.show();
+    await repl.executeQuery(
+      isPython(uri)
+        ? getPythonWrapper(text, "serialized")
+        : isSql(uri)
+          ? getSQLWrapper(text)
+          : text,
+    );
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
       logger,
@@ -783,16 +900,55 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 }
 
+export type RunTarget =
+  | { kind: "repl" }
+  | { kind: "connection"; conn: InsightsConnection | LocalConnection };
+
+/**
+ * Decides where a q/Python/SQL file runs. Precedence:
+ *   1. persisted assignment (kdb.connectionMap): an explicit REPL assignment is
+ *      sticky; an explicit connection is resolved (offering to connect);
+ *   2. otherwise the active target — the last-focused KX terminal (REPL or a
+ *      connection console);
+ *   3. otherwise the REPL (getOrCreateInstance picks the active REPL or spawns
+ *      one for the workspace).
+ */
+export async function resolveRunTarget(
+  uri: Uri,
+): Promise<RunTarget | undefined> {
+  const server = getServerForUri(uri);
+
+  if (server === ext.REPL) {
+    return { kind: "repl" };
+  }
+
+  if (server !== undefined) {
+    const conn = await findConnection(uri);
+    return conn ? { kind: "connection", conn } : undefined;
+  }
+
+  const active = getActiveTarget();
+  if (active?.kind === "connection") {
+    const conn = new ConnectionManagementService().retrieveConnectedConnection(
+      active.connLabel,
+    );
+    if (conn) {
+      return { kind: "connection", conn };
+    }
+  }
+
+  return { kind: "repl" };
+}
+
 export async function runActiveEditor(type?: ExecutionTypes) {
   /* c8 ignore start */
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
-    let server = getServerForUri(uri);
-    if (server === ext.REPL) {
-      server = undefined;
-      await setServerForUri(uri, undefined);
+    const runTarget = await resolveRunTarget(uri);
+    if (!runTarget) {
+      return;
     }
-    if (server === undefined) {
+    if (runTarget.kind === "repl") {
       await runOnRepl(ext.activeTextEditor, type);
       notifyExecution(
         RunFlag.Run |
@@ -804,10 +960,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       );
       return;
     }
-    const conn = await findConnection(uri);
-    if (!conn) {
-      return;
-    }
+    const conn = runTarget.conn;
 
     const isInsights = conn instanceof InsightsConnection;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
@@ -907,27 +1060,34 @@ function update(uri: Uri) {
 }
 
 export class ConnectionLensProvider implements CodeLensProvider {
+  readonly onDidChangeCodeLenses = onDidChangeSessionMaps;
+
   async provideCodeLenses(document: TextDocument) {
     const server = getServerForUri(document.uri);
     const top = new Range(0, 0, 0, 0);
 
-    const pickConnection = new CodeLens(top, {
-      command: "kdb.file.pickConnection",
-      title: server ? `Run on ${server}` : "Choose Connection",
-    });
+    const lenses: CodeLens[] = [];
+
+    lenses.push(
+      new CodeLens(top, {
+        command: "kdb.file.pickConnection",
+        title: server ? `Run on ${server}` : "Run on active",
+      }),
+    );
 
     if (server) {
       const conn = await getConnectionForServer(server);
       if (!isSql(document.uri) && conn instanceof InsightsNode) {
-        const pickTarget = new CodeLens(top, {
-          command: "kdb.file.pickTarget",
-          title: getTargetForUri(document.uri) || "scratchpad",
-        });
-        return [pickConnection, pickTarget];
+        lenses.push(
+          new CodeLens(top, {
+            command: "kdb.file.pickTarget",
+            title: getTargetForUri(document.uri) || "scratchpad",
+          }),
+        );
       }
     }
 
-    return [pickConnection];
+    return lenses;
   }
 }
 
@@ -992,6 +1152,7 @@ export function connectWorkspaceCommands() {
     /* c8 ignore stop */
   });
   window.onDidChangeActiveTextEditor(activeEditorChanged);
+  window.onDidChangeActiveNotebookEditor(() => updateStatusBarItems());
   activeEditorChanged(window.activeTextEditor);
 }
 

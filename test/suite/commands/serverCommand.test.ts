@@ -45,6 +45,7 @@ import * as dataSourceUtils from "../../../src/utils/dataSource";
 import { ExecutionConsole } from "../../../src/utils/executionConsole";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
+import * as plotUtils from "../../../src/utils/plotUtils";
 import * as kdbValidators from "../../../src/validators/kdbValidator";
 import { createMockDatasource } from "../../fixtures/config/datasource";
 
@@ -191,6 +192,45 @@ describe("serverCommand", () => {
       sinon.assert.calledWithExactly(
         notifyStub,
         "Invalid alias",
+        sinon.match.any,
+        sinon.match.any,
+      );
+    });
+
+    it("should reject an insecure http:// Insights URL", async () => {
+      getInsightsStub.returns({});
+      insightsData.server = "http://insightsservername.com/";
+      await serverCommand.addInsightsConnection(insightsData);
+      sinon.assert.notCalled(updateInsightsStub);
+      sinon.assert.calledWithExactly(
+        notifyStub,
+        sinon.match(/require a secure https:\/\/ URL/),
+        sinon.match.any,
+        sinon.match.any,
+      );
+    });
+
+    it("should reject an Insights URL with no protocol", async () => {
+      getInsightsStub.returns({});
+      insightsData.server = "insightsservername.com";
+      await serverCommand.addInsightsConnection(insightsData);
+      sinon.assert.notCalled(updateInsightsStub);
+      sinon.assert.calledWithExactly(
+        notifyStub,
+        sinon.match(/require a secure https:\/\/ URL/),
+        sinon.match.any,
+        sinon.match.any,
+      );
+    });
+
+    it("should reject an empty Insights URL", async () => {
+      getInsightsStub.returns({});
+      insightsData.server = "";
+      await serverCommand.addInsightsConnection(insightsData);
+      sinon.assert.notCalled(updateInsightsStub);
+      sinon.assert.calledWithExactly(
+        notifyStub,
+        "Insights connection address is required.",
         sinon.match.any,
         sinon.match.any,
       );
@@ -747,6 +787,32 @@ describe("serverCommand", () => {
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
     });
+
+    it("should write an encoded png to a plot", async () => {
+      const png = "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAYAAAALpr0T";
+      const writePlotToFileStub = sinon.stub(plotUtils, "writePlotToFile");
+      sinon.stub(notifications, "notify");
+      scratchpadResult.data = png;
+      isVisibleStub.returns(false);
+
+      await serverCommand.writeScratchpadResult(
+        scratchpadResult,
+        "dummy query",
+        "connLabel",
+        "testFile.kdb.q",
+        false,
+        true,
+        "2",
+        "0",
+      );
+
+      sinon.assert.calledOnceWithExactly(
+        writePlotToFileStub,
+        `data:image/png;base64,${png}`,
+      );
+      sinon.assert.notCalled(writeQueryResultsToViewStub);
+      sinon.assert.notCalled(writeQueryResultsToConsoleStub);
+    });
   });
 
   describe("resetScratchPad", () => {
@@ -1273,6 +1339,9 @@ describe("serverCommand", () => {
     beforeEach(() => {
       windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");
       retrieveConnectionStub = sinon.stub(connService, "retrieveConnection");
+      // connect() starts the console for real, which opens a fresh output
+      // channel on a host that is no longer accepting them.
+      sinon.stub(ExecutionConsole, "start").returns(_executionConsole);
     });
 
     afterEach(() => {

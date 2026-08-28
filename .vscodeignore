@@ -16,7 +16,6 @@ CLAUDE.md
 build-api.js
 qcumber.q
 secure-processes.md
-scripts
 qcumber.sh 
 esbuild.mjs
 sonar-project.properties
@@ -30,3 +29,4 @@ out-test/
 .test-folder/
 .prettierignore
 .README
+scripts/

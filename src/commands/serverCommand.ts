@@ -42,13 +42,11 @@ import {
 } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
-import { Plot } from "../models/plot";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { DataSourcesPanel } from "../panels/datasource";
 import { NewConnectionPannel } from "../panels/newConnection";
-import { ChartEditorProvider } from "../services/chartEditorProvider";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import {
   InsightsMetaNode,
@@ -72,6 +70,7 @@ import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { MessageKind, Runner, notify } from "../utils/notifications";
+import { writePlotToFile } from "../utils/plotUtils";
 import {
   checkIfIsDatasource,
   addQueryHistory,
@@ -82,12 +81,7 @@ import {
 } from "../utils/queryUtils";
 import { openUrl } from "../utils/uriUtils";
 import {
-  addWorkspaceFile,
-  openWith,
-  setUriContent,
-  workspaceHas,
-} from "../utils/workspace";
-import {
+  validateInsightsServerUrl,
   validateServerAlias,
   validateServerName,
   validateServerPort,
@@ -120,8 +114,14 @@ export async function addInsightsConnection(
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
+  const serverValidation = validateInsightsServerUrl(insightsData.server);
+  if (serverValidation) {
+    notify(serverValidation, MessageKind.ERROR, { logger });
+    return;
+  }
+  const server = insightsData.server!.trim();
   if (insightsData.alias === undefined || insightsData.alias === "") {
-    const host = new url.URL(insightsData.server!);
+    const host = new url.URL(server);
     insightsData.alias = host.host;
   }
 
@@ -138,10 +138,6 @@ export async function addInsightsConnection(
     return;
   } else {
     const key = insightsData.alias;
-    let server = insightsData.server || "";
-    if (!/^https?:\/\//i.exec(server)) {
-      server = "https://" + server;
-    }
     if (insights === undefined) {
       insights = {
         key: {
@@ -201,6 +197,12 @@ export async function editInsightsConnection(
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
+  const serverValidation = validateInsightsServerUrl(insightsData.server);
+  if (serverValidation) {
+    notify(serverValidation, MessageKind.ERROR, { logger });
+    return;
+  }
+  insightsData.server = insightsData.server.trim();
   const isConnectedConn = isConnected(oldAlias);
   await disconnect(oldAlias);
   if (insightsData.alias === undefined || insightsData.alias === "") {
@@ -867,8 +869,7 @@ export async function disconnect(connLabel: string): Promise<void> {
   connMngService.disconnect(connLabel);
 
   if (ext.connectedConnectionList.length === 0) {
-    const queryConsole = ExecutionConsole.start();
-    queryConsole.dispose();
+    ExecutionConsole.current?.dispose();
     DataSourcesPanel.close();
     ext.serverProvider.reload();
   }
@@ -884,6 +885,7 @@ export async function executeQuery(
   isFromConnTree?: boolean,
   token?: CancellationToken,
   timeout?: number,
+  requestID?: string,
 ): Promise<any> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
@@ -935,6 +937,7 @@ export async function executeQuery(
     isStringfy,
     isPython,
     timeout,
+    requestID,
   );
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
@@ -972,26 +975,7 @@ export async function executeQuery(
             (isInsights ? ".ie" : ".kdb") +
             (isPython ? ".py" : ".q"),
         });
-        const active = ext.activeTextEditor;
-        if (active) {
-          const plot = <Plot>{
-            charts: [{ data }],
-          };
-          const uri = await addWorkspaceFile(
-            active.document.uri,
-            "plot",
-            ".plot",
-          );
-          if (!workspaceHas(uri)) {
-            await workspace.openTextDocument(uri);
-            await openWith(
-              uri,
-              ChartEditorProvider.viewType,
-              ViewColumn.Beside,
-            );
-          }
-          await setUriContent(uri, JSON.stringify(plot));
-        }
+        await writePlotToFile(data);
       } else {
         await writeQueryResultsToView(
           results,
@@ -1354,6 +1338,10 @@ export async function writeQueryResultsToView(
     connVersion,
     isPython,
   );
+  // Results went to the (possibly hidden) Results view — leave a clickable
+  // pointer in the connection's console so the user knows where they landed and
+  // can open the view on demand.
+  ext.connectionConsoles.get(connLabel)?.appendResultsPointer();
   let isSuccess = true;
 
   if (!checkIfIsDatasource(type)) {
@@ -1406,6 +1394,17 @@ export async function writeScratchpadResult(
 
   if (executorName.endsWith(".kxnb")) {
     return errorMsg ?? result;
+  }
+
+  const plot = errorMsg ? undefined : resultToBase64(result);
+
+  if (plot) {
+    notify("GG Plot displayed", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Results.Graphics.Displayed.ie" + (isPython ? ".py" : ".q"),
+    });
+    await writePlotToFile(plot);
+    return;
   }
 
   if (ext.isResultsTabVisible) {

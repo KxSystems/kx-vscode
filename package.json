@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "icon": "resources/images/kx-logo-vs.png",
   "repository": {
     "type": "git",
@@ -384,6 +384,18 @@
       },
       {
         "category": "KX",
+        "command": "kdb.results.destination.terminal",
+        "title": "Terminal",
+        "icon": "$(terminal)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.results.destination.view",
+        "title": "kdb Results View",
+        "icon": "$(table)"
+      },
+      {
+        "category": "KX",
         "command": "kdb.datasource.import",
         "title": "Import Datasource from old format"
       },
@@ -669,6 +681,18 @@
         "contents": "No connections registered.\n[Add Connection](command:kdb.connections.add)"
       }
     ],
+    "submenus": [
+      {
+        "id": "kdb.results.destination.terminalMenu",
+        "label": "Output Destination",
+        "icon": "$(terminal)"
+      },
+      {
+        "id": "kdb.results.destination.viewMenu",
+        "label": "Output Destination",
+        "icon": "$(table)"
+      }
+    ],
     "menus": {
       "commandPalette": [
         {
@@ -825,6 +849,14 @@
         },
         {
           "command": "kdb.resultsPanel.export.csv",
+          "when": "false"
+        },
+        {
+          "command": "kdb.results.destination.terminal",
+          "when": "false"
+        },
+        {
+          "command": "kdb.results.destination.view",
           "when": "false"
         },
         {
@@ -1080,6 +1112,38 @@
           "group": "inline"
         }
       ],
+      "editor/title": [
+        {
+          "submenu": "kdb.results.destination.terminalMenu",
+          "group": "navigation@-0.5",
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py|kdb\\.json)$/i && !kdb.showResultsInView"
+        },
+        {
+          "submenu": "kdb.results.destination.viewMenu",
+          "group": "navigation@-0.5",
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py|kdb\\.json)$/i && kdb.showResultsInView"
+        }
+      ],
+      "kdb.results.destination.terminalMenu": [
+        {
+          "command": "kdb.results.destination.terminal",
+          "group": "navigation@0"
+        },
+        {
+          "command": "kdb.results.destination.view",
+          "group": "navigation@1"
+        }
+      ],
+      "kdb.results.destination.viewMenu": [
+        {
+          "command": "kdb.results.destination.terminal",
+          "group": "navigation@0"
+        },
+        {
+          "command": "kdb.results.destination.view",
+          "group": "navigation@1"
+        }
+      ],
       "editor/title/run": [
         {
           "command": "kdb.scratchpad.python.run.file",
@@ -1237,16 +1301,13 @@
     "test": "node ./out-test/test/runTest.js",
     "test:file": "cross-env TEST_FILE=$1 npm run test",
     "test:folder": "cross-env TEST_FOLDER=$1 npm run test",
+    "pretest:e2e": "npm run build && npm run pretest",
+    "test:e2e": "node ./out-test/test/runE2E.js",
     "coverage": "rimraf out && c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
-    "preui-test-cmd": "tsc --outdir out-test --strict false",
-    "ui-test-cmd": "extest setup-and-run --code_version 1.103.0 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
-    "preui-test": "rimraf out-test .test-extensions",
-    "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
-    "q-test": "q qcumber.q -color -src ./test/q/main.q -test ./test/q/tests",
-    "mock-insights-server": "node --experimental-strip-types scripts/mock-insights-server/server.ts"
+    "q-test": "bash qcumber.sh -src test/q/main.q -test test/q/tests"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.4",
+    "@eslint/js": "9.39.5",
     "@shoelace-style/shoelace": "2.20.1",
     "@types/fs-extra": "11.0.4",
     "@types/jsdom": "28.0.3",
@@ -1260,19 +1321,18 @@
     "@types/ws": "8.18.1",
     "@vscode/extension-telemetry": "1.4.0",
     "@vscode/python-extension": "1.0.6",
-    "@vscode/test-electron": "2.5.2",
+    "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "3.9.2",
-    "axios": "1.16.1",
+    "axios": "1.19.0",
     "c8": "11.0.0",
     "chevrotain": "11.1.2",
     "cross-env": "10.1.0",
-    "esbuild": "0.28.1",
-    "eslint": "9.39.4",
+    "esbuild": "0.28.2",
+    "eslint": "9.39.5",
     "eslint-plugin-header": "3.1.1",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-license-header": "0.8.0",
     "eslint-plugin-unused-imports": "4.3.0",
-    "extract-zip": "2.0.1",
     "fs-extra": "11.3.6",
     "glob": "13.0.6",
     "jsdom": "29.1.1",
@@ -1285,7 +1345,7 @@
     "mock-fs": "5.5.0",
     "moment": "2.30.1",
     "moment-duration-format": "2.3.2",
-    "moment-timezone": "0.6.2",
+    "moment-timezone": "0.6.3",
     "node-q": "2.7.0",
     "npm-check-updates": "22.0.1",
     "pick-port": "2.2.1",
@@ -1296,12 +1356,11 @@
     "sinon": "21.1.2",
     "typescript": "5.8.3",
     "typescript-eslint": "8.48.1",
-    "vscode-extension-tester": "8.23.0",
     "vscode-languageclient": "9.0.1",
     "vscode-languageserver": "9.0.1",
     "vscode-languageserver-textdocument": "1.0.13",
     "vscode-uri": "3.1.0",
-    "ws": "8.21.0"
+    "ws": "8.21.3"
   },
   "overrides": {
     "@microsoft/applicationinsights-core-js": "3.3.11",
@@ -1312,7 +1371,7 @@
     "serialize-javascript": ">=7.0.5",
     "fast-uri": ">=3.1.2",
     "tmp": ">=0.2.6",
-    "undici": "7.28.0",
+    "undici": "7.29.0",
     "form-data": ">=4.0.6"
   }
 }

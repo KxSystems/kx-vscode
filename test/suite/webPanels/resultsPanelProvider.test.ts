@@ -592,14 +592,14 @@ describe("ResultsPanelProvider", () => {
       sinon.restore();
     });
 
-    it("should show an error message if there are no results to export", () => {
+    it("should show an error message if there are no results to export", async () => {
       sinon.stub(ext, "resultPanelCSV").value("");
       const showErrorMessageStub = sinon.stub(
         vscode.window,
         "showErrorMessage",
       );
 
-      resultsPanel.exportToCsv();
+      await resultsPanel.exportToCsv();
 
       assert.equal(
         showErrorMessageStub.calledOnceWith("No results to export"),
@@ -607,7 +607,7 @@ describe("ResultsPanelProvider", () => {
       );
     });
 
-    it("should export to CSV if there are results and a folder is open", () => {
+    it("should export to CSV if there are results and a folder is open", async () => {
       sinon.stub(ext, "resultPanelCSV").value("some,csv,data");
       const workspaceUri = vscode.Uri.parse("file:///path/to/workspace");
       sinon
@@ -615,12 +615,33 @@ describe("ResultsPanelProvider", () => {
         .value([{ uri: workspaceUri }]);
       const exportToCsvStub = sinon.stub(utils, "exportToCsv");
 
-      resultsPanel.exportToCsv();
+      await resultsPanel.exportToCsv();
 
       assert.equal(exportToCsvStub.calledOnceWith(workspaceUri), true);
     });
 
-    it("should show error message if no results to export", () => {
+    it("should not resolve until the file has been written", async () => {
+      sinon.stub(ext, "resultPanelCSV").value("some,csv,data");
+      sinon
+        .stub(vscode.workspace, "workspaceFolders")
+        .value([{ uri: vscode.Uri.parse("file:///path/to/workspace") }]);
+      let written = false;
+      sinon.stub(utils, "exportToCsv").callsFake(
+        () =>
+          new Promise<void>((resolve) =>
+            setTimeout(() => {
+              written = true;
+              resolve();
+            }, 10),
+          ),
+      );
+
+      await resultsPanel.exportToCsv();
+
+      assert.strictEqual(written, true);
+    });
+
+    it("should show error message if no results to export", async () => {
       const windowMock = sinon.mock(vscode.window);
       const workspaceMock = sinon.mock(vscode.workspace);
       const exportToCsvStub = sinon.stub(utils, "exportToCsv");
@@ -633,7 +654,7 @@ describe("ResultsPanelProvider", () => {
 
       workspaceMock.expects("getWorkspaceFolder").never();
 
-      resultsPanel.exportToCsv();
+      await resultsPanel.exportToCsv();
 
       windowMock.verify();
       workspaceMock.verify();

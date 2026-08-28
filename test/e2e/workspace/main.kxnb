@@ -1,0 +1,34 @@
+{
+  "cells": [
+    {
+      "kind": 2,
+      "languageId": "q",
+      "value": "nbtrades:([]sym:`AAPL`MSFT;px:172.5 410.0)\n\"NOTEBOOK_Q\"",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "sql",
+      "value": "select sym, px from nbtrades where px > 200",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "python",
+      "value": "print(\"NOTEBOOK_PY\")",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "sql",
+      "value": "",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "python",
+      "value": "   ",
+      "outputs": []
+    }
+  ]
+}

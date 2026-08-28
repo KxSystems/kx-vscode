@@ -32,8 +32,8 @@ Run these with `npm run scriptName`
 | `lint`        | Lint all `ts` files                         |
 | `package`     | Produce `vsix`                              |
 | `test`        | Perform [Unit Tests](https://github.com/KxSystems/kx-vscode/tree/dev/test/suite)|
+| `test:e2e`    | Perform [End to End Tests](https://github.com/KxSystems/kx-vscode/tree/dev/test/e2e)|
 | `coverage`    | Produce coverage reports|
-| `ui-test`     | Perform [UI Tests](https://github.com/KxSystems/kx-vscode/tree/dev/test/ui)|
 | `q-test`      | Perform [q Tests](https://github.com/KxSystems/kx-vscode/tree/dev/test/q/tests)|
 
 ## Configuring SonarQube
@@ -50,8 +50,6 @@ Pressing F5 with a file in the extension open will launch a VSCode instance runn
 
 Extension [Unit Tests](https://github.com/KxSystems/kx-vscode/tree/dev/test/suite) can be debugged by selecting `Extension Tests` target from run and debug tab.
 
-Extension [UI Tests](https://github.com/KxSystems/kx-vscode/tree/dev/test/ui) can be debugged by selecting `Extension UI Tests` target from run and debug tab. UI Tests use [Page Object APIs](https://github.com/redhat-developer/vscode-extension-tester/wiki/Page-Object-APIs).
-
 Testing will stop at any breakpoint set in test or source file.
 
 ![Run and debug tab](../images/dev-run-and-debug-tab.png)
@@ -60,9 +58,85 @@ Single test file can also be debugged by clicking run button from the editor too
 
 ![Debug single test file](../images/dev-debug-single-test-file.png)
 
+## End to end Testing
+
+`npm run test:e2e` opens a second VS Code window on
+[test/e2e/workspace](https://github.com/KxSystems/kx-vscode/tree/dev/test/e2e/workspace)
+and drives the extension the way a user does: real commands, real workspace
+settings, the real language server. Nothing is stubbed.
+
+The test files sit directly in [test/e2e](https://github.com/KxSystems/kx-vscode/tree/dev/test/e2e);
+everything they are built out of — the stand-ins, the fixtures, the helpers that
+drive VS Code — lives in
+[test/e2e/utils](https://github.com/KxSystems/kx-vscode/tree/dev/test/e2e/utils).
+
+Stand-ins take the place of everything outside the extension, and each records
+what it is sent, which is what the tests assert on:
+
+- `fakeq/bin/q`, spawned by the REPL because the workspace points
+  `kdb.qHomeDirectoryWorkspace` at it. It answers the REPL handshake and writes
+  a `.transcript.log` next to the directory each REPL runs in.
+- `qserver.ts`, a kdb+ IPC server the connection tests run in process. It uses
+  the same codec as `node-q`, and the suite adds and removes its connection
+  itself, so no connection has to be prepared beforehand.
+- `insightsServer.ts`, a KDB Insights instance, over HTTPS with a self-signed
+  certificate generated into `test/e2e/certs/` on the first run — Insights
+  connections must be `https://`, and a certificate no CA vouches for is what
+  the connection's "insecure" flag exists for. It answers the OAuth code flow,
+  the configuration, meta, scratchpad and service gateway endpoints, and the
+  scratchpad log websocket. Which endpoints the extension picks depends on the
+  version the instance reports, so `version` and `queryEnvironments` are
+  settings on it and a test can stand up an older instance by changing them.
+- the browser the OAuth code flow opens, replaced in `insights.ts` by a
+  function that walks the authorization redirect back to the extension's own
+  local server. It exists because there is no one in a test window to open the
+  URL — the code flow, the token request and the certificate handling all still
+  run for real.
+- the person a notification is addressed to, replaced in `prompt.ts`. A
+  notification's buttons are drawn by the workbench and no API presses one, so
+  a command that asks before it acts could otherwise not be driven to either
+  answer. Every notification is recorded, and one is answered only when a test
+  has said what to answer it with.
+- the person a dialog is addressed to, replaced in `dialog.ts` — the file
+  dialogs a command opens to read or write a file, and the quick picks it asks a
+  question through. These are drawn by the workbench too, and no API hands one a
+  path, so the connections panel's import and export could otherwise not be
+  driven at all. Each is recorded with the options it was raised with, so a test
+  can assert what the user was offered as well as what was done with the answer.
+  An unanswered quick pick is left to the workbench the way an unanswered
+  notification is; an unanswered file dialog is answered as one closed without a
+  choice, since nothing in a test window would dismiss it.
+
+The last three replace a VS Code API rather than a process, and all of them
+stand in for the user rather than for anything the extension talks to.
+
+What a tree view draws is the one thing these tests cannot reach: VS Code
+exposes no API for another extension's tree items, and the window loads the
+bundled extension, so a test cannot reach the providers either. Tree contents
+are covered in `test/suite` instead; what a tree item's command does when it is
+run is still driven from here, with the item the tree would hand it.
+
+The workspace also turns off everything the workbench would otherwise put in
+front of a test: `files.simpleDialog.enable` replaces the system file dialog
+with a quick pick, so a dialog `dialog.ts` has not been told how to answer
+leaves the window usable rather than blocking it behind a native sheet, and the
+`explorer.confirm*` settings drop the confirmations the explorer raises before
+it deletes or moves a file.
+`window.dialogStyle` is deliberately not among them — it is application scoped,
+so a workspace file cannot set it, and modal messages are answered through
+`prompt.ts` rather than by their style.
+
+Both suites can be debugged with the `E2E Tests` and `E2E Test Selected File`
+targets in the run and debug tab.
+
+These tests are macOS and Linux only for now: the REPL spawns q through
+`cmd.exe` on Windows, which cannot run the extensionless stand-in.
+
 ## q Testing
 
-To run the tests locally, you need to
+To run the tests non-interactively, you can just run `npm run q-test` and they will be run in the q-build container.
+
+To run the tests interactively, you need to
 1. Install Python version 3.12 installed, as the tests rely on an old version of pykx that doesn't support the latest Python
 ```
 ~/kx-vscode $ brew install python@3.12
@@ -78,8 +152,6 @@ To run the tests locally, you need to
 3. kdb+ installed, with the `q` executable in the system path
 4. [AxLibraries](https://code.kx.com/developer/getting-started/) should be installed, according to its readme.
 
-You can then run the tests with `npm run q-test`.
-
 To debug the tests, create a file with a username and password to secure the q process, then start a q process using that authentication.
 ```
 $ echo "myusername:mypassword" >> users.txt
@@ -92,6 +164,23 @@ q)\l test/q/main.q
 ```
 
 You can now connect to the process on port 1234 and step through the tests
+
+## Python and matplotlib
+
+Start a virtual environment
+
+```sh
+python3 -m venv ~/kx-vscode/venv
+source venv/bin/activate
+```
+
+Then install matplotlib
+```sh
+pip install --upgrade matplotlib
+```
+
+and PyKX, following the steps here
+https://code.kx.com/pykx/getting-started/installing.html#1-install-kdb-x-python
 
 ## Restart Extension Host
 
@@ -107,9 +196,25 @@ npm exec ncu
 
 ## Releasing a new version
 
+Let the doc writer, or the #docs channel if they're unavailable, know that a release is about to go out so they can publish the docs concurrently.
+
 Check out the branch to release, update the version number in package.json, then run
 ```
 git tag v1.2.3
 git push origin v1.2.3
 ```
 Then, in the [Actions](https://github.com/KxSystems/kx-vscode/actions) tab, open the pipeline that was just created, and give manual approval once the action reaches that point. It can take 10 minutes for the version number to be updated in the extension marketplace, even after it updates the timestamp to reflect the new release.
+
+Announce the release in #kx-product-releases, using the template
+```
+:rocket: VSCode Extension x.y.z has been released
+
+https://github.com/KxSystems/kx-vscode/releases/tag/vX.Y.Z
+https://marketplace.visualstudio.com/items?itemName=KX.kdb
+
+
+vX.Y.Z
+Release date: [Today's Date]
+
+[The change log, which can be found by clicking the release [here](https://github.com/KxSystems/kx-vscode/tags)]
+```

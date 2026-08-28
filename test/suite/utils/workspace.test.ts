@@ -92,6 +92,32 @@ describe("Workspace tests", () => {
       assert.ok(result.fsPath.endsWith("test-1.q"));
       sinon.restore();
     }).timeout(5000);
+
+    it("should skip a name held by an unsaved document", async () => {
+      sinon.stub(loggers, "kdbOutputLog");
+      workspaceMock.value(testWorkspaceFolder);
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .returns(testWorkspaceFolder[0]);
+
+      // findFiles never sees an untitled document, so without the extra check
+      // this name would be handed out again and the unsaved plot overwritten.
+      const taken = vscode.Uri.joinPath(
+        testWorkspaceFolder[0].uri,
+        ".kx",
+        "test-1.q",
+      ).with({ scheme: "untitled" });
+      sinon.stub(vscode.workspace, "textDocuments").value([{ uri: taken }]);
+
+      const result = await workspaceHelper.addWorkspaceFile(
+        vscode.Uri.file("test.q"),
+        "test",
+        ".q",
+      );
+
+      assert.ok(result.fsPath.endsWith("test-2.q"));
+      sinon.restore();
+    }).timeout(5000);
   });
 
   describe("setUriContent", () => {

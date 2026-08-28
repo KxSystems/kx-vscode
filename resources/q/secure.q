@@ -1,7 +1,8 @@
 // A file to mimic a locked-down process.
 // This is for testing only, and is not sufficient to secure a production process
 
-// \l resources/q/vscode.q
+// This file must be first generated from resources/q/vscode.q by running `node build-api.js`
+\l out/vscode.q
 
 \d .secure
 

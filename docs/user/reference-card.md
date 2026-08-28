@@ -76,6 +76,12 @@ timestamp: 2026-07-10
 | kdb.linting                                         | resource | `boolean` | `false`       |
 | kdb.refactoring                                     | resource | `string`  | `"Workspace"` |
 
+`kdb.connectionMap`, `kdb.targetMap` and `kdb.timeoutMap` are keyed by
+workspace relative path, so they only cover files inside the workspace. Files
+opened from outside the workspace can still be assigned a connection, an
+execution target and a timeout, but those assignments are kept in memory and
+are lost when VS Code restarts.
+
 ## Execution
 
 | Type                | REPL | My q | IE SP | IE q/SQL | IE API | IE UDA | IE Populate SP |
@@ -93,6 +99,9 @@ timestamp: 2026-07-10
 | Datasource          |      |      |       |    ✓     |   ✓    |   ✓    |       ✓        |
 
 `REPL` and `My q` requires [PyKX](use-pykx-within-repl.md) for Python support.
+
+`quke` files support selection and current line execution only — there is no
+whole file run.
 
 ## Telemetry
 
@@ -200,6 +209,7 @@ timestamp: 2026-07-10
 | Results.Graphics.Displayed.kdb.py |              | src/commands/serverCommand.ts            |
 | Results.Graphics.Displayed.ie.q   |              | src/commands/serverCommand.ts            |
 | Results.Graphics.Displayed.ie.py  |              | src/commands/serverCommand.ts            |
+| Results.Graphics.Displayed.ie.ws  |              | src/classes/scratchpadLogger.ts          |
 | ¦                                 |              |                                          |
 | Language.References               |              | server/src/qLangServer.ts                |
 | Language.Definition               |              | server/src/qLangServer.ts                |

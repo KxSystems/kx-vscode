@@ -15,12 +15,16 @@ import {
   ExtensionContext,
   languages,
   LogOutputChannel,
+  NotebookCell,
+  NotebookCellExecution,
+  NotebookCellOutput,
   OutputChannel,
   StatusBarItem,
   TextEditor,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 
+import { ConnectionConsole } from "./classes/connectionConsole";
 import { InsightsConnection } from "./classes/insightsConnection";
 import { LocalConnection } from "./classes/localConnection";
 import { kdbAuthMap } from "./models/connectionsModels";
@@ -52,6 +56,10 @@ export namespace ext {
   export let serverProvider: KdbTreeProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
+  // Output destination toggle, driven by the editor-toolbar selector: when true
+  // query results render in the kdb Results View, when false they go to the
+  // connection's output console (Terminal). Mirrored to the
+  // "kdb.showResultsInView" context key for the selector's menu state.
   export let isResultsTabVisible: boolean;
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
   export let dataSourceTreeProvider: WorkspaceTreeProvider;
@@ -72,6 +80,19 @@ export namespace ext {
   export const connectedConnectionList: Array<
     LocalConnection | InsightsConnection
   > = [];
+  // One output-only console terminal per connected connection, keyed by
+  // connLabel. Created on connect, disposed on disconnect.
+  export const connectionConsoles = new Map<string, ConnectionConsole>();
+  export interface CellExecutionTarget {
+    execution: NotebookCellExecution;
+    cell: NotebookCell;
+    index: number;
+    outputs: NotebookCellOutput[];
+    applied?: Thenable<void>;
+    endedAt?: number;
+    superseded?: boolean;
+  }
+  export const pendingImageTargets = new Map<string, CellExecutionTarget>();
   export const connectedContextStrings: Array<string> = [];
   export const queryHistoryAvailableToCopy: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
@@ -190,7 +211,18 @@ export namespace ext {
     // "Namespaces", removed to investigate
   ];
 
-  export const qNamespaceFilters = [".q", ".Q", ".h", ".z", ".o", ".j", ".m"];
+  // The namespaces a process keeps to itself, which are its own business
+  // rather than the user's and so are left out of the listing.
+  export const qNamespaceFilters = [
+    ".q",
+    ".Q",
+    ".h",
+    ".z",
+    ".o",
+    ".j",
+    ".m",
+    ".s",
+  ];
 
   export const constants = {
     names: [

@@ -27,6 +27,14 @@ jobs:
         if: runner.os == 'Linux'
       - run: npm test
         if: runner.os != 'Linux'
+      # The stand-in q the end to end workspace points at cannot run under
+      # cmd.exe, so these are macOS and Linux only for now.
+      - name: End to end tests
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+      - name: End to end tests
+        if: runner.os == 'macOS'
+        run: npm run test:e2e
 
       - name: Code coverage summary
         if: runner.os == 'Linux'
@@ -51,11 +59,17 @@ jobs:
           name: lcov
           path: coverage-reports/lcov.info
           retention-days: 1
+
   test-q:
     runs-on: ubuntu-latest
+    # Needs the private GitLab registry credentials and a kdb+ license, neither
+    # of which is available to pull requests from forks.
+    if: "! github.event.pull_request.head.repo.fork"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Build q API
+        run: node build-api.js
       - name: Login to GitLab
         uses: docker/login-action@v3
         with:
@@ -66,17 +80,9 @@ jobs:
         run: ./qcumber.sh -src test/q/main.q -test test/q/tests
         env:
           KDB_K4LICENSE_B64: ${{ secrets.KDB_K4LICENSE_B64 }}
+
   q-api:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-    - run: node build-api.js
-    - uses: actions/upload-artifact@v4
-      with:
-        name: q-api
-        path: out/vscode.q
-      
+    uses: ./.github/workflows/q-api.yml
 
   app-sec:
     needs: [test, test-q]

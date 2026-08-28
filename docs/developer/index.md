@@ -12,9 +12,10 @@ Architecture and contributor notes for the kdb VS Code extension. See also the
 [user notes](../user/index.md).
 
 > The end-user product documentation is hosted separately at
-> <https://gitlab.com/kxdev/documentation/vscode-docs/>.
+> <https://code.kx.com/vscode/>.
 
 - [Development](development.md) — setup, recommended extensions, scripts, debugging, releasing.
+- [What the End to End Suite Covers](end-to-end-coverage.md) — the map of what `test:e2e` asserts, and what it cannot reach.
 - [Log, Telemetry and User Notifications](log-telemetry-and-user-notifications.md) — the single notification entry point.
 - [Progress Notifications](progress-notifications.md) — creating progress notifications.
 - [Query Execution Call Hierarchy](query-execution-call-hierarchy.md) — file types, actions and their entry points.

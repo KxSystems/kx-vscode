@@ -2,8 +2,10 @@
 # Enable via repo Settings -> Pages -> Source: "Deploy from a branch",
 # then pick the branch and the /docs folder. No Actions workflow required.
 
-title: kdb VS Code Extension Docs
-description: In-tree documentation for the kdb VS Code extension, ported from the GitHub wiki in Open Knowledge Format.
+title: kdb VS Code Extension Wiki
+description:
+  In-tree documentation for the kdb VS Code extension, ported from the GitHub
+  wiki in Open Knowledge Format.
 theme: jekyll-theme-cayman
 
 # jekyll-relative-links (auto-enabled on GitHub Pages) rewrites relative .md

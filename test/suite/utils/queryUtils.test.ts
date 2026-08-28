@@ -12,7 +12,6 @@
  */
 
 import * as assert from "assert";
-import * as fs from "node:fs";
 import * as path from "node:path";
 import * as sinon from "sinon";
 
@@ -106,13 +105,57 @@ describe("queryUtils", () => {
       assert.deepEqual(result, expectedRes);
     });
 
-    it("should work with rows with newlines", () => {
+    it("should keep a column list on one line", () => {
+      const rows = [
+        "id#$#;header;#$#components",
+        '"KXI-1"#$#;#$#"Insights UI"\n"Scratchpad"',
+        '"KXI-2"#$#;#$#"Pipeline UI"',
+      ];
+      const result = queryUtils.convertRowsToConsole(rows);
+
+      assert.deepEqual(result, [
+        "id       components                  ",
+        "-------------------------------------",
+        '"KXI-1"  "Insights UI" "Scratchpad"  ',
+        '"KXI-2"  "Pipeline UI"               ',
+      ]);
+    });
+
+    it("should cut a row that does not fit the width", () => {
+      const rows = [
+        "aa#$#;header;#$#bb#$#;header;#$#cc",
+        "11#$#;#$#22#$#;#$#33",
+      ];
+      const result = queryUtils.convertRowsToConsole(rows, 11);
+
+      assert.deepEqual(result, ["aa  bb  c..", "-----------", "11  22  3.."]);
+    });
+
+    it("should leave a row that fits the width alone", () => {
+      const rows = ["a#$#;header;#$#b", "1#$#;#$#2"];
+      const result = queryUtils.convertRowsToConsole(rows, 40);
+
+      assert.deepEqual(result, ["a  b  ", "------", "1  2  "]);
+    });
+
+    it("should keep the start of a column too wide to fit", () => {
+      const rows = ["id#$#;header;#$#text", "1#$#;#$#0123456789abcdef"];
+      const result = queryUtils.convertRowsToConsole(rows, 12);
+
+      assert.deepEqual(result, [
+        "id  text  ..",
+        "------------",
+        "1   012345..",
+      ]);
+    });
+
+    it("should keep a row with newlines in it on one line", () => {
       const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
       const expectedRes = [
-        "a   b   ",
-        "--------",
-        "a1  \na2  b1  \n    b2  ",
-        "3   4   ",
+        "a      b      ",
+        "--------------",
+        "a1 a2  b1 b2  ",
+        "3      4      ",
       ];
       const result = queryUtils.convertRowsToConsole(rows);
 
@@ -382,6 +425,44 @@ describe("queryUtils", () => {
       ]);
 
       assert.ok(result);
+    });
+
+    const encoded = Buffer.from(
+      [...png, ...img].map((value) => parseInt(value, 16)),
+    ).toString("base64");
+
+    it("should return base64 for an encoded png", () => {
+      const result = queryUtils.resultToBase64(encoded);
+
+      assert.strictEqual(result, `data:image/png;base64,${encoded}`);
+    });
+
+    it("should return base64 for a scratchpad result carrying an encoded png", () => {
+      const result = queryUtils.resultToBase64({
+        error: false,
+        errorMsg: "",
+        data: encoded,
+      });
+
+      assert.strictEqual(result, `data:image/png;base64,${encoded}`);
+    });
+
+    it("should return base64 for an encoded png with a non zero ninth byte", () => {
+      const bytes = [...png, ...img].map((value) => parseInt(value, 16));
+      bytes[8] = 0x80;
+      const other = Buffer.from(bytes).toString("base64");
+
+      assert.strictEqual(other[10], "q");
+      assert.strictEqual(
+        queryUtils.resultToBase64(other),
+        `data:image/png;base64,${other}`,
+      );
+    });
+
+    it("should return undefined for a string that is not a png", () => {
+      const result = queryUtils.resultToBase64("not an image");
+
+      assert.strictEqual(result, undefined);
     });
   });
 

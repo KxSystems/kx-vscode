@@ -13,6 +13,8 @@
 
 import { commands } from "vscode";
 
+import { setActiveTarget } from "../classes/activeTarget";
+import { ConnectionConsole } from "../classes/connectionConsole";
 import { LocalConnection } from "../classes/localConnection";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "./kdbTreeProvider";
@@ -208,6 +210,21 @@ export class ConnectionManagementService {
     ext.serverProvider.reload();
 
     ext.activeConnection.setActive();
+    setActiveTarget({ kind: "connection", connLabel: node.label });
+  }
+
+  // Clears the active connection without disconnecting it — used when a REPL
+  // becomes the active target, so no connection shows as active (green).
+  public clearActiveConnection(): void {
+    if (!ext.activeConnection) {
+      return;
+    }
+    ext.activeConnection.setInactive();
+    ext.activeConnection = undefined;
+    ext.connectionNode = undefined;
+    commands.executeCommand("setContext", "kdb.connected.active", false);
+    commands.executeCommand("setContext", "kdb.pythonEnabled", false);
+    ext.serverProvider.reload();
   }
 
   public disconnect(connLabel: string): void {
@@ -280,9 +297,20 @@ export class ConnectionManagementService {
       "kdb.connected",
       ext.connectedContextStrings,
     );
+    this.createConnectionConsole(connNode.label);
     this.setActiveConnection(connNode);
     ext.connectionNode = connNode;
     ext.serverProvider.reload();
+  }
+
+  private createConnectionConsole(connLabel: string): void {
+    ext.connectionConsoles.get(connLabel)?.dispose();
+    const console = new ConnectionConsole(connLabel, () =>
+      this.disconnect(connLabel),
+    );
+    ext.connectionConsoles.set(connLabel, console);
+    // Reveal (and focus) the new console so it becomes the active target.
+    console.reveal();
   }
 
   public connectFailBehaviour(connLabel: string, error?: unknown): void {
@@ -296,6 +324,8 @@ export class ConnectionManagementService {
     connection: LocalConnection | InsightsConnection,
   ): void {
     const connType = connection instanceof LocalConnection ? "KDB" : "Insights";
+    ext.connectionConsoles.get(connection.connLabel)?.dispose();
+    ext.connectionConsoles.delete(connection.connLabel);
     ext.connectedConnectionList.splice(
       ext.connectedConnectionList.indexOf(connection),
       1,
@@ -329,6 +359,7 @@ export class ConnectionManagementService {
     stringify?: boolean,
     isPython?: boolean,
     timeout?: number,
+    requestID?: string,
   ): Promise<any> {
     let selectedConn;
     if (connLabel) {
@@ -357,6 +388,7 @@ export class ConnectionManagementService {
         isPython,
         !stringify,
         timeout,
+        requestID,
       );
     }
   }

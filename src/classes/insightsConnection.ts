@@ -12,6 +12,7 @@
  */
 
 import axios, { AxiosRequestConfig } from "axios";
+import * as crypto from "crypto";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
 import { CancellationToken } from "vscode-languageclient";
@@ -29,6 +30,7 @@ import { JwtUser } from "../models/jwt_user";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
 import { StructuredTextResults } from "../models/queryResult";
 import { ScratchpadRequestBody } from "../models/scratchpad";
+import { ScratchpadResult } from "../models/scratchpadResult";
 import { UDARequestBody } from "../models/uda";
 import {
   getCurrentToken,
@@ -43,11 +45,32 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { getHeaders } from "../utils/queryUtils";
+import { getHeaders, isEncodedPng } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const logger = "insightsConnection";
+
+/**
+ * Builds a human-readable message from an error thrown by an Insights REST
+ * request. Handles the cases where the gateway/coordinator goes away mid-query:
+ * a 500 with a plain-text reason (e.g. "Coordinator connection has closed"), a
+ * 502 with an HTML error page, or a dropped socket with no response at all.
+ */
+export function extractInsightsRequestError(error: any): string {
+  const response = error?.response;
+  if (response) {
+    const data = response.data;
+    const detail =
+      typeof data === "string" && data.trim() && !data.trim().startsWith("<")
+        ? data.trim()
+        : response.statusText || "";
+    return `Request failed with status ${response.status}${
+      detail ? `: ${detail}` : ""
+    }`;
+  }
+  return error?.message ?? String(error);
+}
 
 export class InsightsConnection {
   public connected: boolean;
@@ -74,33 +97,52 @@ export class InsightsConnection {
       await this.getConfig();
       await this.getApiConfig();
       await this.getMeta();
+      this.startLogger();
     } else this.connected = false;
     return this.connected;
   }
 
   public disconnect(): boolean {
     ext.context.secrets.delete(this.node.details.alias);
+    if (this.scratchpadLogger) {
+      this.scratchpadLogger.disconnect();
+      this.scratchpadLogger = undefined;
+    }
     this.connected = false;
     return this.connected;
   }
 
-  public async setActive() {
+  /**
+   * Opens the scratchpad log websocket, which carries the stdout the extension
+   * renders as images. Bound to the connection rather than to which connection
+   * is active, because notebooks and workbooks run against the connection they
+   * are mapped to — closing this when another connection became active meant
+   * their output never arrived. Safe to call repeatedly.
+   */
+  private startLogger() {
     if (
       this.insightsVersion &&
       isBaseVersionGreaterOrEqual(this.insightsVersion, "1.18")
     ) {
       if (!this.scratchpadLogger) {
-        this.scratchpadLogger = new ScratchpadLogger(this.node.details);
+        this.scratchpadLogger = new ScratchpadLogger(
+          this.node.details,
+          this.connLabel,
+        );
       }
 
       this.scratchpadLogger.connect();
     }
   }
 
+  public async setActive() {
+    // A safety net only: the logger normally starts on connect. Still called
+    // here for connections that were established before the version was known.
+    this.startLogger();
+  }
+
   public setInactive() {
-    if (this.scratchpadLogger) {
-      this.scratchpadLogger.disconnect();
-    }
+    // Deliberately does not close the log websocket — see startLogger().
   }
 
   public update() {
@@ -230,8 +272,15 @@ export class InsightsConnection {
   }
 
   public async getApiConfig() {
+    if (!this.connected) {
+      return undefined;
+    }
+
+    // The endpoint itself only exists from 1.13; all it decides is whether the
+    // query environment prefix is used. The endpoints are resolved either way —
+    // an older instance has its own set, and until they are defined nothing,
+    // not even the meta, can be requested.
     if (
-      this.connected &&
       this.insightsVersion &&
       isBaseVersionGreaterOrEqual(this.insightsVersion, "1.13")
     ) {
@@ -246,20 +295,19 @@ export class InsightsConnection {
         configUrl.toString(),
       );
 
-      if (options === undefined) {
-        return undefined;
+      if (options !== undefined) {
+        notify("REST", MessageKind.DEBUG, {
+          logger,
+          params: { url: options.url },
+        });
+
+        const configResponse = await axios(options);
+
+        this.apiConfig = configResponse.data;
       }
-
-      notify("REST", MessageKind.DEBUG, {
-        logger,
-        params: { url: options.url },
-      });
-
-      const configResponse = await axios(options);
-
-      this.apiConfig = configResponse.data;
-      this.defineEndpoints();
     }
+
+    this.defineEndpoints();
   }
 
   public async getConfig() {
@@ -617,29 +665,43 @@ export class InsightsConnection {
         params: { url: options.url },
       });
 
-      return await axios(options).then((response: any) => {
-        if (!token?.isCancellationRequested) {
-          if (response.data.error) {
+      return await axios(options)
+        .then((response: any) => {
+          if (!token?.isCancellationRequested) {
+            if (response.data.error) {
+              notify(
+                `Error occured while populating scratchpad: ${response.data.errorMsg || "Unknown error"}`,
+                silent ? MessageKind.DEBUG : MessageKind.ERROR,
+                {
+                  logger,
+                  params: { status: response.status },
+                },
+              );
+            } else {
+              notify(
+                `Scratchpad variable (${variableName}) populated.`,
+                silent ? MessageKind.DEBUG : MessageKind.INFO,
+                {
+                  logger,
+                  params: { status: response.status },
+                },
+              );
+            }
+          }
+        })
+        .catch((error: any) => {
+          if (!token?.isCancellationRequested) {
+            const errorMsg = extractInsightsRequestError(error);
             notify(
-              "Error occured while populating scratchpad.",
+              `Error occured while populating scratchpad: ${errorMsg}`,
               silent ? MessageKind.DEBUG : MessageKind.ERROR,
               {
                 logger,
-                params: { status: response.status },
-              },
-            );
-          } else {
-            notify(
-              `Scratchpad variable (${variableName}) populated.`,
-              silent ? MessageKind.DEBUG : MessageKind.INFO,
-              {
-                logger,
-                params: { status: response.status },
+                params: { status: error?.response?.status },
               },
             );
           }
-        }
-      });
+        });
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -733,6 +795,7 @@ export class InsightsConnection {
     isPython?: boolean,
     isTableView?: boolean,
     timeout?: number,
+    requestID?: string,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       if (isTableView === undefined) {
@@ -748,6 +811,7 @@ export class InsightsConnection {
         context: context || ".",
         sampleFn: "first",
         sampleSize: 10000,
+        requestID: requestID || crypto.randomUUID(),
       };
 
       if (this.insightsVersion) {
@@ -775,35 +839,47 @@ export class InsightsConnection {
         params: { url: options.url },
       });
 
-      return await axios(options).then((response: any) => {
-        if (response.data.error) {
-          return response.data;
-        } else if (query === "") {
-          notify(
-            `Scratchpad created for connection: ${this.connLabel}.`,
-            MessageKind.DEBUG,
-            { logger },
-          );
-        } else {
-          notify(`Status: ${response.status}`, MessageKind.DEBUG, {
-            logger,
-          });
-          if (!response.data.error) {
-            if (isTableView) {
-              if (
-                this.insightsVersion &&
-                isBaseVersionGreaterOrEqual(this.insightsVersion, "1.12")
-              ) {
-                response.data = JSON.parse(
-                  response.data.data,
-                ) as StructuredTextResults;
+      return await axios(options)
+        .then((response: any) => {
+          if (response.data.error) {
+            return response.data;
+          } else if (query === "") {
+            notify(
+              `Scratchpad created for connection: ${this.connLabel}.`,
+              MessageKind.DEBUG,
+              { logger },
+            );
+          } else {
+            notify(`Status: ${response.status}`, MessageKind.DEBUG, {
+              logger,
+            });
+            if (!response.data.error) {
+              if (isTableView && !isEncodedPng(response.data.data)) {
+                if (
+                  this.insightsVersion &&
+                  isBaseVersionGreaterOrEqual(this.insightsVersion, "1.12")
+                ) {
+                  response.data = JSON.parse(
+                    response.data.data,
+                  ) as StructuredTextResults;
+                }
               }
+              return response.data;
             }
             return response.data;
           }
-          return response.data;
-        }
-      });
+        })
+        .catch((error: any) => {
+          const errorMsg = extractInsightsRequestError(error);
+          notify(`Scratchpad query failed: ${errorMsg}`, MessageKind.DEBUG, {
+            logger,
+            params: { status: error?.response?.status },
+          });
+          return {
+            error: true,
+            errorMsg,
+          } as ScratchpadResult;
+        });
     } else {
       this.noConnectionOrEndpoints();
     }

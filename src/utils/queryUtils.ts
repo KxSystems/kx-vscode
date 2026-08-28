@@ -208,7 +208,7 @@ export function getPythonWrapper(
   query: string,
   returnFormat: "serialized" | "text" | "structuredText",
 ): string {
-  const wrapper = normalizeQSQLQuery(queryWrapper(true, false));
+  const wrapper = queryWrapper(true, false);
   const args = {
     returnFormat,
     code: normalizePyQuery(query),
@@ -232,7 +232,7 @@ export function getSQLWrapper(query: string): string {
   return `s)${query.replace(/(?:\r\n|\n)/g, " ")}`;
 }
 
-export function convertRows(rows: any[]): any {
+export function convertRows(rows: any[], width = 0): any {
   if (rows.length === 0) {
     return [];
   }
@@ -249,29 +249,57 @@ export function convertRows(rows: any[]): any {
     });
     result.push(values.join("#$#;#$#"));
   }
-  return convertRowsToConsole(result).join("\n") + "\n\n";
+  return convertRowsToConsole(result, width).join("\n") + "\n\n";
 }
 
-export function convertRowsToConsole(rows: string[]): string[] {
+// Marks a line the console could not show in full, as a q console marks one.
+const CUT = "..";
+
+// Cuts a line to the given width, as a q console cuts one to its `\c`. A width
+// of 0 means no limit — the shared output channel scrolls horizontally, where
+// a terminal only wraps, and a wrapped table is no longer a table.
+function fit(line: string, width: number): string {
+  if (!width || line.length <= width) {
+    return line;
+  }
+  return line.slice(0, Math.max(0, width - CUT.length)) + CUT;
+}
+
+// A cell that arrives with newlines in it — a nested list, rendered down the
+// page by whatever produced it — would otherwise carry the rest of its row
+// with it and leave every column after it hanging. A console table keeps one
+// row to one line.
+function flatten(value: string) {
+  const parts = String(value ?? "").split("\n");
+  const last = parts.length - 1;
+  return parts
+    .map((part, index) => {
+      const head = index === 0 ? part.trimEnd() : part.trimStart();
+      return index === last ? head : head.trimEnd();
+    })
+    .filter((part, index) => index === 0 || part)
+    .join(" ")
+    .trimEnd();
+}
+
+export function convertRowsToConsole(rows: string[], width = 0): string[] {
   if (rows.length === 0) {
     return [];
   }
   const haveHeader = rows[0].includes("#$#;header;#$#");
   let header;
   if (haveHeader) {
-    header = rows[0].split("#$#;header;#$#");
+    header = rows[0].split("#$#;header;#$#").map(flatten);
     rows.shift();
   }
-  const vector = rows.map((row) => row.split("#$#;#$#"));
+  const vector = rows.map((row) => row.split("#$#;#$#").map(flatten));
   if (header) {
     vector.unshift(header);
   }
 
   const columnCounters = vector[0].reduce((counters: number[], _, j) => {
-    // get max width of column, splitting values by new line
     const maxLength = vector.reduce(
-      (max, row) =>
-        Math.max(max, Math.max(...row[j].split("\n").map((l) => l.length))),
+      (max, row) => Math.max(max, (row[j] || "").length),
       0,
     );
     counters.push(maxLength + 2);
@@ -281,38 +309,21 @@ export function convertRowsToConsole(rows: string[]): string[] {
   vector.forEach((row) => {
     row.forEach((value, j) => {
       const counter = columnCounters[j];
-      const lines = value.split("\n");
-      row[j] = "";
-
-      lines.forEach((line, lineIndex) => {
-        if (lineIndex > 0) {
-          // prepend spacing to align lines within the same cell
-          const prevCol = columnCounters[j - 1];
-          if (prevCol) {
-            row[j] += "\n" + " ".repeat(prevCol);
-          } else {
-            row[j] += "\n";
-          }
+      const diff = counter - value.length;
+      if (diff > 0) {
+        if (!haveHeader && j !== columnCounters.length - 1) {
+          row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
+        } else {
+          row[j] = value + " ".repeat(diff);
         }
-
-        const diff = counter - line.length;
-        if (diff > 0) {
-          if (!haveHeader && j !== columnCounters.length - 1) {
-            row[j] += line + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
-          } else {
-            row[j] += line + " ".repeat(diff);
-          }
-        }
-      });
+      }
     });
   });
 
-  const result = vector.map((row) => row.join(""));
+  const result = vector.map((row) => fit(row.join(""), width));
 
-  const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
-  const totalCounter = "-".repeat(totalCount);
   if (haveHeader) {
-    result.splice(1, 0, totalCounter);
+    result.splice(1, 0, "-".repeat(result[0].length));
   }
 
   return result;
@@ -424,8 +435,30 @@ export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
 }
 
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const PNG_BASE64 = "iVBORw0KGg";
+
+/**
+ * Tells whether a result is a PNG the process encoded with .Q.btoa, which the
+ * Insights display API does for any image, whatever return format was asked
+ * for.
+ * @param result The result, or the data field of one
+ * @returns Whether it is a base64 encoded PNG
+ */
+export function isEncodedPng(result: any): result is string {
+  return typeof result === "string" && result.startsWith(PNG_BASE64);
+}
 
 export function resultToBase64(result: any): string | undefined {
+  const encoded = isEncodedPng(result)
+    ? result
+    : isEncodedPng(result?.data)
+      ? result.data
+      : undefined;
+
+  if (encoded) {
+    return `data:image/png;base64,${encoded}`;
+  }
+
   const bytes =
     (Array.isArray(result?.data?.rows) && result?.data?.rows[0].Value) ||
     (Array.isArray(result?.columns) && result.columns[0]?.values) ||
