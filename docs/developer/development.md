@@ -97,9 +97,18 @@ what it is sent, which is what the tests assert on:
   a command that asks before it acts could otherwise not be driven to either
   answer. Every notification is recorded, and one is answered only when a test
   has said what to answer it with.
+- the person a dialog is addressed to, replaced in `dialog.ts` — the file
+  dialogs a command opens to read or write a file, and the quick picks it asks a
+  question through. These are drawn by the workbench too, and no API hands one a
+  path, so the connections panel's import and export could otherwise not be
+  driven at all. Each is recorded with the options it was raised with, so a test
+  can assert what the user was offered as well as what was done with the answer.
+  An unanswered quick pick is left to the workbench the way an unanswered
+  notification is; an unanswered file dialog is answered as one closed without a
+  choice, since nothing in a test window would dismiss it.
 
-The last two replace a VS Code API rather than a process, and both stand in for
-the user rather than for anything the extension talks to.
+The last three replace a VS Code API rather than a process, and all of them
+stand in for the user rather than for anything the extension talks to.
 
 What a tree view draws is the one thing these tests cannot reach: VS Code
 exposes no API for another extension's tree items, and the window loads the
@@ -109,8 +118,10 @@ run is still driven from here, with the item the tree would hand it.
 
 The workspace also turns off everything the workbench would otherwise put in
 front of a test: `files.simpleDialog.enable` replaces the system file dialog
-with a quick pick a test can accept, and the `explorer.confirm*` settings drop
-the confirmations the explorer raises before it deletes or moves a file.
+with a quick pick, so a dialog `dialog.ts` has not been told how to answer
+leaves the window usable rather than blocking it behind a native sheet, and the
+`explorer.confirm*` settings drop the confirmations the explorer raises before
+it deletes or moves a file.
 `window.dialogStyle` is deliberately not among them — it is application scoped,
 so a workspace file cannot set it, and modal messages are answered through
 `prompt.ts` rather than by their style.
