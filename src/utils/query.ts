@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { isBaseVersionGreaterOrEqual } from "./core";
 import { convertTimeToTimestamp } from "./dataSource";
 import { cleanAssemblyName, cleanDapName } from "./shared";
 import { parseUDAList } from "./uda";
@@ -22,6 +23,7 @@ import {
 } from "../models/dataSource";
 import { MetaObjectPayload } from "../models/meta";
 import {
+  DISTRIBUTED_SINCE,
   GET_DATA,
   QueryFile,
   createGetData,
@@ -39,13 +41,25 @@ export function parseQueryList(meta: MetaObjectPayload): UDA[] {
 
 /**
  * The execution targets the connection reports, named as a qSQL request wants
- * them: a tier for each assembly instance, and each DAP process inside it.
+ * them: the assembly on its own for the distributed target, a tier for each of
+ * its instances, and each DAP process inside those. Distributed scopes only
+ * came in with Insights 1.13, so a connection older than that is offered the
+ * tiers alone.
  */
-export function parseTargets(meta: MetaObjectPayload): string[] {
+export function parseTargets(
+  meta: MetaObjectPayload,
+  version?: string,
+): string[] {
   const targets = new Set<string>();
+  const distributed =
+    !!version && isBaseVersionGreaterOrEqual(version, DISTRIBUTED_SINCE);
 
   for (const dap of meta.dap || []) {
-    const tier = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+    const assembly = cleanAssemblyName(dap.assembly);
+    if (distributed) {
+      targets.add(assembly);
+    }
+    const tier = `${assembly} ${dap.instance}`;
     targets.add(tier);
     if (dap.dap) {
       targets.add(`${tier} ${cleanDapName(dap.dap)}`);

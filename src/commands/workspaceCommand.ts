@@ -45,6 +45,7 @@ import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
 import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
+import { DISTRIBUTED, DISTRIBUTED_SINCE } from "../models/query";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
@@ -52,6 +53,7 @@ import {
   calculateSeconds,
   formatSeconds,
   getBasename,
+  isBaseVersionGreaterOrEqual,
   isQuick,
   isQuickAlias,
   offerConnectAction,
@@ -570,7 +572,12 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
     daps.unshift(createMetaDapFromTarget(target));
   }
 
-  const tierItems = buildTierOptionsWithSeparators(daps);
+  const tierItems = buildTierOptionsWithSeparators(
+    daps,
+    isInsights &&
+      !!conn.insightsVersion &&
+      isBaseVersionGreaterOrEqual(conn.insightsVersion, DISTRIBUTED_SINCE),
+  );
   const defaultOption = isInsights ? "scratchpad" : "default";
 
   const items: QuickPickItem[] = [{ label: defaultOption }];
@@ -657,7 +664,7 @@ export async function pickTimeout(uri: Uri) {
 
 function createTierKey(dap: MetaDap): string {
   const cleanedAssembly = cleanAssemblyName(dap.assembly);
-  return `${cleanedAssembly} ${dap.instance}`;
+  return dap.instance ? `${cleanedAssembly} ${dap.instance}` : cleanedAssembly;
 }
 
 function targetExists(target: string, daps: MetaDap[]): boolean {
@@ -726,7 +733,10 @@ function createMetaDapFromTarget(target: string): MetaDap {
 // }
 
 // Options separated by Assembly
-function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+function buildTierOptionsWithSeparators(
+  daps: MetaDap[],
+  distributed: boolean,
+): QuickPickItem[] {
   const assemblyMap = new Map<string, Map<string, MetaDap[]>>();
 
   daps.forEach((dap) => {
@@ -734,7 +744,7 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
       assemblyMap.set(dap.assembly, new Map<string, MetaDap[]>());
     }
 
-    const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+    const tierKey = createTierKey(dap);
     const tierMap = assemblyMap.get(dap.assembly)!;
     const cleanedDap = { ...dap };
 
@@ -758,6 +768,14 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
       kind: QuickPickItemKind.Separator,
       label: `${assembly}`,
     });
+
+    // The assembly on its own: the RC fans the query out over every tier.
+    if (distributed) {
+      items.push({
+        label: cleanAssemblyName(assembly),
+        description: DISTRIBUTED,
+      });
+    }
 
     const tierMap = assemblyMap.get(assembly)!;
     const sortedTierKeys = Array.from(tierMap.keys()).sort((a, b) =>

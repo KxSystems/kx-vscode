@@ -96,6 +96,22 @@ export const GET_DATA = ".kxi.getData";
 export const QSQL = "qSQL";
 export const SQL = "SQL";
 
+/**
+ * The name Insights gives the target that leaves the instance out of a qSQL
+ * request: the RC takes the query and fans it out over every tier of the
+ * assembly. The target itself is the assembly on its own, so the word is a
+ * label, never part of the value.
+ */
+export const DISTRIBUTED = "distributed";
+
+/** The first Insights version whose qSQL scope accepts an omitted instance. */
+export const DISTRIBUTED_SINCE = "1.13";
+
+/** How an execution target reads in a dropdown. */
+export function targetLabel(target: string) {
+  return target.includes(" ") ? target : `${target} ${DISTRIBUTED}`;
+}
+
 export function isGetData(query: UDA | undefined) {
   return query?.name === GET_DATA;
 }
@@ -289,7 +305,8 @@ export function createGetData(): UDA {
 export const QSQL_PARAMS: UDAParam[] = [
   {
     name: "target",
-    description: "Tier or DAP process to run the query on.",
+    description:
+      "Tier or DAP process to run the query on. An assembly on its own is the distributed target: every tier of it.",
     isReq: true,
     type: [-11],
     typeStrings: ["Symbol"],

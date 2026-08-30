@@ -52,9 +52,12 @@ qSQL and SQL are text queries rather than analytics called with named
 arguments, so each has a single `query` parameter — a box the size of a
 query — and qSQL a `target` dropdown above it, listing the tiers the
 connection reports and the DAP processes inside them as `assembly instance` and
-`assembly instance dap`. A target the connection does not list is kept and
-shown, so a file written against another connection opens unchanged. Neither
-field can be removed.
+`assembly instance dap`. Above those sits `assembly distributed` — the assembly
+on its own, which leaves the instance out of the request so the resource
+coordinator fans the query out over every tier. It is offered on Insights 1.13
+and later, the versions whose qSQL scope accepts a missing instance. A target
+the connection does not list is kept and shown, so a file written against
+another connection opens unchanged. Neither field can be removed.
 
 qSQL takes two optional parameters from the **+ Add parameter** list. `agg` is a
 unary function run on the aggregator over the results the processes return,

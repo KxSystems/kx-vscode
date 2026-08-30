@@ -144,8 +144,34 @@ describe("query", () => {
       ]);
     });
 
+    it("should offer the assembly on its own from 1.13", () => {
+      const targets = parseTargets(
+        <MetaObjectPayload>{
+          dap: [
+            { assembly: "assembly-qe", instance: "rdb", dap: "rdb-1:1234" },
+          ],
+        },
+        "1.13",
+      );
+      assert.deepStrictEqual(targets, [
+        "assembly",
+        "assembly rdb",
+        "assembly rdb rdb-1",
+      ]);
+    });
+
+    it("should leave the assembly out before 1.13", () => {
+      const targets = parseTargets(
+        <MetaObjectPayload>{
+          dap: [{ assembly: "assembly-qe", instance: "rdb" }],
+        },
+        "1.12",
+      );
+      assert.deepStrictEqual(targets, ["assembly rdb"]);
+    });
+
     it("should read nothing out of an empty meta", () => {
-      assert.deepStrictEqual(parseTargets(<MetaObjectPayload>{}), []);
+      assert.deepStrictEqual(parseTargets(<MetaObjectPayload>{}, "1.13"), []);
     });
   });
 

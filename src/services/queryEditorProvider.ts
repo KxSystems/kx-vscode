@@ -104,7 +104,10 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
     const queries = parseQueryList(connection.meta.payload);
     this.cache.set(connLabel, queries);
     this.tables.set(connLabel, parseTables(connection.meta.payload));
-    this.targets.set(connLabel, parseTargets(connection.meta.payload));
+    this.targets.set(
+      connLabel,
+      parseTargets(connection.meta.payload, connection.insightsVersion),
+    );
     return queries;
   }
 

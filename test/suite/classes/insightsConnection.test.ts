@@ -280,6 +280,16 @@ describe("insightsConnection", () => {
       assert.strictEqual(body.scope.assembly, "assembly-qe");
     });
 
+    it("should leave the instance out of a distributed scope", () => {
+      const body = <any>(
+        withMeta("1.20").generateQSqlBody("q", "assembly", "1.20")
+      );
+
+      assert.strictEqual(body.scope.assembly, "assembly-qe");
+      assert.strictEqual(body.scope.tier, undefined);
+      assert.strictEqual(body.scope.dap, undefined);
+    });
+
     it("should send them on the older body shape too", () => {
       const body = <any>withMeta("1.12").generateQSqlBody(
         "q",

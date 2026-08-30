@@ -16,7 +16,7 @@ import { customElement } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 
 import { baseStyles } from "./baseStyles";
-import { KdbSelect } from "./kdbSelect";
+import { KdbSelect, SelectOption } from "./kdbSelect";
 import { queryStyles } from "./queryStyles";
 import { QueryCommand, QueryMessage } from "../../models/messages";
 import {
@@ -27,6 +27,7 @@ import {
   isBuiltin,
   parseRows,
   serializeRows,
+  targetLabel,
   toDraft,
 } from "../../models/query";
 import {
@@ -330,7 +331,7 @@ export class KdbQueryView extends LitElement {
 
   renderSelect(
     value: string,
-    options: string[],
+    options: (string | SelectOption)[],
     handler: (event: Event) => void,
     empty = "",
     label = "",
@@ -345,9 +346,12 @@ export class KdbQueryView extends LitElement {
     `;
   }
 
-  suggestions(source: ParamSource) {
+  suggestions(source: ParamSource): (string | SelectOption)[] {
     if (source === "targets") {
-      return this.targets;
+      return this.targets.map((target) => ({
+        value: target,
+        label: targetLabel(target),
+      }));
     }
 
     if (source === "tables") {

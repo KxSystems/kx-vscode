@@ -617,11 +617,12 @@ describe("KdbQueryView", () => {
 
     it("should offer the connection's targets for the target", () => {
       view.query = createQsql();
-      view.targets = ["assembly rdb", "assembly rdb rdb-1"];
+      view.targets = ["assembly", "assembly rdb", "assembly rdb rdb-1"];
       assert.strictEqual(named("target").source, "targets");
       assert.deepStrictEqual(view.suggestions("targets"), [
-        "assembly rdb",
-        "assembly rdb rdb-1",
+        { value: "assembly", label: "assembly distributed" },
+        { value: "assembly rdb", label: "assembly rdb" },
+        { value: "assembly rdb rdb-1", label: "assembly rdb rdb-1" },
       ]);
       assert.ok(
         markup(view.renderParam(named("target"))).includes("<kdb-select"),
