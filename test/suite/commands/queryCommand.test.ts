@@ -21,6 +21,8 @@ import {
   convertDataSource,
   convertDataSources,
   toGetDataQuery,
+  toQsqlQuery,
+  toSqlQuery,
 } from "../../../src/commands/queryCommand";
 import * as workspaceCommand from "../../../src/commands/workspaceCommand";
 import { ext } from "../../../src/extensionVariables";
@@ -164,6 +166,69 @@ describe("queryCommand", () => {
     });
   });
 
+  describe("toQsqlQuery", () => {
+    it("should carry the aggregation and the labels over", () => {
+      const query = toQsqlQuery(
+        createDataSource(DataSourceTypes.QSQL, {
+          qsql: {
+            query: "select from trades",
+            selectedTarget: "assembly qe",
+            agg: "raze",
+            labels: { region: "emea" },
+          },
+        }),
+      );
+      const agg = query.params.find((param) => param.name === "agg");
+      const labels = query.params.find((param) => param.name === "labels");
+      assert.strictEqual(agg?.value, "raze");
+      assert.strictEqual(agg?.isVisible, true);
+      assert.strictEqual(labels?.value, '{"region":"emea"}');
+      assert.strictEqual(labels?.isVisible, true);
+    });
+
+    it("should leave the aggregation and the labels out when unset", () => {
+      const query = toQsqlQuery(
+        createDataSource(DataSourceTypes.QSQL, {
+          qsql: {
+            query: "select from trades",
+            selectedTarget: "assembly qe",
+            labels: {},
+          },
+        }),
+      );
+      const agg = query.params.find((param) => param.name === "agg");
+      const labels = query.params.find((param) => param.name === "labels");
+      assert.strictEqual(agg?.value, undefined);
+      assert.strictEqual(agg?.isVisible, false);
+      assert.strictEqual(labels?.value, undefined);
+      assert.strictEqual(labels?.isVisible, false);
+    });
+
+    it("should survive a datasource with no qsql section", () => {
+      const query = toQsqlQuery(<DataSourceFiles>{
+        dataSource: { selectedType: DataSourceTypes.QSQL },
+      });
+      assert.strictEqual(query.name, "qSQL");
+      assert.strictEqual(
+        query.params.find((param) => param.name === "query")?.value,
+        undefined,
+      );
+    });
+  });
+
+  describe("toSqlQuery", () => {
+    it("should survive a datasource with no sql section", () => {
+      const query = toSqlQuery(<DataSourceFiles>{
+        dataSource: { selectedType: DataSourceTypes.SQL },
+      });
+      assert.strictEqual(query.name, "SQL");
+      assert.strictEqual(
+        query.params.find((param) => param.name === "query")?.value,
+        undefined,
+      );
+    });
+  });
+
   describe("convertDataSource", () => {
     it("should write a query file for a UDA datasource", async () => {
       stubDocument(
@@ -190,35 +255,40 @@ describe("queryCommand", () => {
       );
     });
 
-    it("should write a workbook for a QSQL datasource", async () => {
+    it("should write a query file for a QSQL datasource", async () => {
       stubDocument(
         createDataSource(DataSourceTypes.QSQL, {
           qsql: { query: "select from trades", selectedTarget: "assembly qe" },
         }),
       );
       const target = await convertDataSource(uri);
-      assert.ok(target?.path.endsWith("/datasource.kdb.q"));
-      assert.strictEqual(written().content, "select from trades");
+      assert.ok(target?.path.endsWith("/datasource.kxquery"));
+      const query = JSON.parse(written().content).query;
+      assert.strictEqual(query.name, "qSQL");
+      assert.strictEqual(
+        query.params.find((param: any) => param.name === "query").value,
+        "select from trades",
+      );
+      assert.strictEqual(
+        query.params.find((param: any) => param.name === "target").value,
+        "assembly qe",
+      );
     });
 
-    it("should write a workbook for a SQL datasource", async () => {
+    it("should write a query file for a SQL datasource", async () => {
       stubDocument(
         createDataSource(DataSourceTypes.SQL, {
           sql: { query: "select * from trades" },
         }),
       );
       const target = await convertDataSource(uri);
-      assert.ok(target?.path.endsWith("/datasource.kdb.sql"));
-      assert.strictEqual(written().content, "select * from trades");
-    });
-
-    it("should move a kxuda file to the new key", async () => {
-      stubDocument({ version: 1, uda: { name: "test.uda", params: [] } });
-      const target = await convertDataSource(
-        vscode.Uri.file("/tmp/analytic.kxuda"),
+      assert.ok(target?.path.endsWith("/datasource.kxquery"));
+      const query = JSON.parse(written().content).query;
+      assert.strictEqual(query.name, "SQL");
+      assert.strictEqual(
+        query.params.find((param: any) => param.name === "query").value,
+        "select * from trades",
       );
-      assert.ok(target?.path.endsWith("/analytic.kxquery"));
-      assert.strictEqual(JSON.parse(written().content).query.name, "test.uda");
     });
 
     it("should carry the connection over", async () => {

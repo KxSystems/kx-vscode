@@ -119,21 +119,23 @@ Editing a field writes the file as you type; **Save** commits it to disk.
 
 ## Datasources
 
-`.kdb.json` datasources are superseded by this editor and by workbooks:
+`.kdb.json` datasources are superseded by this editor:
 
 | Datasource | Becomes |
 | :--------- | :------ |
 | API (getData) | a `.kxquery` running getData, with the filters, aggregations, groups, sorts and labels carried over |
 | UDA | a `.kxquery` running the same UDA |
-| QSQL | a `.kdb.q` workbook holding the query, with its execution target |
-| SQL | a `.kdb.sql` workbook holding the query |
+| QSQL | a `.kxquery` running qSQL, with the execution target, the aggregation and the labels carried over |
+| SQL | a `.kxquery` running SQL, with the query carried over |
 
-A QSQL or SQL datasource still converts to a workbook rather than to a
-`.kxquery`: it is a query in text, and a workbook is a better editor for text.
-The qSQL and SQL entries in the **API** dropdown are there for a query you
-want to keep as a `.kxquery` beside the rest.
+A converted QSQL query keeps the target the datasource named even when the
+connection you open it against does not offer it, so nothing is lost by
+converting against the wrong connection — pick the right target from the
+dropdown when you get there. To edit one of these queries as text instead, copy
+it into a workbook (`.kdb.q`, `.kdb.sql`), which gives you the language server,
+the run gutter and per-statement execution.
 
 Opening a `.kdb.json` converts it and opens what came out; the original file is
 left on disk. **KX: Convert datasources to queries** does the same across the
-whole workspace. Files from the earlier `.kxuda` format are converted the same
-way. Each converted file keeps the connection the original was bound to.
+whole workspace. Each converted file keeps the connection the original was bound
+to.

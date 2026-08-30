@@ -21,7 +21,12 @@ import {
 } from "./workspaceCommand";
 import { ext } from "../extensionVariables";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
-import { QueryFile, createGetData } from "../models/query";
+import {
+  QueryFile,
+  createGetData,
+  createQsql,
+  createSql,
+} from "../models/query";
 import { UDA } from "../models/uda";
 import { MessageKind, notify } from "../utils/notifications";
 import { setParamValue } from "../utils/query";
@@ -55,6 +60,41 @@ export function toGetDataQuery(dataSource: DataSourceFiles): UDA {
   }
 
   return query;
+}
+
+export function toQsqlQuery(dataSource: DataSourceFiles): UDA {
+  const query = createQsql();
+  const qsql = dataSource.dataSource.qsql;
+
+  setParamValue(query.params, "target", qsql?.selectedTarget);
+  setParamValue(query.params, "query", qsql?.query);
+  setParamValue(query.params, "agg", qsql?.agg);
+
+  const labels = qsql?.labels;
+  if (labels && Object.keys(labels).length) {
+    setParamValue(query.params, "labels", JSON.stringify(labels));
+  }
+
+  return query;
+}
+
+export function toSqlQuery(dataSource: DataSourceFiles): UDA {
+  const query = createSql();
+  setParamValue(query.params, "query", dataSource.dataSource.sql?.query);
+  return query;
+}
+
+function toQuery(dataSource: DataSourceFiles): UDA | undefined {
+  switch (dataSource?.dataSource?.selectedType) {
+    case DataSourceTypes.QSQL:
+      return toQsqlQuery(dataSource);
+    case DataSourceTypes.SQL:
+      return toSqlQuery(dataSource);
+    case DataSourceTypes.UDA:
+      return dataSource.dataSource.uda;
+    default:
+      return toGetDataQuery(dataSource);
+  }
 }
 
 function getLegacyApiBody(dataSource: DataSourceFiles) {
@@ -135,9 +175,9 @@ async function write(uri: Uri, content: string, source: Uri) {
 }
 
 /**
- * Converts one datasource, or one `.kxuda` file, to the format the query
- * editor reads. API and UDA datasources become a `.kxquery`; QSQL and SQL
- * become the workbook that supersedes them. The original is left on disk.
+ * Converts one datasource to the format the query editor reads. Every type
+ * becomes a `.kxquery`: API and UDA the query they named, QSQL and SQL the
+ * builtin the editor holds for them. The original is left on disk.
  *
  * Returns the uri of the file it wrote, or undefined when there was nothing to
  * convert or the target was already there.
@@ -154,39 +194,6 @@ export async function convertDataSource(uri: Uri): Promise<Uri | undefined> {
     return undefined;
   }
 
-  if (uri.path.endsWith(".kxuda")) {
-    const target = replaceExtension(uri, /\.kxuda$/, ".kxquery");
-    if (await exists(target)) {
-      return undefined;
-    }
-    const file: QueryFile = { version: 1, query: content.query || content.uda };
-    await write(target, JSON.stringify(file, null, 2), uri);
-    return target;
-  }
-
-  const dataSource = <DataSourceFiles>content;
-  const type = dataSource?.dataSource?.selectedType;
-
-  if (type === DataSourceTypes.QSQL || type === DataSourceTypes.SQL) {
-    const extension = type === DataSourceTypes.QSQL ? ".kdb.q" : ".kdb.sql";
-    const target = replaceExtension(uri, /\.kdb\.json$/, extension);
-    if (await exists(target)) {
-      return undefined;
-    }
-    const query =
-      type === DataSourceTypes.QSQL
-        ? dataSource.dataSource.qsql.query
-        : dataSource.dataSource.sql.query;
-    await write(target, query || "", uri);
-    if (type === DataSourceTypes.QSQL) {
-      const selectedTarget = dataSource.dataSource.qsql.selectedTarget;
-      if (selectedTarget) {
-        await setTargetForUri(target, selectedTarget);
-      }
-    }
-    return target;
-  }
-
   const target = replaceExtension(uri, /\.kdb\.json$/, ".kxquery");
   if (await exists(target)) {
     return undefined;
@@ -194,10 +201,7 @@ export async function convertDataSource(uri: Uri): Promise<Uri | undefined> {
 
   const file: QueryFile = {
     version: 1,
-    query:
-      type === DataSourceTypes.UDA
-        ? dataSource.dataSource.uda
-        : toGetDataQuery(dataSource),
+    query: toQuery(<DataSourceFiles>content),
   };
 
   await write(target, JSON.stringify(file, null, 2), uri);
@@ -205,7 +209,7 @@ export async function convertDataSource(uri: Uri): Promise<Uri | undefined> {
 }
 
 export async function convertDataSources() {
-  const files = await workspace.findFiles("**/*.{kdb.json,kxuda}");
+  const files = await workspace.findFiles("**/*.kdb.json");
   const converted: Uri[] = [];
 
   for (const file of files) {

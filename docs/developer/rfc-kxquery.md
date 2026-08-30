@@ -24,9 +24,9 @@ Remove `.kdb.json` datasources and the datasource editor. Replace them with:
 - **The query editor webview** — a custom editor for that file, in which getData
   and a deployed UDA are the same thing rendered by the same code.
 
-Datasource types that were only ever text — QSQL and SQL — become workbooks.
-Existing files are converted when opened; nothing is rewritten behind the user's
-back.
+QSQL and SQL are two more entries in that editor's query list, so every
+datasource converts to a `.kxquery`. Existing files are converted when opened;
+nothing is rewritten behind the user's back.
 
 ## Background
 
@@ -54,11 +54,13 @@ The editor was `src/webview/components/kdbDataSourceView.ts` — 1,916 lines,
 same query in a real editor: language server, completion, diagnostics, the run
 gutter, per-statement and selection execution, diff and blame. The only thing
 the datasource form added around them — a connection and a target — workbooks
-already have through `kdb.connectionMap` and `kdb.targetMap`. So a datasource
-converts to a workbook, and the tab machinery around the two of them — most of
-the component's complexity — is gone. What they are _not_ is a concept the query
-editor has to be without: they are two more entries in its query list (see
-below), which costs two parameter lists and no machinery at all.
+already have through `kdb.connectionMap` and `kdb.targetMap`. So the tab
+machinery around the two of them — most of the component's complexity — is gone,
+and a query you are writing belongs in a workbook. What they are _not_ is a
+concept the query editor has to be without: they are two more entries in its
+query list (see below), which costs two parameter lists and no machinery at all
+— and that is what a converted datasource becomes, so nothing about it has to be
+reassembled from a text file and a workspace setting.
 
 **The other two tabs were two editors for one concept.** API and UDA both call
 an analytic on Insights with named parameters, and they shared no code. The API
@@ -267,15 +269,15 @@ rather than through codicon's `.codicon-*` classes.
 ## Migration
 
 `DataSourceConverterProvider` is registered as the custom editor for
-`*.kdb.json` and `*.kxuda`. Opening one converts it, opens the result and closes
-itself. `KX: Convert datasources to queries` does the same across a workspace.
+`*.kdb.json`. Opening one converts it, opens the result and closes itself.
+`KX: Convert datasources to queries` does the same across a workspace.
 
 | Datasource    | Becomes                                                                                       |
 | :------------ | :-------------------------------------------------------------------------------------------- |
 | API (getData) | `.kxquery` running getData, with filters, aggregations, groups, sorts and labels carried over |
 | UDA           | `.kxquery` running the same UDA                                                               |
-| QSQL          | `.kdb.q` workbook, with its execution target                                                  |
-| SQL           | `.kdb.sql` workbook                                                                           |
+| QSQL          | `.kxquery` running the builtin qSQL query, with its target, aggregation and labels            |
+| SQL           | `.kxquery` running the builtin SQL query                                                      |
 
 The original file is left on disk, and each converted file keeps the connection
 the original was bound to. The API conversion reconstructs the legacy payload
@@ -295,8 +297,7 @@ happens exactly when the user is looking at the file.
   `kdb.datasource.import` → `kdb.query.create`, `kdb.query.refresh`,
   `kdb.query.convert`.
 - Custom editor `kdb.dataSourceEditor` (`*.kdb.json`) → `kdb.queryEditor`
-  (`*.kxquery`), with `kdb.dataSourceConverter` added for `*.kdb.json` and
-  `*.kxuda`.
+  (`*.kxquery`), with `kdb.dataSourceConverter` added for `*.kdb.json`.
 - Language `kdbdatasource` / `.kdb.json` → `kxquery` / `.kxquery`.
 
 Deleted: `kdbDataSourceView.ts` (1,916), its tests (1,208),
@@ -315,9 +316,13 @@ Deleted: `kdbDataSourceView.ts` (1,916), its tests (1,208),
 - **Put the qSQL target in `kdb.targetMap`, as a workbook's is.** Rejected: it
   is an argument to the request, and splitting a two-field query across a file
   and a workspace setting is worse than either.
-- **Convert QSQL and SQL datasources to `.kxquery` now that it holds them.**
-  Rejected: a workbook is still the better editor for a query in text, so the
-  conversion would land somewhere worse than it does today.
+- **Convert QSQL and SQL datasources to workbooks.** What the first cut did, on
+  the grounds that a workbook is the better editor for a query in text. Rejected
+  once the editor held qSQL and SQL: a datasource is a saved request, and a
+  workbook cannot hold one — `agg` and `labels` had nowhere to go and were
+  dropped, and the target moved into `kdb.targetMap`, splitting the request
+  across a file and a workspace setting. A workbook remains the right home for a
+  query the user is writing; it is the wrong shape for one being migrated.
 - **Keep `.kdb.json` and replace only the editor.** Rejected: the union-of-four
   shape is what forces dead branches, and a format that outlives its editor
   invites the next editor to support all four again.
@@ -337,7 +342,7 @@ Deleted: `kdbDataSourceView.ts` (1,916), its tests (1,208),
 - getData's structured parameters are not really scalar UDA arguments; `at`,
   `many` and `typed` exist to bridge that. The trade is one representation with
   three annotations against two parallel models with no shared code.
-- Conversion is one-way: a converted QSQL datasource is a workbook and does not
+- Conversion is one-way: a converted datasource is a `.kxquery` and does not
   become a datasource again.
 - Should `.kxquery` ever hold more than one analytic (a saved sequence), or is
   one-per-file permanent?

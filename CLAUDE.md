@@ -140,9 +140,9 @@ SQL and UDAs), `.plot` (Chart viewer), `.kxnb` (KX Notebook), `.kdb.q`/
 connection and execution target via the `kdb.connectionMap`/`kdb.targetMap`
 workspace settings.
 
-Datasources (`.kdb.json`) are gone: opening one converts it — API and UDA
-datasources to a `.kxquery`, QSQL and SQL to the workbook that supersedes them
-(`DataSourceConverterProvider`). `DataSourceFiles` survives as the internal
+Datasources (`.kdb.json`) are gone: opening one converts it to a `.kxquery` —
+API and UDA to the query they named, QSQL and SQL to the builtin the query
+editor holds for them (`DataSourceConverterProvider`). `DataSourceFiles` survives as the internal
 execution format that the query file is adapted into on its way to Insights
 (`toDataSourceFile`), and that the query history and scratchpad import store.
 

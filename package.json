@@ -1259,9 +1259,6 @@
         "selector": [
           {
             "filenamePattern": "*.kdb.json"
-          },
-          {
-            "filenamePattern": "*.kxuda"
           }
         ],
         "priority": "default"

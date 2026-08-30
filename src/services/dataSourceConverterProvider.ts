@@ -20,7 +20,6 @@ import {
   WebviewPanel,
   commands,
   window,
-  workspace,
 } from "vscode";
 
 import { QueryEditorProvider } from "./queryEditorProvider";
@@ -33,9 +32,8 @@ import { openWith } from "../utils/workspace";
 const logger = "dataSourceConverterProvider";
 
 /**
- * Stands in for the datasource editor, which is gone. Opening a `.kdb.json` or
- * a `.kxuda` converts it — to a `.kxquery` for getData and UDA datasources, to
- * a workbook for QSQL and SQL — opens what came out, and closes itself. The
+ * Stands in for the datasource editor, which is gone. Opening a `.kdb.json`
+ * converts it to a `.kxquery`, opens what came out, and closes itself. The
  * original file is left where it is.
  */
 export class DataSourceConverterProvider implements CustomTextEditorProvider {
@@ -52,7 +50,7 @@ export class DataSourceConverterProvider implements CustomTextEditorProvider {
   constructor(private readonly context: ExtensionContext) {}
 
   static isConvertible(uri: Uri) {
-    return uri.path.endsWith(".kdb.json") || uri.path.endsWith(".kxuda");
+    return uri.path.endsWith(".kdb.json");
   }
 
   async resolveCustomTextEditor(
@@ -82,11 +80,7 @@ export class DataSourceConverterProvider implements CustomTextEditorProvider {
     ext.queryTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
 
-    if (target.path.endsWith(".kxquery")) {
-      await openWith(target, QueryEditorProvider.viewType);
-    } else {
-      await window.showTextDocument(await workspace.openTextDocument(target));
-    }
+    await openWith(target, QueryEditorProvider.viewType);
 
     await commands.executeCommand(
       "workbench.action.closeActiveEditor",
