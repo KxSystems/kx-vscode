@@ -14,6 +14,7 @@
 import { ConnectionType } from "./connectionsModels";
 import { DataSourceFiles } from "./dataSource";
 import { MetaObjectPayload } from "./meta";
+import { QueryFile } from "./query";
 import { UDA } from "./uda";
 
 export type DataSourceMessage = {
@@ -50,6 +51,26 @@ export interface DataSourceMessage2 {
   insightsMeta: MetaObjectPayload;
   dataSourceFile: DataSourceFiles;
   UDAs: UDA[];
+}
+
+export const enum QueryCommand {
+  Update,
+  Change,
+  Connection,
+  Save,
+  Run,
+  Populate,
+  Refresh,
+}
+
+export interface QueryMessage {
+  command: QueryCommand;
+  file: QueryFile;
+  queries: UDA[];
+  tables: { [table: string]: string[] };
+  targets: string[];
+  isMetaLoaded: boolean;
+  selectedServer: string;
 }
 
 export interface EditConnectionMessage {

@@ -16,31 +16,26 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-import { shoelaceStyles } from "./styles";
+import { baseStyles } from "./baseStyles";
+import { checked } from "../directives";
 
 @customElement("kdb-welcome-view")
 export class KdbWelcomeView extends LitElement {
   static readonly styles = [
-    shoelaceStyles,
+    baseStyles,
     css`
       .container {
         padding: 1em 4em 0 4em;
         margin-bottom: 4em;
       }
+      /* The gaps this page wants. The directions are baseStyles' — spelling
+         them out again is how these two came to mean the opposite of the
+         .row and .col every other view is built from. */
       .row {
-        display: flex;
-        flex-wrap: nowrap;
-        flex-direction: column;
-        gap: 0;
-      }
-      .col {
-        display: flex;
-        flex-wrap: nowrap;
-        flex-direction: row;
         gap: 1em;
       }
-      .mt-1 {
-        margin-top: 1em;
+      .col {
+        gap: 0;
       }
       .middle {
         align-items: baseline;
@@ -63,12 +58,10 @@ export class KdbWelcomeView extends LitElement {
         text-align: center;
         background-color: var(--vscode-editor-background);
       }
-      body {
-        margin: 0;
-        padding: 0;
+      .footer .checkbox {
+        justify-content: center;
       }
       a {
-        color: var(--vscode-textLink-foreground);
         text-decoration: none;
       }
       img {
@@ -94,41 +87,41 @@ export class KdbWelcomeView extends LitElement {
   protected render() {
     return html`
       <div class="container">
-        <div class="row">
+        <div class="col">
           <h1>Welcome to KDB-X</h1>
-          <div class="col">
+          <div class="row">
             <div>
               <p>
                 KDB-X is the next generation of kdb+, optimized for modern
                 analytics and AI workflows. Let’s get you ready to code.
               </p>
               <p>What you’ll do next:</p>
-              <div class="col">
+              <div class="row">
                 <div class="icon">${renderIcon1(this.dark)}</div>
-                <div class="row">
+                <div class="col">
                   <strong>Log in or create an account</strong>
                   <div>A browser opens → authenticate → accept EULA.</div>
                 </div>
               </div>
-              <div class="col">
+              <div class="row">
                 <div class="icon">${renderIcon2(this.dark)}</div>
-                <div class="row">
+                <div class="col">
                   <strong>Retrieve your license key</strong>
                   <div>Copy the key from the KDB-X welcome page.</div>
                 </div>
               </div>
-              <div class="col">
+              <div class="row">
                 <div class="icon">${renderIcon3(this.dark)}</div>
-                <div class="row">
+                <div class="col">
                   <strong>Activate in VS Code</strong>
                   <div>
                     Paste the key in VS Code → terminal installs KDB-X runtime.
                   </div>
                 </div>
               </div>
-              <div class="col">
+              <div class="row">
                 <div class="icon">${renderIcon4(this.dark)}</div>
-                <div class="row">
+                <div class="col">
                   <strong>Start coding</strong>
                   <div>
                     Installation completes → run command
@@ -136,15 +129,14 @@ export class KdbWelcomeView extends LitElement {
                   </div>
                 </div>
               </div>
-              <div class="col mt-1 middle">
-                <sl-button
-                  variant="primary"
-                  href="https://developer.kx.com/products/kdb-x/install"
+              <div class="row mt-1 middle">
+                <button
+                  class="primary"
                   @click="${() => {
                     this.vscode.postMessage("install");
-                  }}"
-                  >Install & Continue</sl-button
-                >
+                  }}">
+                  Install &amp; Continue
+                </button>
                 <a href="https://developer.kx.com/products/kdb-x" class="nowrap"
                   >Developer Center & Documentation
                   <span class="icon-inline">${renderIcon5()}</span></a
@@ -156,13 +148,17 @@ export class KdbWelcomeView extends LitElement {
         </div>
       </div>
       <div class="footer">
-        <sl-checkbox
-          .checked="${this.checked === "true"}"
-          @sl-change="${(event: Event) => {
-            this.vscode.postMessage((event.target as any).checked);
-          }}"
-          >Show welcome page on startup</sl-checkbox
-        >
+        <label class="checkbox">
+          <input
+            type="checkbox"
+            ${checked(this.checked === "true")}
+            @change="${(event: Event) => {
+              this.vscode.postMessage(
+                (event.target as HTMLInputElement).checked,
+              );
+            }}" />
+          Show welcome page on startup
+        </label>
       </div>
     `;
   }

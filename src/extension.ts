@@ -25,6 +25,7 @@ import { initActiveTargetTracking } from "./classes/activeTargetTracker";
 import { OPEN_RESULTS_HINT } from "./classes/connectionConsole";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
+import { convertDataSources } from "./commands/queryCommand";
 import {
   activeConnection,
   addAuthConnection,
@@ -52,7 +53,6 @@ import {
   ConnectionLensProvider,
   connectWorkspaceCommands,
   getActiveFileUri,
-  importOldDSFiles,
   pickConnection,
   pickTarget,
   pickTimeout,
@@ -70,12 +70,12 @@ import {
   Server,
   ServerDetails,
 } from "./models/connectionsModels";
-import { createDefaultDataSourceFile } from "./models/dataSource";
 import { ExecutionTypes } from "./models/execution";
+import { createDefaultQueryFile } from "./models/query";
 import { QueryResult } from "./models/queryResult";
 import { ChartEditorProvider } from "./services/chartEditorProvider";
 import { CompletionProvider } from "./services/completionProvider";
-import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
+import { DataSourceConverterProvider } from "./services/dataSourceConverterProvider";
 import { HelpFeedbackProvider } from "./services/helpFeedbackProvider";
 import {
   InsightsMetaNode,
@@ -90,6 +90,7 @@ import {
   KxNotebookTargetActionProvider,
 } from "./services/notebookProviders";
 import { KxNotebookSerializer } from "./services/notebookSerializer";
+import { QueryEditorProvider } from "./services/queryEditorProvider";
 import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
@@ -184,8 +185,8 @@ export async function activate(context: vscode.ExtensionContext) {
     "**/*.kdb.{q,py,sql}",
     "scratchpad",
   );
-  ext.dataSourceTreeProvider = new WorkspaceTreeProvider(
-    "**/*.kdb.json",
+  ext.queryTreeProvider = new WorkspaceTreeProvider(
+    "**/*.kxquery",
     "datasource",
   );
 
@@ -202,8 +203,8 @@ export async function activate(context: vscode.ExtensionContext) {
     ext.scratchpadTreeProvider,
   );
   vscode.window.registerTreeDataProvider(
-    "kdb-datasource-explorer",
-    ext.dataSourceTreeProvider,
+    "kdb-query-explorer",
+    ext.queryTreeProvider,
   );
 
   vscode.window.registerTreeDataProvider(
@@ -224,7 +225,8 @@ export async function activate(context: vscode.ExtensionContext) {
       { webviewOptions: { retainContextWhenHidden: true } },
     ),
 
-    DataSourceEditorProvider.register(context),
+    QueryEditorProvider.register(context),
+    DataSourceConverterProvider.register(context),
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(
@@ -239,7 +241,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ext.diagnosticCollection,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("kdb.connectionMap")) {
-        ext.dataSourceTreeProvider.reload();
+        ext.queryTreeProvider.reload();
         ext.scratchpadTreeProvider.reload();
       }
       if (event.affectsConfiguration("kdb.connectionLabelsMap")) {
@@ -531,27 +533,23 @@ function registerResultsPanelCommands(): CommandRegistration[] {
   return resultsCommands;
 }
 
-function registerDatasourceCommands(): CommandRegistration[] {
-  const dataSourceCommands: CommandRegistration[] = [
+function registerQueryCommands(): CommandRegistration[] {
+  const queryCommands: CommandRegistration[] = [
     {
-      command: "kdb.datasource.import",
-      callback: async () => await importOldDSFiles(),
-    },
-    {
-      command: "kdb.datasource.create",
+      command: "kdb.query.create",
       callback: async (item: FileTreeItem) => {
-        if (hasWorkspaceOrShowOption("adding datasources")) {
+        if (hasWorkspaceOrShowOption("adding queries")) {
           const uri = await addWorkspaceFile(
             item ? item.resourceUri : undefined,
-            "datasource",
-            ".kdb.json",
+            "query",
+            ".kxquery",
           );
           await vscode.workspace.openTextDocument(uri);
           await setUriContent(
             uri,
-            JSON.stringify(createDefaultDataSourceFile(), null, 2),
+            JSON.stringify(createDefaultQueryFile(), null, 2),
           );
-          await openWith(uri, DataSourceEditorProvider.viewType);
+          await openWith(uri, QueryEditorProvider.viewType);
           await vscode.commands.executeCommand(
             "workbench.action.files.save",
             uri,
@@ -561,12 +559,16 @@ function registerDatasourceCommands(): CommandRegistration[] {
       },
     },
     {
-      command: "kdb.datasource.refreshDataSourceExplorer",
-      callback: () => ext.dataSourceTreeProvider.reload(),
+      command: "kdb.query.convert",
+      callback: async () => await convertDataSources(),
+    },
+    {
+      command: "kdb.query.refresh",
+      callback: () => ext.queryTreeProvider.reload(),
     },
   ];
 
-  return dataSourceCommands;
+  return queryCommands;
 }
 
 function registerScratchpadCommands(): CommandRegistration[] {
@@ -962,8 +964,8 @@ function registerFileCommands(): CommandRegistration[] {
       command: "kdb.file.rename",
       callback: async (item: FileTreeItem) => {
         if (item && item.resourceUri) {
-          if (item.resourceUri.path.endsWith(".kdb.json")) {
-            await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
+          if (item.resourceUri.path.endsWith(".kxquery")) {
+            await openWith(item.resourceUri, QueryEditorProvider.viewType);
           } else {
             const document = await vscode.workspace.openTextDocument(
               item.resourceUri,
@@ -979,8 +981,8 @@ function registerFileCommands(): CommandRegistration[] {
       command: "kdb.file.delete",
       callback: async (item: FileTreeItem) => {
         if (item && item.resourceUri) {
-          if (item.resourceUri.path.endsWith(".kdb.json")) {
-            await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
+          if (item.resourceUri.path.endsWith(".kxquery")) {
+            await openWith(item.resourceUri, QueryEditorProvider.viewType);
           } else {
             const document = await vscode.workspace.openTextDocument(
               item.resourceUri,
@@ -1101,7 +1103,7 @@ function registerAllExtensionCommands(): void {
     ...registerSetupCommands(),
     ...registerHelpCommands(),
     ...registerResultsPanelCommands(),
-    ...registerDatasourceCommands(),
+    ...registerQueryCommands(),
     ...registerScratchpadCommands(),
     ...registerQueryHistoryCommands(),
     ...registerConnectionsCommands(),

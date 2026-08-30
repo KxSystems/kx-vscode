@@ -23,6 +23,7 @@ import {
 } from "../utils/connLabel";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/uriUtils";
+import { webviewReset } from "../utils/webviewPage";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -168,19 +169,12 @@ export class NewConnectionPannel {
 
     return /* html */ `
         <!DOCTYPE html>
-        <html lang="en" class="${
-          vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ||
-          vscode.window.activeColorTheme.kind ===
-            vscode.ColorThemeKind.HighContrastLight
-            ? "sl-theme-light"
-            : "sl-theme-dark"
-        }">
+        <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>New Connection</title>
-            <link rel="stylesheet" href="${getResource("light.css")}" />
-            <link rel="stylesheet" href="${getResource("style.css")}" />
+            ${webviewReset(getNonce())}
             <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
         </head>
         <body>

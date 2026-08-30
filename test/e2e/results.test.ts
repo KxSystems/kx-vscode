@@ -112,7 +112,7 @@ describe("Results view", () => {
   const turn = (button: keyof typeof PAGER) =>
     view.eval(
       async (root: string, icon: string) => {
-        __find(`${root}.pager sl-button:has(svg.${icon})`).click();
+        __find(`${root}.pager button:has(svg.${icon})`).click();
         await __find("kdb-results-view").updateComplete;
       },
       VIEW,
@@ -122,7 +122,7 @@ describe("Results view", () => {
   const pageLabel = () =>
     view.eval(
       (root: string) =>
-        __find(`${root}.pager sl-button:not(:has(svg))`)?.textContent.trim(),
+        __find(`${root}.pager button:not(:has(svg))`)?.textContent.trim(),
       VIEW,
     );
 

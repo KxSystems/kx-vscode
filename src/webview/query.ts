@@ -11,23 +11,5 @@
  * specific language governing permissions and limitations under the License.
  */
 
-/* eslint @typescript-eslint/ban-ts-comment: 0 */
-
-import Module from "module";
-import path from "path";
-
-// @ts-ignore
-const resolve = Module._resolveFilename;
-
-// @ts-ignore
-Module._resolveFilename = function (specifier: string, parent: string) {
-  switch (specifier) {
-    case "lit":
-    case "lit/decorators.js":
-    case "lit/directive.js":
-    case "lit/directives/repeat.js":
-      specifier = path.resolve(__dirname, "webview.js");
-      break;
-  }
-  return resolve(specifier, parent);
-};
+import "./components/kdbSelect";
+import "./components/kdbQueryView";

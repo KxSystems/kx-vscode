@@ -102,7 +102,7 @@ export class FileTreeItem extends TreeItem {
 
   private getFileIconType(fileName: string) {
     /* c8 ignore start */
-    if (fileName.endsWith(".kdb.json")) {
+    if (fileName.endsWith(".kxquery")) {
       this.baseIcon = "datasource";
     } else if (fileName.endsWith(".kdb.q")) {
       this.baseIcon = "scratchpad";

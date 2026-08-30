@@ -123,7 +123,7 @@ describe("Welcome", () => {
           heading: __find(`${root}h1`).textContent.trim(),
           // The step titles are the direct children of each step; the one
           // inside a step's text, naming the REPL command, is not.
-          steps: [...container.querySelectorAll(".row > strong")].map(
+          steps: [...container.querySelectorAll(".col > strong")].map(
             (step: any) => step.textContent.trim(),
           ),
           image: __find(`${root}img`).getAttribute("src"),
@@ -184,7 +184,7 @@ describe("Welcome", () => {
       await show();
 
       const posted = await view.eval((root: string) => {
-        __find(`${root}sl-button[variant="primary"]`).click();
+        __find(`${root}button.primary`).click();
         return __posted;
       }, VIEW);
 
@@ -193,10 +193,10 @@ describe("Welcome", () => {
 
     const startup = () =>
       view.eval(async (root: string) => {
-        const checkbox = __find(`${root}.footer sl-checkbox`);
+        const checkbox = __find(`${root}.footer input[type="checkbox"]`);
         const before = checkbox.checked;
-        __find(`${root}.footer sl-checkbox >>> input[type="checkbox"]`).click();
-        await checkbox.updateComplete;
+        checkbox.click();
+        await new Promise((resolve) => setTimeout(resolve, 20));
         return { before, posted: __posted };
       }, VIEW);
 

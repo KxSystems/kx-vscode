@@ -45,7 +45,6 @@ import { ExecutionTypes } from "../models/execution";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { DataSourcesPanel } from "../panels/datasource";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import {
@@ -66,7 +65,6 @@ import {
   updateInsights,
   updateServers,
 } from "../utils/core";
-import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { MessageKind, Runner, notify } from "../utils/notifications";
@@ -839,14 +837,12 @@ export async function connect(connLabel: string): Promise<void> {
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
-  refreshDataSourcesPanel();
   ext.serverProvider.reload();
 }
 
 export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   const connMngService = new ConnectionManagementService();
   connMngService.setActiveConnection(viewItem);
-  refreshDataSourcesPanel();
   ext.serverProvider.reload();
 }
 
@@ -870,7 +866,6 @@ export async function disconnect(connLabel: string): Promise<void> {
 
   if (ext.connectedConnectionList.length === 0) {
     ExecutionConsole.current?.dispose();
-    DataSourcesPanel.close();
     ext.serverProvider.reload();
   }
 }

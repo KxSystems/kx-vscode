@@ -241,4 +241,58 @@ describe("insightsConnection", () => {
       assert.strictEqual(result.data, encoded);
     });
   });
+
+  describe("generateQSqlBody", () => {
+    const withMeta = (version: string) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://example.com" },
+        label: "conn",
+      });
+      conn.insightsVersion = version;
+      (<any>conn).meta = {
+        payload: { dap: [{ assembly: "assembly-qe", instance: "rdb" }] },
+      };
+      return conn;
+    };
+
+    it("should leave the body alone when neither is given", () => {
+      const body = <any>(
+        withMeta("1.20").generateQSqlBody("q", "assembly rdb", "1.20")
+      );
+
+      assert.strictEqual("agg" in body, false);
+      assert.strictEqual("labels" in body, false);
+    });
+
+    it("should send the agg and the labels beside the scope", () => {
+      const body = <any>withMeta("1.20").generateQSqlBody(
+        "q",
+        "assembly rdb",
+        "1.20",
+        {
+          agg: "distinct",
+          labels: { kxname: "db" },
+        },
+      );
+
+      assert.strictEqual(body.agg, "distinct");
+      assert.deepStrictEqual(body.labels, { kxname: "db" });
+      assert.strictEqual(body.scope.assembly, "assembly-qe");
+    });
+
+    it("should send them on the older body shape too", () => {
+      const body = <any>withMeta("1.12").generateQSqlBody(
+        "q",
+        "assembly rdb",
+        "1.12",
+        {
+          agg: "distinct",
+        },
+      );
+
+      assert.strictEqual(body.agg, "distinct");
+      assert.strictEqual(body.assembly, "assembly-qe");
+      assert.strictEqual("scope" in body, false);
+    });
+  });
 });

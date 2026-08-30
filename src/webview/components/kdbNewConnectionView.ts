@@ -13,10 +13,10 @@
 
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { live } from "lit/directives/live.js";
-import { repeat } from "lit/directives/repeat.js";
 
-import { kdbStyles, newConnectionStyles, shoelaceStyles } from "./styles";
+import { baseStyles } from "./baseStyles";
+import { KdbSelect } from "./kdbSelect";
+import { kdbStyles, newConnectionStyles } from "./styles";
 import {
   ConnectionType,
   InsightDetails,
@@ -25,10 +25,17 @@ import {
 } from "../../models/connectionsModels";
 import { LabelColors, Labels } from "../../models/labels";
 import { EditConnectionMessage } from "../../models/messages";
+import { TEXT } from "../converters";
+import { bind, checked, inputDefaults } from "../directives";
+
+const NEW_LABEL = "\u0000new-label";
+
+const AUTH_SECTION = "Authentication & TLS";
+const ADVANCED_SECTION = "Advanced";
 
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
-  static readonly styles = [shoelaceStyles, kdbStyles, newConnectionStyles];
+  static readonly styles = [baseStyles, kdbStyles, newConnectionStyles];
   selectedTab = ConnectionType.Kdb;
   lblColorsList: LabelColors[] = [];
   lblNamesList: Labels[] = [];
@@ -50,12 +57,13 @@ export class KdbNewConnectionView extends LitElement {
     realm: "",
     insecure: false,
   };
-  labels: string[] = [""];
+  labels: string[] = [];
   serverType: ServerType = ServerType.KDB;
   oldAlias: string = "";
   editAuth: boolean = false;
   renderId: string = "";
   private isModalOpen = false;
+  private readonly openSections = new Set<string>();
   private _connectionData: EditConnectionMessage | undefined = undefined;
   private readonly vscode = acquireVsCodeApi();
   private tabConfig = {
@@ -95,27 +103,10 @@ export class KdbNewConnectionView extends LitElement {
     super.disconnectedCallback();
   }
 
-  removeBlankLabels() {
-    this.labels = Array.from(
-      new Set(
-        this.labels.filter((label) => label !== "" && label !== undefined),
-      ),
-    );
-  }
-
-  addLabel() {
-    this.labels.push("");
-    this.requestUpdate();
-  }
-
-  removeLabel(index: number) {
-    this.labels.splice(index, 1);
-    this.requestUpdate();
-  }
-
-  updateLabelValue(pos: number, event: Event) {
-    const value = (event.target as HTMLSelectElement).value;
-    this.labels[pos] = decodeURIComponent(value);
+  toggleLabel(name: string, on: boolean) {
+    this.labels = on
+      ? [...this.labels.filter((label) => label !== name), name]
+      : this.labels.filter((label) => label !== name);
     this.requestUpdate();
   }
 
@@ -132,7 +123,7 @@ export class KdbNewConnectionView extends LitElement {
     const message = event.data;
     if (message.command === "editConnection") {
       this.connectionData = message.data;
-      this.labels = message.labels;
+      this.labels = [...new Set<string>(message.labels || [])].filter(Boolean);
       this.requestUpdate();
     }
     if (message.command === "refreshLabels") {
@@ -151,6 +142,21 @@ export class KdbNewConnectionView extends LitElement {
     this.requestUpdate();
   }
 
+  renderSection(title: string, body: unknown) {
+    return html`<details
+      ?open="${this.openSections.has(title)}"
+      @toggle="${(event: Event) => {
+        if ((event.target as HTMLDetailsElement).open) {
+          this.openSections.add(title);
+        } else {
+          this.openSections.delete(title);
+        }
+      }}">
+      <summary>${title}</summary>
+      <div class="section">${body}</div>
+    </details>`;
+  }
+
   renderServerNameDesc() {
     return html`<span>Name the server.</span>`;
   }
@@ -158,26 +164,32 @@ export class KdbNewConnectionView extends LitElement {
   renderServerNameField(serverType: ServerType) {
     /* c8 ignore start */
     return serverType === ServerType.KDB
-      ? html`<sl-input
-          class="text-field larger option-title"
-          required
-          placeholder="Server-1"
-          value="${live(this.kdbServer.serverAlias)}"
-          @input="${(event: Event) =>
-            (this.kdbServer.serverAlias = (
-              event.target as HTMLInputElement
-            ).value)}"
-          label="Server Name"></sl-input>`
-      : html`<sl-input
-          class="text-field larger option-title"
-          required
-          placeholder="Insights-1"
-          value="${live(this.insightsServer.alias)}"
-          @input="${(event: Event) =>
-            (this.insightsServer.alias = (
-              event.target as HTMLInputElement
-            ).value)}"
-          label="Server Name"></sl-input>`;
+      ? html`<label class="field"
+          ><span class="label">Server Name</span
+          ><input
+            class="text-field larger"
+            required
+            placeholder="Server-1"
+            ${inputDefaults()}
+            ${bind(this.kdbServer.serverAlias)}
+            @input="${(event: Event) =>
+              (this.kdbServer.serverAlias = (
+                event.target as HTMLInputElement
+              ).value)}"
+        /></label>`
+      : html`<label class="field"
+          ><span class="label">Server Name</span
+          ><input
+            class="text-field larger"
+            required
+            placeholder="Insights-1"
+            ${inputDefaults()}
+            ${bind(this.insightsServer.alias)}
+            @input="${(event: Event) =>
+              (this.insightsServer.alias = (
+                event.target as HTMLInputElement
+              ).value)}"
+        /></label>`;
 
     /* c8 ignore stop */
   }
@@ -202,16 +214,19 @@ export class KdbNewConnectionView extends LitElement {
     /* c8 ignore start */
     return html`
       <div class="row">
-        <sl-input
-          class="text-field larger option-title"
-          required
-          placeholder="5001"
-          value="${live(this.kdbServer.serverPort)}"
-          @input="${(event: Event) => {
-            const value = (event.target as HTMLInputElement).value;
-            this.kdbServer.serverPort = value;
-          }}"
-          label="Set port number"></sl-input>
+        <label class="field"
+          ><span class="label">Set port number</span
+          ><input
+            class="text-field larger"
+            required
+            placeholder="5001"
+            ${inputDefaults()}
+            ${bind(this.kdbServer.serverPort)}
+            @input="${(event: Event) => {
+              const value = (event.target as HTMLInputElement).value;
+              this.kdbServer.serverPort = value;
+            }}"
+        /></label>
       </div>
       <div class="row option-description option-help">
         ${this.renderPortNumberDesc()}
@@ -231,27 +246,32 @@ export class KdbNewConnectionView extends LitElement {
     /* c8 ignore start */
     return html`
       <div class="row">
-        <sl-input
-          class="text-field larger option-title"
-          required
-          placeholder="${serverType === ServerType.KDB
-            ? "127.0.0.1 or localhost"
-            : `https://myinsights.example.com`}"
-          value="${live(
-            serverType === ServerType.KDB
-              ? this.kdbServer.serverName
-              : this.insightsServer.server,
-          )}"
-          @input="${(event: Event) => {
-            const value = (event.target as HTMLInputElement).value;
+        <label class="field"
+          ><span class="label">Define connection address</span
+          ><input
+            class="text-field larger"
+            required
+            placeholder="${serverType === ServerType.KDB
+              ? "127.0.0.1 or localhost"
+              : `https://myinsights.example.com`}"
+            ${inputDefaults()}
+            ${bind(
+              serverType === ServerType.KDB
+                ? this.kdbServer.serverName
+                : this.insightsServer.server,
+              TEXT,
+              serverType,
+            )}
+            @input="${(event: Event) => {
+              const value = (event.target as HTMLInputElement).value;
 
-            if (serverType === ServerType.KDB) {
-              this.kdbServer.serverName = value;
-            } else {
-              this.insightsServer.server = value;
-            }
-          }}"
-          label="Define connection address"></sl-input>
+              if (serverType === ServerType.KDB) {
+                this.kdbServer.serverName = value;
+              } else {
+                this.insightsServer.server = value;
+              }
+            }}"
+        /></label>
       </div>
       <div class="row option-description option-help">
         ${this.renderConnAddDesc(serverType)}
@@ -263,16 +283,19 @@ export class KdbNewConnectionView extends LitElement {
   renderRealm() {
     /* c8 ignore start */
     return html`
-      <div class="row mt-1">
-        <sl-input
-          class="text-field larger option-title"
-          value="${live(this.insightsServer.realm ?? "")}"
-          placeholder="insights"
-          @input="${(event: Event) => {
-            const value = (event.target as HTMLInputElement).value;
-            this.insightsServer.realm = value;
-          }}"
-          label="Define Realm (optional)"></sl-input>
+      <div class="row">
+        <label class="field"
+          ><span class="label">Define Realm (optional)</span
+          ><input
+            class="text-field larger"
+            ${inputDefaults()}
+            ${bind(this.insightsServer.realm ?? "")}
+            placeholder="insights"
+            @input="${(event: Event) => {
+              const value = (event.target as HTMLInputElement).value;
+              this.insightsServer.realm = value;
+            }}"
+        /></label>
       </div>
       <div class="row option-description option-help">
         Specify the Keycloak realm for authentication. Use this field to connect
@@ -285,16 +308,18 @@ export class KdbNewConnectionView extends LitElement {
   renderInsecureSSL() {
     /* c8 ignore start */
     return html`
-      <div class="row mt-1">
-        <sl-checkbox
-          .checked="${this.insightsServer.insecure ?? false}"
-          @sl-change="${(event: Event) => {
-            this.insightsServer.insecure = (
-              event.target as HTMLInputElement
-            ).checked;
-          }}">
+      <div class="row">
+        <label class="checkbox"
+          ><input
+            type="checkbox"
+            ${checked(this.insightsServer.insecure ?? false)}
+            @change="${(event: Event) => {
+              this.insightsServer.insecure = (
+                event.target as HTMLInputElement
+              ).checked;
+            }}" />
           Accept insecure SSL certifcates
-        </sl-checkbox>
+        </label>
       </div>
     `;
     /* c8 ignore stop */
@@ -307,78 +332,52 @@ export class KdbNewConnectionView extends LitElement {
     this.serverType = config.serverType;
   }
 
+  renderTLSField() {
+    return html`<div class="row">
+      <label class="checkbox"
+        ><input
+          type="checkbox"
+          ${checked(this.kdbServer.tls)}
+          @change="${() => this.changeTLS()}" />
+        Enable TLS Encryption on the kdb connection
+      </label>
+    </div>`;
+  }
+
   renderLblDropdownColorOptions() {
-    return html`
-      <sl-option> No Color Selected </sl-option>
-      ${repeat(
-        this.lblColorsList,
-        (color) => color,
-        (color) =>
-          html` <sl-option .value="${color.name}">
-            <span
-              ><div
-                style="width: 10px; height: 10px; background: ${color.colorHex}; border-radius: 50%; float: left;
-    margin-right: 10px; margin-top: 3px;"></div>
-              ${color.name}</span
-            >
-          </sl-option>`,
-      )}
-    `;
+    return this.lblColorsList.map((color) => color.name);
   }
 
-  renderLblsDropdown(pos: number) {
-    return html`
-      <div class="lbl-dropdown-container-field-wrapper">
-        <sl-select
-          id="selectLabel"
-          class="dropdown larger"
-          value="${live(
-            this.labels[pos] === undefined
-              ? ""
-              : encodeURIComponent(this.labels[pos]),
-          )}"
-          @sl-change="${(event: Event) => {
-            this.updateLabelValue(pos, event);
-          }}">
-          ${this.renderLblDropdownOptions(pos)}
-        </sl-select>
-        <sl-button-group>
-          <sl-button
-            aria-label="Remove Label"
-            variant="neutral"
-            @click="${() => this.removeLabel(pos)}"
-            >-</sl-button
-          >
-          <sl-button
-            aria-label="Add Label"
-            variant="neutral"
-            @click="${this.addLabel}"
-            >+</sl-button
-          >
-        </sl-button-group>
-      </div>
-    `;
+  labelOptions() {
+    return [
+      ...this.lblNamesList.map((lbl) => ({
+        value: lbl.name,
+        color: lbl.color?.colorHex,
+      })),
+      { value: NEW_LABEL, label: "+ Create new label..." },
+    ];
   }
 
-  renderLblDropdownOptions(_pos: number) {
+  handleLabels(event: Event) {
+    const picked = (event.target as KdbSelect).values;
+    if (picked.includes(NEW_LABEL)) {
+      this.openModal();
+      return;
+    }
+    this.labels = picked;
+    this.requestUpdate();
+  }
+
+  renderLbls() {
     return html`
-      <sl-option> No Label Selected </sl-option>
-      ${repeat(
-        this.lblNamesList,
-        (lbl) => lbl,
-        (lbl) => {
-          return html`
-            <sl-option .value="${encodeURIComponent(lbl.name)}">
-              <span>
-                <div
-                  style="width: 10px; height: 10px; background: ${lbl.color
-                    .colorHex}; border-radius: 50%; float: left; margin-right: 10px; margin-top: 3px;"></div>
-                ${lbl.name}
-              </span>
-            </sl-option>
-          `;
-        },
-      )}
+      <kdb-select
+        class="labels"
+        multiple
+        empty="Select labels..."
+        label="Connection labels"
+        .values="${this.labels}"
+        .options="${this.labelOptions()}"
+        @change="${this.handleLabels}"></kdb-select>
     `;
   }
 
@@ -390,49 +389,52 @@ export class KdbNewConnectionView extends LitElement {
         <div class="modal-content">
           <h2>Add a New Label</h2>
           <div class="row">
-            <sl-input
-              label="Label name"
-              placeholder="Label name"
-              class="text-field larger"
-              value="${live(this.newLblName)}"
-              @sl-input="${(event: Event) => {
-                this.newLblName = (event.target as HTMLInputElement).value;
-                this.requestUpdate();
-              }}"
-              id="label-name"></sl-input>
+            <label class="field"
+              ><span class="label">Label name</span
+              ><input
+                placeholder="Label name"
+                class="text-field larger"
+                ${inputDefaults()}
+                ${bind(this.newLblName)}
+                @input="${(event: Event) => {
+                  this.newLblName = (event.target as HTMLInputElement).value;
+                  this.requestUpdate();
+                }}"
+                id="label-name"
+            /></label>
           </div>
           <div class="row option-title gap-0" style="margin-top: 10px;">
             Label color
           </div>
           <div class="row">
-            <sl-select
+            <kdb-select
               id="label-color"
-              value="${live(this.newLblColorName)}"
-              @sl-change="${(event: Event) => {
-                this.newLblColorName = (event.target as HTMLInputElement).value;
-                this.requestUpdate();
-              }}"
               class="dropdown"
-              style="width: 18.5em;">
-              ${this.renderLblDropdownColorOptions()}
-            </sl-select>
+              style="width: 18.5em;"
+              value="${this.newLblColorName}"
+              empty="No Color Selected"
+              label="Label color"
+              .options="${this.renderLblDropdownColorOptions()}"
+              @change="${(event: Event) => {
+                this.newLblColorName = (event.target as KdbSelect).value;
+                this.requestUpdate();
+              }}"></kdb-select>
           </div>
           <div class="row" style="margin-top: 10px;">
-            <sl-button
-              variant="neutral"
+            <button
               aria-label="Cancel"
               appearance="secondary"
               @click="${this.closeModal}">
               Cancel
-            </sl-button>
-            <sl-button
-              variant="primary"
+            </button>
+            <button
+              class="primary"
               aria-label="Create Label"
               @click="${this.createLabel}"
               ?disabled="${this.newLblName === "" ||
               this.newLblColorName === ""}">
               Create
-            </sl-button>
+            </button>
           </div>
         </div>
       </dialog>
@@ -440,32 +442,11 @@ export class KdbNewConnectionView extends LitElement {
     /* c8 ignore stop */
   }
 
-  renderNewLblBtn() {
-    return html`
-      <sl-button
-        variant="neutral"
-        aria-label="Create New Label"
-        style="height: 26px;    margin-top: 18px;"
-        appearance="secondary"
-        @click="${this.openModal}">
-        Create New Label
-      </sl-button>
-    `;
-  }
-
   renderConnectionLabelsSection() {
     return html` <div class="row">
       <div class="col gap-0">
-        <div class="row option-title">Connection label (optional)</div>
-        <div class="row mt-1">
-          <div class="dropdown-container lbl-dropdown-container">
-            <label for="selectLabel">Label Name</label>
-            ${this.labels.length === 0
-              ? this.renderLblsDropdown(0)
-              : this.labels.map((_, i) => this.renderLblsDropdown(i))}
-          </div>
-          ${this.renderNewLblBtn()}
-        </div>
+        <div class="row option-title">Connection labels (optional)</div>
+        <div class="row mt-1">${this.renderLbls()}</div>
       </div>
     </div>`;
   }
@@ -482,46 +463,45 @@ export class KdbNewConnectionView extends LitElement {
       <div class="row">
         <div class="col gap-0">${this.renderPortNumber()}</div>
       </div>
-      <div class="row option-title">Add Authentication if enabled</div>
       <div class="row">
         <div class="col gap-0">
-          <div class="row">
-            <sl-input
-              class="text-field larger option-title"
-              label="Username"
-              .value="${this.kdbServer.username || ""}"
-              @sl-input="${(event: Event) =>
-                (this.kdbServer.username = (
-                  event.target as HTMLInputElement
-                ).value)}"></sl-input>
-          </div>
-          <div class="row">
-            <sl-input
-              type="password"
-              class="text-field larger option-title"
-              label="Password"
-              .value="${this.kdbServer.password || ""}"
-              @sl-input="${(event: Event) =>
-                (this.kdbServer.password = (
-                  event.target as HTMLInputElement
-                ).value)}"></sl-input>
-          </div>
-          <div class="row option-description  option-help">
-            Add required authentication to get access to the server connection
-            if enabled.
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col gap-0">
-          <div class="row option-title">Optional: Enable TLS Encryption</div>
-          <div class="row">
-            <sl-checkbox
-              .checked="${this.kdbServer.tls}"
-              @sl-change="${() => this.changeTLS()}">
-              Enable TLS Encryption on the kdb connection
-            </sl-checkbox>
-          </div>
+          ${this.renderSection(
+            AUTH_SECTION,
+            html`
+              <div class="row">
+                <label class="field"
+                  ><span class="label">Username</span
+                  ><input
+                    class="text-field larger"
+                    ${inputDefaults()}
+                    ${bind(this.kdbServer.username || "")}
+                    @input="${(event: Event) =>
+                      (this.kdbServer.username = (
+                        event.target as HTMLInputElement
+                      ).value)}"
+                /></label>
+              </div>
+              <div class="row">
+                <label class="field"
+                  ><span class="label">Password</span
+                  ><input
+                    type="password"
+                    class="text-field larger"
+                    ${inputDefaults()}
+                    ${bind(this.kdbServer.password || "")}
+                    @input="${(event: Event) =>
+                      (this.kdbServer.password = (
+                        event.target as HTMLInputElement
+                      ).value)}"
+                /></label>
+              </div>
+              <div class="row option-description option-help">
+                Add required authentication to get access to the server
+                connection if enabled.
+              </div>
+              ${this.renderTLSField()}
+            `,
+          )}
         </div>
       </div>
       ${this.renderConnectionLabelsSection()}
@@ -544,10 +524,10 @@ export class KdbNewConnectionView extends LitElement {
       </div>
       <div class="row">
         <div class="col gap-0">
-          <details>
-            <summary>Advanced</summary>
-            ${this.renderRealm()} ${this.renderInsecureSSL()}
-          </details>
+          ${this.renderSection(
+            ADVANCED_SECTION,
+            html`${this.renderRealm()} ${this.renderInsecureSSL()}`,
+          )}
         </div>
       </div>
       ${this.renderConnectionLabelsSection()}
@@ -584,43 +564,37 @@ export class KdbNewConnectionView extends LitElement {
             </div>
           </div>
           <div class="row">
-            <div class="tabs">
-              <sl-tab-group>
-                <sl-tab
-                  slot="nav"
-                  panel="${ConnectionType.Kdb}"
-                  ?active="${live(this.selectedTab === ConnectionType.Kdb)}"
+            <div class="col">
+              <div class="tabs" role="tablist">
+                <button
+                  class="tab"
+                  role="tab"
+                  aria-selected="${this.selectedTab === ConnectionType.Kdb}"
                   @click="${() => {
                     this.serverType = ServerType.KDB;
                     this.selectedTab = ConnectionType.Kdb;
-                  }}"
-                  >My q
-                </sl-tab>
-                <sl-tab
-                  slot="nav"
-                  panel="${ConnectionType.Insights}"
-                  ?active="${live(
-                    this.selectedTab === ConnectionType.Insights,
-                  )}"
+                    this.requestUpdate();
+                  }}">
+                  My q
+                </button>
+                <button
+                  class="tab"
+                  role="tab"
+                  aria-selected="${this.selectedTab ===
+                  ConnectionType.Insights}"
                   @click="${() => {
                     this.serverType = ServerType.INSIGHTS;
                     this.selectedTab = ConnectionType.Insights;
-                  }}"
-                  >Insights connection
-                </sl-tab>
-                <sl-tab-panel
-                  name="${ConnectionType.Kdb}"
-                  ?active="${live(this.selectedTab === ConnectionType.Kdb)}">
-                  ${this.renderNewMyQConnectionForm()}
-                </sl-tab-panel>
-                <sl-tab-panel
-                  name="${ConnectionType.Insights}"
-                  ?active="${live(
-                    this.selectedTab === ConnectionType.Insights,
-                  )}">
-                  ${this.renderNewInsightsConnectionForm()}
-                </sl-tab-panel>
-              </sl-tab-group>
+                    this.requestUpdate();
+                  }}">
+                  Insights connection
+                </button>
+              </div>
+              <div role="tabpanel">
+                ${this.selectedTab === ConnectionType.Kdb
+                  ? this.renderNewMyQConnectionForm()
+                  : this.renderNewInsightsConnectionForm()}
+              </div>
             </div>
           </div>
         </div>
@@ -631,9 +605,9 @@ export class KdbNewConnectionView extends LitElement {
 
   renderCreateConnectionBtn() {
     return html`<div class="row">
-      <sl-button variant="primary" class="grow" @click="${() => this.save()}"
-        >Create Connection</sl-button
-      >
+      <button class="primary" class="grow" @click="${() => this.save()}">
+        Create Connection
+      </button>
     </div>`;
   }
 
@@ -672,12 +646,12 @@ export class KdbNewConnectionView extends LitElement {
           <div class="row">${this.renderEditConnFields()}</div>
           <div class="row">${this.renderConnectionLabelsSection()}</div>
           <div class="row">
-            <sl-button
-              variant="primary"
+            <button
+              class="primary"
               class="grow"
-              @click="${() => this.editConnection()}"
-              >Update Connection</sl-button
-            >
+              @click="${() => this.editConnection()}">
+              Update Connection
+            </button>
           </div>
         </div>
       </div>
@@ -715,6 +689,9 @@ export class KdbNewConnectionView extends LitElement {
       this.kdbServer.serverName = this.connectionData.serverAddress;
       this.kdbServer.auth = this.connectionData.auth ?? false;
       this.kdbServer.tls = this.connectionData.tls ?? false;
+      if (this.kdbServer.tls) {
+        this.openSections.add(AUTH_SECTION);
+      }
     }
 
     return html`
@@ -730,59 +707,56 @@ export class KdbNewConnectionView extends LitElement {
         </div>
         <div class="row">
           <div class="col gap-0">
-            <div class="row option-title">Optional: Edit Auth options</div>
-            <div class="row">
-              <sl-checkbox
-                .checked="${this.editAuth}"
-                @sl-change="${() => this.editAuthOfConn()}">
-                Edit existing auth on the kdb connection
-              </sl-checkbox>
-            </div>
-          </div>
-        </div>
-        ${this.editAuth
-          ? html`
-              <div class="row">
-                <div class="col gap-0">
-                  <div class="row">
-                    <sl-input
-                      class="text-field larger option-title"
-                      label="Username"
-                      .value="${this.kdbServer.username || ""}"
-                      @sl-input="${(event: Event) =>
-                        (this.kdbServer.username = (
-                          event.target as HTMLInputElement
-                        ).value)}"></sl-input>
-                  </div>
-                  <div class="row">
-                    <sl-input
-                      type="password"
-                      class="text-field larger option-title"
-                      label="Password"
-                      .value="${this.kdbServer.password || ""}"
-                      @sl-input="${(event: Event) =>
-                        (this.kdbServer.password = (
-                          event.target as HTMLInputElement
-                        ).value)}"></sl-input>
-                  </div>
-                  <div class="row option-description  option-help">
-                    Add required authentication to get access to the server
-                    connection if enabled.
-                  </div>
+            ${this.renderSection(
+              AUTH_SECTION,
+              html`
+                <div class="row">
+                  <label class="checkbox"
+                    ><input
+                      type="checkbox"
+                      ${checked(this.editAuth)}
+                      @change="${() => this.editAuthOfConn()}" />
+                    Edit existing auth on the kdb connection
+                  </label>
                 </div>
-              </div>
-            `
-          : ""}
-        <div class="row">
-          <div class="col gap-0">
-            <div class="row option-title">Optional: Enable TLS Encryption</div>
-            <div class="row">
-              <sl-checkbox
-                .checked="${this.kdbServer.tls}"
-                @sl-change="${() => this.changeTLS()}">
-                Enable TLS Encryption on the kdb connection
-              </sl-checkbox>
-            </div>
+                ${this.editAuth
+                  ? html`
+                      <div class="row">
+                        <label class="field"
+                          ><span class="label">Username</span
+                          ><input
+                            class="text-field larger"
+                            ${inputDefaults()}
+                            ${bind(this.kdbServer.username || "")}
+                            @input="${(event: Event) =>
+                              (this.kdbServer.username = (
+                                event.target as HTMLInputElement
+                              ).value)}"
+                        /></label>
+                      </div>
+                      <div class="row">
+                        <label class="field"
+                          ><span class="label">Password</span
+                          ><input
+                            type="password"
+                            class="text-field larger"
+                            ${inputDefaults()}
+                            ${bind(this.kdbServer.password || "")}
+                            @input="${(event: Event) =>
+                              (this.kdbServer.password = (
+                                event.target as HTMLInputElement
+                              ).value)}"
+                        /></label>
+                      </div>
+                      <div class="row option-description option-help">
+                        Add required authentication to get access to the server
+                        connection if enabled.
+                      </div>
+                    `
+                  : ""}
+                ${this.renderTLSField()}
+              `,
+            )}
           </div>
         </div>
       </div>
@@ -800,6 +774,9 @@ export class KdbNewConnectionView extends LitElement {
       this.insightsServer.server = this.connectionData.serverAddress;
       this.insightsServer.realm = this.connectionData.realm ?? "";
       this.insightsServer.insecure = this.connectionData.insecure ?? false;
+      if (this.insightsServer.realm || this.insightsServer.insecure) {
+        this.openSections.add(ADVANCED_SECTION);
+      }
     }
 
     return html`
@@ -816,10 +793,10 @@ export class KdbNewConnectionView extends LitElement {
         </div>
         <div class="row">
           <div class="col gap-0">
-            <details>
-              <summary>Advanced</summary>
-              ${this.renderRealm()} ${this.renderInsecureSSL()}
-            </details>
+            ${this.renderSection(
+              ADVANCED_SECTION,
+              html`${this.renderRealm()} ${this.renderInsecureSSL()}`,
+            )}
           </div>
         </div>
       </div>
@@ -848,7 +825,6 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   private save() {
-    this.removeBlankLabels();
     if (this.serverType === ServerType.INSIGHTS) {
       this.vscode.postMessage({
         command: "kdb.connections.add.insights",
@@ -873,8 +849,7 @@ export class KdbNewConnectionView extends LitElement {
       },
     });
     setTimeout(() => {
-      this.labels.push(this.newLblName);
-      this.removeBlankLabels();
+      this.toggleLabel(this.newLblName, true);
       this.closeModal();
     }, 500);
   }
@@ -883,7 +858,6 @@ export class KdbNewConnectionView extends LitElement {
     if (!this.connectionData) {
       return;
     }
-    this.removeBlankLabels();
     if (this.connectionData.connType === 1) {
       this.vscode.postMessage({
         command: "kdb.connections.edit.kdb",

@@ -21,6 +21,7 @@ import {
   UDAParam,
   UDARequestBody,
   UDAReturn,
+  sourceForParam,
 } from "../models/uda";
 
 export function filterUDAParamsValidTypes(type: number | number[]): number[] {
@@ -138,6 +139,7 @@ export function parseUDAParams(
       fieldType,
       typeStrings,
       multiFieldTypes,
+      source: sourceForParam(param.name, fieldType),
       isVisible: param.isReq,
     });
   });
@@ -154,6 +156,8 @@ export function convertTypesToString(returnType: number[]): string[] {
   );
 }
 
+const MINUTE_PRECISION = /^(?:\d{4}-\d{2}-\d{2}T)?\d{2}:\d{2}$/;
+
 //TODO: Should remove this after add nanoseconds support in uda
 export function fixTimeAtUDARequestBody(
   udaReqBody: UDARequestBody,
@@ -161,15 +165,13 @@ export function fixTimeAtUDARequestBody(
   const parameterTypes = udaReqBody.parameterTypes as {
     [key: string]: number;
   };
+  const params = udaReqBody.params as { [key: string]: any };
 
   for (const key in parameterTypes) {
     if (parameterTypes[key] === -12) {
-      if (
-        (udaReqBody.params as { [key: string]: any })[key] &&
-        (udaReqBody.params as { [key: string]: any })[key] !== ""
-      ) {
-        (udaReqBody.params as { [key: string]: any })[key] =
-          `${(udaReqBody.params as { [key: string]: any })[key]}:00.000000000`;
+      const value = params[key];
+      if (typeof value === "string" && MINUTE_PRECISION.test(value)) {
+        params[key] = `${value}:00.000000000`;
       }
     }
   }

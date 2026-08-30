@@ -18,12 +18,12 @@ import { customElement, property, query, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { when } from "lit/directives/when.js";
 
-import { shoelaceStyles } from "./styles";
+import { baseStyles } from "./baseStyles";
 
 @customElement("kdb-results-view")
 export class KdbResultsView extends LitElement {
   static readonly styles = [
-    shoelaceStyles,
+    baseStyles,
     css`
       table,
       thead,
@@ -81,11 +81,27 @@ export class KdbResultsView extends LitElement {
         overflow: auto;
       }
       .pager {
+        display: flex;
         position: fixed;
         right: 1em;
         bottom: 0.75em;
         opacity: 0.5;
         background-color: var(--vscode-editor-background);
+      }
+      .pager button {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 0;
+        padding: 0.2em 0.4em;
+      }
+      .pager button:first-child {
+        border-radius: 2px 0 0 2px;
+      }
+      .pager button:last-child {
+        border-radius: 0 2px 2px 0;
+      }
+      .pager button:disabled {
+        opacity: 1;
       }
       .pager:hover {
         opacity: 1;
@@ -204,16 +220,13 @@ export class KdbResultsView extends LitElement {
               ${when(
                 this.total > 1,
                 () => html`
-                  <sl-button-group class="pager">
-                    <sl-button
-                      variant="neutral"
-                      size="small"
+                  <div class="pager">
+                    <button
                       @click="${() => {
                         this.page = 0;
                         this.renderPage();
                       }}">
                       <svg
-                        slot="prefix"
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
                         height="16"
@@ -227,10 +240,8 @@ export class KdbResultsView extends LitElement {
                           fill-rule="evenodd"
                           d="M12.354 1.646a.5.5 0 0 1 0 .708L6.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0" />
                       </svg>
-                    </sl-button>
-                    <sl-button
-                      variant="neutral"
-                      size="small"
+                    </button>
+                    <button
                       @click="${() => {
                         if (this.page > 0) {
                           this.page--;
@@ -238,7 +249,6 @@ export class KdbResultsView extends LitElement {
                         }
                       }}">
                       <svg
-                        slot="prefix"
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
                         height="16"
@@ -249,13 +259,9 @@ export class KdbResultsView extends LitElement {
                           fill-rule="evenodd"
                           d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0" />
                       </svg>
-                    </sl-button>
-                    <sl-button variant="neutral" size="small"
-                      >${this.page + 1} / ${this.total}</sl-button
-                    >
-                    <sl-button
-                      variant="neutral"
-                      size="small"
+                    </button>
+                    <button disabled>${this.page + 1} / ${this.total}</button>
+                    <button
                       @click="${() => {
                         if (this.page < this.total - 1) {
                           this.page++;
@@ -263,7 +269,6 @@ export class KdbResultsView extends LitElement {
                         }
                       }}">
                       <svg
-                        slot="prefix"
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
                         height="16"
@@ -274,16 +279,13 @@ export class KdbResultsView extends LitElement {
                           fill-rule="evenodd"
                           d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708" />
                       </svg>
-                    </sl-button>
-                    <sl-button
-                      variant="neutral"
-                      size="small"
+                    </button>
+                    <button
                       @click="${() => {
                         this.page = this.total - 1;
                         this.renderPage();
                       }}">
                       <svg
-                        slot="prefix"
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
                         height="16"
@@ -297,8 +299,8 @@ export class KdbResultsView extends LitElement {
                           fill-rule="evenodd"
                           d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708" />
                       </svg>
-                    </sl-button>
-                  </sl-button-group>
+                    </button>
+                  </div>
                 `,
               )}
             `}

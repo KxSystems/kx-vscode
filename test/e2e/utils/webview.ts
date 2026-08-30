@@ -21,8 +21,8 @@ import * as vscode from "vscode";
  * only channel is postMessage. So a test opens its own panel, loads the same
  * out/webview.js bundle the real panels load, and drives the component from a
  * script running inside the page, which reports what it found back over that
- * channel. The component, its shadow DOM and the Shoelace controls are all
- * real; only the panel hosting them belongs to the test.
+ * channel. The component, its shadow DOM and the controls it is built from are
+ * all real; only the panel hosting them belongs to the test.
  */
 
 // Runs in the page. Grabs the one real handle to the extension host, leaves a
@@ -38,7 +38,6 @@ const DRIVER = /* javascript */ `
     setState: () => undefined,
   });
 
-  // A path through nested shadow roots, "sl-input >>> input".
   window.__find = (path) =>
     path
       .split(">>>")
@@ -53,7 +52,7 @@ const DRIVER = /* javascript */ `
   // carries the same payload a keystroke would. Setting .value and dispatching
   // an event by hand would be untrusted, and would skip selection handling.
   window.__type = (path, text) => {
-    const input = window.__find(path);
+    const input = typeof path === "string" ? window.__find(path) : path;
     input.focus();
     input.select();
     document.execCommand("insertText", false, text);
@@ -71,29 +70,56 @@ const DRIVER = /* javascript */ `
     throw new Error("timed out waiting for " + what);
   };
 
-  // Picks an option out of an sl-select by its text. Shoelace opens the
-  // listbox on mousedown over the combobox and commits the choice on mouseup
-  // over the option, so a click on either never selects anything. These are
-  // listeners rather than default actions, so dispatching the events by hand
-  // does drive them.
-  window.__pick = async (path, text) => {
+  window.__field = (path, text, tag) => {
+    const scope = window.__find(path);
+    const field = [
+      ...(scope.shadowRoot || scope).querySelectorAll("label.field"),
+    ].find(
+      (candidate) =>
+        candidate.querySelector(".label")?.textContent.trim() === text,
+    );
+    return field ? field.querySelector(tag || "input") : undefined;
+  };
+
+  window.__open = async (path, text) => {
+    const scope = window.__find(path);
+    const section = [
+      ...(scope.shadowRoot || scope).querySelectorAll("details"),
+    ].find(
+      (candidate) =>
+        candidate.querySelector("summary")?.textContent.trim() === text,
+    );
+    if (!section) {
+      throw new Error("no section " + text + " in " + path);
+    }
+    if (!section.open) {
+      section.querySelector("summary").click();
+    }
+    await scope.updateComplete;
+  };
+
+  window.__opened = async (path) => {
     const select = window.__find(path);
-    const mouse = (target, type) =>
-      target.dispatchEvent(
-        new MouseEvent(type, { bubbles: true, composed: true }),
-      );
+    if (!select.open) {
+      select.shadowRoot.querySelector(".box").click();
+      await select.updateComplete;
+    }
+    return [...select.shadowRoot.querySelectorAll(".option .text")].map(
+      (option) => option.textContent.trim(),
+    );
+  };
 
-    mouse(select.shadowRoot.querySelector(".select__combobox"), "mousedown");
-    await select.updateComplete;
-
-    const option = [...select.querySelectorAll("sl-option")].find(
-      (candidate) => candidate.textContent.trim() === text,
+  window.__choose = async (path, text) => {
+    const texts = await window.__opened(path);
+    const select = window.__find(path);
+    const option = [...select.shadowRoot.querySelectorAll(".option")].find(
+      (candidate) =>
+        candidate.querySelector(".text").textContent.trim() === text,
     );
     if (!option) {
-      throw new Error("no option " + text + " in " + path);
+      throw new Error("no option " + text + " in " + path + ", only " + texts);
     }
-
-    mouse(option, "mouseup");
+    option.click();
     await select.updateComplete;
   };
 
@@ -121,12 +147,13 @@ const DRIVER = /* javascript */ `
 declare global {
   // Everything the component under test sent to the extension host.
   const __posted: any[];
-  // Queries through nested shadow roots, "kdb-view >>> sl-input >>> input".
   function __find(path: string): any;
   // Replaces what a field holds, as typing it would.
   function __type(path: string, text: string): void;
-  // Chooses an sl-select option by the text it shows.
-  function __pick(path: string, text: string): Promise<void>;
+  function __field(path: string, text: string, tag?: string): any;
+  function __open(path: string, text: string): Promise<void>;
+  function __opened(path: string): Promise<string[]>;
+  function __choose(path: string, text: string): Promise<void>;
   // Waits for the page to render what a message asked for.
   function __until(condition: () => any, what: string): Promise<void>;
 }
@@ -199,11 +226,9 @@ export async function webview(
 
   panel.webview.html = /* html */ `
     <!DOCTYPE html>
-    <html lang="en" class="sl-theme-dark">
+    <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <link rel="stylesheet" href="${resource("light.css")}" />
-      <link rel="stylesheet" href="${resource("style.css")}" />
       <script>${DRIVER}</script>
       <script type="module" src="${resource("webview.js")}"></script>
     </head>

@@ -62,7 +62,7 @@ export namespace ext {
   // "kdb.showResultsInView" context key for the selector's menu state.
   export let isResultsTabVisible: boolean;
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
-  export let dataSourceTreeProvider: WorkspaceTreeProvider;
+  export let queryTreeProvider: WorkspaceTreeProvider;
   export let runScratchpadItem: StatusBarItem;
   export let pickTimeoutItem: StatusBarItem;
   export const activeScratchPadList: Array<ScratchpadFile> = [];
@@ -102,7 +102,6 @@ export namespace ext {
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
   export const kdbDataSourceFileGlob = "*.ds";
-  export let oldDSformatExists: boolean;
   export const kdbDataSourceRootNodes: string[] = [];
   export const kdbQueryHistoryNodes: string[] = [];
   export const kdbQueryHistoryList: QueryHistory[] = [];

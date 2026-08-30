@@ -11,8 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as fs from "fs";
-import path from "path";
 import { CancellationToken, InputBoxOptions, window } from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -24,20 +22,13 @@ import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ServerType } from "../models/connectionsModels";
 import { GetDataError, getDataBodyPayload } from "../models/data";
-import {
-  DataSourceFiles,
-  DataSourceTypes,
-  createDefaultDataSourceFile,
-} from "../models/dataSource";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
 import { UDARequestBody } from "../models/uda";
-import { DataSourcesPanel } from "../panels/datasource";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { noSelectedConnectionAction } from "../utils/core";
 import {
   checkIfTimeParamIsCorrect,
-  convertTimeToTimestamp,
-  createKdbDataSourcesFolder,
   getConnectedInsightsNode,
 } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
@@ -52,31 +43,7 @@ import { validateScratchpadOutputVariableName } from "../validators/interfaceVal
 
 const logger = "dataSourceCommand";
 
-export async function addDataSource(): Promise<void> {
-  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-
-  let length = 0;
-  let fileName = `datasource-${length}${ext.kdbDataSourceFileExtension}`;
-  let filePath = path.join(kdbDataSourcesFolderPath, fileName);
-
-  while (fs.existsSync(filePath)) {
-    length++;
-    fileName = `datasource-${length}${ext.kdbDataSourceFileExtension}`;
-    filePath = path.join(kdbDataSourcesFolderPath, fileName);
-  }
-  const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
-  const defaultDataSourceContent = createDefaultDataSourceFile();
-  const insightsNode = getConnectedInsightsNode();
-  defaultDataSourceContent.name = dataSourceName;
-  defaultDataSourceContent.insightsNode = insightsNode;
-
-  fs.writeFileSync(filePath, JSON.stringify(defaultDataSourceContent));
-  notify(
-    `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
-    MessageKind.INFO,
-    { logger },
-  );
-}
+let running = false;
 
 export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
@@ -103,7 +70,7 @@ export async function populateScratchpad(
       connMngService.retrieveConnectedConnection(connLabel);
 
     if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      DataSourcesPanel.running = false;
+      running = false;
       return;
     }
 
@@ -130,7 +97,7 @@ export async function runDataSource(
   token?: CancellationToken,
   timeout?: number,
 ): Promise<any> {
-  if (DataSourcesPanel.running) {
+  if (running) {
     return;
   }
 
@@ -139,7 +106,7 @@ export async function runDataSource(
     return;
   }
 
-  DataSourcesPanel.running = true;
+  running = true;
   const connMngService = new ConnectionManagementService();
   const selectedConnection =
     connMngService.retrieveConnectedConnection(connLabel);
@@ -178,17 +145,17 @@ export async function runDataSource(
           timeout,
         );
         break;
-      case "UDA":
-        res = await runUDADataSource(fileContent, selectedConnection, timeout);
-        break;
       case "SQL":
-      default:
         res = await runSqlDataSource(
           fileContent,
           selectedConnection,
           isNotebook || undefined,
           timeout,
         );
+        break;
+      case "UDA":
+      default:
+        res = await runUDADataSource(fileContent, selectedConnection, timeout);
         break;
     }
 
@@ -266,9 +233,9 @@ export async function runDataSource(
       logger,
       params: error,
     });
-    DataSourcesPanel.running = false;
+    running = false;
   } finally {
-    DataSourcesPanel.running = false;
+    running = false;
   }
 }
 
@@ -312,10 +279,11 @@ export async function runApiDataSource(
   selectedConn: InsightsConnection,
   timeout?: number,
 ): Promise<any> {
-  const isTimeCorrect = checkIfTimeParamIsCorrect(
-    fileContent.dataSource.api.startTS,
-    fileContent.dataSource.api.endTS,
-  );
+  const payload = fileContent.dataSource.api.payload || {};
+  const isTimeCorrect =
+    !payload.startTS ||
+    !payload.endTS ||
+    checkIfTimeParamIsCorrect(payload.startTS, payload.endTS);
   if (!isTimeCorrect) {
     notify(
       "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS",
@@ -343,86 +311,7 @@ export async function runApiDataSource(
 export function getApiBody(
   fileContent: DataSourceFiles,
 ): Partial<getDataBodyPayload> {
-  const api = fileContent.dataSource.api;
-
-  const apiBody: getDataBodyPayload = {
-    table: fileContent.dataSource.api.table,
-    startTS: convertTimeToTimestamp(api.startTS),
-    endTS: convertTimeToTimestamp(api.endTS),
-  };
-
-  const optional = api.optional;
-
-  if (optional) {
-    if (optional.filled) {
-      apiBody.fill = api.fill;
-    }
-    if (optional.temporal) {
-      apiBody.temporality = api.temporality;
-    }
-    if (optional.rowLimit && api.rowCountLimit) {
-      if (api.isRowLimitLast) {
-        apiBody.limit = -parseInt(api.rowCountLimit);
-      } else {
-        apiBody.limit = parseInt(api.rowCountLimit);
-      }
-    }
-
-    const labels = optional.labels.filter((label) => label.active);
-
-    if (labels.length > 0) {
-      apiBody.labels = Object.assign(
-        {},
-        ...labels.map((label) => ({ [label.key]: label.value })),
-      );
-    } else {
-      apiBody.labels = {};
-    }
-
-    const filters = optional.filters
-      .filter((filter) => filter.active)
-      .map((filter) => [
-        filter.operator,
-        filter.column,
-        ((values: string) => {
-          const tokens = values.split(/[;\s]+/).map((token) => {
-            const number = parseFloat(token);
-            return isNaN(number) ? token : number;
-          });
-          return tokens.length === 1 ? tokens[0] : tokens;
-        })(filter.values),
-      ]);
-
-    if (filters.length > 0) {
-      apiBody.filter = filters;
-    }
-
-    const sorts = optional.sorts
-      .filter((sort) => sort.active)
-      .map((sort) => sort.column);
-
-    if (sorts.length > 0) {
-      apiBody.sortCols = sorts;
-    }
-
-    const aggs = optional.aggs
-      .filter((agg) => agg.active)
-      .map((agg) => [agg.key, agg.operator, agg.column]);
-
-    if (aggs.length > 0) {
-      apiBody.agg = aggs;
-    }
-
-    const groups = optional.groups
-      .filter((group) => group.active)
-      .map((group) => group.column);
-
-    if (groups.length > 0) {
-      apiBody.groupBy = groups;
-    }
-  }
-
-  return apiBody;
+  return fileContent.dataSource.api.payload || {};
 }
 
 export async function runQsqlDataSource(
@@ -435,6 +324,10 @@ export async function runQsqlDataSource(
     fileContent.dataSource.qsql.query,
     fileContent.dataSource.qsql.selectedTarget,
     selectedConn.insightsVersion,
+    {
+      agg: fileContent.dataSource.qsql.agg,
+      labels: fileContent.dataSource.qsql.labels,
+    },
   );
 
   const qsqlCall = await selectedConn.getDatasourceQuery(
@@ -522,14 +415,13 @@ export function getQuery(
 ): string {
   switch (selectedType) {
     case "API":
-      return `GetData - table: ${fileContent.dataSource.api.table}`;
+      return `GetData - table: ${fileContent.dataSource.api.payload?.table}`;
     case "QSQL":
       return fileContent.dataSource.qsql.query;
-    case "UDA":
-      return `Executed UDA: ${fileContent.dataSource.uda?.name}`;
     case "SQL":
-    default:
       return fileContent.dataSource.sql.query;
+    default:
+      return `Executed UDA: ${fileContent.dataSource.uda?.name}`;
   }
 }
 

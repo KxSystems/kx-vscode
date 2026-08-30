@@ -13,7 +13,6 @@
 
 import { isDeepStrictEqual } from "util";
 import {
-  ColorThemeKind,
   CustomTextEditorProvider,
   Disposable,
   ExtensionContext,
@@ -36,89 +35,83 @@ import {
 } from "../commands/dataSourceCommand";
 import {
   getConnectionForServer,
-  getInsightsServers,
   getServerForUri,
   getTimeoutForUri,
-  setServerForUri,
-  setTimeoutForUri,
+  pickConnection,
 } from "../commands/workspaceCommand";
-import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
+import { QueryCommand, QueryMessage } from "../models/messages";
 import { MetaObjectPayload } from "../models/meta";
+import { QueryFile, createDefaultQueryFile } from "../models/query";
 import { UDA } from "../models/uda";
-import {
-  calculateSeconds,
-  deconstructSeconds,
-  getBasename,
-  offerConnectAction,
-} from "../utils/core";
+import { getBasename, offerConnectAction } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { MessageKind, Runner, notify } from "../utils/notifications";
+import {
+  parseQueryList,
+  parseTables,
+  parseTargets,
+  queryType,
+  toDataSourceFile,
+} from "../utils/query";
 import { RunFlag, notifyExecution } from "../utils/queryUtils";
-import { parseUDAList } from "../utils/uda";
 import { getUri } from "../utils/uriUtils";
+import { webviewReset } from "../utils/webviewPage";
 
-const logger = "dataSourceEditorProvider";
+const logger = "queryEditorProvider";
 
-export class DataSourceEditorProvider implements CustomTextEditorProvider {
-  public filenname = "";
-  static readonly viewType = "kdb.dataSourceEditor";
+export class QueryEditorProvider implements CustomTextEditorProvider {
+  static readonly viewType = "kdb.queryEditor";
 
   public static register(context: ExtensionContext): Disposable {
-    const provider = new DataSourceEditorProvider(context);
+    const provider = new QueryEditorProvider(context);
     return window.registerCustomEditorProvider(
-      DataSourceEditorProvider.viewType,
+      QueryEditorProvider.viewType,
       provider,
     );
   }
 
-  private cache = new Map<string, Promise<MetaObjectPayload | undefined>>();
+  private cache = new Map<string, UDA[]>();
+  private tables = new Map<string, { [table: string]: string[] }>();
+  private targets = new Map<string, string[]>();
 
   constructor(private readonly context: ExtensionContext) {}
 
-  async getMeta(connLabel: string) {
-    let meta = this.cache.get(connLabel);
-    const connMngService = new ConnectionManagementService();
-    const isConnected = connMngService.isConnected(connLabel);
-    if (!isConnected) {
-      this.cache.set(connLabel, Promise.resolve(<MetaObjectPayload>{}));
-      return Promise.resolve(<MetaObjectPayload>{});
+  async getQueries(connLabel: string): Promise<UDA[]> {
+    const cached = this.cache.get(connLabel);
+    if (cached) {
+      return cached;
     }
-    const selectedConnection =
-      connMngService.retrieveConnectedConnection(connLabel);
 
-    try {
-      if (
-        !(selectedConnection instanceof InsightsConnection) ||
-        !selectedConnection
-      ) {
-        throw new Error("The connection selected is not Insights");
-      }
-      if (
-        !selectedConnection.meta ||
-        selectedConnection.meta.payload.assembly.length === 0
-      ) {
-        throw new Error();
-      }
-      meta = Promise.resolve(selectedConnection?.meta?.payload);
+    const connMngService = new ConnectionManagementService();
+    if (!connMngService.isConnected(connLabel)) {
+      return parseQueryList(<MetaObjectPayload>{});
+    }
 
-      this.cache.set(connLabel, meta);
-    } catch {
+    const connection = connMngService.retrieveConnectedConnection(connLabel);
+    if (
+      !(connection instanceof InsightsConnection) ||
+      !connection.meta ||
+      connection.meta.payload.assembly.length === 0
+    ) {
       notify(
         "No database running in this Insights connection.",
         MessageKind.WARNING,
         { logger },
       );
-      meta = Promise.resolve(<MetaObjectPayload>{});
-      this.cache.set(connLabel, meta);
+      return parseQueryList(<MetaObjectPayload>{});
     }
-    return (await meta) || Promise.resolve(<MetaObjectPayload>{});
+
+    const queries = parseQueryList(connection.meta.payload);
+    this.cache.set(connLabel, queries);
+    this.tables.set(connLabel, parseTables(connection.meta.payload));
+    this.targets.set(connLabel, parseTargets(connection.meta.payload));
+    return queries;
   }
 
   async resolveCustomTextEditor(
     document: TextDocument,
     webviewPanel: WebviewPanel,
   ): Promise<void> {
-    this.filenname = document.fileName.split("/").pop() || "";
     const webview = webviewPanel.webview;
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
@@ -128,32 +121,23 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     const updateWebview = async () => {
       if (changing === 0) {
         const selectedServer = getServerForUri(document.uri) || "";
-        const timeout = getTimeoutForUri(document.uri);
-        const timeoutParts = deconstructSeconds(timeout.value);
-        const selectedServerVersion =
-          await connMngService.retrieveInsightsConnVersion(selectedServer);
         await getConnectionForServer(selectedServer);
-        const insightsMeta = await this.getMeta(selectedServer);
-        const UDAs: UDA[] = parseUDAList(insightsMeta);
-        webview.postMessage(<DataSourceMessage2>{
-          command: DataSourceCommand.Update,
+        const queries = await this.getQueries(selectedServer);
+        webview.postMessage(<QueryMessage>{
+          command: QueryCommand.Update,
+          file: this.getDocumentAsJson(document),
+          queries,
+          tables: this.tables.get(selectedServer) || {},
+          targets: this.targets.get(selectedServer) || [],
+          isMetaLoaded: connMngService.isConnected(selectedServer),
           selectedServer,
-          timeoutUnit: timeoutParts.unit,
-          timeoutDefault: timeout.source === "workspace",
-          timeoutValue: timeoutParts.value,
-          servers: getInsightsServers(),
-          selectedServerVersion,
-          dataSourceFile: this.getDocumentAsJson(document),
-          insightsMeta,
-          isInsights: true,
-          UDAs,
         });
       }
     };
 
     workspace.onDidChangeConfiguration((event) => {
       /* c8 ignore start */
-      if ((event.affectsConfiguration("kdb.connectionMap"), document)) {
+      if (event.affectsConfiguration("kdb.connectionMap")) {
         updateWebview();
       }
       /* c8 ignore stop */
@@ -177,32 +161,19 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       changeDocumentSubscription.dispose();
     });
 
-    webview.onDidReceiveMessage(async (msg: DataSourceMessage2) => {
+    webview.onDidReceiveMessage(async (msg: QueryMessage) => {
       /* c8 ignore start */
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
       let runner: any;
       switch (msg.command) {
-        case DataSourceCommand.Server: {
-          await setServerForUri(document.uri, msg.selectedServer);
+        case QueryCommand.Connection: {
+          await pickConnection(document.uri);
           updateWebview();
           break;
         }
-        case DataSourceCommand.Timeout: {
-          if (msg.timeoutDefault) {
-            await setTimeoutForUri(document.uri, undefined);
-          } else {
-            await setTimeoutForUri(
-              document.uri,
-              calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
-            );
-          }
-
-          updateWebview();
-          break;
-        }
-        case DataSourceCommand.Change: {
-          const changed = msg.dataSourceFile;
+        case QueryCommand.Change: {
+          const changed = msg.file;
           const current = this.getDocumentAsJson(document);
           if (!isDeepStrictEqual(current, changed)) {
             changing++;
@@ -214,17 +185,19 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           }
           break;
         }
-        case DataSourceCommand.Save: {
+        case QueryCommand.Save: {
           await commands.executeCommand(
             "workbench.action.files.save",
             document,
           );
           break;
         }
-        case DataSourceCommand.Refresh: {
+        case QueryCommand.Refresh: {
           runner = Runner.create(async () => {
             await connMngService.refreshGetMeta(selectedServer);
             this.cache.delete(selectedServer);
+            this.tables.delete(selectedServer);
+            this.targets.delete(selectedServer);
             updateWebview();
           });
           runner.location = ProgressLocation.Notification;
@@ -234,7 +207,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             await runner.execute();
           break;
         }
-        case DataSourceCommand.Run: {
+        case QueryCommand.Run: {
           runner = Runner.create(async (_, token) => {
             const cancellation = new Promise((_, reject) => {
               token.onCancellationRequested(() =>
@@ -245,17 +218,16 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             try {
               return await Promise.race([
                 runDataSource(
-                  msg.dataSourceFile,
+                  toDataSourceFile(msg.file),
                   msg.selectedServer,
-                  this.filenname,
+                  getBasename(document.uri),
                   token,
-                  calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
+                  getTimeoutForUri(document.uri).value,
                 ),
                 cancellation,
               ]);
             } catch (err) {
               if (err instanceof Error && err.message === "Cancelled") {
-                // user cancelled
                 notify(
                   `Cancel request sent for ${msg.selectedServer}, however, the query will continue running on the database until it finishes or times out`,
                   MessageKind.INFO,
@@ -272,13 +244,10 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           if (connected) await runner.execute();
           else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          notifyExecution(
-            RunFlag.Run,
-            msg.dataSourceFile.dataSource.selectedType,
-          );
+          notifyExecution(RunFlag.Run, queryType(msg.file));
           break;
         }
-        case DataSourceCommand.Populate: {
+        case QueryCommand.Populate: {
           runner = Runner.create(async (_, token) => {
             const cancellation = new Promise((_, reject) => {
               token.onCancellationRequested(() =>
@@ -289,18 +258,17 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             try {
               return await Promise.race([
                 populateScratchpad(
-                  msg.dataSourceFile,
+                  toDataSourceFile(msg.file),
                   msg.selectedServer,
                   undefined,
                   undefined,
                   token,
-                  calculateSeconds(msg.timeoutValue, msg.timeoutUnit),
+                  getTimeoutForUri(document.uri).value,
                 ),
                 cancellation,
               ]);
             } catch (err) {
               if (err instanceof Error && err.message === "Cancelled") {
-                // user cancelled
                 notify(
                   `Scratchpad cancel request sent for ${msg.selectedServer}`,
                   MessageKind.INFO,
@@ -316,7 +284,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           if (connected) await runner.execute();
           else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          notifyExecution(0, msg.dataSourceFile.dataSource.selectedType);
+          notifyExecution(0, queryType(msg.file));
           break;
         }
       }
@@ -326,10 +294,10 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     updateWebview();
   }
 
-  private getDocumentAsJson(document: TextDocument) {
+  private getDocumentAsJson(document: TextDocument): QueryFile {
     const text = document.getText();
     if (text.trim().length === 0) {
-      return {};
+      return createDefaultQueryFile();
     }
     return JSON.parse(text);
   }
@@ -352,22 +320,23 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
     return /* html */ `
       <!DOCTYPE html>
-      <html lang="en" class="${
-        window.activeColorTheme.kind === ColorThemeKind.Light ||
-        window.activeColorTheme.kind === ColorThemeKind.HighContrastLight
-          ? "sl-theme-light"
-          : "sl-theme-dark"
-      }">
+      <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="${getResource("light.css")}" />
-        <link rel="stylesheet" href="${getResource("style.css")}" />
-        <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
-        <title>DataSource</title>
+        ${webviewReset(getNonce())}
+        <style nonce="${getNonce()}">
+          @font-face {
+            font-family: "codicon";
+            font-display: block;
+            src: url("${getResource("codicon.ttf")}") format("truetype");
+          }
+        </style>
+        <script type="module" nonce="${getNonce()}" src="${getResource("query.js")}"></script>
+        <title>Query</title>
       </head>
       <body>
-        <kdb-data-source-view></kdb-data-source-view>
+        <kdb-query-view></kdb-query-view>
       </body>
       </html>
     `;

@@ -79,9 +79,22 @@ outputting to `out/`:
    activation entry point.
 2. **Language server** — [server/src/server.ts](server/src/server.ts) (CJS,
    Node). A separate process spoken to via LSP.
-3. **Webviews** — [src/webview/main.ts](src/webview/main.ts) (ESM, browser).
-   Lit + Shoelace components.
-4. **Webview CSS** — from `src/webview/styles/`.
+3. **Webviews** — [src/webview/main.ts](src/webview/main.ts) (ESM, browser):
+   welcome, new connection, chart and results. Lit with native HTML controls —
+   no component library. Shared shadow-root styles live in
+   [baseStyles.ts](src/webview/components/baseStyles.ts), and
+   `bind`/`selectValue` in
+   [directives.ts](src/webview/directives.ts) keep a control's value tied to the
+   model without fighting the DOM. Theme colours come from `--vscode-*` tokens;
+   any token VS Code leaves undefined for a theme kind needs a fallback, which
+   `test/suite/webPanels/webViews/themeTokens.test.ts` enforces.
+4. **Query editor webview** — [src/webview/query.ts](src/webview/query.ts)
+   (ESM, browser), bundled apart from the others so it carries no weight it
+   does not use. `codicon.ttf` is copied beside it for the toolbar icons.
+
+Each webview page inlines its document reset from
+[webviewPage.ts](src/utils/webviewPage.ts) — there is no shared stylesheet
+asset.
 
 ### Extension host (`src/`)
 
@@ -121,10 +134,17 @@ model used by locked-down processes.
 
 ### File types & features
 
-Custom file types the extension owns: `.kdb.json` (Datasource editor), `.plot`
-(Chart viewer), `.kxnb` (KX Notebook), `.kdb.q`/`.kdb.py`/`.kdb.sql`
-(Workbooks/scratchpads). Each workbook/datasource is mapped to a connection and
-execution target via the `kdb.connectionMap`/`kdb.targetMap` workspace settings.
+Custom file types the extension owns: `.kxquery` (Query editor — getData, qSQL,
+SQL and UDAs), `.plot` (Chart viewer), `.kxnb` (KX Notebook), `.kdb.q`/
+`.kdb.py`/`.kdb.sql` (Workbooks/scratchpads). Each workbook/query is mapped to a
+connection and execution target via the `kdb.connectionMap`/`kdb.targetMap`
+workspace settings.
+
+Datasources (`.kdb.json`) are gone: opening one converts it — API and UDA
+datasources to a `.kxquery`, QSQL and SQL to the workbook that supersedes them
+(`DataSourceConverterProvider`). `DataSourceFiles` survives as the internal
+execution format that the query file is adapted into on its way to Insights
+(`toDataSourceFile`), and that the query history and scratchpad import store.
 
 ### Documentation (`docs/`)
 

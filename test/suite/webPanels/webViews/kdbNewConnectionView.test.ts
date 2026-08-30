@@ -111,6 +111,46 @@ describe("KdbNewConnectionView", () => {
     });
   });
 
+  describe("renderSection", () => {
+    function toggle(section: any, open: boolean) {
+      section.values[1]({ target: { open } });
+    }
+
+    it("should title the disclosure after the section", () => {
+      const result = view.renderSection("Authentication & TLS", html`<i></i>`);
+      assert.strictEqual(result.values[2], "Authentication & TLS");
+    });
+
+    it("should start closed", () => {
+      assert.strictEqual(
+        view.renderSection("Authentication & TLS", "").values[0],
+        false,
+      );
+    });
+
+    it("should stay open once turned", () => {
+      toggle(view.renderSection("Authentication & TLS", ""), true);
+      assert.strictEqual(
+        view.renderSection("Authentication & TLS", "").values[0],
+        true,
+      );
+    });
+
+    it("should stay closed once turned back", () => {
+      toggle(view.renderSection("Authentication & TLS", ""), true);
+      toggle(view.renderSection("Authentication & TLS", ""), false);
+      assert.strictEqual(
+        view.renderSection("Authentication & TLS", "").values[0],
+        false,
+      );
+    });
+
+    it("should remember each section on its own", () => {
+      toggle(view.renderSection("Authentication & TLS", ""), true);
+      assert.strictEqual(view.renderSection("Advanced", "").values[0], false);
+    });
+  });
+
   describe("renderServerNameField", () => {
     it("should render server name field for KDB", () => {
       const result = view.renderServerNameField(ServerType.KDB);
@@ -194,40 +234,47 @@ describe("KdbNewConnectionView", () => {
 
       const result = view.renderLblDropdownColorOptions();
 
-      assert.strictEqual(
-        JSON.stringify(result).includes("No Color Selected"),
-        true,
-      );
+      assert.deepStrictEqual(result, ["red", "green"]);
     });
 
-    it("should render label dropdown options", () => {
+    it("should offer every label, with its colour, and a way to add one", () => {
       view.lblNamesList = [
         { name: "label1", color: { colorHex: "#FF0000" } },
         { name: "label2", color: { colorHex: "#00FF00" } },
       ];
-      view.labels = ["label1"];
 
-      const result = view.renderLblDropdownOptions();
-
-      assert.strictEqual(
-        JSON.stringify(result).includes("No Label Selected"),
-        true,
-      );
+      assert.deepStrictEqual(view.labelOptions(), [
+        { value: "label1", color: "#FF0000" },
+        { value: "label2", color: "#00FF00" },
+        { value: "\u0000new-label", label: "+ Create new label..." },
+      ]);
     });
 
-    it("should render label dropdown", () => {
-      view.lblNamesList = [
-        { name: "label1", color: { colorHex: "#FF0000" } },
-        { name: "label2", color: { colorHex: "#00FF00" } },
-      ];
+    it("should render the labels it holds", () => {
+      view.lblNamesList = [{ name: "label1", color: { colorHex: "#FF0000" } }];
       view.labels = ["label1"];
 
-      const result = view.renderLblsDropdown(0);
+      const rendered = JSON.stringify(view.renderLbls());
 
-      assert.strictEqual(
-        JSON.stringify(result).includes("No Label Selected"),
-        true,
-      );
+      assert.strictEqual(rendered.includes("label1"), true);
+      assert.strictEqual(rendered.includes("Select labels..."), true);
+    });
+
+    it("should take the labels that are picked", () => {
+      view.handleLabels(<any>{ target: { values: ["label1", "label2"] } });
+
+      assert.deepStrictEqual(view.labels, ["label1", "label2"]);
+    });
+
+    it("should open the modal rather than hold the new label entry", () => {
+      view.labels = ["label1"];
+
+      view.handleLabels(<any>{
+        target: { values: ["label1", "\u0000new-label"] },
+      });
+
+      assert.deepStrictEqual(view.labels, ["label1"]);
+      assert.strictEqual((<any>view).isModalOpen, true);
     });
 
     it("should render New Label Modal", () => {
@@ -239,20 +286,11 @@ describe("KdbNewConnectionView", () => {
       );
     });
 
-    it("should render New Label Btn", () => {
-      const result = view.renderNewLblBtn();
-
-      assert.strictEqual(
-        JSON.stringify(result).includes("Create New Label"),
-        true,
-      );
-    });
-
     it("should render Connection Label Section", () => {
       const result = view.renderConnectionLabelsSection();
 
       assert.strictEqual(
-        JSON.stringify(result).includes("Connection label (optional)"),
+        JSON.stringify(result).includes("Connection labels (optional)"),
         true,
       );
     });
@@ -275,47 +313,43 @@ describe("KdbNewConnectionView", () => {
     });
   });
 
-  describe("removeBlankLabels", () => {
-    it("should remove blank labels", () => {
-      view.labels = ["label1", ""];
-      view.removeBlankLabels();
-      assert.strictEqual(view.labels.length, 1);
-    });
-
-    it("should not remove blank labels", () => {
+  describe("toggleLabel", () => {
+    it("should add a label", () => {
       view.labels = ["label1"];
-      view.removeBlankLabels();
-      assert.strictEqual(view.labels.length, 1);
+      view.toggleLabel("label2", true);
+      assert.deepStrictEqual(view.labels, ["label1", "label2"]);
     });
 
-    it("should remove duplicate labels", () => {
-      view.labels = ["label1", "label1", "label1"];
-      view.removeBlankLabels();
-      assert.strictEqual(view.labels.length, 1);
+    it("should remove a label", () => {
+      view.labels = ["label1", "label2"];
+      view.toggleLabel("label1", false);
+      assert.deepStrictEqual(view.labels, ["label2"]);
+    });
+
+    it("should hold a label once however often it is added", () => {
+      view.labels = ["label1"];
+      view.toggleLabel("label1", true);
+      assert.deepStrictEqual(view.labels, ["label1"]);
+    });
+
+    it("should leave the rest alone when removing one it does not hold", () => {
+      view.labels = ["label1"];
+      view.toggleLabel("label2", false);
+      assert.deepStrictEqual(view.labels, ["label1"]);
     });
   });
 
-  it("should add label", () => {
-    view.labels = ["label1"];
-    view.addLabel();
-    assert.strictEqual(view.labels.length, 2);
-  });
-
-  it("should remove label", () => {
-    view.labels = ["label1"];
-    view.removeLabel(0);
-    assert.strictEqual(view.labels.length, 0);
-  });
-
-  it("should update label", () => {
-    view.labels = ["label1"];
-    const event: Event = new Event("label2");
-    Object.defineProperty(event, "target", {
-      value: { value: "label2" },
-      writable: false,
+  describe("editing a connection", () => {
+    it("should take the labels it is given without blanks or repeats", () => {
+      view.handleMessage({
+        data: {
+          command: "editConnection",
+          data: {},
+          labels: ["label1", "", "label1", "label2"],
+        },
+      });
+      assert.deepStrictEqual(view.labels, ["label1", "label2"]);
     });
-    view.updateLabelValue(0, event);
-    assert.strictEqual(view.labels[0], "label2");
   });
 
   describe("render()", () => {
@@ -498,6 +532,64 @@ describe("KdbNewConnectionView", () => {
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));
       assert.ok(result.strings[3].includes('<div class="col gap-0">'));
+    });
+  });
+
+  describe("open sections of an edited connection", () => {
+    it("should open Authentication & TLS for a connection with TLS on", () => {
+      view.connectionData = {
+        port: "5000",
+        serverAddress: "localhost",
+        serverName: "local",
+        tls: true,
+      };
+      view.renderMyQEditForm();
+      assert.strictEqual(
+        view.renderSection("Authentication & TLS", "").values[0],
+        true,
+      );
+    });
+
+    it("should leave it closed for a connection without TLS", () => {
+      view.connectionData = {
+        port: "5000",
+        serverAddress: "localhost",
+        serverName: "local",
+      };
+      view.renderMyQEditForm();
+      assert.strictEqual(
+        view.renderSection("Authentication & TLS", "").values[0],
+        false,
+      );
+    });
+
+    it("should open Advanced for a connection that has a realm", () => {
+      view.connectionData = {
+        serverAddress: "https://localhost",
+        serverName: "insights",
+        realm: "kx",
+      };
+      view.renderInsightsEditForm();
+      assert.strictEqual(view.renderSection("Advanced", "").values[0], true);
+    });
+
+    it("should open Advanced for a connection that skips SSL checks", () => {
+      view.connectionData = {
+        serverAddress: "https://localhost",
+        serverName: "insights",
+        insecure: true,
+      };
+      view.renderInsightsEditForm();
+      assert.strictEqual(view.renderSection("Advanced", "").values[0], true);
+    });
+
+    it("should leave Advanced closed for a plain connection", () => {
+      view.connectionData = {
+        serverAddress: "https://localhost",
+        serverName: "insights",
+      };
+      view.renderInsightsEditForm();
+      assert.strictEqual(view.renderSection("Advanced", "").values[0], false);
     });
   });
 

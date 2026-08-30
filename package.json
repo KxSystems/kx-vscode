@@ -196,19 +196,6 @@
       },
       {
         "category": "KX",
-        "command": "kdb.datasource.create",
-        "title": "New Datasource",
-        "icon": "$(add)"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.datasource.refreshDataSourceExplorer",
-        "title": "Refresh datasources",
-        "icon": "$(refresh)",
-        "enablement": "workspaceFolderCount > 0"
-      },
-      {
-        "category": "KX",
         "command": "kdb.scratchpad.create",
         "title": "New Workbook (q)",
         "icon": {
@@ -396,11 +383,6 @@
       },
       {
         "category": "KX",
-        "command": "kdb.datasource.import",
-        "title": "Import Datasource from old format"
-      },
-      {
-        "category": "KX",
         "command": "kdb.repl.start",
         "title": "Start REPL"
       },
@@ -492,6 +474,24 @@
         "category": "KX",
         "command": "kdb.createNotebook",
         "title": "New Notebook"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.query.create",
+        "title": "New Query",
+        "icon": "$(add)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.query.refresh",
+        "title": "Refresh queries",
+        "icon": "$(refresh)",
+        "enablement": "workspaceFolderCount > 0"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.query.convert",
+        "title": "Convert datasources to queries"
       }
     ],
     "keybindings": [
@@ -575,12 +575,12 @@
         "configuration": "./language-configuration.json"
       },
       {
-        "id": "kdbdatasource",
+        "id": "kxquery",
         "aliases": [
-          "kdbdatasource"
+          "kxquery"
         ],
         "extensions": [
-          ".kdb.json"
+          ".kxquery"
         ],
         "icon": {
           "dark": "./resources/dark/datasource.svg",
@@ -645,8 +645,8 @@
           "icon": "resources/images/server.svg"
         },
         {
-          "id": "kdb-datasource-explorer",
-          "name": "Datasources",
+          "id": "kdb-query-explorer",
+          "name": "Queries",
           "icon": "resources/images/server.svg"
         },
         {
@@ -721,14 +721,6 @@
         },
         {
           "command": "kdb.connections.refresh.serverObjects",
-          "when": "false"
-        },
-        {
-          "command": "kdb.datasource.create",
-          "when": "true"
-        },
-        {
-          "command": "kdb.datasource.refreshDataSourceExplorer",
           "when": "false"
         },
         {
@@ -860,10 +852,6 @@
           "when": "false"
         },
         {
-          "command": "kdb.datasource.import",
-          "when": "false"
-        },
-        {
           "command": "kdb.repl.start",
           "when": "true"
         },
@@ -934,6 +922,18 @@
         {
           "command": "kdb.createNotebook",
           "when": "true"
+        },
+        {
+          "command": "kdb.query.create",
+          "when": "true"
+        },
+        {
+          "command": "kdb.query.refresh",
+          "when": "false"
+        },
+        {
+          "command": "kdb.query.convert",
+          "when": "true"
         }
       ],
       "webview/context": [
@@ -950,6 +950,16 @@
       ],
       "view/title": [
         {
+          "command": "kdb.query.create",
+          "when": "view == kdb-query-explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "kdb.query.refresh",
+          "when": "view == kdb-query-explorer",
+          "group": "navigation@2"
+        },
+        {
           "command": "kdb.connections.add",
           "when": "view == kdb-servers",
           "group": "navigation@1"
@@ -957,16 +967,6 @@
         {
           "command": "kdb.connections.refresh.serverObjects",
           "when": "view == kdb-servers",
-          "group": "navigation@2"
-        },
-        {
-          "command": "kdb.datasource.create",
-          "when": "view == kdb-datasource-explorer",
-          "group": "navigation@1"
-        },
-        {
-          "command": "kdb.datasource.refreshDataSourceExplorer",
-          "when": "view == kdb-datasource-explorer",
           "group": "navigation@2"
         },
         {
@@ -1083,12 +1083,12 @@
         },
         {
           "command": "kdb.file.rename",
-          "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
+          "when": "(view == kdb-query-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
           "group": "kdbWorkspace@1"
         },
         {
           "command": "kdb.file.delete",
-          "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
+          "when": "(view == kdb-query-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
           "group": "kdbWorkspace@2"
         },
         {
@@ -1116,12 +1116,12 @@
         {
           "submenu": "kdb.results.destination.terminalMenu",
           "group": "navigation@-0.5",
-          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py|kdb\\.json)$/i && !kdb.showResultsInView"
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py|kxquery)$/i && !kdb.showResultsInView"
         },
         {
           "submenu": "kdb.results.destination.viewMenu",
           "group": "navigation@-0.5",
-          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py|kdb\\.json)$/i && kdb.showResultsInView"
+          "when": "resourceFilename =~ /\\.(?:q|quke|sql|py|kxquery)$/i && kdb.showResultsInView"
         }
       ],
       "kdb.results.destination.terminalMenu": [
@@ -1234,11 +1234,11 @@
     },
     "customEditors": [
       {
-        "viewType": "kdb.dataSourceEditor",
-        "displayName": "Datasource Editor",
+        "viewType": "kdb.queryEditor",
+        "displayName": "Query Editor",
         "selector": [
           {
-            "filenamePattern": "*.kdb.json"
+            "filenamePattern": "*.kxquery"
           }
         ],
         "priority": "default"
@@ -1249,6 +1249,19 @@
         "selector": [
           {
             "filenamePattern": "*.plot"
+          }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "kdb.dataSourceConverter",
+        "displayName": "Datasource Converter",
+        "selector": [
+          {
+            "filenamePattern": "*.kdb.json"
+          },
+          {
+            "filenamePattern": "*.kxuda"
           }
         ],
         "priority": "default"
@@ -1308,7 +1321,6 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
-    "@shoelace-style/shoelace": "2.20.1",
     "@types/fs-extra": "11.0.4",
     "@types/jsdom": "28.0.3",
     "@types/mocha": "10.0.10",
@@ -1319,6 +1331,7 @@
     "@types/vscode": "1.103.0",
     "@types/vscode-webview": "1.57.5",
     "@types/ws": "8.18.1",
+    "@vscode/codicons": "0.0.46-24",
     "@vscode/extension-telemetry": "1.4.0",
     "@vscode/python-extension": "1.0.6",
     "@vscode/test-electron": "3.1.0",

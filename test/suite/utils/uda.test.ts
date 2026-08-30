@@ -21,6 +21,7 @@ import {
   UDAParam,
   UDARequestBody,
 } from "../../../src/models/uda";
+import { sourceForParam } from "../../../src/models/uda";
 import * as UDAUtils from "../../../src/utils/uda";
 
 describe("UDA", () => {
@@ -145,6 +146,40 @@ describe("UDA", () => {
     });
   });
 
+  describe("sourceForParam", () => {
+    it("should recognise a table parameter", () => {
+      assert.strictEqual(
+        sourceForParam("table", ParamFieldType.Text),
+        "tables",
+      );
+    });
+
+    it("should recognise the conventional column parameters", () => {
+      for (const name of ["column", "columns", "sortCols", "groupBy", "by"]) {
+        assert.strictEqual(
+          sourceForParam(name, ParamFieldType.Text),
+          "columns",
+          name,
+        );
+      }
+    });
+
+    it("should leave anything else alone", () => {
+      assert.strictEqual(sourceForParam("sym", ParamFieldType.Text), undefined);
+    });
+
+    it("should not claim a parameter that is not a symbol", () => {
+      assert.strictEqual(
+        sourceForParam("table", ParamFieldType.Number),
+        undefined,
+      );
+      assert.strictEqual(
+        sourceForParam("columns", ParamFieldType.JSON),
+        undefined,
+      );
+    });
+  });
+
   describe("convertTypesToString", () => {
     let dataTypesStub: sinon.SinonStub;
 
@@ -242,6 +277,42 @@ describe("UDA", () => {
 
       const result = UDAUtils.fixTimeAtUDARequestBody(input);
       assert.deepStrictEqual(result, input);
+    });
+
+    it("should not modify a value that already has seconds and nanoseconds", () => {
+      const input: UDARequestBody = {
+        language: "en",
+        name: "test",
+        parameterTypes: { timeKey: -12 },
+        params: { timeKey: "2024-01-01T10:20:30.123456789" },
+        returnFormat: "json",
+        sampleFn: "sample",
+        sampleSize: 10,
+      };
+
+      const result = UDAUtils.fixTimeAtUDARequestBody(input);
+      assert.strictEqual(
+        result.params.timeKey,
+        "2024-01-01T10:20:30.123456789",
+      );
+    });
+
+    it("should fill out a date and time that stops at minutes", () => {
+      const input: UDARequestBody = {
+        language: "en",
+        name: "test",
+        parameterTypes: { timeKey: -12 },
+        params: { timeKey: "2024-01-01T10:20" },
+        returnFormat: "json",
+        sampleFn: "sample",
+        sampleSize: 10,
+      };
+
+      const result = UDAUtils.fixTimeAtUDARequestBody(input);
+      assert.strictEqual(
+        result.params.timeKey,
+        "2024-01-01T10:20:00.000000000",
+      );
     });
 
     it("should not modify params[key] if params[key] is an empty string", () => {

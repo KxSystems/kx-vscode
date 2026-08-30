@@ -13,13 +13,11 @@
 
 import * as fs from "fs";
 import path from "path";
-import { workspace, Uri } from "vscode";
 
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { MessageKind, notify } from "./notifications";
 import { DataSourceFiles } from "../models/dataSource";
-import { DataSourcesPanel } from "../panels/datasource";
 
 const logger = "dataSource";
 
@@ -98,61 +96,8 @@ export function checkIfTimeParamIsCorrect(
   }
 }
 
-export function refreshDataSourcesPanel(): void {
-  if (DataSourcesPanel.currentPanel) {
-    DataSourcesPanel.currentPanel.refresh();
-  }
-}
-
 export function convertDataSourceFormToDataSourceFile(
   form: any,
 ): DataSourceFiles {
   return form as DataSourceFiles;
-}
-
-export function oldFilesExists(): boolean {
-  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-  const files = fs.readdirSync(kdbDataSourcesFolderPath);
-  return files.length > 0;
-}
-
-export async function importOldDsFiles(): Promise<void> {
-  /* c8 ignore start */
-  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-  const files = fs.readdirSync(kdbDataSourcesFolderPath);
-  for (const file of files) {
-    const fileData = fs.readFileSync(path.join(kdbDataSourcesFolderPath, file));
-    const fileContent: DataSourceFiles = JSON.parse(fileData.toString());
-    //remove fields that will became deprecated in the future
-    fileContent.name = undefined;
-    fileContent.originalName = undefined;
-    fileContent.insightsNode = undefined;
-    // import DS
-    await addDSToLocalFolder(fileContent);
-    // remove old DS
-    fs.unlinkSync(path.join(kdbDataSourcesFolderPath, file));
-  }
-  ext.oldDSformatExists = false;
-  /* c8 ignore stop */
-}
-
-export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
-  /* c8 ignore start */
-  const folders = workspace.workspaceFolders;
-  if (folders) {
-    const folder = folders[0];
-    const importToUri = Uri.joinPath(folder.uri, ".kx");
-    await workspace.fs.createDirectory(importToUri);
-    let i = 1;
-    let fileName = `datasource-${i}.kdb.json`;
-    let filePath = path.join(importToUri.fsPath, fileName);
-    while (fs.existsSync(filePath)) {
-      i++;
-      fileName = `datasource-${i}.kdb.json`;
-      filePath = path.join(importToUri.fsPath, fileName);
-    }
-    fs.writeFileSync(filePath, JSON.stringify(ds));
-    notify(`Datasource created.`, MessageKind.INFO, { logger });
-  }
-  /* c8 ignore stop */
 }

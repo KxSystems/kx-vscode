@@ -41,7 +41,6 @@ import {
 } from "../../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../../src/utils/core";
-import * as dataSourceUtils from "../../../src/utils/dataSource";
 import { ExecutionConsole } from "../../../src/utils/executionConsole";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
@@ -1181,21 +1180,16 @@ describe("serverCommand", () => {
         ConnectionManagementService.prototype,
         "setActiveConnection",
       );
-      refreshDataSourcesPanelStub = sinon.stub(
-        dataSourceUtils,
-        "refreshDataSourcesPanel",
-      );
       reloadStub = sinon.stub(ext.serverProvider, "reload");
     });
     afterEach(() => {
       sinon.restore();
     });
 
-    it("should set active connection and refresh panel", () => {
+    it("should set active connection and reload the tree", () => {
       serverCommand.activeConnection(kdbNode);
 
       assert.ok(setActiveConnectionStub.calledWith(kdbNode));
-      assert.ok(refreshDataSourcesPanelStub.calledOnce);
       assert.ok(reloadStub.calledOnce);
     });
   });

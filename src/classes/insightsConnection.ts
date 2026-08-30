@@ -43,7 +43,6 @@ import {
   invalidUsernameJWT,
   tokenUndefinedError,
 } from "../utils/core";
-import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { getHeaders, isEncodedPng } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
@@ -465,12 +464,18 @@ export class InsightsConnection {
     query: string,
     assemblyTarget: string,
     version?: string,
+    options?: { agg?: string; labels?: { [key: string]: string } },
   ) {
     const [plainAssembly, tier, plainDap] =
       normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
 
     const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
     const dap = this.retrieveCorrectDAPName(plainDap, tier);
+
+    const extras = {
+      ...(options?.agg === undefined ? {} : { agg: options.agg }),
+      ...(options?.labels === undefined ? {} : { labels: options.labels }),
+    };
 
     if (version && isBaseVersionGreaterOrEqual(version, "1.13")) {
       return {
@@ -481,10 +486,11 @@ export class InsightsConnection {
           tier: dap ? undefined : tier,
           dap: dap,
         },
+        ...extras,
       };
     }
 
-    return { query, assembly, tier, dap };
+    return { query, assembly, tier, dap, ...extras };
   }
 
   public retrieveCorrectAssemblyName(
@@ -598,11 +604,7 @@ export class InsightsConnection {
       };
       switch (params.dataSource.selectedType) {
         case DataSourceTypes.API: {
-          body.params = {
-            table: params.dataSource.api.table,
-            startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
-            endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
-          };
+          body.params = params.dataSource.api.payload || {};
           coreUrl = this.connEndpoints.scratchpad.import;
           break;
         }
@@ -616,6 +618,10 @@ export class InsightsConnection {
             params.dataSource.qsql.query,
             params.dataSource.qsql.selectedTarget,
             this.insightsVersion,
+            {
+              agg: params.dataSource.qsql.agg,
+              labels: params.dataSource.qsql.labels,
+            },
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;

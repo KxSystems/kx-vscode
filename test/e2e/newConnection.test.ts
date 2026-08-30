@@ -18,21 +18,17 @@ import { Webview, webview } from "./utils/webview";
 
 /**
  * The new connection view, driven the way a user drives it: real typing into
- * real Shoelace controls, real clicks, and the real messages the panel
- * exchanges with it. What is asserted is the traffic across the postMessage
+ * the real controls, real clicks, and the real messages the panel exchanges
+ * with it. What is asserted is the traffic across the postMessage
  * boundary, which is all the extension side ever sees of this form.
  */
 describe("New connection view", () => {
   let view: Webview;
 
-  // Each form is a scope the fields hang off. The new connection form keeps
-  // both server types mounted, one tab panel each — named after ConnectionType,
-  // so 1 is My q and 2 is Insights — and the same labels and Server Name appear
-  // in both, so every field has to be looked up under its own tab. The edit
-  // form has no tabs.
-  const MY_Q = "kdb-new-connection-view >>> sl-tab-panel[name='1'] ";
-  const INSIGHTS = "kdb-new-connection-view >>> sl-tab-panel[name='2'] ";
-  const EDIT = "kdb-new-connection-view >>> ";
+  const ROOT = "kdb-new-connection-view";
+  const MY_Q = ROOT;
+  const INSIGHTS = ROOT;
+  const EDIT = ROOT;
 
   before(async () => {
     await activate();
@@ -50,7 +46,7 @@ describe("New connection view", () => {
     view.eval(
       (root: string, values: Record<string, string>) => {
         for (const label of Object.keys(values)) {
-          __type(`${root}sl-input[label="${label}"] >>> input`, values[label]);
+          __type(__field(root, label), values[label]);
         }
       },
       scope,
@@ -60,12 +56,22 @@ describe("New connection view", () => {
   const click = (path: string) =>
     view.eval((selector: string) => __find(selector).click(), path);
 
+  const open = (scope: string, section: string) =>
+    view.eval(
+      (root: string, title: string) => __open(root, title),
+      scope,
+      section,
+    );
+
+  const AUTH = "Authentication & TLS";
+  const ADVANCED = "Advanced";
+
   // The primary button is Create Connection on the new form, Update Connection
   // on the edit one; both are the last thing a user touches, so this returns
   // everything the view sent while the test was driving it.
   const submit = (scope: string) =>
     view.eval((root: string) => {
-      __find(`${root}sl-button[variant="primary"]`).click();
+      __find(`${root} >>> button.primary`).click();
       return __posted;
     }, scope);
 
@@ -100,10 +106,11 @@ describe("New connection view", () => {
       "Server Name": "secured",
       "Define connection address": "127.0.0.1",
       "Set port number": "5001",
-      Username: "  user  ",
-      Password: " secret ",
     });
-    await click(`${MY_Q}sl-checkbox >>> input[type="checkbox"]`);
+
+    await open(MY_Q, AUTH);
+    await type(MY_Q, { Username: "  user  ", Password: " secret " });
+    await click(`${MY_Q} >>> input[type="checkbox"]`);
 
     const [message] = await submit(MY_Q);
 
@@ -119,18 +126,15 @@ describe("New connection view", () => {
   });
 
   it("adds an Insights connection from the Insights tab", async () => {
-    await click(`kdb-new-connection-view >>> sl-tab[panel="2"]`);
+    await click(`${ROOT} >>> .tabs button:nth-child(2)`);
     await type(INSIGHTS, {
       "Server Name": "insights",
       "Define connection address": "https://insights.example.com",
     });
 
-    // Realm and the SSL checkbox live behind Advanced, and a field inside a
-    // closed details cannot be focused, so typing would land in whichever
-    // field still had focus.
-    await click(`${INSIGHTS}details summary`);
+    await open(INSIGHTS, ADVANCED);
     await type(INSIGHTS, { "Define Realm (optional)": "keycloak" });
-    await click(`${INSIGHTS}sl-checkbox >>> input[type="checkbox"]`);
+    await click(`${INSIGHTS} >>> input[type="checkbox"]`);
 
     const posted = await submit(INSIGHTS);
 
@@ -162,22 +166,19 @@ describe("New connection view", () => {
       ],
     });
 
-    const offered = await view.eval(async (root: string) => {
-      const options = () => [
-        ...__find(`${root}sl-select#selectLabel`).querySelectorAll("sl-option"),
-      ];
-      for (let attempt = 0; attempt < 100 && options().length < 2; attempt++) {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-      return options().map((option: any) => option.textContent.trim());
-    }, MY_Q);
+    const LABELS = `${MY_Q} >>> kdb-select.labels`;
 
-    assert.deepStrictEqual(offered, ["No Label Selected", "prod", "dev"]);
+    const offered = await view.eval(async (path: string) => {
+      await __until(
+        () => __find(path).options.length > 1,
+        "the labels the panel sent",
+      );
+      return __opened(path);
+    }, LABELS);
 
-    await view.eval(
-      (root: string) => __pick(`${root}sl-select#selectLabel`, "dev"),
-      MY_Q,
-    );
+    assert.deepStrictEqual(offered, ["prod", "dev", "+ Create new label..."]);
+
+    await view.eval((path: string) => __choose(path, "dev"), LABELS);
 
     await type(MY_Q, { "Server Name": "labelled" });
     const [message] = await submit(MY_Q);
@@ -192,7 +193,7 @@ describe("New connection view", () => {
     await view.eval(
       (root: string) =>
         __until(
-          () => __find(`${root}h2`)?.textContent.trim().startsWith("Edit"),
+          () => __find(`${root} >>> h2`)?.textContent.trim().startsWith("Edit"),
           "the edit form",
         ),
       EDIT,
@@ -202,16 +203,12 @@ describe("New connection view", () => {
   const shownIn = (labels: string[]) =>
     view.eval(
       (root: string, wanted: string[]) => {
-        const shown: Record<string, string> = {
-          heading: __find(`${root}h2`).textContent.trim(),
-          button: __find(
-            `${root}sl-button[variant="primary"]`,
-          ).textContent.trim(),
+        const shown: Record<string, string | undefined> = {
+          heading: __find(`${root} >>> h2`).textContent.trim(),
+          button: __find(`${root} >>> button.primary`).textContent.trim(),
         };
         for (const label of wanted) {
-          shown[label] = __find(
-            `${root}sl-input[label="${label}"] >>> input`,
-          )?.value;
+          shown[label] = __field(root, label)?.value;
         }
         return shown;
       },
@@ -275,15 +272,11 @@ describe("New connection view", () => {
     assert.strictEqual(before["Username"], undefined);
     assert.strictEqual(before["Password"], undefined);
 
-    // The first checkbox is "Edit existing auth"; the credentials are rendered
-    // only while it is ticked, and TLS is the checkbox after them.
-    await click(`${EDIT}sl-checkbox >>> input[type="checkbox"]`);
+    await open(EDIT, AUTH);
+    await click(`${EDIT} >>> input[type="checkbox"]`);
     await view.eval(
       (root: string) =>
-        __until(
-          () => __find(`${root}sl-input[label="Username"]`),
-          "the credential fields",
-        ),
+        __until(() => __field(root, "Username"), "the credential fields"),
       EDIT,
     );
 
@@ -317,7 +310,7 @@ describe("New connection view", () => {
     await type(EDIT, {
       "Define connection address": "https://moved.example.com",
     });
-    await click(`${EDIT}details summary`);
+    await open(EDIT, ADVANCED);
     await type(EDIT, { "Define Realm (optional)": "keycloak" });
 
     const [message] = await submit(EDIT);
