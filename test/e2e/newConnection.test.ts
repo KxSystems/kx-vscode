@@ -75,6 +75,32 @@ describe("New connection view", () => {
       return __posted;
     }, scope);
 
+  // What a field shows, as opposed to what the form sends: the two came apart
+  // when a field was repainted from a model the typing had not reached.
+  const shown = (scope: string, label: string) =>
+    view.eval(
+      (root: string, text: string) => __field(root, text)?.value,
+      scope,
+      label,
+    );
+
+  it("keeps what was typed in a field once the focus has moved on", async () => {
+    await type(MY_Q, {
+      "Server Name": "test server",
+      "Define connection address": "127.0.0.1",
+      "Set port number": "5001",
+    });
+
+    // Typing into the next field takes the focus off the one before it, which
+    // is when the binding repaints a field from the model.
+    assert.strictEqual(await shown(MY_Q, "Server Name"), "test server");
+    assert.strictEqual(
+      await shown(MY_Q, "Define connection address"),
+      "127.0.0.1",
+    );
+    assert.strictEqual(await shown(MY_Q, "Set port number"), "5001");
+  });
+
   it("adds a kdb connection from the My q tab", async () => {
     await type(MY_Q, {
       "Server Name": "test server",

@@ -38,7 +38,7 @@ import {
   getQSQLWrapper,
 } from "../utils/queryUtils";
 import { updatedExtractRowData } from "../utils/resultsRenderer";
-import { retrieveUDAtoCreateReqBody } from "../utils/uda";
+import { recastParams, retrieveUDAtoCreateReqBody } from "../utils/uda";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
 const logger = "dataSourceCommand";
@@ -384,6 +384,18 @@ export async function runUDADataSource(
       params: udaReqBody.error,
     });
     return udaReqBody;
+  }
+
+  // A REST request carries no types of its own, so the gateway casts each
+  // parameter to the first type the UDA registered for it. Saying so beats
+  // returning quietly mistyped results, since the form let the type be chosen.
+  const recast = uda ? recastParams(uda) : [];
+  if (recast.length > 0) {
+    notify(
+      `The service gateway will read ${recast.join(", ")} as the first type the UDA registers, not the type chosen. Populate Scratchpad honours the choice.`,
+      MessageKind.WARNING,
+      { logger },
+    );
   }
 
   return await executeUDARequest(selectedConn, udaReqBody, timeout);

@@ -102,6 +102,9 @@ const STRUCTURED = [
   "scope",
 ];
 
+const AGG_CONFLICT =
+  "Give either columns or agg, not both: getData carries column selection and aggregation in the same parameter.";
+
 function parseStructured(name: string, value: string) {
   try {
     return JSON.parse(value);
@@ -131,7 +134,18 @@ export function buildGetDataPayload(query: UDA): Partial<getDataBodyPayload> {
       payload[name] = (
         NANOSECONDS.test(time) ? time : convertTimeToTimestamp(time)
       ) as never;
+    } else if (param.name === "columns") {
+      // Column selection and aggregation are the same wire parameter, and it
+      // takes one shape or the other, so both being filled in is ambiguous
+      // rather than additive. Say so instead of picking one.
+      if ("agg" in payload) {
+        throw new Error(AGG_CONFLICT);
+      }
+      payload.agg = parseStructured("columns", String(value)) as never;
     } else if (STRUCTURED.includes(param.name)) {
+      if (param.name === "agg" && "agg" in payload) {
+        throw new Error(AGG_CONFLICT);
+      }
       payload[name] = parseStructured(param.name, String(value)) as never;
     } else if (param.name === "limit") {
       payload.limit = Number(value);

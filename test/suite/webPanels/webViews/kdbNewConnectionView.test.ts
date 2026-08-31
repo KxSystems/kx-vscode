@@ -111,6 +111,73 @@ describe("KdbNewConnectionView", () => {
     });
   });
 
+  describe("field input handlers", () => {
+    function fire(template: any, value: unknown) {
+      const handler = template.values.find(
+        (candidate: unknown) => typeof candidate === "function",
+      );
+      handler({ target: { value, checked: value } });
+    }
+
+    let requestUpdate: sinon.SinonSpy;
+
+    beforeEach(() => {
+      requestUpdate = sinon.spy(view, "requestUpdate");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should keep the server name and ask for a render", () => {
+      fire(view.renderServerNameField(ServerType.KDB), "server-1");
+      assert.strictEqual(view.kdbServer.serverAlias, "server-1");
+      assert.strictEqual(requestUpdate.called, true);
+    });
+
+    it("should keep the Insights alias and ask for a render", () => {
+      fire(view.renderServerNameField(ServerType.INSIGHTS), "insights-1");
+      assert.strictEqual(view.insightsServer.alias, "insights-1");
+      assert.strictEqual(requestUpdate.called, true);
+    });
+
+    it("should keep the port and ask for a render", () => {
+      fire(view.renderPortNumber(), "5001");
+      assert.strictEqual(view.kdbServer.serverPort, "5001");
+      assert.strictEqual(requestUpdate.called, true);
+    });
+
+    it("should keep the kdb address and ask for a render", () => {
+      fire(view.renderConnAddress(ServerType.KDB), "localhost");
+      assert.strictEqual(view.kdbServer.serverName, "localhost");
+      assert.strictEqual(requestUpdate.called, true);
+    });
+
+    it("should keep the Insights address and ask for a render", () => {
+      fire(view.renderConnAddress(ServerType.INSIGHTS), "https://insights");
+      assert.strictEqual(view.insightsServer.server, "https://insights");
+      assert.strictEqual(requestUpdate.called, true);
+    });
+
+    it("should keep the realm and ask for a render", () => {
+      fire(view.renderRealm(), "custom");
+      assert.strictEqual(view.insightsServer.realm, "custom");
+      assert.strictEqual(requestUpdate.called, true);
+    });
+
+    it("should keep the insecure flag and ask for a render", () => {
+      fire(view.renderInsecureSSL(), true);
+      assert.strictEqual(view.insightsServer.insecure, true);
+      assert.strictEqual(requestUpdate.called, true);
+    });
+
+    it("should ask for a render when TLS is toggled", () => {
+      view.changeTLS();
+      assert.strictEqual(view.kdbServer.tls, true);
+      assert.strictEqual(requestUpdate.called, true);
+    });
+  });
+
   describe("renderSection", () => {
     function toggle(section: any, open: boolean) {
       section.values[1]({ target: { open } });

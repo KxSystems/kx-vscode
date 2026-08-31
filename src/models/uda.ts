@@ -49,6 +49,8 @@ export interface UDAParam {
   multiFieldTypes?: { [key: string]: ParamFieldType }[];
   selectedMultiTypeString?: string;
   value?: any;
+  /** Render the choices as a multi-select, holding a list rather than one. */
+  multiple?: boolean;
   isVisible?: boolean;
   isDistinguised?: boolean;
   choices?: string[];
@@ -94,13 +96,17 @@ export const UDA_DISTINGUISHED_PARAMS: UDAParam[] = [
   },
   {
     name: "labels",
-    description: "A dictionary describing DAP labels to target,",
+    description:
+      "DAP labels to target. One key takes several values, separated by spaces or semicolons.",
     isReq: false,
     type: [99],
     typeStrings: ["Dictionary"],
     isVisible: false,
     fieldType: ParamFieldType.JSON,
     isDistinguised: true,
+    // Values stay strings: a label is a symbol, so a numeric-looking one like
+    // 600519 must not be coerced to a number.
+    rows: [{ name: "key" }, { name: "value", many: true, typed: false }],
   },
   {
     name: "scope",

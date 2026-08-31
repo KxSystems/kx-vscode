@@ -532,12 +532,15 @@ export class InsightsConnection {
         ? (body as UDARequestBody).name
         : "";
       if (udaName !== "") {
+        // The parameters are the whole body, and parameterTypes is dropped on
+        // purpose: a REST request has nowhere to put it. The gateway casts each
+        // parameter using the type the UDA registered, and where a parameter
+        // registers several, "auto-casting uses the first type in the list"
+        // (kdb Insights, .kxi.metaParam). Sending the key would only add a
+        // parameter the UDA has no argument for. runUDADataSource warns when a
+        // chosen type is about to be overridden this way; the scratchpad path,
+        // which does take parameterTypes, honours the choice.
         body = body.params;
-        // TODO: This will be necessary when the parametertypes issue is fixed just remove the line above
-        // body = {
-        //   ...body.params,
-        //   parameterTypes: body.parameterTypes,
-        // };
       }
       if (timeout) {
         body.opts = {

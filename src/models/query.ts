@@ -175,6 +175,20 @@ export const GET_DATA_PARAMS: UDAParam[] = [
     ],
   },
   {
+    // getData has no column projection of its own: agg doubles as one, taking
+    // "column(s) to select" as a plain symbol list. buildGetDataPayload sends
+    // this under the agg key for that reason.
+    name: "columns",
+    description: "Columns to return. All of them when none are chosen.",
+    isReq: false,
+    type: [11],
+    typeStrings: ["Symbol vector"],
+    fieldType: ParamFieldType.Text,
+    isVisible: false,
+    multiple: true,
+    source: "columns",
+  },
+  {
     name: "groupBy",
     description: "Columns to group by.",
     isReq: false,
@@ -379,7 +393,24 @@ function isDictionary(param: UDAParam) {
   return param.name === "labels" || param.name === "scope";
 }
 
-function parseValue(value: unknown) {
+/**
+ * The getData filter operators whose value has to be a list even when only one
+ * was given: "when using `in` or `within` this should be a list that matches
+ * the data type of column name being referenced". The comparison operators want
+ * a scalar instead, which is what a single value collapses to on its own, so
+ * only these two need forcing.
+ */
+const LIST_OPERATORS = new Set(["in", "within"]);
+
+function forcesList(param: UDAParam, row: string[]) {
+  if (param.name !== "filter") {
+    return false;
+  }
+  const at = (param.rows || []).findIndex((field) => field.name === "operator");
+  return at >= 0 && LIST_OPERATORS.has(row[at]);
+}
+
+export function parseValue(value: unknown) {
   if (typeof value !== "string") {
     return value;
   }
@@ -424,9 +455,10 @@ export function parseRows(param: UDAParam): string[][] {
   }
 
   if (isDictionary(param)) {
+    const many = !!fields[1]?.many;
     return Object.entries(parsed).map(([key, value]) => [
       key,
-      String(value ?? ""),
+      many ? fromValues(value) : String(value ?? ""),
     ]);
   }
 
@@ -476,8 +508,19 @@ export function serializeRows(param: UDAParam, rows: string[][]) {
   }
 
   if (isDictionary(param)) {
+    const values = fields[1];
     return JSON.stringify(
-      Object.fromEntries(filled.map(([key, value]) => [key, value])),
+      Object.fromEntries(
+        filled.map(([key, value]) => {
+          if (!values?.many) {
+            return [key, value];
+          }
+          // One key maps to several values, and to a list even when only one
+          // was given — a label is matched against a list of candidates.
+          const given = toValues(value, values.typed);
+          return [key, Array.isArray(given) ? given : [given]];
+        }),
+      ),
     );
   }
 
@@ -493,7 +536,9 @@ export function serializeRows(param: UDAParam, rows: string[][]) {
       fields.forEach((field, index) => {
         const at = field.at ?? index;
         if (field.many) {
-          values[at] = toValues(row[index] || "", field.typed);
+          const given = toValues(row[index] || "", field.typed);
+          values[at] =
+            forcesList(param, row) && !Array.isArray(given) ? [given] : given;
           return;
         }
         const slot = shared.get(at) || [];

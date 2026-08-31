@@ -14,15 +14,27 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 
+import { InsightsConnection } from "../../../src/classes/insightsConnection";
 import { ext } from "../../../src/extensionVariables";
 import { MetaObjectPayload } from "../../../src/models/meta";
 import {
   ParamFieldType,
+  UDA,
   UDAParam,
   UDARequestBody,
 } from "../../../src/models/uda";
 import { sourceForParam } from "../../../src/models/uda";
 import * as UDAUtils from "../../../src/utils/uda";
+
+/**
+ * Only the two things the UDA request path asks a connection: whether it is
+ * usable, and whether it knows the UDA. Standing a real InsightsConnection up
+ * would drag in auth, endpoints and the tree for no gain.
+ */
+const connection = (available: boolean) =>
+  ({
+    isUDAAvailable: async () => available,
+  }) as unknown as InsightsConnection;
 
 describe("UDA", () => {
   describe("filterUDAParamsValidTypes", () => {
@@ -129,6 +141,10 @@ describe("UDA", () => {
       assert.strictEqual(result[1].fieldType, ParamFieldType.Number);
     });
 
+    it("should take a UDA that lists no params at all", () => {
+      assert.deepStrictEqual(UDAUtils.parseUDAParams(undefined), []);
+    });
+
     it("should return Invalid if required param is invalid", () => {
       const params: UDAParam[] = [
         {
@@ -210,6 +226,15 @@ describe("UDA", () => {
 
       const result = UDAUtils.convertTypesToString(types);
       assert.deepStrictEqual(result, ["Boolean"]);
+    });
+
+    it("should take a single type that is not in an array", () => {
+      dataTypesStub.value(new Map([["-11", "Symbol"]]));
+
+      assert.deepStrictEqual(
+        UDAUtils.convertTypesToString(-11 as unknown as number[]),
+        ["Symbol"],
+      );
     });
 
     it("should handle empty array", () => {
@@ -450,7 +475,7 @@ describe("UDA", () => {
     });
 
     it("should return empty type array and empty description when metadata has no return", () => {
-      const metadata = undefined;
+      const metadata = { api: ".uda.noReturn" };
       convertTypesToStringStub.withArgs([]).returns([]);
 
       const result = UDAUtils.createUDAReturn(metadata);
@@ -536,6 +561,23 @@ describe("UDA", () => {
       assert.strictEqual(result[0].name, "testAPI");
       assert.strictEqual(result[0].params.length, 1);
       assert.strictEqual(result[0].params[0].fieldType, ParamFieldType.Boolean);
+    });
+
+    it("should parse a UDA registered without a return", () => {
+      const getMeta = {
+        api: [
+          {
+            api: "noReturnAPI",
+            uda: true,
+            params: [],
+          },
+        ],
+      } as unknown as MetaObjectPayload;
+
+      const result = UDAUtils.parseUDAList(getMeta);
+
+      assert.strictEqual(result.length, 1);
+      assert.deepStrictEqual(result[0].return, { type: [], description: "" });
     });
   });
 
@@ -807,6 +849,360 @@ describe("UDA", () => {
         new Error(
           "Invalid type for parameter: param6. Expected number or array of numbers.",
         ),
+      );
+    });
+
+    it("should return the type picked for a multi-typed parameter", () => {
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+      const param: UDAParam = {
+        name: "value",
+        description: "Test parameter",
+        isReq: true,
+        type: [-11, -7],
+        selectedMultiTypeString: "Long",
+      };
+
+      assert.strictEqual(UDAUtils.resolveParamType(param), -7);
+    });
+
+    it("should fall back to the first type when no type was picked", () => {
+      const param: UDAParam = {
+        name: "value",
+        description: "Test parameter",
+        isReq: true,
+        type: [-11, -7],
+      };
+
+      assert.strictEqual(UDAUtils.resolveParamType(param), -11);
+    });
+  });
+
+  describe("processUDAParams", () => {
+    beforeEach(() => {
+      sinon.stub(ext.constants, "allowedEmptyRequiredTypes").value([10, -11]);
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+    });
+
+    const uda = (params: UDAParam[]): UDA => ({
+      name: ".uda.test",
+      description: "",
+      params,
+    });
+
+    it("sends a boolean parameter answered false rather than rejecting it", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "flag",
+            description: "",
+            isReq: true,
+            type: [-1],
+            isVisible: true,
+            value: false,
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, { flag: false });
+      assert.deepStrictEqual(result.parameterTypes, { flag: -1 });
+    });
+
+    it("sends a number parameter answered zero rather than rejecting it", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "multiplier",
+            description: "",
+            isReq: true,
+            type: [-7],
+            isVisible: true,
+            value: 0,
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, { multiplier: 0 });
+    });
+
+    it("still rejects a required parameter left blank", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "multiplier",
+            description: "",
+            isReq: true,
+            type: [-7],
+            isVisible: true,
+            value: "",
+          },
+        ]),
+      );
+
+      assert.deepStrictEqual(result.error, {
+        error: "The UDA: .uda.test requires the parameter: multiplier.",
+      });
+    });
+
+    it("sends the type picked for a multi-typed parameter", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "value",
+            description: "",
+            isReq: true,
+            type: [-11, -7],
+            selectedMultiTypeString: "Long",
+            isVisible: true,
+            value: 42,
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.parameterTypes, { value: -7 });
+    });
+  });
+  describe("validateUDA", () => {
+    it("refuses a UDA that is not there at all", async () => {
+      const result = await UDAUtils.validateUDA(undefined, connection(true));
+
+      assert.deepStrictEqual(result, { error: "UDA not found" });
+    });
+
+    it("refuses a UDA with no name", async () => {
+      const result = await UDAUtils.validateUDA(
+        { name: "", description: "", params: [] },
+        connection(true),
+      );
+
+      assert.deepStrictEqual(result, { error: "UDA name not found" });
+    });
+
+    it("refuses a UDA the connection does not report", async () => {
+      const result = await UDAUtils.validateUDA(
+        { name: ".uda.gone", description: "", params: [] },
+        connection(false),
+      );
+
+      assert.deepStrictEqual(result, {
+        error: "UDA .uda.gone is not available in this connection",
+      });
+    });
+
+    it("accepts a UDA the connection reports", async () => {
+      const result = await UDAUtils.validateUDA(
+        { name: ".uda.here", description: "", params: [] },
+        connection(true),
+      );
+
+      assert.strictEqual(result, null);
+    });
+  });
+
+  describe("createUDARequestBody", () => {
+    it("builds the body the scratchpad expects", () => {
+      const body = UDAUtils.createUDARequestBody(
+        ".uda.test",
+        { x: "44" },
+        { x: -6 },
+        "text",
+      );
+
+      assert.deepStrictEqual(body, {
+        language: "q",
+        name: ".uda.test",
+        params: { x: "44" },
+        parameterTypes: { x: -6 },
+        returnFormat: "text",
+        sampleFn: "first",
+        sampleSize: 10000,
+      });
+    });
+  });
+
+  describe("retrieveUDAtoCreateReqBody", () => {
+    beforeEach(() => {
+      sinon.stub(ext.constants, "allowedEmptyRequiredTypes").value([10, -11]);
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+      sinon.stub(ext, "isResultsTabVisible").value(false);
+    });
+
+    const uda = (params: UDAParam[] = []): UDA => ({
+      name: ".uda.test",
+      description: "",
+      params,
+    });
+
+    const multiplier = (value: unknown): UDAParam => ({
+      name: "multiplier",
+      description: "",
+      isReq: true,
+      type: [-7],
+      isVisible: true,
+      value,
+    });
+
+    it("refuses a UDA that is not there at all", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        undefined,
+        connection(true),
+      );
+
+      assert.deepStrictEqual(result, { error: "UDA is undefined" });
+    });
+
+    it("passes on the reason the UDA did not validate", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        uda(),
+        connection(false),
+      );
+
+      assert.deepStrictEqual(result, {
+        error: "UDA .uda.test is not available in this connection",
+      });
+    });
+
+    it("passes on the reason a parameter did not validate", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        uda([multiplier("")]),
+        connection(true),
+      );
+
+      assert.deepStrictEqual(result, {
+        error: "The UDA: .uda.test requires the parameter: multiplier.",
+      });
+    });
+
+    it("carries the parameters and their types through to the body", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        uda([multiplier("3")]),
+        connection(true),
+      );
+
+      assert.deepStrictEqual(result, {
+        language: "q",
+        name: ".uda.test",
+        params: { multiplier: "3" },
+        parameterTypes: { multiplier: -7 },
+        returnFormat: "text",
+        sampleFn: "first",
+        sampleSize: 10000,
+      });
+    });
+
+    it("carries the type picked for a multi-typed parameter", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        uda([
+          {
+            name: "value",
+            description: "",
+            isReq: true,
+            type: [-11, -7],
+            selectedMultiTypeString: "Long",
+            isVisible: true,
+            value: 44,
+          },
+        ]),
+        connection(true),
+      );
+
+      assert.deepStrictEqual(result.parameterTypes, { value: -7 });
+      assert.deepStrictEqual(result.params, { value: 44 });
+    });
+
+    it("asks for structured text while the results tab is up", async () => {
+      sinon.stub(ext, "isResultsTabVisible").value(true);
+
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        uda(),
+        connection(true),
+      );
+
+      assert.strictEqual(result.returnFormat, "structuredText");
+    });
+  });
+  describe("recastParams", () => {
+    beforeEach(() => {
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+    });
+
+    const multi = (over: Partial<UDAParam> = {}): UDAParam => ({
+      name: "value",
+      description: "",
+      isReq: true,
+      type: [-11, -7],
+      isVisible: true,
+      ...over,
+    });
+
+    const uda = (params: UDAParam[]): UDA => ({
+      name: ".uda.test",
+      description: "",
+      params,
+    });
+
+    it("names a parameter whose chosen type is not the first registered", () => {
+      const result = UDAUtils.recastParams(
+        uda([multi({ selectedMultiTypeString: "Long" })]),
+      );
+
+      assert.deepStrictEqual(result, ["value"]);
+    });
+
+    it("stays quiet when the first type is the one chosen", () => {
+      const result = UDAUtils.recastParams(
+        uda([multi({ selectedMultiTypeString: "Symbol" })]),
+      );
+
+      assert.deepStrictEqual(result, []);
+    });
+
+    it("stays quiet when no type has been chosen", () => {
+      assert.deepStrictEqual(UDAUtils.recastParams(uda([multi()])), []);
+    });
+
+    it("stays quiet for a parameter of a single type", () => {
+      const result = UDAUtils.recastParams(
+        uda([multi({ type: [-7], selectedMultiTypeString: "Long" })]),
+      );
+
+      assert.deepStrictEqual(result, []);
+    });
+
+    it("ignores a parameter that is not on the form", () => {
+      const result = UDAUtils.recastParams(
+        uda([multi({ isVisible: false, selectedMultiTypeString: "Long" })]),
+      );
+
+      assert.deepStrictEqual(result, []);
+    });
+
+    it("takes a UDA with no parameters at all", () => {
+      assert.deepStrictEqual(
+        UDAUtils.recastParams({ name: "x", description: "", params: [] }),
+        [],
       );
     });
   });

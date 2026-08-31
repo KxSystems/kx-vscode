@@ -429,6 +429,8 @@ describe("KdbQueryView", () => {
 
     it("should name what each row field selects", () => {
       view.tables = { trades: ["time", "price"] };
+      view.query!.params.find((param) => param.name === "table")!.value =
+        "trades";
       const filter = view.query!.params.find(
         (param) => param.name === "filter",
       )!;
@@ -445,6 +447,8 @@ describe("KdbQueryView", () => {
 
     it("should offer column dropdowns inside a row builder", () => {
       view.tables = { trades: ["time", "price"] };
+      view.query!.params.find((param) => param.name === "table")!.value =
+        "trades";
       const filter = view.query!.params.find(
         (param) => param.name === "filter",
       )!;
@@ -483,13 +487,38 @@ describe("KdbQueryView", () => {
       assert.deepStrictEqual(view.suggestions("columns"), ["price", "time"]);
     });
 
-    it("should offer every column until a table is chosen", () => {
+    it("should offer no columns until a table is chosen", () => {
       view.tables = { trades: ["time", "price"], quotes: ["bid", "time"] };
-      assert.deepStrictEqual(view.suggestions("columns"), [
-        "bid",
-        "price",
-        "time",
-      ]);
+      assert.deepStrictEqual(view.suggestions("columns"), []);
+    });
+
+    it("should offer no columns for a table the connection does not have", () => {
+      view.tables = { trades: ["time", "price"] };
+      view.query!.params.find((param) => param.name === "table")!.value =
+        "quotes";
+      assert.deepStrictEqual(view.suggestions("columns"), []);
+    });
+
+    it("should take the table from whichever param draws on the table list", () => {
+      view.tables = { trades: ["time", "price"], quotes: ["bid"] };
+      const table = view.query!.params.find((param) => param.name === "table")!;
+      table.name = "tablename";
+      table.value = "trades";
+      assert.deepStrictEqual(view.suggestions("columns"), ["price", "time"]);
+    });
+
+    it("should say a table comes first while a column has none to offer", () => {
+      view.tables = { trades: ["time"] };
+      assert.strictEqual(
+        view.placeholder("column", "columns"),
+        "Select a table first...",
+      );
+      view.query!.params.find((param) => param.name === "table")!.value =
+        "trades";
+      assert.strictEqual(
+        view.placeholder("column", "columns"),
+        "Select a column...",
+      );
     });
 
     it("should render a dropdown for a parameter with a source", () => {
@@ -656,6 +685,62 @@ describe("KdbQueryView", () => {
       view.query = createSql();
       assert.strictEqual(markup(view.renderAddParam()).trim(), "");
       assert.ok(view.renderParams());
+    });
+  });
+
+  describe("renderMultitype", () => {
+    function handlers(template: any, found: any[] = []): any[] {
+      if (!template || typeof template !== "object") {
+        return found;
+      }
+      if (Array.isArray(template)) {
+        template.forEach((each) => handlers(each, found));
+        return found;
+      }
+      for (const value of template.values || []) {
+        if (typeof value === "function") {
+          found.push(value);
+        } else {
+          handlers(value, found);
+        }
+      }
+      return found;
+    }
+
+    function createMultitype(param: Partial<UDAParam> = {}) {
+      return createParam({
+        fieldType: ParamFieldType.MultiType,
+        typeStrings: ["Symbol", "Float"],
+        multiFieldTypes: [
+          { Symbol: ParamFieldType.Text },
+          { Float: ParamFieldType.Number },
+        ],
+        ...param,
+      });
+    }
+
+    it("should keep what was typed in the selected type's field", () => {
+      const param = createMultitype();
+      const [, typed] = handlers(view.renderMultitype(param));
+      typed(createValueEvent("AAPL"));
+      assert.strictEqual(param.value, "AAPL");
+    });
+
+    it("should keep a timestamp typed in the selected type's field", () => {
+      const param = createMultitype({
+        typeStrings: ["Timestamp"],
+        multiFieldTypes: [{ Timestamp: ParamFieldType.Timestamp }],
+      });
+      const [, local] = handlers(view.renderMultitype(param));
+      local(createValueEvent("2024-01-01T10:20:30"));
+      assert.strictEqual(param.value, "2024-01-01T10:20:30.000000000");
+    });
+
+    it("should remove the param from the selected type's field", () => {
+      const param = createMultitype();
+      const found = handlers(view.renderMultitype(param));
+      found[found.length - 1]();
+      assert.strictEqual(param.isVisible, false);
     });
   });
 

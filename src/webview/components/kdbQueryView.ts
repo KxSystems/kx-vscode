@@ -26,6 +26,7 @@ import {
   createRow,
   isBuiltin,
   parseRows,
+  parseValue,
   serializeRows,
   targetLabel,
   toDraft,
@@ -92,7 +93,15 @@ export class KdbQueryView extends LitElement {
       this.targets = msg.targets || [];
       this.isMetaLoaded = msg.isMetaLoaded;
       this.selectedServer = msg.selectedServer;
-      this.query = msg.file.query;
+      // The stored query gets the same treatment as one picked from the
+      // dropdown. A .kxquery is user-editable JSON, and a converted datasource
+      // carries whatever its .kdb.json held, so `params` may be absent
+      // altogether or list none of the distinguished ones.
+      const stored = msg.file.query;
+      this.query =
+        !stored || isBuiltin(stored)
+          ? stored
+          : this.withDistinguishedParams(stored);
       this.drafts = msg.file.drafts || [];
       this.editing.clear();
       this.requestUpdate();
@@ -282,7 +291,10 @@ export class KdbQueryView extends LitElement {
     return param.name + (this.isRequired(param) ? " *" : "");
   }
 
-  placeholder(name: string) {
+  placeholder(name: string, source?: ParamSource) {
+    if (source === "columns" && this.suggestions(source).length === 0) {
+      return "Select a table first...";
+    }
     return `Select ${/^[aeiou]/i.test(name) ? "an" : "a"} ${name}...`;
   }
 
@@ -358,15 +370,16 @@ export class KdbQueryView extends LitElement {
       return Object.keys(this.tables).sort();
     }
 
+    // Only the table chosen has columns to offer, and until one is chosen
+    // there are none. The parameter holding it is the one drawing on the table
+    // list rather than the one called `table`, so a UDA naming it `tablename`
+    // narrows its columns the same way getData does.
     const table = this.query?.params.find(
-      (param) => param.name === "table",
+      (param) => param.source === "tables" && !!param.value,
     )?.value;
     const named = table ? this.tables[String(table)] : undefined;
-    const columns = named
-      ? [...named]
-      : [...new Set(Object.values(this.tables).flat())];
 
-    return columns.sort();
+    return named ? [...named].sort() : [];
   }
 
   renderQueryDetails() {
@@ -457,6 +470,9 @@ export class KdbQueryView extends LitElement {
     if (param.rows) {
       return this.renderRows(param);
     }
+    if (param.multiple) {
+      return this.renderChoices(param);
+    }
     if (param.choices || param.source) {
       return this.renderChoice(param);
     }
@@ -534,7 +550,7 @@ export class KdbQueryView extends LitElement {
                           row[column] = (event.target as KdbSelect).value;
                           this.setRows(param, rows);
                         },
-                        this.placeholder(field.name),
+                        this.placeholder(field.name, field.source),
                         field.name,
                       )
                     : html`
@@ -571,6 +587,51 @@ export class KdbQueryView extends LitElement {
     `;
   }
 
+  /**
+   * A parameter holding several of the choices at once. The value is stored as
+   * the JSON list the request wants, so what the badges show and what goes over
+   * the wire are the same thing.
+   */
+  renderChoices(param: UDAParam) {
+    const options =
+      param.choices || (param.source ? this.suggestions(param.source) : []);
+    const held = parseValue(param.value);
+    const values = Array.isArray(held) ? held.map(String) : [];
+
+    return html`
+      <div class="param">
+        <div class="field">
+          <span class="label">${this.paramLabel(param)}</span>
+          <span class="row control">
+            <kdb-select
+              multiple
+              label="${this.paramLabel(param)}"
+              empty="${this.placeholder(param.name, param.source)}"
+              .values="${values}"
+              .options="${options}"
+              @input="${(event: Event) => {
+                const chosen = (event.target as KdbSelect).values;
+                this.setParam(
+                  param,
+                  chosen.length === 0 ? undefined : JSON.stringify(chosen),
+                );
+              }}"></kdb-select>
+            ${this.renderRemove(param)}
+          </span>
+          <small class="help">${this.paramHelp(param)}</small>
+        </div>
+      </div>
+    `;
+  }
+
+  /*
+   * A choice parameter sits in a div rather than a label, the way renderRows
+   * does. A label forwards its click to its first labelable descendant, and
+   * kdb-select is a custom element that does not qualify — so the click carried
+   * on to the remove button beside it and deleted the parameter the moment its
+   * dropdown was opened. The visible name stays in .label and the control keeps
+   * its own aria-label, so nothing is lost by not being a label.
+   */
   renderChoice(param: UDAParam) {
     const value = String(param.value ?? param.default ?? "");
     const options =
@@ -578,7 +639,7 @@ export class KdbQueryView extends LitElement {
 
     return html`
       <div class="param">
-        <label class="field">
+        <div class="field">
           <span class="label">${this.paramLabel(param)}</span>
           <span class="row control">
             ${this.renderSelect(
@@ -586,13 +647,13 @@ export class KdbQueryView extends LitElement {
               options,
               (event: Event) =>
                 this.setParam(param, (event.target as KdbSelect).value),
-              this.placeholder(param.name),
+              this.placeholder(param.name, param.source),
               this.paramLabel(param),
             )}
             ${this.renderRemove(param)}
           </span>
           <small class="help">${this.paramHelp(param)}</small>
-        </label>
+        </div>
       </div>
     `;
   }
@@ -735,11 +796,6 @@ export class KdbQueryView extends LitElement {
     );
     const help = this.paramHelp(param, selected);
 
-    const field = {
-      ...param,
-      fieldType: fieldType ? Object.values(fieldType)[0] : ParamFieldType.Text,
-    };
-
     return html`
       <div class="multitype">
         <label class="field types">
@@ -754,14 +810,27 @@ export class KdbQueryView extends LitElement {
               param.value = undefined;
               this.requestChange();
             }}"></kdb-select>
+          ${selected && selected !== param.typeStrings?.[0]
+            ? html`
+                <small class="help warn">
+                  Run Query reads this as ${param.typeStrings?.[0]}${": "}the
+                  service gateway casts to the first type a UDA registers.
+                  Populate Scratchpad reads it as ${selected}.
+                </small>
+              `
+            : html``}
         </label>
-        ${this.renderParamOfType(field, help)}
+        ${this.renderParamOfType(
+          param,
+          help,
+          fieldType ? Object.values(fieldType)[0] : ParamFieldType.Text,
+        )}
       </div>
     `;
   }
 
-  renderParamOfType(param: UDAParam, help: string) {
-    switch (param.fieldType) {
+  renderParamOfType(param: UDAParam, help: string, fieldType: ParamFieldType) {
+    switch (fieldType) {
       case ParamFieldType.Boolean:
         return this.renderCheckbox(param, help);
       case ParamFieldType.JSON:

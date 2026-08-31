@@ -190,8 +190,8 @@ export function getIncompatibleError(
 
 export function createUDAReturn(uda: any): UDAReturn {
   return {
-    type: convertTypesToString(uda?.return.type || []),
-    description: uda?.return.description || "",
+    type: convertTypesToString(uda?.return?.type || []),
+    description: uda?.return?.description || "",
   };
 }
 
@@ -274,7 +274,7 @@ export function processUDAParams(uda: UDA): {
       }
 
       if (param.isVisible) {
-        params[param.name] = param.value || "";
+        params[param.name] = param.value ?? "";
         parameterTypes[param.name] = resolveParamType(param);
       }
     }
@@ -303,43 +303,86 @@ function validateParam(
   return null;
 }
 
+/**
+ * The type a parameter is being given as: for a parameter registered with more
+ * than one, the one picked on the form rather than the first declared.
+ * Undefined where there is nothing to go on — a multi-typed parameter with no
+ * pick yet, an empty type list, or a type the map does not name.
+ */
+function selectedParamType(param: UDAParam): number | undefined {
+  if (!Array.isArray(param.type)) {
+    return typeof param.type === "number" ? param.type : undefined;
+  }
+  if (param.type.length > 1) {
+    if (!param.selectedMultiTypeString) {
+      return undefined;
+    }
+    const named = param.selectedMultiTypeString.replace("_", " ");
+    return ext.constants.reverseDataTypes.get(named);
+  }
+  return param.type[0];
+}
+
+/**
+ * Whether a parameter has been left blank. A parameter given `false` or `0` has
+ * been answered, so neither counts as blank.
+ */
+function isBlank(value: unknown): boolean {
+  return value === undefined || value === null || value === "";
+}
+
+/**
+ * The parameters whose chosen type the service gateway will not honour. A REST
+ * request carries no type of its own: the gateway casts each parameter using
+ * the UDA's registered metadata, and "if multiple types are specified,
+ * auto-casting uses the first type in the list" — so a multi-typed parameter
+ * given anything but its first type is cast to something else. The scratchpad
+ * takes parameterTypes and does honour the choice, so this is about Run Query
+ * alone.
+ */
+export function recastParams(uda: UDA): string[] {
+  return (uda.params || [])
+    .filter((param) => {
+      if (!param.isVisible || !Array.isArray(param.type)) {
+        return false;
+      }
+      const selected = selectedParamType(param);
+      return (
+        param.type.length > 1 &&
+        selected !== undefined &&
+        selected !== param.type[0]
+      );
+    })
+    .map((param) => param.name);
+}
+
 export function resolveParamType(param: UDAParam): number {
+  const selected = selectedParamType(param);
+  if (selected !== undefined) {
+    return selected;
+  }
+  // Reached by a multi-typed parameter whose pick is missing or unrecognised;
+  // a single type has already come back from selectedParamType.
   if (Array.isArray(param.type) && param.type.length > 0) {
     return param.type[0];
-  } else if (typeof param.type === "number") {
-    return param.type;
-  } else {
-    throw new Error(
-      `Invalid type for parameter: ${param.name}. Expected number or array of numbers.`,
-    );
   }
+  throw new Error(
+    `Invalid type for parameter: ${param.name}. Expected number or array of numbers.`,
+  );
 }
 
 export function isInvalidRequiredParam(param: UDAParam): boolean {
   if (param.name === "table" && param.isReq) {
-    return !param.value || param.value === "";
+    return isBlank(param.value);
   }
 
-  let typeToValidate: number | undefined;
-
-  if (Array.isArray(param.type)) {
-    if (param.type.length === 1) {
-      typeToValidate = param.type[0];
-    } else if (param.type.length > 1 && param.selectedMultiTypeString) {
-      const selectedTypeFixed = param.selectedMultiTypeString.replace("_", " ");
-      typeToValidate = ext.constants.reverseDataTypes.get(selectedTypeFixed);
-    }
-  } else if (typeof param.type === "number") {
-    typeToValidate = param.type;
-  }
+  const typeToValidate = selectedParamType(param);
 
   const isAllowedEmptyType =
     typeof typeToValidate === "number" &&
     ext.constants.allowedEmptyRequiredTypes.includes(typeToValidate);
 
-  return (
-    !isAllowedEmptyType && param.isReq && (!param.value || param.value === "")
-  );
+  return !isAllowedEmptyType && param.isReq && isBlank(param.value);
 }
 
 export function createUDARequestBody(

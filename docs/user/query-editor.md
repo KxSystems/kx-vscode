@@ -96,12 +96,14 @@ two such as `wavg`.
 Anything that names a table or a column is chosen from a dropdown filled from
 the connection's meta: `table` lists the tables it reports, and the column
 fields of `filter`, `agg`, `groupBy`, `sortCols` and `outputTZCols` list the
-columns of whichever table the query names — every column it knows of until you
-pick one. A UDA gets the same lists: its distinguished `table` parameter, any parameter
-it declares called `table`, and its symbol parameters named for columns
-(`column`, `columns`, `col`, `cols`, `sortCols`, `groupBy`, `by`). A value
-the meta does not mention is kept and shown, so opening a file written against
-another connection never empties it.
+columns of the table the query names. A column belongs to a table, so until one
+is picked these dropdowns are empty and say `Select a table first...`. A UDA
+gets the same lists: its distinguished `table` parameter, any parameter it
+declares called `table` or `tableName`, and its symbol parameters named for
+columns (`column`, `columns`, `col`, `cols`, `sortCols`, `groupBy`, `by`) — so a
+UDA that names no table of its own offers columns once its `table` parameter is
+added and set. A value the meta does not mention is kept and shown, so opening a
+file written against another connection never empties it.
 
 `table` is the only getData parameter that must be filled in. The time range is
 optional — leaving `startTS` and `endTS` empty queries the table unbounded, so

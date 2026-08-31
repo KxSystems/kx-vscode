@@ -153,9 +153,9 @@ export class KdbWelcomeView extends LitElement {
             type="checkbox"
             ${checked(this.checked === "true")}
             @change="${(event: Event) => {
-              this.vscode.postMessage(
-                (event.target as HTMLInputElement).checked,
-              );
+              const on = (event.target as HTMLInputElement).checked;
+              this.checked = String(on);
+              this.vscode.postMessage(on);
             }}" />
           Show welcome page on startup
         </label>

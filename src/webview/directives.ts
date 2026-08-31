@@ -16,6 +16,16 @@ import { Directive, directive, PartInfo } from "lit/directive.js";
 
 import { Converter, TEXT } from "./converters";
 
+/**
+ * Ties an input's value to a model value, showing the edit format while the
+ * field has focus and the display format otherwise.
+ *
+ * The host must re-render (`requestUpdate()`) on every `input` event it
+ * handles: the value passed here is only refreshed by a render, and focus and
+ * blur repaint the field from it. A handler that mutates non-reactive state
+ * without asking for a render leaves this directive holding the stale value and
+ * the field is repainted with it, discarding what was typed.
+ */
 export class Bind extends Directive {
   declare private readonly target: HTMLInputElement;
 

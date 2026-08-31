@@ -133,8 +133,21 @@ export class KdbNewConnectionView extends LitElement {
     }
   }
 
+  setKdbServer<K extends keyof ServerDetails>(key: K, value: ServerDetails[K]) {
+    this.kdbServer[key] = value;
+    this.requestUpdate();
+  }
+
+  setInsightsServer<K extends keyof InsightDetails>(
+    key: K,
+    value: InsightDetails[K],
+  ) {
+    this.insightsServer[key] = value;
+    this.requestUpdate();
+  }
+
   changeTLS() {
-    this.kdbServer.tls = !this.kdbServer.tls;
+    this.setKdbServer("tls", !this.kdbServer.tls);
   }
 
   editAuthOfConn() {
@@ -173,9 +186,10 @@ export class KdbNewConnectionView extends LitElement {
             ${inputDefaults()}
             ${bind(this.kdbServer.serverAlias)}
             @input="${(event: Event) =>
-              (this.kdbServer.serverAlias = (
-                event.target as HTMLInputElement
-              ).value)}"
+              this.setKdbServer(
+                "serverAlias",
+                (event.target as HTMLInputElement).value,
+              )}"
         /></label>`
       : html`<label class="field"
           ><span class="label">Server Name</span
@@ -186,9 +200,10 @@ export class KdbNewConnectionView extends LitElement {
             ${inputDefaults()}
             ${bind(this.insightsServer.alias)}
             @input="${(event: Event) =>
-              (this.insightsServer.alias = (
-                event.target as HTMLInputElement
-              ).value)}"
+              this.setInsightsServer(
+                "alias",
+                (event.target as HTMLInputElement).value,
+              )}"
         /></label>`;
 
     /* c8 ignore stop */
@@ -222,10 +237,11 @@ export class KdbNewConnectionView extends LitElement {
             placeholder="5001"
             ${inputDefaults()}
             ${bind(this.kdbServer.serverPort)}
-            @input="${(event: Event) => {
-              const value = (event.target as HTMLInputElement).value;
-              this.kdbServer.serverPort = value;
-            }}"
+            @input="${(event: Event) =>
+              this.setKdbServer(
+                "serverPort",
+                (event.target as HTMLInputElement).value,
+              )}"
         /></label>
       </div>
       <div class="row option-description option-help">
@@ -266,9 +282,9 @@ export class KdbNewConnectionView extends LitElement {
               const value = (event.target as HTMLInputElement).value;
 
               if (serverType === ServerType.KDB) {
-                this.kdbServer.serverName = value;
+                this.setKdbServer("serverName", value);
               } else {
-                this.insightsServer.server = value;
+                this.setInsightsServer("server", value);
               }
             }}"
         /></label>
@@ -291,10 +307,11 @@ export class KdbNewConnectionView extends LitElement {
             ${inputDefaults()}
             ${bind(this.insightsServer.realm ?? "")}
             placeholder="insights"
-            @input="${(event: Event) => {
-              const value = (event.target as HTMLInputElement).value;
-              this.insightsServer.realm = value;
-            }}"
+            @input="${(event: Event) =>
+              this.setInsightsServer(
+                "realm",
+                (event.target as HTMLInputElement).value,
+              )}"
         /></label>
       </div>
       <div class="row option-description option-help">
@@ -313,11 +330,11 @@ export class KdbNewConnectionView extends LitElement {
           ><input
             type="checkbox"
             ${checked(this.insightsServer.insecure ?? false)}
-            @change="${(event: Event) => {
-              this.insightsServer.insecure = (
-                event.target as HTMLInputElement
-              ).checked;
-            }}" />
+            @change="${(event: Event) =>
+              this.setInsightsServer(
+                "insecure",
+                (event.target as HTMLInputElement).checked,
+              )}" />
           Accept insecure SSL certifcates
         </label>
       </div>
@@ -476,9 +493,10 @@ export class KdbNewConnectionView extends LitElement {
                     ${inputDefaults()}
                     ${bind(this.kdbServer.username || "")}
                     @input="${(event: Event) =>
-                      (this.kdbServer.username = (
-                        event.target as HTMLInputElement
-                      ).value)}"
+                      this.setKdbServer(
+                        "username",
+                        (event.target as HTMLInputElement).value,
+                      )}"
                 /></label>
               </div>
               <div class="row">
@@ -490,9 +508,10 @@ export class KdbNewConnectionView extends LitElement {
                     ${inputDefaults()}
                     ${bind(this.kdbServer.password || "")}
                     @input="${(event: Event) =>
-                      (this.kdbServer.password = (
-                        event.target as HTMLInputElement
-                      ).value)}"
+                      this.setKdbServer(
+                        "password",
+                        (event.target as HTMLInputElement).value,
+                      )}"
                 /></label>
               </div>
               <div class="row option-description option-help">
@@ -729,9 +748,10 @@ export class KdbNewConnectionView extends LitElement {
                             ${inputDefaults()}
                             ${bind(this.kdbServer.username || "")}
                             @input="${(event: Event) =>
-                              (this.kdbServer.username = (
-                                event.target as HTMLInputElement
-                              ).value)}"
+                              this.setKdbServer(
+                                "username",
+                                (event.target as HTMLInputElement).value,
+                              )}"
                         /></label>
                       </div>
                       <div class="row">
@@ -743,9 +763,10 @@ export class KdbNewConnectionView extends LitElement {
                             ${inputDefaults()}
                             ${bind(this.kdbServer.password || "")}
                             @input="${(event: Event) =>
-                              (this.kdbServer.password = (
-                                event.target as HTMLInputElement
-                              ).value)}"
+                              this.setKdbServer(
+                                "password",
+                                (event.target as HTMLInputElement).value,
+                              )}"
                         /></label>
                       </div>
                       <div class="row option-description option-help">

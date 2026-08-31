@@ -62,6 +62,12 @@ export const baseStyles = css`
     color: var(--vscode-descriptionForeground);
   }
 
+  /* Help that is a caveat rather than a description. Same token as
+     .notice.warning, which VS Code defines for every theme kind. */
+  .help.warn {
+    color: var(--vscode-editorWarning-foreground);
+  }
+
   .row {
     display: flex;
     flex-flow: row nowrap;

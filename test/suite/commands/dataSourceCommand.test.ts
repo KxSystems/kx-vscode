@@ -202,6 +202,82 @@ describe("dataSourceCommand", () => {
       assert.deepStrictEqual(results, getDataIntResponse.results);
     });
 
+    it("warns when the gateway will override a chosen parameter type", async () => {
+      isUDAAvailableStub.resolves(true);
+      getDataInsightsStub.resolves(getDataIntResponse);
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+      const warning = sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves();
+
+      const source = createMockDatasource();
+      source.dataSource.selectedType = DataSourceTypes.UDA;
+      source.dataSource.uda = {
+        name: ".uda.identity",
+        description: "",
+        params: [
+          {
+            name: "x",
+            description: "",
+            isReq: true,
+            type: [-11, -7],
+            selectedMultiTypeString: "Long",
+            isVisible: true,
+            value: 44,
+          },
+        ],
+      };
+
+      await dataSourceCommand.runUDADataSource(source, insightsConn);
+
+      sinon.assert.calledOnce(warning);
+      assert.match(
+        warning.getCall(0).args[0],
+        /^The service gateway will read x as the first type/,
+      );
+    });
+
+    it("stays quiet when the chosen type is the one the gateway would use", async () => {
+      isUDAAvailableStub.resolves(true);
+      getDataInsightsStub.resolves(getDataIntResponse);
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+      const warning = sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves();
+
+      const source = createMockDatasource();
+      source.dataSource.selectedType = DataSourceTypes.UDA;
+      source.dataSource.uda = {
+        name: ".uda.identity",
+        description: "",
+        params: [
+          {
+            name: "x",
+            description: "",
+            isReq: true,
+            type: [-11, -7],
+            selectedMultiTypeString: "Symbol",
+            isVisible: true,
+            value: "AAPL",
+          },
+        ],
+      };
+
+      await dataSourceCommand.runUDADataSource(source, insightsConn);
+
+      sinon.assert.notCalled(warning);
+    });
+
     it("should call the API and handle the error results", async () => {
       isUDAAvailableStub.resolves(true);
       getDataInsightsStub.resolves({ error: "error test" });

@@ -21,6 +21,7 @@ import {
   InsightsConnection,
 } from "../../../src/classes/insightsConnection";
 import { ext } from "../../../src/extensionVariables";
+import { DataSourceTypes } from "../../../src/models/dataSource";
 
 describe("insightsConnection", () => {
   describe("scratchpad logger lifecycle", () => {
@@ -239,6 +240,140 @@ describe("insightsConnection", () => {
 
       assert.strictEqual(result.error, false);
       assert.strictEqual(result.data, encoded);
+    });
+  });
+
+  describe("getDatasourceQuery for a UDA", () => {
+    const withConnection = (body: any, timeout?: number) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        serviceGateway: { udaBase: "servicegateway/" },
+      };
+      const getOptions = sinon
+        .stub(<any>conn, "getOptions")
+        .resolves(undefined);
+
+      return conn
+        .getDatasourceQuery(DataSourceTypes.UDA, body, timeout)
+        .then(() => getOptions.getCall(0).args);
+    };
+
+    const request = () => ({
+      language: "q",
+      name: ".insightsUda.singleMultiplierAPI",
+      params: { column: "price", multiplier: "3" },
+      parameterTypes: { column: -11, multiplier: -7 },
+      returnFormat: "text",
+      sampleFn: "first",
+      sampleSize: 10000,
+    });
+
+    afterEach(() => sinon.restore());
+
+    it("names the UDA in the path, dots as slashes and the namespace dropped", async () => {
+      const args = await withConnection(request());
+
+      assert.strictEqual(
+        args[3],
+        "https://test.kx.com/servicegateway/insightsUda/singleMultiplierAPI",
+      );
+    });
+
+    it("sends the parameters as the whole body", async () => {
+      const args = await withConnection(request());
+
+      assert.deepStrictEqual(args[4], {
+        column: "price",
+        multiplier: "3",
+      });
+    });
+
+    it("drops the parameter types on the way to the gateway", async () => {
+      const args = await withConnection(request());
+
+      // Deliberate for now: getDatasourceQuery does `body = body.params`, so
+      // Run Query sends no parameterTypes while Populate Scratchpad does. The
+      // TODO beside it waits on the endpoint accepting the key — until then a
+      // multi-typed parameter is read by the gateway as its first type.
+      assert.strictEqual(args[4].parameterTypes, undefined);
+    });
+
+    it("adds the timeout the caller asked for, in milliseconds", async () => {
+      const args = await withConnection(request(), 30);
+
+      assert.deepStrictEqual(args[4].opts, { timeout: 30000 });
+    });
+  });
+
+  describe("importScratchpad for a UDA", () => {
+    const uda = {
+      name: ".insightsUda.multiplierAPI",
+      description: "",
+      params: [
+        {
+          name: "value",
+          description: "",
+          isReq: true,
+          type: [-11, -7],
+          selectedMultiTypeString: "Long",
+          isVisible: true,
+          value: 44,
+        },
+      ],
+    };
+
+    const withConnection = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        scratchpad: { importUDA: "scratchpadmanager/scratchpad/importUDA" },
+      };
+      sinon.stub(conn, "isUDAAvailable").resolves(true);
+      const getOptions = sinon
+        .stub(<any>conn, "getOptions")
+        .resolves(undefined);
+
+      return conn
+        .importScratchpad("out", <any>{
+          dataSource: { selectedType: DataSourceTypes.UDA, uda },
+        })
+        .then(() => getOptions.getCall(0)?.args[4] as any);
+    };
+
+    beforeEach(() => {
+      sinon.stub(ext.constants, "allowedEmptyRequiredTypes").value([10, -11]);
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+    });
+
+    afterEach(() => sinon.restore());
+
+    it("carries the parameter types the scratchpad needs", async () => {
+      const body = await withConnection();
+
+      // The key KXI-65951 asks for, with the type picked on the form rather
+      // than the first one registered.
+      assert.deepStrictEqual(body.parameterTypes, { value: -7 });
+      assert.deepStrictEqual(body.params, { value: 44 });
+    });
+
+    it("names the UDA and the variable it lands in", async () => {
+      const body = await withConnection();
+
+      assert.strictEqual(body.name, ".insightsUda.multiplierAPI");
+      assert.strictEqual(body.output, "out");
+      assert.strictEqual(body.language, "q");
     });
   });
 

@@ -27,7 +27,11 @@ import {
   serializeRows,
   toDraft,
 } from "../../../src/models/query";
-import { UDA, UDAParam } from "../../../src/models/uda";
+import {
+  UDA,
+  UDAParam,
+  UDA_DISTINGUISHED_PARAMS,
+} from "../../../src/models/uda";
 import {
   buildGetDataPayload,
   parseQueryList,
@@ -373,6 +377,75 @@ describe("query", () => {
       );
     });
 
+    it("should send chosen columns under the agg key", () => {
+      // getData has no column projection of its own; agg takes "column(s) to
+      // select" as a plain symbol list.
+      const query = getData({ columns: '["price","size"]' });
+
+      assert.deepStrictEqual(buildGetDataPayload(query).agg, ["price", "size"]);
+    });
+
+    it("should refuse columns and agg together", () => {
+      const query = getData({
+        columns: '["price"]',
+        agg: '[["avgPx","avg","price"]]',
+      });
+
+      assert.throws(() => buildGetDataPayload(query), /not both/);
+    });
+
+    it("should still send agg on its own", () => {
+      const query = getData({ agg: '[["avgPx","avg","price"]]' });
+
+      assert.deepStrictEqual(buildGetDataPayload(query).agg, [
+        ["avgPx", "avg", "price"],
+      ]);
+    });
+
+    it("should keep a single in value as a list", () => {
+      const query = getData();
+      // "When using in or within this should be a list that matches the data
+      // type of column name being referenced" — so one value is still a list.
+      assert.strictEqual(
+        serializeRows(param(query, "filter"), [["sym", "in", "AAPL"]]),
+        '[["in","sym",["AAPL"]]]',
+      );
+      assert.strictEqual(
+        serializeRows(param(query, "filter"), [["price", "in", "1"]]),
+        '[["in","price",[1]]]',
+      );
+    });
+
+    it("should keep a single within value as a list", () => {
+      const query = getData();
+      assert.strictEqual(
+        serializeRows(param(query, "filter"), [["price", "within", "10"]]),
+        '[["within","price",[10]]]',
+      );
+    });
+
+    it("should leave a comparison operator its scalar", () => {
+      const query = getData();
+      for (const operator of ["<", ">", "<=", ">=", "=", "<>"]) {
+        assert.strictEqual(
+          serializeRows(param(query, "filter"), [["price", operator, "100"]]),
+          `[["${operator}","price",100]]`,
+          operator,
+        );
+      }
+      assert.strictEqual(
+        serializeRows(param(query, "filter"), [["sym", "like", "AAP*"]]),
+        '[["like","sym","AAP*"]]',
+      );
+    });
+
+    it("should read a single in value back into the field", () => {
+      const query = getData({ filter: '[["in","sym",["AAPL"]]]' });
+      assert.deepStrictEqual(parseRows(param(query, "filter")), [
+        ["sym", "in", "AAPL"],
+      ]);
+    });
+
     it("should send an aggregation over one column as that column", () => {
       const query = getData();
       assert.strictEqual(
@@ -517,6 +590,74 @@ describe("query", () => {
         ["target", "query", "agg", "labels"],
       );
       assert.strictEqual(param(query, "target").value, undefined);
+    });
+  });
+  describe("UDA labels rows", () => {
+    const labels = () => {
+      const param = UDA_DISTINGUISHED_PARAMS.find(
+        (item) => item.name === "labels",
+      )!;
+      return { ...param, rows: param.rows?.map((field) => ({ ...field })) };
+    };
+
+    it("should send one value as a list", () => {
+      // The ticket's ask: a key maps to a list of candidates, even a list of one.
+      assert.strictEqual(
+        serializeRows(labels(), [["region", "canada"]]),
+        '{"region":["canada"]}',
+      );
+    });
+
+    it("should split several values onto one key", () => {
+      assert.strictEqual(
+        serializeRows(labels(), [["exchange", "TSX TSXV"]]),
+        '{"exchange":["TSX","TSXV"]}',
+      );
+      assert.strictEqual(
+        serializeRows(labels(), [["exchange", "TSX;TSXV"]]),
+        '{"exchange":["TSX","TSXV"]}',
+      );
+    });
+
+    it("should keep a numeric looking label a symbol", () => {
+      assert.strictEqual(
+        serializeRows(labels(), [["code", "600519"]]),
+        '{"code":["600519"]}',
+      );
+    });
+
+    it("should hold a key per row", () => {
+      assert.strictEqual(
+        serializeRows(labels(), [
+          ["region", "canada"],
+          ["exchange", "TSX TSXV"],
+        ]),
+        '{"region":["canada"],"exchange":["TSX","TSXV"]}',
+      );
+    });
+
+    it("should read the values back space separated", () => {
+      const param = labels();
+      param.value = '{"exchange":["TSX","TSXV"]}';
+
+      assert.deepStrictEqual(parseRows(param), [["exchange", "TSX TSXV"]]);
+    });
+
+    it("should read a value that was stored as a scalar", () => {
+      // What an older file, or a hand edit, may hold.
+      const param = labels();
+      param.value = '{"region":"canada"}';
+
+      assert.deepStrictEqual(parseRows(param), [["region", "canada"]]);
+    });
+
+    it("should leave the getData labels filter single valued", () => {
+      const query = getData();
+
+      assert.strictEqual(
+        serializeRows(param(query, "labels"), [["region", "canada"]]),
+        '{"region":"canada"}',
+      );
     });
   });
 });
