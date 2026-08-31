@@ -19,10 +19,10 @@ import * as vscode from "vscode";
 /**
  * Webview content runs in an iframe the extension host cannot reach into: the
  * only channel is postMessage. So a test opens its own panel, loads the same
- * out/webview.js bundle the real panels load, and drives the component from a
- * script running inside the page, which reports what it found back over that
- * channel. The component, its shadow DOM and the controls it is built from are
- * all real; only the panel hosting them belongs to the test.
+ * bundle the real panels load, and drives the component from a script running
+ * inside the page, which reports what it found back over that channel. The
+ * component, its shadow DOM and the controls it is built from are all real;
+ * only the panel hosting them belongs to the test.
  */
 
 // Runs in the page. Grabs the one real handle to the extension host, leaves a
@@ -175,11 +175,14 @@ export type Webview = {
  * Mounts a component and returns a handle on the page it is in. Attributes are
  * the ones the panel hosting it in the product sets, such as the page size the
  * results view is given: without them the test drives a differently configured
- * component than ships.
+ * component than ships. The bundle is the one the real page loads: the query
+ * editor is built apart from the rest, so its component only exists in
+ * out/query.js.
  */
 export async function webview(
   tag: string,
   attributes: Record<string, string> = {},
+  bundle = "webview.js",
 ): Promise<Webview> {
   const extension = vscode.extensions.getExtension("KX.kdb");
   assert.ok(extension, "the kdb extension is not installed in this window");
@@ -230,7 +233,7 @@ export async function webview(
     <head>
       <meta charset="UTF-8">
       <script>${DRIVER}</script>
-      <script type="module" src="${resource("webview.js")}"></script>
+      <script type="module" src="${resource(bundle)}"></script>
     </head>
     <body></body>
     </html>`;
