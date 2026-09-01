@@ -17,6 +17,7 @@ export type GetDataError = string | { buffer: ArrayBuffer };
 
 export type GetDataObjectPayload = {
   error: GetDataError;
+  stacktrace?: string;
   table?: {
     meta: {
       [column: string]: string;

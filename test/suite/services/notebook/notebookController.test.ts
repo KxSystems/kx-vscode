@@ -292,6 +292,73 @@ describe("Controller", () => {
         });
       });
 
+      describe("Output escaping", () => {
+        let writeOutputStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          const conn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
+          sinon
+            .stub(
+              ConnectionManagementService.prototype,
+              "retrieveConnectedConnection",
+            )
+            .returns(conn);
+          runOn(conn);
+          writeOutputStub = sinon.stub(
+            controlller.KxNotebookController.prototype,
+            "writeOutput",
+          );
+          createInstance();
+        });
+
+        const rendered = () => writeOutputStub.lastCall.args[1];
+
+        it("should escape markup in a column name and a cell value", async () => {
+          executeQueryStub.resolves({
+            count: 1,
+            columns: [
+              {
+                name: "x<y",
+                type: "symbols",
+                values: ["<b>a</b> & b"],
+                order: [0],
+              },
+            ],
+          });
+
+          await instance.execute(
+            [notebookTestUtils.createCell("sql")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          assert.strictEqual(rendered().mime, "text/html");
+          assert.ok(
+            rendered().text.includes("<th>x&lt;y [symbols]</th>"),
+            rendered().text,
+          );
+          assert.ok(
+            rendered().text.includes("<td>&lt;b&gt;a&lt;/b&gt; &amp; b</td>"),
+            rendered().text,
+          );
+        });
+
+        it("should escape markup in a text result", async () => {
+          executeQueryStub.resolves("{x<y}\n     ^");
+
+          await instance.execute(
+            [notebookTestUtils.createCell("q")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          assert.strictEqual(
+            rendered().text,
+            `<p class="results-txt">{x&lt;y}<br/>     ^</p>`,
+          );
+        });
+      });
+
       describe("Local Connection", () => {
         beforeEach(() => {
           sinon

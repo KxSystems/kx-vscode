@@ -22,6 +22,7 @@ import {
 } from "../../../src/classes/insightsConnection";
 import { ext } from "../../../src/extensionVariables";
 import { DataSourceTypes } from "../../../src/models/dataSource";
+import * as loggers from "../../../src/utils/loggers";
 
 describe("insightsConnection", () => {
   describe("scratchpad logger lifecycle", () => {
@@ -309,6 +310,71 @@ describe("insightsConnection", () => {
     });
   });
 
+  describe("getDatasourceQuery errors", () => {
+    let adapter: any;
+
+    const rejectWith = (header: any) => {
+      axios.defaults.adapter = async () => {
+        throw { response: { status: 400, data: { header } } };
+      };
+    };
+
+    const withConnection = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        serviceGateway: { data: "servicegateway/kxi/getData" },
+      };
+      sinon
+        .stub(<any>conn, "getOptions")
+        .resolves({ url: "https://test.kx.com/getData", method: "POST" });
+      return conn;
+    };
+
+    beforeEach(() => {
+      ext.outputChannel = window.createOutputChannel("kdb", { log: true });
+      adapter = axios.defaults.adapter;
+    });
+
+    afterEach(() => {
+      axios.defaults.adapter = adapter;
+      sinon.restore();
+    });
+
+    it("should return the stack trace the gateway sent beside the message", async () => {
+      rejectWith({
+        ai: "Executing code using (Q) raised - type: Mismatched types",
+        bt: "  [0] {1+x}\n        ^\n",
+      });
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.API,
+        { table: "trade" },
+      );
+
+      assert.strictEqual(
+        result?.error,
+        "Executing code using (Q) raised - type: Mismatched types",
+      );
+      assert.strictEqual(result?.stacktrace, "  [0] {1+x}\n        ^\n");
+    });
+
+    it("should leave the stack trace out when the gateway sends none", async () => {
+      rejectWith({ ai: "table does not exist" });
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.API,
+        { table: "trade" },
+      );
+
+      assert.strictEqual(result?.error, "table does not exist");
+      assert.strictEqual(result?.stacktrace, undefined);
+    });
+  });
+
   describe("importScratchpad for a UDA", () => {
     const uda = {
       name: ".insightsUda.multiplierAPI",
@@ -374,6 +440,67 @@ describe("insightsConnection", () => {
       assert.strictEqual(body.name, ".insightsUda.multiplierAPI");
       assert.strictEqual(body.output, "out");
       assert.strictEqual(body.language, "q");
+    });
+  });
+
+  describe("importScratchpad errors", () => {
+    let adapter: any;
+    let kdbOutputLog: sinon.SinonStub;
+
+    const respondWith = (data: unknown) => {
+      axios.defaults.adapter = async (config: any) =>
+        <any>{
+          data,
+          status: 200,
+          statusText: "OK",
+          headers: {},
+          config,
+        };
+    };
+
+    const withConnection = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        scratchpad: { importQsql: "scratchpadmanager/scratchpad/importQSQL" },
+      };
+      sinon
+        .stub(<any>conn, "getOptions")
+        .resolves({ url: "https://test.kx.com/importQSQL", method: "POST" });
+      return conn;
+    };
+
+    beforeEach(() => {
+      ext.outputChannel = window.createOutputChannel("kdb", { log: true });
+      adapter = axios.defaults.adapter;
+      sinon.stub(window, "showErrorMessage").resolves(undefined);
+      kdbOutputLog = sinon.stub(loggers, "kdbOutputLog");
+    });
+
+    afterEach(() => {
+      axios.defaults.adapter = adapter;
+      sinon.restore();
+    });
+
+    it("should log the stack trace the scratchpad returned", async () => {
+      respondWith({
+        error: true,
+        errorMsg: "Executing code using (Q) raised - type: Mismatched types",
+        data: null,
+        stacktrace: "  [0] {1+x}\n        ^\n",
+      });
+
+      await withConnection().importScratchpad("out", <any>{
+        dataSource: {
+          selectedType: DataSourceTypes.QSQL,
+          qsql: { query: "1+`a", selectedTarget: "assembly rdb" },
+        },
+      });
+
+      sinon.assert.calledWithMatch(kdbOutputLog, "  [0] {1+x}");
     });
   });
 

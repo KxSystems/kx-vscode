@@ -239,9 +239,16 @@ export function generateCoumnDefs(results: any, isInsights: boolean): any {
   }
 }
 
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export function formatResult(queryResult: string | number): string {
   return queryResult !== ""
-    ? `<p class="results-txt">${queryResult.toString().replace(/\n/g, "<br/>")}</p>`
+    ? `<p class="results-txt">${escapeHtml(queryResult.toString()).replace(/\n/g, "<br/>")}</p>`
     : "<p>No results to show</p>";
 }
 

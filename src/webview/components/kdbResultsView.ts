@@ -75,6 +75,10 @@ export class KdbResultsView extends LitElement {
       .faint {
         font-weight: 200;
       }
+      .results-txt {
+        font-family: var(--vscode-editor-font-family);
+        white-space: pre-wrap;
+      }
       .container {
         width: 100vw;
         height: 100vh;

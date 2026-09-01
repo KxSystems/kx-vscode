@@ -402,6 +402,22 @@ export function addQueryHistory(
   ext.queryHistoryProvider.refresh();
 }
 
+export function appendStacktrace(
+  message: string,
+  stacktrace?: ScratchpadStacktrace | string,
+): string {
+  if (!stacktrace) {
+    return message;
+  }
+  return (
+    message +
+    "\n" +
+    (Array.isArray(stacktrace)
+      ? formatScratchpadStacktrace(stacktrace)
+      : `${stacktrace}`)
+  );
+}
+
 export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
   return stacktrace
     .map((frame, i) => {

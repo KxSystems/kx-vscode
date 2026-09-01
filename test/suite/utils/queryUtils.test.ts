@@ -215,6 +215,33 @@ describe("queryUtils", () => {
     });
   });
 
+  describe("appendStacktrace", () => {
+    it("should return the message alone when there is no stacktrace", () => {
+      assert.strictEqual(
+        queryUtils.appendStacktrace("type", undefined),
+        "type",
+      );
+    });
+
+    it("should append a string stacktrace as it arrived", () => {
+      assert.strictEqual(
+        queryUtils.appendStacktrace("type", "  [0] {1+x}\n        ^\n"),
+        "type\n  [0] {1+x}\n        ^\n",
+      );
+    });
+
+    it("should format a frame list before appending it", () => {
+      const stacktrace = [
+        { name: "f", isNested: false, text: ["{a:x*2;a", "+y}"] },
+      ];
+
+      assert.strictEqual(
+        queryUtils.appendStacktrace("type", stacktrace),
+        "type\n" + queryUtils.formatScratchpadStacktrace(stacktrace),
+      );
+    });
+  });
+
   describe("formatScratchpadStacktrace", () => {
     it("should format a Scratchpad stacktrace correctly", () => {
       const stacktrace = [

@@ -72,7 +72,7 @@ import { writePlotToFile } from "../utils/plotUtils";
 import {
   checkIfIsDatasource,
   addQueryHistory,
-  formatScratchpadStacktrace,
+  appendStacktrace,
   resultToBase64,
   needsScratchpad,
   getSQLWrapper,
@@ -1375,16 +1375,7 @@ export async function writeScratchpadResult(
   let errorMsg;
 
   if (result.error) {
-    errorMsg = "Error: " + result.errorMsg;
-
-    if (result.stacktrace) {
-      errorMsg =
-        errorMsg +
-        "\n" +
-        (Array.isArray(result.stacktrace)
-          ? formatScratchpadStacktrace(result.stacktrace)
-          : `${result.stacktrace}`);
-    }
+    errorMsg = appendStacktrace("Error: " + result.errorMsg, result.stacktrace);
   }
 
   if (executorName.endsWith(".kxnb")) {

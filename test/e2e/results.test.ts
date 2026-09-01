@@ -15,6 +15,7 @@ import * as assert from "node:assert";
 
 import { activate } from "./utils";
 import { Webview, webview } from "./utils/webview";
+import { formatResult } from "../../src/utils/resultsRenderer";
 
 /**
  * The results view only ever receives: the panel posts what a query returned
@@ -224,20 +225,48 @@ describe("Results view", () => {
     assert.deepStrictEqual((await shown()).rows, [["AAPL", "1.1"]]);
   });
 
-  it("renders the content it is sent as markup", async () => {
-    // setResultsContent goes through unsafeHTML, so whatever formatResult
-    // produces is parsed as HTML rather than shown as text. Pinned here
-    // because it is the view's injection surface, not because it is desirable.
-    await show(text("<b>a</b>&lt;b&gt;"));
+  it("shows a text result as text, markup and all", async () => {
+    await show(text(formatResult("{x<y}\n     ^\na & b")));
 
     const rendered = await view.eval(
       (root: string) => ({
-        bold: __find(`${root}.container b`)?.textContent,
-        text: __find(`${root}.container`).textContent.trim(),
+        bold: !!__find(`${root}.container b`),
+        text: __find(`${root}.results-txt`).innerText,
       }),
       VIEW,
     );
 
-    assert.deepStrictEqual(rendered, { bold: "a", text: "a<b>" });
+    assert.deepStrictEqual(rendered, {
+      bold: false,
+      text: "{x<y}\n     ^\na & b",
+    });
+  });
+
+  it("keeps a stack trace caret under the character it points at", async () => {
+    await show(text(formatResult("type\n  [0] {1+x}\n        ^\n")));
+
+    const aligned = await view.eval((root: string) => {
+      const paragraph = __find(`${root}.results-txt`);
+      const style = getComputedStyle(paragraph);
+      const width = (text: string) => {
+        const probe = document.createElement("span");
+        probe.style.font = style.font;
+        probe.style.whiteSpace = "pre";
+        probe.textContent = text;
+        paragraph.appendChild(probe);
+        const measured = probe.getBoundingClientRect().width;
+        probe.remove();
+        return measured;
+      };
+      return {
+        whiteSpace: style.whiteSpace,
+        caretUnderThePlus: width("  [0] {1+") === width("        ^"),
+      };
+    }, VIEW);
+
+    assert.deepStrictEqual(aligned, {
+      whiteSpace: "pre-wrap",
+      caretUnderThePlus: true,
+    });
   });
 });

@@ -511,6 +511,58 @@ describe("dataSourceCommand", () => {
         .withArgs("No Insights active connection found");
     });
 
+    it("should append the stack trace to the results panel message", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.resolves({
+        error: "Executing code using (Q) raised - type: Mismatched types",
+        stacktrace: "  [0] {1+x}\n        ^\n",
+      });
+
+      ext.isResultsTabVisible = true;
+      await dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "test-file.kxquery",
+      );
+
+      sinon.assert.calledWith(
+        writeQueryResultsToViewStub,
+        "Executing code using (Q) raised - type: Mismatched types\n  [0] {1+x}\n        ^\n",
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should append the stack trace to the console message", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.resolves({
+        error: "Executing code using (Q) raised - type: Mismatched types",
+        stacktrace: "  [0] {1+x}\n        ^\n",
+      });
+
+      ext.isResultsTabVisible = false;
+      await dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "test-file.kxquery",
+      );
+
+      sinon.assert.calledWith(
+        writeQueryResultsToConsoleStub,
+        "Executing code using (Q) raised - type: Mismatched types\n  [0] {1+x}\n        ^\n",
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
     it("should return error for visible results panel", async () => {
       ext.connectedConnectionList.push(insightsConn);
       retrieveConnStub.resolves(insightsConn);
@@ -701,6 +753,50 @@ describe("dataSourceCommand", () => {
 
       assert.ok(kdbOutputLogStub.calledOnce);
       assert.deepEqual(result, { error });
+    });
+
+    it("should keep the stack trace beside the error", () => {
+      const result = dataSourceCommand.parseError("test error", "  [0] {1+x}");
+
+      assert.deepEqual(result, {
+        error: "test error",
+        stacktrace: "  [0] {1+x}",
+      });
+    });
+  });
+
+  describe("formatDataSourceError", () => {
+    it("should prefer the error message over the error", () => {
+      const result = dataSourceCommand.formatDataSourceError({
+        error: true,
+        errorMsg: "type",
+      });
+
+      assert.strictEqual(result, "type");
+    });
+
+    it("should append the stack trace under the message", () => {
+      const result = dataSourceCommand.formatDataSourceError({
+        error: "type",
+        stacktrace: "  [0] {1+x}\n        ^\n",
+      });
+
+      assert.strictEqual(result, "type\n  [0] {1+x}\n        ^\n");
+    });
+
+    it("should leave the message alone without a stack trace", () => {
+      const result = dataSourceCommand.formatDataSourceError({
+        error: "type",
+      });
+
+      assert.strictEqual(result, "type");
+    });
+
+    it("should pass a buffer error through untouched", () => {
+      const error = { buffer: new ArrayBuffer(1) };
+      const result = dataSourceCommand.formatDataSourceError({ error });
+
+      assert.strictEqual(result, error);
     });
   });
 });

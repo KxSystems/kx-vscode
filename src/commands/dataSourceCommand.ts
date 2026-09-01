@@ -34,6 +34,7 @@ import {
 import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
+  appendStacktrace,
   convertRows,
   getQSQLWrapper,
 } from "../utils/queryUtils";
@@ -182,7 +183,7 @@ export async function runDataSource(
             logger,
           });
         } else if (!success) {
-          res = res.errorMsg ? res.errorMsg : res.error;
+          res = formatDataSourceError(res);
         }
 
         if (isNotebook) {
@@ -205,7 +206,7 @@ export async function runDataSource(
             { logger },
           );
         } else if (res.error) {
-          res = res.errorMsg ? res.errorMsg : res.error;
+          res = formatDataSourceError(res);
         }
 
         // Fit the table to the connection's console, which wraps what does not
@@ -300,7 +301,7 @@ export async function runApiDataSource(
   );
 
   if (apiCall?.error) {
-    return parseError(apiCall.error);
+    return parseError(apiCall.error, apiCall.stacktrace);
   } else if (apiCall?.results) {
     return apiCall.results;
   } else {
@@ -337,7 +338,7 @@ export async function runQsqlDataSource(
   );
 
   if (qsqlCall?.error) {
-    return parseError(qsqlCall.error);
+    return parseError(qsqlCall.error, qsqlCall.stacktrace);
   } else if (qsqlCall?.results) {
     return qsqlCall.results;
   } else {
@@ -361,7 +362,7 @@ export async function runSqlDataSource(
   );
 
   if (sqlCall?.error) {
-    return parseError(sqlCall.error);
+    return parseError(sqlCall.error, sqlCall.stacktrace);
   } else if (sqlCall?.results) {
     return sqlCall.results;
   } else {
@@ -413,7 +414,7 @@ export async function executeUDARequest(
   );
 
   if (udaCall?.error) {
-    return parseError(udaCall.error);
+    return parseError(udaCall.error, udaCall.stacktrace);
   } else if (udaCall?.results) {
     return udaCall.results;
   } else {
@@ -437,14 +438,19 @@ export function getQuery(
   }
 }
 
-export function parseError(error: GetDataError) {
+export function parseError(error: GetDataError, stacktrace?: string) {
   notify(`Datasource error.`, MessageKind.DEBUG, {
     logger,
-    params: error,
+    params: { error, stacktrace },
   });
-  return {
-    error,
-  };
+  return stacktrace ? { error, stacktrace } : { error };
+}
+
+export function formatDataSourceError(res: any) {
+  const message = res.errorMsg ? res.errorMsg : res.error;
+  return typeof message === "string"
+    ? appendStacktrace(message, res.stacktrace)
+    : message;
 }
 
 export function getPartialDatasourceFile(

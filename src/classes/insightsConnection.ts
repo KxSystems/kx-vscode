@@ -584,8 +584,10 @@ export class InsightsConnection {
             MessageKind.DEBUG,
             { logger, params: error },
           );
+          const header = error.response.data.header;
           return {
-            error: error.response.data.header.ai,
+            error: header.ai,
+            stacktrace: header.bt,
             arrayBuffer: undefined,
           };
         });
@@ -683,7 +685,10 @@ export class InsightsConnection {
                 silent ? MessageKind.DEBUG : MessageKind.ERROR,
                 {
                   logger,
-                  params: { status: response.status },
+                  params: {
+                    status: response.status,
+                    stacktrace: response.data.stacktrace,
+                  },
                 },
               );
             } else {

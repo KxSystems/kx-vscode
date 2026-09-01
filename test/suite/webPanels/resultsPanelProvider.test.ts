@@ -459,6 +459,22 @@ describe("ResultsPanelProvider", () => {
       });
     });
 
+    it("should escape markup in a string queryResult", () => {
+      resultsPanel.updateWebView("{x<y} & z");
+      sinon.assert.calledWith(postMessageStub, {
+        command: "setResultsContent",
+        results: `<p class="results-txt">{x&lt;y} &amp; z</p>`,
+      });
+    });
+
+    it("should turn the newlines of a string queryResult into breaks", () => {
+      resultsPanel.updateWebView("type\n  [0] {1+x}\n        ^\n");
+      sinon.assert.calledWith(postMessageStub, {
+        command: "setResultsContent",
+        results: `<p class="results-txt">type<br/>  [0] {1+x}<br/>        ^<br/></p>`,
+      });
+    });
+
     it("should handle empty string queryResult", () => {
       const queryResult = "";
       resultsPanel.updateWebView(queryResult);

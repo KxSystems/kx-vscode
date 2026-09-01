@@ -41,7 +41,11 @@ import {
   notifyExecution,
   RunFlag,
 } from "../utils/queryUtils";
-import { convertToGrid, formatResult } from "../utils/resultsRenderer";
+import {
+  convertToGrid,
+  escapeHtml,
+  formatResult,
+} from "../utils/resultsRenderer";
 
 const logger = "notebookController";
 
@@ -233,7 +237,7 @@ export class KxNotebookController {
         this.writeOutput(
           execution,
           {
-            text: `<p>Execution stopped.</p><p>${error instanceof Error ? error.message : error}</p>`,
+            text: `<p>Execution stopped.</p><p>${escapeHtml(`${error instanceof Error ? error.message : error}`)}</p>`,
             mime: "text/html",
           },
           cellTarget,
@@ -397,7 +401,7 @@ function render(
         rows.push("<tr>");
         const fields: string[] = [];
         for (const def of table.columnDefs) {
-          rows.push(`<th>${def.headerName}</th>`);
+          rows.push(`<th>${escapeHtml(`${def.headerName}`)}</th>`);
           if ("field" in def) {
             fields.push(def.field || "");
           } else {
@@ -412,7 +416,9 @@ function render(
           for (const row of table.rowData) {
             rows.push("<tr>");
             for (const field of fields) {
-              rows.push(`<td>${field ? row[field] : "n/a"}</td>`);
+              rows.push(
+                `<td>${field ? escapeHtml(`${row[field]}`) : "n/a"}</td>`,
+              );
             }
             rows.push("</tr>");
           }
