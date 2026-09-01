@@ -21,10 +21,6 @@ export function decodeQUTF(text: string): any {
     return text;
   }
 
-  if (text === "1b" || text === "0b") {
-    return text === "1b";
-  }
-
   return text.replace(/(\\[^0-7])|(\\[0-7]{3})+/g, (text, notOctal) => {
     if (notOctal) {
       return text;

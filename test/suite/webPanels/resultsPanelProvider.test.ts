@@ -398,6 +398,27 @@ describe("ResultsPanelProvider", () => {
       const output = renderer.convertToGrid(results, true);
       assert.equal(JSON.stringify(output), expectedOutput);
     });
+
+    it("should keep booleans as q prints them (KXI-73119)", () => {
+      const results = {
+        count: 2,
+        columns: [
+          { name: "flag", type: "booleans", values: ["1b", "0b"] },
+          { name: "one", type: "boolean", values: ["1b"] },
+        ],
+      };
+
+      const output = renderer.convertToGrid(results, true, "1.20");
+
+      assert.deepStrictEqual(output.rowData, [
+        { index: 1, flag: "1b", one: "1b" },
+        { index: 2, flag: "0b" },
+      ]);
+      assert.deepStrictEqual(
+        output.columnDefs.map((col: any) => col.cellDataType),
+        ["number", "text", "text"],
+      );
+    });
   });
 
   describe("generateColumnDefs", () => {

@@ -169,8 +169,8 @@ export function sanitizeString(value: any): any {
 
 export function kdbToAgGridCellType(kdbType: string): string {
   const typeMapping: { [key: string]: string } = {
-    boolean: "boolean",
-    booleans: "boolean",
+    boolean: "text",
+    booleans: "text",
     guid: "text",
     byte: "number",
     short: "number",
