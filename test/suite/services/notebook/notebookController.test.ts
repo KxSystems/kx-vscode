@@ -245,8 +245,14 @@ describe("Controller", () => {
         });
 
         describe("Connection Exists", () => {
+          let runDataSourceStub: sinon.SinonStub;
+
           beforeEach(() => {
             runOn(sinon.createStubInstance(InsightsConnection));
+
+            runDataSourceStub = sinon
+              .stub(dataSourceCommand, "runDataSource")
+              .resolves(undefined);
 
             createInstance();
           });
@@ -257,7 +263,30 @@ describe("Controller", () => {
               notebookTestUtils.createNotebook(),
               createController(),
             );
+            sinon.assert.calledOnce(runDataSourceStub);
             assert.strictEqual(success, true);
+          });
+
+          it("should fail the cell when the datasource query fails", async () => {
+            const writeOutput = sinon.stub(
+              controlller.KxNotebookController.prototype,
+              "writeOutput",
+            );
+            runDataSourceStub.rejects(
+              new Error("Request failed with status 502: Bad Gateway"),
+            );
+
+            await instance.execute(
+              [notebookTestUtils.createCell("sql")],
+              notebookTestUtils.createNotebook(),
+              createController(),
+            );
+
+            assert.strictEqual(success, false);
+            assert.match(
+              writeOutput.firstCall.args[1].text,
+              /502: Bad Gateway/,
+            );
           });
         });
 

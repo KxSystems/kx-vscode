@@ -230,12 +230,24 @@ export async function runDataSource(
       addDStoQueryHistory(dataSourceForm, success, connLabel, executorName);
     }
   } catch (error) {
-    notify(`Datasource error: ${error}.`, MessageKind.DEBUG, {
-      logger,
-      params: error,
-    });
-    running = false;
+    // Backstop for anything the per-type runners did not turn into a result.
+    // A notebook renders the failure into the cell that raised it, so let it
+    // through; everywhere else the query failed and must say so rather than
+    // logging out of sight, and the attempt is recorded so the query history
+    // still increments (KXI-69283).
+    if (executorName.endsWith(".kxnb")) {
+      throw error;
+    }
+    if (!token?.isCancellationRequested) {
+      notify(
+        `Datasource error: ${error instanceof Error ? error.message : error}`,
+        MessageKind.ERROR,
+        { logger, params: error },
+      );
+      addDStoQueryHistory(dataSourceForm, false, connLabel, executorName);
+    }
   } finally {
+    ext.isDatasourceExecution = false;
     running = false;
   }
 }

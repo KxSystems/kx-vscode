@@ -166,6 +166,26 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
       let runner: any;
+
+      // Runner.execute rejects, and this handler is the end of the chain: a
+      // rejection nothing catches is an error the user never sees (KXI-69283).
+      const execute = async (pending: Runner<unknown>) => {
+        try {
+          if (connected) await pending.execute();
+          else if (await offerConnectAction(selectedServer))
+            await pending.execute();
+        } catch (error) {
+          if (pending.cancelled) {
+            return;
+          }
+          const what = pending.title.replace(/\.$/, "") || "The query";
+          notify(`${what} failed.`, MessageKind.ERROR, {
+            logger,
+            params: error,
+          });
+        }
+      };
+
       switch (msg.command) {
         case QueryCommand.Connection: {
           await pickConnection(document.uri);
@@ -202,9 +222,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
           });
           runner.location = ProgressLocation.Notification;
           runner.title = `Refreshing meta data for ${selectedServer}.`;
-          if (connected) await runner.execute();
-          else if (await offerConnectAction(selectedServer))
-            await runner.execute();
+          await execute(runner);
           break;
         }
         case QueryCommand.Run: {
@@ -241,9 +259,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
           });
           runner.location = ProgressLocation.Notification;
           runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
-          if (connected) await runner.execute();
-          else if (await offerConnectAction(selectedServer))
-            await runner.execute();
+          await execute(runner);
           notifyExecution(RunFlag.Run, queryType(msg.file));
           break;
         }
@@ -280,10 +296,9 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
               throw err;
             }
           });
-          runner.title = "Populating scratchpad.";
-          if (connected) await runner.execute();
-          else if (await offerConnectAction(selectedServer))
-            await runner.execute();
+          runner.location = ProgressLocation.Notification;
+          runner.title = `Populating scratchpad on ${msg.selectedServer}.`;
+          await execute(runner);
           notifyExecution(0, queryType(msg.file));
           break;
         }

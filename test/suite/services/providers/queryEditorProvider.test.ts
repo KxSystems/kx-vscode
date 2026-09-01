@@ -182,6 +182,7 @@ describe("queryEditorProvider", () => {
     let offerConnectAction: sinon.SinonStub;
     let applyEdit: sinon.SinonStub;
     let executeCommand: sinon.SinonStub;
+    let showErrorMessage: sinon.SinonStub;
 
     const settled = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -229,6 +230,9 @@ describe("queryEditorProvider", () => {
         .resolves(false);
       applyEdit = sinon.stub(vscode.workspace, "applyEdit").resolves(true);
       executeCommand = sinon.stub(vscode.commands, "executeCommand").resolves();
+      showErrorMessage = sinon
+        .stub(vscode.window, "showErrorMessage")
+        .resolves(<any>undefined);
 
       const document = await vscode.workspace.openTextDocument({
         language: "json",
@@ -325,10 +329,13 @@ describe("queryEditorProvider", () => {
       await assert.doesNotReject(() => send(QueryCommand.Run));
     });
 
-    it("should let a run failure through", async () => {
+    it("should report a run failure rather than dropping it", async () => {
       runDataSource.rejects(new Error("boom"));
 
-      await assert.rejects(() => send(QueryCommand.Run), /boom/);
+      await assert.doesNotReject(() => send(QueryCommand.Run));
+
+      sinon.assert.calledOnce(showErrorMessage);
+      assert.match(showErrorMessage.firstCall.args[0], / failed\.$/);
     });
 
     it("should populate the scratchpad", async () => {
@@ -359,10 +366,13 @@ describe("queryEditorProvider", () => {
       await assert.doesNotReject(() => send(QueryCommand.Populate));
     });
 
-    it("should let a populate failure through", async () => {
+    it("should report a populate failure rather than dropping it", async () => {
       populateScratchpad.rejects(new Error("boom"));
 
-      await assert.rejects(() => send(QueryCommand.Populate), /boom/);
+      await assert.doesNotReject(() => send(QueryCommand.Populate));
+
+      sinon.assert.calledOnce(showErrorMessage);
+      assert.match(showErrorMessage.firstCall.args[0], / failed\.$/);
     });
 
     it("should ignore a command it does not know", async () => {

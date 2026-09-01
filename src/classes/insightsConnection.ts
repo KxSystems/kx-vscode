@@ -579,15 +579,24 @@ export class InsightsConnection {
           };
         })
         .catch((error: any) => {
+          // Only a gateway error carries a header; when the coordinator or the
+          // gateway goes away mid-query the body is plain text or an HTML error
+          // page, and a dropped socket has no response at all. Reading
+          // error.response.data.header on those threw a TypeError out of this
+          // handler, which runDataSource logged and never showed (KXI-69283).
+          const errorMsg = extractInsightsRequestError(error);
           notify(
-            `Datasource execution status: ${error.response.status}.`,
+            `Datasource execution failed: ${errorMsg}`,
             MessageKind.DEBUG,
-            { logger, params: error },
+            {
+              logger,
+              params: { status: error?.response?.status, error },
+            },
           );
-          const header = error.response.data.header;
+          const header = error?.response?.data?.header;
           return {
-            error: header.ai,
-            stacktrace: header.bt,
+            error: header?.ai || errorMsg,
+            stacktrace: header?.bt,
             arrayBuffer: undefined,
           };
         });
@@ -934,9 +943,12 @@ export class InsightsConnection {
           );
           return true;
         })
-        .catch((_error: any) => {
+        .catch((error: any) => {
           notify(
-            `Scratchpad cancel request error: ${_error.response.data.message}`,
+            `Scratchpad cancel request error: ${
+              error?.response?.data?.message ??
+              extractInsightsRequestError(error)
+            }`,
             MessageKind.ERROR,
             { logger },
           );

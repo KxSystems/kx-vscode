@@ -537,6 +537,56 @@ describe("dataSourceCommand", () => {
       ext.connectedConnectionList.length = 0;
     });
 
+    it("should report and record a query that threw instead of returning", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.rejects(new Error("socket hang up"));
+      const showErrorMessage = sinon
+        .stub(vscode.window, "showErrorMessage")
+        .resolves(<any>undefined);
+      ext.kdbQueryHistoryList.length = 0;
+
+      ext.isResultsTabVisible = true;
+      await dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "test-file.kxquery",
+      );
+
+      sinon.assert.calledOnce(showErrorMessage);
+      assert.match(showErrorMessage.firstCall.args[0], /socket hang up/);
+      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+      assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
+      assert.strictEqual(ext.isDatasourceExecution, false);
+
+      ext.kdbQueryHistoryList.length = 0;
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should let a notebook render a query that threw", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.rejects(new Error("socket hang up"));
+
+      await assert.rejects(
+        () =>
+          dataSourceCommand.runDataSource(
+            mockDataSourceFile,
+            insightsConn.connLabel,
+            "test-file.kxnb",
+          ),
+        /socket hang up/,
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
     it("should append the stack trace to the console message", async () => {
       ext.connectedConnectionList.push(insightsConn);
       retrieveConnStub.resolves(insightsConn);

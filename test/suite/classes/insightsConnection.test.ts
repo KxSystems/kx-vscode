@@ -373,6 +373,75 @@ describe("insightsConnection", () => {
       assert.strictEqual(result?.error, "table does not exist");
       assert.strictEqual(result?.stacktrace, undefined);
     });
+
+    it("should surface a plain-text 500 when the coordinator is killed mid-query", async () => {
+      axios.defaults.adapter = async () => {
+        throw {
+          response: {
+            status: 500,
+            statusText: "Internal Server Error",
+            data: "Coordinator connection has closed",
+          },
+        };
+      };
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.API,
+        { table: "trade" },
+      );
+
+      assert.strictEqual(
+        result?.error,
+        "Request failed with status 500: Coordinator connection has closed",
+      );
+      assert.strictEqual(result?.stacktrace, undefined);
+    });
+
+    it("should surface an HTML 502 when the gateway is killed mid-query", async () => {
+      axios.defaults.adapter = async () => {
+        throw {
+          response: {
+            status: 502,
+            statusText: "Bad Gateway",
+            data: "<html><head><title>502 Bad Gateway</title></head></html>",
+          },
+        };
+      };
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.UDA,
+        { name: ".test.uda", params: {} },
+      );
+
+      assert.strictEqual(
+        result?.error,
+        "Request failed with status 502: Bad Gateway",
+      );
+    });
+
+    it("should surface a dropped socket with no response", async () => {
+      axios.defaults.adapter = async () => {
+        throw new Error("socket hang up");
+      };
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.QSQL,
+        { query: "select from trade" },
+      );
+
+      assert.strictEqual(result?.error, "socket hang up");
+    });
+
+    it("should fall back to the request error when the header carries no message", async () => {
+      rejectWith({ ai: "" });
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.API,
+        { table: "trade" },
+      );
+
+      assert.strictEqual(result?.error, "Request failed with status 400");
+    });
   });
 
   describe("importScratchpad for a UDA", () => {
