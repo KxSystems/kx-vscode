@@ -139,11 +139,9 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
     };
 
     workspace.onDidChangeConfiguration((event) => {
-      /* c8 ignore start */
       if (event.affectsConfiguration("kdb.connectionMap")) {
         updateWebview();
       }
-      /* c8 ignore stop */
     });
 
     const changeDocumentSubscription = workspace.onDidChangeTextDocument(
@@ -165,7 +163,6 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
     });
 
     webview.onDidReceiveMessage(async (msg: QueryMessage) => {
-      /* c8 ignore start */
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
       let runner: any;
@@ -291,7 +288,6 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
           break;
         }
       }
-      /* c8 ignore stop */
     });
 
     updateWebview();

@@ -162,6 +162,34 @@ describe("workspaceCommand", () => {
       cb2(vscode.Uri.file("test.kdb.q"));
       assert.strictEqual(wbTree, true);
     });
+
+    it("should reload both views when the workspace folders change", () => {
+      let dsTree, wbTree;
+      sinon.stub(vscode.workspace, "createFileSystemWatcher").value(() => ({
+        onDidCreate: () => undefined,
+        onDidDelete: () => undefined,
+      }));
+      const folders = sinon.stub(
+        vscode.workspace,
+        "onDidChangeWorkspaceFolders",
+      );
+      ext.queryTreeProvider = <WorkspaceTreeProvider>{
+        reload() {
+          dsTree = true;
+        },
+      };
+      ext.scratchpadTreeProvider = <WorkspaceTreeProvider>{
+        reload() {
+          wbTree = true;
+        },
+      };
+
+      workspaceCommand.connectWorkspaceCommands();
+      folders.firstCall.args[0](<any>undefined);
+
+      assert.strictEqual(dsTree, true);
+      assert.strictEqual(wbTree, true);
+    });
   });
 
   describe("updateStatusBarItems", () => {

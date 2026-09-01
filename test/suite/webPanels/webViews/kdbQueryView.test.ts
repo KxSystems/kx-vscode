@@ -401,6 +401,17 @@ describe("KdbQueryView", () => {
         selectedServer: "server",
       });
     });
+
+    it("should hand the message to the extension host api", () => {
+      postMessage.restore();
+      const api = sinon.stub(view.vscode, "postMessage");
+
+      view.postMessage({ command: QueryCommand.Save });
+
+      assert.deepStrictEqual(api.firstCall.args[0], {
+        command: QueryCommand.Save,
+      });
+    });
   });
 
   describe("getData", () => {

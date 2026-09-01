@@ -53,6 +53,77 @@ describe("ResultsPanelProvider", () => {
     resultsPanel["_view"] = viewStub;
   });
 
+  describe("resolveWebviewView", () => {
+    const createView = () => {
+      const posted: any[] = [];
+      let received: ((data: any) => void) | undefined;
+      const view = <vscode.WebviewView>(<unknown>{
+        webview: {
+          options: {},
+          html: "",
+          asWebviewUri: (uri: vscode.Uri) => uri,
+          cspSource: "self",
+          postMessage(message: any) {
+            posted.push(message);
+          },
+          onDidReceiveMessage(callback: (data: any) => void) {
+            received = callback;
+          },
+        },
+      });
+      return { view, posted, receive: (data: any) => received?.(data) };
+    };
+
+    beforeEach(() => {
+      resultsPanel["_view"] = undefined;
+      sinon.stub(ext, "context").value(<vscode.ExtensionContext>(<unknown>{
+        extensionUri: uriTest,
+      }));
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should let the page run scripts from the bundle directory", () => {
+      const { view } = createView();
+
+      resultsPanel.resolveWebviewView(view);
+
+      assert.strictEqual(view.webview.options.enableScripts, true);
+      assert.strictEqual(
+        view.webview.options.localResourceRoots?.[0].path.endsWith("out"),
+        true,
+      );
+    });
+
+    it("should mount the results element in the page it writes", () => {
+      const { view } = createView();
+
+      resultsPanel.resolveWebviewView(view);
+
+      assert.ok(view.webview.html.includes('<kdb-results-view size="100">'));
+      assert.ok(view.webview.html.includes("out/webview.js"));
+    });
+
+    it("should render what the webview sends back", () => {
+      const { view, posted, receive } = createView();
+      resultsPanel.resolveWebviewView(view);
+      posted.length = 0;
+
+      receive("a result");
+
+      assert.deepStrictEqual(
+        posted.map((message) => message.command),
+        ["loading", "setResultsContent"],
+      );
+      assert.strictEqual(
+        posted[1].results,
+        `<p class="results-txt">a result</p>`,
+      );
+    });
+  });
+
   describe("defineAgGridTheme()", () => {
     it("should return 'ag-theme-alpine' if the color theme is not dark", () => {
       resultsPanel._colorTheme = { kind: vscode.ColorThemeKind.Light };

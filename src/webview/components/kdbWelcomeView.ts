@@ -11,8 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-/* c8 ignore start */
-
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
@@ -385,5 +383,3 @@ function renderIcon5() {
     </svg>
   `;
 }
-
-/* c8 ignore stop */

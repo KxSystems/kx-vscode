@@ -68,13 +68,9 @@ export function which(cmd: string): string[] {
 }
 
 export function stat(path: string): boolean {
-  /* c8 ignore start */
   return existsSync(path);
-  /* c8 ignore stop */
 }
 
 export function readTextFile(path: string): string {
-  /* c8 ignore start */
   return readFileSync(path, "utf-8");
-  /* c8 ignore stop */
 }

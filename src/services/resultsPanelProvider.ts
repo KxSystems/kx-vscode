@@ -54,7 +54,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   public resolveWebviewView(webviewView: WebviewView) {
-    /* c8 ignore start */
     this._view = webviewView;
 
     webviewView.webview.options = {
@@ -69,7 +68,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage((data) => {
       this.updateWebView(data);
     });
-    /* c8 ignore stop */
   }
 
   public updateResults(
@@ -186,7 +184,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   private getWebviewContent(webview: Webview) {
-    /* c8 ignore start */
     const getResource = (resource: string) =>
       getUri(webview, ext.context.extensionUri, resource.split("/"));
 
@@ -205,6 +202,5 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       </body>
       </html>
     `;
-    /* c8 ignore stop */
   }
 }

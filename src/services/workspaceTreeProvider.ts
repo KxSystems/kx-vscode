@@ -101,7 +101,6 @@ export class FileTreeItem extends TreeItem {
   }
 
   private getFileIconType(fileName: string) {
-    /* c8 ignore start */
     if (fileName.endsWith(".kxquery")) {
       this.baseIcon = "datasource";
     } else if (fileName.endsWith(".kdb.q")) {
@@ -111,7 +110,6 @@ export class FileTreeItem extends TreeItem {
     } else {
       this.baseIcon = "sql";
     }
-    /* c8 ignore stop */
   }
 
   async getChildren(): Promise<FileTreeItem[]> {

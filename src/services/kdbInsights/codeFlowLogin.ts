@@ -233,12 +233,10 @@ export async function getToken(
   insecure: boolean,
   code: string,
 ): Promise<IToken | undefined> {
-  /* c8 ignore start */
   return await tokenRequest(insightsUrl, realm, insecure, {
     code,
     grant_type: ext.insightsGrantType.authorizationCode,
   });
-  /* c8 ignore stop */
 }
 
 async function tokenRequest(

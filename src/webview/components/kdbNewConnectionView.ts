@@ -175,7 +175,6 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderServerNameField(serverType: ServerType) {
-    /* c8 ignore start */
     return serverType === ServerType.KDB
       ? html`<label class="field"
           ><span class="label">Server Name</span
@@ -205,8 +204,6 @@ export class KdbNewConnectionView extends LitElement {
                 (event.target as HTMLInputElement).value,
               )}"
         /></label>`;
-
-    /* c8 ignore stop */
   }
 
   renderServerName(serverType: ServerType) {
@@ -226,7 +223,6 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderPortNumber() {
-    /* c8 ignore start */
     return html`
       <div class="row">
         <label class="field"
@@ -248,7 +244,6 @@ export class KdbNewConnectionView extends LitElement {
         ${this.renderPortNumberDesc()}
       </div>
     `;
-    /* c8 ignore stop */
   }
 
   renderConnAddDesc(serverType: ServerType) {
@@ -259,7 +254,6 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderConnAddress(serverType: ServerType) {
-    /* c8 ignore start */
     return html`
       <div class="row">
         <label class="field"
@@ -293,11 +287,9 @@ export class KdbNewConnectionView extends LitElement {
         ${this.renderConnAddDesc(serverType)}
       </div>
     `;
-    /* c8 ignore stop */
   }
 
   renderRealm() {
-    /* c8 ignore start */
     return html`
       <div class="row">
         <label class="field"
@@ -319,11 +311,9 @@ export class KdbNewConnectionView extends LitElement {
         to a specific realm as configured on your server.
       </div>
     `;
-    /* c8 ignore stop */
   }
 
   renderInsecureSSL() {
-    /* c8 ignore start */
     return html`
       <div class="row">
         <label class="checkbox"
@@ -339,7 +329,6 @@ export class KdbNewConnectionView extends LitElement {
         </label>
       </div>
     `;
-    /* c8 ignore stop */
   }
 
   tabClickAction(tabNumber: number) {
@@ -399,7 +388,6 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderNewLabelModal() {
-    /* c8 ignore start */
     return html`
       <div class="overlay"></div>
       <dialog class="modal" ?open="${this.isModalOpen}">
@@ -456,7 +444,6 @@ export class KdbNewConnectionView extends LitElement {
         </div>
       </dialog>
     `;
-    /* c8 ignore stop */
   }
 
   renderConnectionLabelsSection() {
@@ -469,7 +456,6 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderNewMyQConnectionForm() {
-    /* c8 ignore start */
     return html`<div class="col">
       <div class="row">
         <div class="col gap-0">${this.renderServerName(ServerType.KDB)}</div>
@@ -526,7 +512,6 @@ export class KdbNewConnectionView extends LitElement {
       ${this.renderConnectionLabelsSection()}
       ${this.renderCreateConnectionBtn()}
     </div>`;
-    /* c8 ignore stop */
   }
 
   renderNewInsightsConnectionForm() {
@@ -555,7 +540,6 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderNewConnectionForm() {
-    /* c8 ignore start */
     return html`
       <div class="row mt-1 mb-1 content-wrapper">
         ${this.isModalOpen ? this.renderNewLabelModal() : ""}
@@ -619,7 +603,6 @@ export class KdbNewConnectionView extends LitElement {
         </div>
       </div>
     `;
-    /* c8 ignore stop */
   }
 
   renderCreateConnectionBtn() {

@@ -114,10 +114,8 @@ export function getActiveFileUri(context?: unknown): Uri | undefined {
 }
 
 function activeEditorChanged(editor?: TextEditor | undefined) {
-  /* c8 ignore start */
   setRealActiveTextEditor(editor);
   updateStatusBarItems();
-  /* c8 ignore stop */
 }
 
 /**
@@ -149,10 +147,8 @@ export async function updateStatusBarItems() {
 }
 
 function setRunScratchpadItemText(uri: Uri, text: string) {
-  /* c8 ignore start */
   ext.runScratchpadItem.text = `$(cloud) ${text}`;
   ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
-  /* c8 ignore stop */
 }
 
 export async function setTimeoutItem(uri: Uri) {
@@ -822,14 +818,12 @@ function isPython(uri: Uri | undefined) {
 }
 
 function isWorkbook(uri: Uri | undefined) {
-  /* c8 ignore start */
   return (
     uri &&
     (uri.path.endsWith(".kdb.q") ||
       uri.path.endsWith(".kdb.py") ||
       uri.path.endsWith(".kdb.sql"))
   );
-  /* c8 ignore stop */
 }
 
 function isQuery(uri: Uri | undefined) {
@@ -1180,10 +1174,8 @@ export function connectWorkspaceCommands() {
   });
 
   workspace.onDidChangeWorkspaceFolders(() => {
-    /* c8 ignore start */
     ext.queryTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
-    /* c8 ignore stop */
   });
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   window.onDidChangeActiveNotebookEditor(() => updateStatusBarItems());

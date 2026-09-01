@@ -117,9 +117,7 @@ export class KdbQueryView extends LitElement {
   }
 
   postMessage(msg: Partial<QueryMessage>) {
-    /* c8 ignore start */
     this.vscode.postMessage(msg);
-    /* c8 ignore stop */
   }
 
   requestChange() {
