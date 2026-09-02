@@ -198,7 +198,9 @@ export function getInsightsServers() {
     {},
   );
 
-  return Object.keys(servers).map((key) => servers[key].alias);
+  return Object.values(servers)
+    .map(({ alias }) => alias)
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function getServers() {
@@ -209,7 +211,9 @@ function getServers() {
   );
 
   return [
-    ...Object.keys(servers).map((key) => servers[key].serverAlias),
+    ...Object.values(servers)
+      .map(({ serverAlias }) => serverAlias)
+      .sort((a, b) => a.localeCompare(b)),
     ...getInsightsServers(),
   ];
 }

@@ -194,6 +194,70 @@ describe("ScratchpadLogger", () => {
     assert.ok(mockSocket.setKeepAlive.calledWith(true, 15000));
   });
 
+  it("should log a handshake failure without alerting while it retries", async () => {
+    logger = new ScratchpadLoggerClass(mockConnection);
+    await logger.connect();
+
+    const onError = fakeWs.on.withArgs("error").getCall(0).args[1];
+    onError({ message: "Unexpected server response: 500" });
+
+    sinon.assert.calledWith(
+      notifyStub,
+      sinon.match("websocket error: Unexpected server response: 500"),
+      notifications.MessageKind.DEBUG,
+    );
+  });
+
+  it("should alert once when the failure outlives the retries", async () => {
+    logger = new ScratchpadLoggerClass(mockConnection);
+    await logger.connect();
+
+    (logger as any).reconnectAttempts = 3;
+    const onError = fakeWs.on.withArgs("error").getCall(0).args[1];
+    onError({ message: "Unexpected server response: 500" });
+    onError({ message: "Unexpected server response: 500" });
+
+    sinon.assert.calledOnce(
+      notifyStub.withArgs(
+        sinon.match("websocket error"),
+        notifications.MessageKind.ERROR,
+      ),
+    );
+  });
+
+  it("should alert again after the socket recovered and failed anew", async () => {
+    logger = new ScratchpadLoggerClass(mockConnection);
+    await logger.connect();
+
+    (logger as any).reconnectAttempts = 3;
+    const onError = fakeWs.on.withArgs("error").getCall(0).args[1];
+    onError({ message: "boom" });
+
+    fakeWs.on.withArgs("open").getCall(0).args[1]();
+    (logger as any).reconnectAttempts = 3;
+    onError({ message: "boom" });
+
+    sinon.assert.calledTwice(
+      notifyStub.withArgs(
+        sinon.match("websocket error"),
+        notifications.MessageKind.ERROR,
+      ),
+    );
+  });
+
+  it("should cancel a pending reconnect on manual disconnect", async () => {
+    logger = new ScratchpadLoggerClass(mockConnection);
+    await logger.connect();
+
+    const onClose = fakeWs.on.withArgs("close").getCall(0).args[1];
+    onClose(1006, "Abnormal Closure");
+
+    logger.disconnect();
+    clock.tick(10000);
+
+    sinon.assert.calledOnce(tokenStub);
+  });
+
   it("should suppress reconnection on manual disconnect", async () => {
     logger = new ScratchpadLoggerClass(mockConnection);
     await logger.connect();

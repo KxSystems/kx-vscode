@@ -282,6 +282,21 @@ describe("workspaceCommand", () => {
       const result = workspaceCommand.getInsightsServers();
       assert.strictEqual(result[0], "connection1");
     });
+
+    it("should return the aliases in alphabetical order", () => {
+      sinon.stub(vscode.workspace, "getConfiguration").value(() => ({
+        get: (key: string) =>
+          key === "insightsEnterpriseConnections"
+            ? [{ alias: "zeta" }, { alias: "alpha" }, { alias: "Mid" }]
+            : {},
+      }));
+
+      assert.deepStrictEqual(workspaceCommand.getInsightsServers(), [
+        "alpha",
+        "Mid",
+        "zeta",
+      ]);
+    });
   });
 
   describe("setServerForUri", () => {
@@ -466,6 +481,36 @@ describe("workspaceCommand", () => {
         vscode.Uri.file("test.kdb.q"),
       );
       assert.strictEqual(result, ext.REPL);
+    });
+
+    it("should offer the connections in the order the tree lists them", async () => {
+      sinon.stub(vscode.workspace, "getConfiguration").value(() => ({
+        get: (key: string) =>
+          key === "servers"
+            ? [{ serverAlias: "local2" }, { serverAlias: "local1" }]
+            : key === "insightsEnterpriseConnections"
+              ? [{ alias: "zeta" }, { alias: "alpha" }]
+              : {},
+      }));
+
+      let offered: readonly string[] = [];
+      sinon
+        .stub(widgets, "showInputPicker")
+        .value(async (items: readonly string[]) => {
+          offered = items;
+          return undefined;
+        });
+
+      await workspaceCommand.pickConnection(vscode.Uri.file("test.kdb.q"));
+
+      assert.deepStrictEqual(offered.slice(0, 6), [
+        "(active)",
+        ext.REPL,
+        "local1",
+        "local2",
+        "alpha",
+        "zeta",
+      ]);
     });
   });
 

@@ -43,7 +43,9 @@ export class ScratchpadLogger {
   private connecting = false;
   private isManualClose = false;
   private pingInterval: NodeJS.Timeout | null = null;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
+  private reported = false;
   private url = "";
   private ws: WebSocket | null = null;
 
@@ -51,6 +53,7 @@ export class ScratchpadLogger {
 
   private readonly MAX_DELAY = 30000;
   private readonly PING_MS = 30000;
+  private readonly QUIET_ATTEMPTS = 3;
 
   constructor(
     private readonly connection: InsightDetails,
@@ -116,6 +119,7 @@ export class ScratchpadLogger {
 
     this.ws.on("open", () => {
       this.reconnectAttempts = 0;
+      this.reported = false;
       this.startHeartbeat();
       notify(`${this.connection.alias} websocket opened`, MessageKind.DEBUG, {
         logger,
@@ -163,13 +167,15 @@ export class ScratchpadLogger {
     });
 
     this.ws.on("error", ({ message }) => {
+      const persistent = this.reconnectAttempts >= this.QUIET_ATTEMPTS;
       notify(
         `${this.connection.alias} websocket error: ${message}`,
-        MessageKind.ERROR,
+        persistent && !this.reported ? MessageKind.ERROR : MessageKind.DEBUG,
         {
           logger,
         },
       );
+      this.reported = this.reported || persistent;
     });
   }
 
@@ -217,6 +223,10 @@ export class ScratchpadLogger {
 
   public disconnect() {
     this.isManualClose = true;
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
     this.ws?.close();
   }
 
@@ -234,7 +244,8 @@ export class ScratchpadLogger {
         logger,
       },
     );
-    setTimeout(() => {
+    this.reconnectTimeout = setTimeout(() => {
+      this.reconnectTimeout = null;
       this.reconnectAttempts++;
       this.connect();
     }, delay);
