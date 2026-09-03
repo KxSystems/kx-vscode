@@ -476,14 +476,6 @@ describe("query", () => {
       ]);
     });
 
-    it("should write scope as a dictionary", () => {
-      const query = getData();
-      assert.strictEqual(
-        serializeRows(param(query, "scope"), [["assembly", "trades"]]),
-        '{"assembly":"trades"}',
-      );
-    });
-
     it("should split a multi valued filter on spaces", () => {
       const query = getData();
       assert.strictEqual(

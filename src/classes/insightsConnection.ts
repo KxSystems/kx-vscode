@@ -24,14 +24,19 @@ import {
   InsightsConfig,
   InsightsEndpoints,
 } from "../models/config";
-import { GetDataObjectPayload } from "../models/data";
+import {
+  GetDataObjectPayload,
+  Scope,
+  getDataBodyPayload,
+} from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { JwtUser } from "../models/jwt_user";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
+import { parseValue } from "../models/query";
 import { StructuredTextResults } from "../models/queryResult";
 import { ScratchpadRequestBody } from "../models/scratchpad";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { UDARequestBody } from "../models/uda";
+import { SCOPE, UDARequestBody } from "../models/uda";
 import {
   getCurrentToken,
   getHttpsAgent,
@@ -460,17 +465,76 @@ export class InsightsConnection {
     return new url.URL(endpoint, this.node.details.server).toString();
   }
 
+  /**
+   * The scope a target string stands for. The names the dropdown offers are the
+   * cleaned ones — no `-qe` suffix, no `:port` — so each is looked up in the
+   * meta to get the name the gateway knows. An instance is left out when a DAP
+   * names one already, and both are left out for an assembly on its own, which
+   * is what hands the request to the resource coordinator.
+   */
+  public scopeForTarget(target: string): Scope {
+    const [plainAssembly, tier, plainDap] =
+      normalizeAssemblyTarget(target).split(/\s+/);
+
+    const dap = this.retrieveCorrectDAPName(plainDap, tier);
+    const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
+
+    // Only the keys there is something to say about: a scope carrying
+    // `tier: undefined` reads as a tier that was named and not found.
+    return {
+      affinity: "soft",
+      ...(assembly === undefined ? {} : { assembly }),
+      ...(dap || !tier ? {} : { tier }),
+      ...(dap === undefined ? {} : { dap }),
+    };
+  }
+
+  /**
+   * What a `scope` parameter is sent as. The form holds the target string the
+   * dropdown wrote, and the request wants the dictionary it stands for. A value
+   * that is already a dictionary is sent as it is — a file written before the
+   * dropdown, or a datasource converted from one, kept working. Nothing chosen
+   * is nothing to send.
+   */
+  public scopeValue(value: unknown): Scope | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+    if (typeof value !== "string") {
+      return <Scope>value;
+    }
+    if (!value.trim()) {
+      return undefined;
+    }
+    const parsed = parseValue(value);
+    return parsed && typeof parsed === "object"
+      ? <Scope>parsed
+      : this.scopeForTarget(value);
+  }
+
+  /**
+   * A getData payload with its scope as the request wants it. The payload is
+   * built where no connection is at hand — the query file has no idea which one
+   * it will run on — so the target string it carries is resolved here.
+   */
+  public scopedApiPayload(
+    payload: Partial<getDataBodyPayload>,
+  ): Partial<getDataBodyPayload> {
+    if (!(SCOPE in payload)) {
+      return payload;
+    }
+    const { scope: _, ...rest } = payload;
+    const scope = this.scopeValue(payload.scope);
+    return scope === undefined ? rest : { ...rest, scope };
+  }
+
   public generateQSqlBody(
     query: string,
     assemblyTarget: string,
     version?: string,
     options?: { agg?: string; labels?: { [key: string]: string } },
   ) {
-    const [plainAssembly, tier, plainDap] =
-      normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
-
-    const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
-    const dap = this.retrieveCorrectDAPName(plainDap, tier);
+    const scope = this.scopeForTarget(assemblyTarget);
 
     const extras = {
       ...(options?.agg === undefined ? {} : { agg: options.agg }),
@@ -478,19 +542,20 @@ export class InsightsConnection {
     };
 
     if (version && isBaseVersionGreaterOrEqual(version, "1.13")) {
-      return {
-        query,
-        scope: {
-          affinity: "soft",
-          assembly,
-          tier: dap ? undefined : tier,
-          dap: dap,
-        },
-        ...extras,
-      };
+      return { query, scope, ...extras };
     }
 
-    return { query, assembly, tier, dap, ...extras };
+    // The older body names the parts rather than nesting them, and carries the
+    // tier as it was given: leaving it out is what 1.13 added.
+    const [, tier] = normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
+
+    return {
+      query,
+      assembly: scope.assembly,
+      tier,
+      dap: scope.dap,
+      ...extras,
+    };
   }
 
   public retrieveCorrectAssemblyName(
@@ -618,7 +683,9 @@ export class InsightsConnection {
       };
       switch (params.dataSource.selectedType) {
         case DataSourceTypes.API: {
-          body.params = params.dataSource.api.payload || {};
+          body.params = this.scopedApiPayload(
+            params.dataSource.api.payload || {},
+          );
           coreUrl = this.connEndpoints.scratchpad.import;
           break;
         }

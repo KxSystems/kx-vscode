@@ -305,7 +305,7 @@ export async function runApiDataSource(
     );
     return;
   }
-  const apiBody = getApiBody(fileContent);
+  const apiBody = getApiBody(fileContent, selectedConn);
   const apiCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.API,
     apiBody,
@@ -323,8 +323,11 @@ export async function runApiDataSource(
 
 export function getApiBody(
   fileContent: DataSourceFiles,
+  selectedConn: InsightsConnection,
 ): Partial<getDataBodyPayload> {
-  return fileContent.dataSource.api.payload || {};
+  return selectedConn.scopedApiPayload(
+    fileContent.dataSource.api.payload || {},
+  );
 }
 
 export async function runQsqlDataSource(

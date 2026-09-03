@@ -92,6 +92,9 @@ export function parseTables(meta: MetaObjectPayload) {
 
 const TIMESTAMPS = ["startTS", "endTS"];
 const NANOSECONDS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{9}$/;
+// scope is absent on purpose: it holds the target string the dropdown wrote,
+// which the transport resolves against the connection meta rather than the
+// form parsing it here.
 const STRUCTURED = [
   "filter",
   "groupBy",
@@ -99,7 +102,6 @@ const STRUCTURED = [
   "sortCols",
   "labels",
   "outputTZCols",
-  "scope",
 ];
 
 const AGG_CONFLICT =

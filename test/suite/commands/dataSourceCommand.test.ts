@@ -88,14 +88,59 @@ describe("dataSourceCommand", () => {
       const dataSource = <DataSourceFiles>{
         dataSource: { selectedType: DataSourceTypes.API, api: { payload } },
       };
-      assert.deepStrictEqual(dataSourceCommand.getApiBody(dataSource), payload);
+      assert.deepStrictEqual(
+        dataSourceCommand.getApiBody(dataSource, insightsConn),
+        payload,
+      );
     });
 
     it("should return an empty body when there is no payload", () => {
       const dataSource = <DataSourceFiles>{
         dataSource: { selectedType: DataSourceTypes.API, api: {} },
       };
-      assert.deepStrictEqual(dataSourceCommand.getApiBody(dataSource), {});
+      assert.deepStrictEqual(
+        dataSourceCommand.getApiBody(dataSource, insightsConn),
+        {},
+      );
+    });
+
+    it("should resolve the target the scope holds into a dictionary", () => {
+      const scoped = new InsightsConnection("conn", insightsNode);
+      (<any>scoped).meta = {
+        payload: { dap: [{ assembly: "assembly-qe", instance: "rdb" }] },
+      };
+      const dataSource = <DataSourceFiles>{
+        dataSource: {
+          selectedType: DataSourceTypes.API,
+          api: {
+            payload: {
+              table: "trades",
+              startTS: "a",
+              endTS: "b",
+              scope: "assembly rdb",
+            },
+          },
+        },
+      };
+
+      assert.deepStrictEqual(
+        dataSourceCommand.getApiBody(dataSource, scoped).scope,
+        { affinity: "soft", assembly: "assembly-qe", tier: "rdb" },
+      );
+    });
+
+    it("should drop a scope that was never given a target", () => {
+      const dataSource = <DataSourceFiles>{
+        dataSource: {
+          selectedType: DataSourceTypes.API,
+          api: { payload: { table: "trades", scope: "" } },
+        },
+      };
+
+      assert.deepStrictEqual(
+        dataSourceCommand.getApiBody(dataSource, insightsConn),
+        { table: "trades" },
+      );
     });
   });
 

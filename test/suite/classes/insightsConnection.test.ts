@@ -621,6 +621,30 @@ describe("insightsConnection", () => {
       assert.strictEqual(body.scope.dap, undefined);
     });
 
+    it("should name only the parts the target gives", () => {
+      const scope = <any>withMeta("1.20").scopeForTarget("assembly");
+
+      assert.deepStrictEqual(scope, {
+        affinity: "soft",
+        assembly: "assembly-qe",
+      });
+    });
+
+    it("should leave the tier out when a DAP names one", () => {
+      const conn = withMeta("1.20");
+      (<any>conn).meta = {
+        payload: {
+          dap: [{ assembly: "assembly-qe", instance: "rdb", dap: "rdb:1234" }],
+        },
+      };
+
+      assert.deepStrictEqual(conn.scopeForTarget("assembly rdb rdb"), {
+        affinity: "soft",
+        assembly: "assembly-qe",
+        dap: "rdb:1234",
+      });
+    });
+
     it("should send them on the older body shape too", () => {
       const body = <any>withMeta("1.12").generateQSqlBody(
         "q",
@@ -634,6 +658,82 @@ describe("insightsConnection", () => {
       assert.strictEqual(body.agg, "distinct");
       assert.strictEqual(body.assembly, "assembly-qe");
       assert.strictEqual("scope" in body, false);
+    });
+  });
+
+  describe("scopeValue", () => {
+    const withMeta = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://example.com" },
+        label: "conn",
+      });
+      (<any>conn).meta = {
+        payload: { dap: [{ assembly: "assembly-qe", instance: "rdb" }] },
+      };
+      return conn;
+    };
+
+    it("should resolve a target string the dropdown wrote", () => {
+      assert.deepStrictEqual(withMeta().scopeValue("assembly rdb"), {
+        affinity: "soft",
+        assembly: "assembly-qe",
+        tier: "rdb",
+      });
+    });
+
+    it("should keep a dictionary a file already holds as JSON text", () => {
+      assert.deepStrictEqual(
+        withMeta().scopeValue('{"assembly":"written-by-hand"}'),
+        { assembly: "written-by-hand" },
+      );
+    });
+
+    it("should keep a dictionary that arrives as an object", () => {
+      assert.deepStrictEqual(withMeta().scopeValue({ assembly: "converted" }), {
+        assembly: "converted",
+      });
+    });
+
+    it("should have nothing to send when no target was chosen", () => {
+      assert.strictEqual(withMeta().scopeValue(""), undefined);
+      assert.strictEqual(withMeta().scopeValue("   "), undefined);
+      assert.strictEqual(withMeta().scopeValue(undefined), undefined);
+    });
+  });
+
+  describe("scopedApiPayload", () => {
+    const conn = () => {
+      const built = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://example.com" },
+        label: "conn",
+      });
+      (<any>built).meta = {
+        payload: { dap: [{ assembly: "assembly-qe", instance: "rdb" }] },
+      };
+      return built;
+    };
+
+    it("should leave a payload carrying no scope alone", () => {
+      const payload = { table: "trades" };
+
+      assert.strictEqual(conn().scopedApiPayload(payload), payload);
+    });
+
+    it("should swap the target string for the dictionary", () => {
+      assert.deepStrictEqual(
+        conn().scopedApiPayload({ table: "trades", scope: "assembly rdb" }),
+        {
+          table: "trades",
+          scope: { affinity: "soft", assembly: "assembly-qe", tier: "rdb" },
+        },
+      );
+    });
+
+    it("should drop a scope with no target in it", () => {
+      assert.deepStrictEqual(
+        conn().scopedApiPayload({ table: "trades", scope: "" }),
+        { table: "trades" },
+      );
     });
   });
 });

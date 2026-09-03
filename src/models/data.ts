@@ -29,10 +29,24 @@ export type GetDataObjectPayload = {
   arrayBuffer?: ArrayBuffer;
 };
 
+/**
+ * Where a request runs: the assembly, and the instance inside it unless the
+ * choice is being left to the resource coordinator. The form holds the target
+ * string the dropdown wrote instead, and the transport swaps it for this on the
+ * way out — `InsightsConnection.scopeValue`.
+ */
+export type Scope = {
+  affinity?: string;
+  assembly?: string;
+  tier?: string;
+  dap?: string;
+};
+
 export type getDataBodyPayload = {
   table: string;
   startTS: string;
   endTS: string;
+  scope?: string | Scope;
   labels?: { [id: string]: string };
   filter?: (string | number | (string | number)[])[][];
   groupBy?: string[];

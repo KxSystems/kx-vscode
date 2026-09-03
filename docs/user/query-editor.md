@@ -1,7 +1,9 @@
 ---
 type: Reference
 title: Query Editor
-description: Editing and running getData, qSQL, SQL and User Defined Analytics in a .kxquery file.
+description:
+  Editing and running getData, qSQL, SQL and User Defined Analytics in a
+  .kxquery file.
 tags: [kdb, vscode, query, uda, getdata, qsql, sql, insights]
 timestamp: 2026-08-16
 ---
@@ -37,9 +39,9 @@ The required parameters are shown straight away — for getData that is `table`,
 list and removed again with the trash button beside it.
 
 A parameter that holds a list — `filter`, `agg`, `groupBy`, `sortCols`,
-`labels`, `scope`, `outputTZCols` — keeps its place in that list once shown:
-choosing it again adds another row. Each row has its own trash button, and
-removing the last row removes the parameter.
+`labels`, `outputTZCols` — keeps its place in that list once shown: choosing it
+again adds another row. Each row has its own trash button, and removing the last
+row removes the parameter.
 
 Changing the API is not a discard. What you entered for the one you leave is
 kept with the file, so switching to another API and back brings the form back as
@@ -48,16 +50,16 @@ you have selected is run; the rest are along for the ride.
 
 ## qSQL and SQL
 
-qSQL and SQL are text queries rather than analytics called with named
-arguments, so each has a single `query` parameter — a box the size of a
-query — and qSQL a `target` dropdown above it, listing the tiers the
-connection reports and the DAP processes inside them as `assembly instance` and
-`assembly instance dap`. Above those sits `assembly distributed` — the assembly
-on its own, which leaves the instance out of the request so the resource
-coordinator fans the query out over every tier. It is offered on Insights 1.13
-and later, the versions whose qSQL scope accepts a missing instance. A target
-the connection does not list is kept and shown, so a file written against
-another connection opens unchanged. Neither field can be removed.
+qSQL and SQL are text queries rather than analytics called with named arguments,
+so each has a single `query` parameter — a box the size of a query — and qSQL a
+`target` dropdown above it, listing the tiers the connection reports and the DAP
+processes inside them as `assembly instance` and `assembly instance dap`. Above
+those sits `assembly distributed` — the assembly on its own, which leaves the
+instance out of the request so the resource coordinator fans the query out over
+every tier. It is offered on Insights 1.13 and later, the versions whose qSQL
+scope accepts a missing instance. A target the connection does not list is kept
+and shown, so a file written against another connection opens unchanged. Neither
+field can be removed.
 
 qSQL takes two optional parameters from the **+ Add parameter** list. `agg` is a
 unary function run on the aggregator over the results the processes return,
@@ -72,26 +74,42 @@ writing — it has the language server, diagnostics, per-statement execution and
 the run gutter — so reach for a `.kxquery` when what you want is a saved,
 re-runnable request beside the getData and UDA queries it belongs with.
 
+## Scope
+
+`scope` says where a request runs, and it is asked the way qSQL asks it: the
+same dropdown, listing the tiers the connection reports and the DAP processes
+inside them, with the assembly on its own above them. Add it from **+ Add
+parameter** and pick a target — getData, a UDA and qSQL all answer the question
+once, in the same words. What the request carries is the assembly, tier and DAP
+the target stands for, resolved against the connection when the query runs, so a
+file written against one connection still names the right processes on another.
+
+Leave it off and the choice is the resource coordinator's, which is what you
+want unless you have a reason to pin a query to one process. A file written
+before the dropdown, holding a scope as JSON text, is sent as the dictionary it
+already describes.
+
 ## Parameters
 
 Each parameter is edited as its type asks:
 
-| Parameter | Editor |
-| :-------- | :----- |
-| `table`, and any column field | a dropdown of what the connection reports |
-| Text, number | a single field |
-| Boolean | a checkbox |
-| Timestamp | a date and time, and the nanoseconds, stored as `YYYY-MM-DDTHH:mm:ss.nnnnnnnnn` |
-| `fill`, `temporality` | a dropdown of the values the request accepts |
-| `filter`, `agg`, `groupBy`, `sortCols`, `labels`, `scope`, `outputTZCols` | rows you add and remove |
+| Parameter                                                        | Editor                                                                          |
+| :--------------------------------------------------------------- | :------------------------------------------------------------------------------ |
+| `table`, and any column field                                    | a dropdown of what the connection reports                                       |
+| Text, number                                                     | a single field                                                                  |
+| Boolean                                                          | a checkbox                                                                      |
+| Timestamp                                                        | a date and time, and the nanoseconds, stored as `YYYY-MM-DDTHH:mm:ss.nnnnnnnnn` |
+| `fill`, `temporality`                                            | a dropdown of the values the request accepts                                    |
+| `scope`                                                          | the same target dropdown qSQL uses                                              |
+| `filter`, `agg`, `groupBy`, `sortCols`, `labels`, `outputTZCols` | rows you add and remove                                                         |
 
 A row parameter reads as one line per entry — a filter is a column, an operator
-and a value; an aggregation is a name, an operator and a column; `labels` and
-`scope` are a key and a value. Filter values are split on spaces or semicolons,
-and anything that parses as a number is sent as one, so `AAPL MSFT` becomes a
-list of two symbols and `100` a number. An aggregation row has two column
-dropdowns: fill the first for a function of one column, both for a function of
-two such as `wavg`.
+and a value; an aggregation is a name, an operator and a column; a label is a
+key and a value. Filter values are split on spaces or semicolons, and anything
+that parses as a number is sent as one, so `AAPL MSFT` becomes a list of two
+symbols and `100` a number. An aggregation row has two column dropdowns: fill
+the first for a function of one column, both for a function of two such as
+`wavg`.
 
 Anything that names a table or a column is chosen from a dropdown filled from
 the connection's meta: `table` lists the tables it reports, and the column
@@ -123,12 +141,12 @@ Editing a field writes the file as you type; **Save** commits it to disk.
 
 `.kdb.json` datasources are superseded by this editor:
 
-| Datasource | Becomes |
-| :--------- | :------ |
+| Datasource    | Becomes                                                                                             |
+| :------------ | :-------------------------------------------------------------------------------------------------- |
 | API (getData) | a `.kxquery` running getData, with the filters, aggregations, groups, sorts and labels carried over |
-| UDA | a `.kxquery` running the same UDA |
-| QSQL | a `.kxquery` running qSQL, with the execution target, the aggregation and the labels carried over |
-| SQL | a `.kxquery` running SQL, with the query carried over |
+| UDA           | a `.kxquery` running the same UDA                                                                   |
+| QSQL          | a `.kxquery` running qSQL, with the execution target, the aggregation and the labels carried over   |
+| SQL           | a `.kxquery` running SQL, with the query carried over                                               |
 
 A converted QSQL query keeps the target the datasource named even when the
 connection you open it against does not offer it, so nothing is lost by

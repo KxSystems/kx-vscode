@@ -36,6 +36,17 @@ const connection = (available: boolean) =>
     isUDAAvailable: async () => available,
   }) as unknown as InsightsConnection;
 
+/** A connection that resolves a target the way the real one does, over a meta
+ * naming a single `assembly-qe rdb` tier. */
+const scoping = () =>
+  ({
+    isUDAAvailable: async () => true,
+    scopeValue: (value: unknown) =>
+      value === "assembly rdb"
+        ? { affinity: "soft", assembly: "assembly-qe", tier: "rdb" }
+        : undefined,
+  }) as unknown as InsightsConnection;
+
 describe("UDA", () => {
   describe("filterUDAParamsValidTypes", () => {
     it("should filter valid types", () => {
@@ -193,6 +204,21 @@ describe("UDA", () => {
         sourceForParam("columns", ParamFieldType.JSON),
         undefined,
       );
+    });
+
+    it("should give a scope the targets dropdown whatever it registers", () => {
+      for (const fieldType of [
+        ParamFieldType.JSON,
+        ParamFieldType.Text,
+        ParamFieldType.Invalid,
+        undefined,
+      ]) {
+        assert.strictEqual(
+          sourceForParam("scope", fieldType),
+          "targets",
+          `${fieldType}`,
+        );
+      }
     });
   });
 
@@ -973,6 +999,139 @@ describe("UDA", () => {
       assert.strictEqual(result.error, undefined);
       assert.deepStrictEqual(result.parameterTypes, { value: -7 });
     });
+
+    it("sends a dictionary parameter as a dictionary, not as its text", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "labels",
+            description: "",
+            isReq: false,
+            type: [99],
+            isVisible: true,
+            value: '{"kxname":"db","region":"emea"}',
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, {
+        labels: { kxname: "db", region: "emea" },
+      });
+      assert.deepStrictEqual(result.parameterTypes, { labels: 99 });
+    });
+
+    it("sends the label values as the lists the rows wrote", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "labels",
+            description: "",
+            isReq: false,
+            type: [99],
+            isVisible: true,
+            value: '{"region":["emea","apac"]}',
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, {
+        labels: { region: ["emea", "apac"] },
+      });
+    });
+
+    it("sends a list parameter as a list", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "syms",
+            description: "",
+            isReq: false,
+            type: [11],
+            isVisible: true,
+            value: '["AAPL","MSFT"]',
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, { syms: ["AAPL", "MSFT"] });
+    });
+
+    it("leaves a text parameter as the text it is", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "query",
+            description: "",
+            isReq: false,
+            type: [10],
+            isVisible: true,
+            value: '["AAPL","MSFT"]',
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, { query: '["AAPL","MSFT"]' });
+    });
+
+    it("reports a dictionary parameter that is not valid JSON", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "labels",
+            description: "",
+            isReq: false,
+            type: [99],
+            isVisible: true,
+            value: "kxname=db",
+          },
+        ]),
+      );
+
+      assert.deepStrictEqual(result.params, {});
+      assert.deepStrictEqual(result.parameterTypes, {});
+      assert.match(result.error?.error ?? "", /labels parameter is not valid/);
+    });
+
+    it("leaves a JSON parameter shown but never filled in alone", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "labels",
+            description: "",
+            isReq: false,
+            type: [99],
+            isVisible: true,
+            value: "",
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, { labels: "" });
+    });
+
+    it("leaves scope as the target string for the connection to resolve", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "scope",
+            description: "",
+            isReq: false,
+            type: [99],
+            isVisible: true,
+            value: "assembly rdb",
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, { scope: "assembly rdb" });
+      assert.deepStrictEqual(result.parameterTypes, { scope: 99 });
+    });
   });
   describe("validateUDA", () => {
     it("refuses a UDA that is not there at all", async () => {
@@ -1125,6 +1284,47 @@ describe("UDA", () => {
 
       assert.deepStrictEqual(result.parameterTypes, { value: -7 });
       assert.deepStrictEqual(result.params, { value: 44 });
+    });
+
+    it("resolves the target the scope holds into a dictionary", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        uda([
+          {
+            name: "scope",
+            description: "",
+            isReq: false,
+            type: [99],
+            isVisible: true,
+            value: "assembly rdb",
+          },
+        ]),
+        scoping(),
+      );
+
+      assert.deepStrictEqual(result.params, {
+        scope: { affinity: "soft", assembly: "assembly-qe", tier: "rdb" },
+      });
+      assert.deepStrictEqual(result.parameterTypes, { scope: 99 });
+    });
+
+    it("drops a scope the connection has nothing to make of", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        uda([
+          {
+            name: "scope",
+            description: "",
+            isReq: false,
+            type: [99],
+            isVisible: true,
+            value: "",
+          },
+          multiplier("3"),
+        ]),
+        scoping(),
+      );
+
+      assert.deepStrictEqual(result.params, { multiplier: "3" });
+      assert.deepStrictEqual(result.parameterTypes, { multiplier: -7 });
     });
 
     it("asks for structured text while the results tab is up", async () => {

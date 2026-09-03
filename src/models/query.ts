@@ -12,7 +12,7 @@
  */
 
 import { aggOperators, filterOperators } from "./dataSource";
-import { ParamFieldType, UDA, UDAParam } from "./uda";
+import { ParamFieldType, SCOPE_DESCRIPTION, UDA, UDAParam } from "./uda";
 
 export interface QueryFile {
   version: number;
@@ -284,13 +284,16 @@ export const GET_DATA_PARAMS: UDAParam[] = [
   },
   {
     name: "scope",
-    description: "A dictionary describing what RC and/or DAPs to target.",
+    description: SCOPE_DESCRIPTION,
     isReq: false,
+    // A dictionary on the wire, but a target string on the form and in the
+    // file: the same one the qSQL target dropdown writes, which the transport
+    // turns into the dictionary the request wants.
     type: [99],
     typeStrings: ["Dictionary"],
-    fieldType: ParamFieldType.JSON,
+    fieldType: ParamFieldType.Text,
     isVisible: false,
-    rows: [{ name: "key" }, { name: "value" }],
+    source: "targets",
   },
   {
     name: "limit",
@@ -390,7 +393,7 @@ export function createSql(): UDA {
 }
 
 function isDictionary(param: UDAParam) {
-  return param.name === "labels" || param.name === "scope";
+  return param.name === "labels";
 }
 
 /**

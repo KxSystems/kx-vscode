@@ -14,9 +14,11 @@
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { MetaObjectPayload } from "../models/meta";
+import { parseValue } from "../models/query";
 import {
   InvalidParamFieldErrors,
   ParamFieldType,
+  SCOPE,
   UDA,
   UDAParam,
   UDARequestBody,
@@ -274,13 +276,50 @@ export function processUDAParams(uda: UDA): {
       }
 
       if (param.isVisible) {
-        params[param.name] = param.value ?? "";
-        parameterTypes[param.name] = resolveParamType(param);
+        const type = resolveParamType(param);
+        const value = jsonValue(param, type);
+        if (value instanceof Error) {
+          return {
+            params: {},
+            parameterTypes: {},
+            error: { error: value.message },
+          };
+        }
+        params[param.name] = value;
+        parameterTypes[param.name] = type;
       }
     }
   }
 
   return { params, parameterTypes };
+}
+
+/**
+ * The value a parameter is sent as. A JSON-typed one — a dictionary or a list —
+ * is edited as JSON text and held as that text, but has to reach the gateway as
+ * the value the text describes: sent as a string it is refused outright, with
+ * `Argument 'scope' is not a dictionary` or `Invalid labels. Not a dictionary`.
+ * Text that does not parse is returned as the Error to report, rather than left
+ * for the gateway to answer 400 to. `scope` is the exception: it holds a target
+ * string rather than JSON, and `retrieveUDAtoCreateReqBody` resolves it against
+ * the connection meta once there is a connection to resolve it against.
+ */
+function jsonValue(param: UDAParam, type: number): unknown {
+  const value = param.value ?? "";
+  if (
+    param.name === SCOPE ||
+    !ext.jsonTypes.has(type) ||
+    typeof value !== "string" ||
+    !value.trim()
+  ) {
+    return value;
+  }
+  const parsed = parseValue(value);
+  return parsed === undefined
+    ? new Error(
+        `The ${param.name} parameter is not valid JSON. Give it a value like ["a","b"] or {"key":"value"}.`,
+      )
+    : parsed;
 }
 
 function validateParam(
@@ -420,6 +459,18 @@ export async function retrieveUDAtoCreateReqBody(
   const { params, parameterTypes, error } = processUDAParams(uda);
   if (error) {
     return error;
+  }
+
+  // The form holds a target string; the request wants the dictionary it stands
+  // for, and only the connection can say what the gateway calls those names.
+  if (SCOPE in params) {
+    const scope = insightsConn.scopeValue(params[SCOPE]);
+    if (scope === undefined) {
+      delete params[SCOPE];
+      delete parameterTypes[SCOPE];
+    } else {
+      params[SCOPE] = scope;
+    }
   }
 
   const udaReqBody: UDARequestBody = createUDARequestBody(

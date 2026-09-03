@@ -11,6 +11,15 @@
  * specific language governing permissions and limitations under the License.
  */
 
+export const SCOPE = "scope";
+
+/**
+ * What `scope` asks for, in the words the qSQL target uses: the two are the
+ * same question, and the same dropdown answers both.
+ */
+export const SCOPE_DESCRIPTION =
+  "Tier or DAP process to run the request on. An assembly on its own leaves the instance to the resource coordinator.";
+
 export enum ParamFieldType {
   Text = "text",
   Number = "number",
@@ -110,11 +119,15 @@ export const UDA_DISTINGUISHED_PARAMS: UDAParam[] = [
   },
   {
     name: "scope",
-    description: "A dictionary describing what RC and/or DAPs to target.",
+    description: SCOPE_DESCRIPTION,
     isReq: false,
+    // See the getData definition of the same parameter: a dictionary on the
+    // wire, the target string the dropdown wrote on the form.
     type: [99],
     typeStrings: ["Dictionary"],
-    fieldType: ParamFieldType.JSON,
+    fieldType: ParamFieldType.Text,
+    isVisible: false,
+    source: "targets",
     isDistinguised: true,
   },
   {
@@ -167,10 +180,17 @@ export function sourceForParam(
   name: string,
   fieldType?: ParamFieldType,
 ): ParamSource | undefined {
+  const key = name.toLowerCase();
+  // Ahead of the field type, which a scope can never satisfy: it is registered
+  // as a dictionary, so it arrives as JSON, and the dropdown answering it is
+  // the one the qSQL target uses. A UDA declaring its own scope gets the same
+  // widget as the distinguished one.
+  if (key === SCOPE) {
+    return "targets";
+  }
   if (fieldType !== ParamFieldType.Text) {
     return undefined;
   }
-  const key = name.toLowerCase();
   if (TABLE_PARAMS.test(key)) {
     return "tables";
   }
