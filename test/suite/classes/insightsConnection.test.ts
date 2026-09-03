@@ -308,6 +308,62 @@ describe("insightsConnection", () => {
 
       assert.deepStrictEqual(args[4].opts, { timeout: 30000 });
     });
+
+    it("reaches the preview API down the same path", async () => {
+      const args = await withConnection({
+        ...request(),
+        name: ".kxi.preview",
+        params: { table: "trade", limit: 10 },
+      });
+
+      assert.strictEqual(
+        args[3],
+        "https://test.kx.com/servicegateway/kxi/preview",
+      );
+      assert.deepStrictEqual(args[4], { table: "trade", limit: 10 });
+    });
+  });
+
+  describe("isUDAAvailable", () => {
+    const withApi = (api: unknown[]) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        serviceGateway: { udaBase: "servicegateway/" },
+      };
+      (<any>conn).meta = { payload: { api } };
+      return conn;
+    };
+
+    it("finds a deployed UDA", async () => {
+      const conn = withApi([{ api: ".insightsUda.testAPI", uda: true }]);
+
+      assert.strictEqual(
+        await conn.isUDAAvailable(".insightsUda.testAPI"),
+        true,
+      );
+    });
+
+    it("finds the preview API, which the meta does not flag as a UDA", async () => {
+      const conn = withApi([{ api: ".kxi.preview", uda: false }]);
+
+      assert.strictEqual(await conn.isUDAAvailable(".kxi.preview"), true);
+    });
+
+    it("still refuses the other system APIs", async () => {
+      const conn = withApi([{ api: ".kxi.qsql", uda: false }]);
+
+      assert.strictEqual(await conn.isUDAAvailable(".kxi.qsql"), false);
+    });
+
+    it("refuses an API the connection does not list", async () => {
+      const conn = withApi([{ api: ".kxi.preview", uda: false }]);
+
+      assert.strictEqual(await conn.isUDAAvailable(".uda.missing"), false);
+    });
   });
 
   describe("getDatasourceQuery errors", () => {

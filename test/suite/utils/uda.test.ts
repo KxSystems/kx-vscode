@@ -607,6 +607,84 @@ describe("UDA", () => {
     });
   });
 
+  describe("parsePreviewApi", () => {
+    beforeEach(() => {
+      sinon.stub(ext, "booleanTypes").value(new Set([-1]));
+      sinon.stub(ext, "numberTypes").value(new Set([-7]));
+      sinon.stub(ext, "textTypes").value(new Set([-11]));
+      sinon.stub(ext, "timestampTypes").value(new Set([-12]));
+      sinon.stub(ext, "jsonTypes").value(new Set([98, 99]));
+    });
+
+    /** The preview entry as the meta of a 1.20 deployment registers it. */
+    const meta = (api: unknown[]) => <MetaObjectPayload>(<unknown>{ api });
+
+    const preview = {
+      api: ".kxi.preview",
+      uda: false,
+      description: "Efficiently fetch a small preview of a table.",
+      params: [
+        { name: "table", type: -11, isReq: true, description: "Table." },
+        {
+          name: "startTS",
+          type: -12,
+          isReq: false,
+          default: "1707-09-22T00:12:43.145224193",
+          description: "Start.",
+        },
+        {
+          name: "endTS",
+          type: -12,
+          isReq: false,
+          default: "2292-04-10T23:47:16.854775807",
+          description: "End.",
+        },
+        {
+          name: "limit",
+          type: -7,
+          isReq: false,
+          default: 1000,
+          description: "",
+        },
+      ],
+      return: { type: 98, description: "Table." },
+    };
+
+    it("offers nothing when the deployment has no preview API", () => {
+      assert.strictEqual(UDAUtils.parsePreviewApi(meta([])), undefined);
+      assert.strictEqual(
+        UDAUtils.parsePreviewApi(<MetaObjectPayload>{}),
+        undefined,
+      );
+    });
+
+    it("takes it despite the uda flag being false", () => {
+      const result = UDAUtils.parsePreviewApi(meta([preview]));
+
+      assert.strictEqual(result?.name, ".kxi.preview");
+      assert.strictEqual(
+        result?.description,
+        "Efficiently fetch a small preview of a table.",
+      );
+    });
+
+    it("builds the form out of the parameters the meta registers", () => {
+      const params = UDAUtils.parsePreviewApi(meta([preview]))?.params || [];
+
+      assert.deepStrictEqual(
+        params.map((param) => [param.name, param.fieldType, param.isVisible]),
+        [
+          ["table", ParamFieldType.Text, true],
+          ["startTS", ParamFieldType.Timestamp, false],
+          ["endTS", ParamFieldType.Timestamp, false],
+          ["limit", ParamFieldType.Number, false],
+        ],
+      );
+      // The table name is picked from the connection, the way getData asks it.
+      assert.strictEqual(params[0].source, "tables");
+    });
+  });
+
   describe("retrieveDataTypeByString", () => {
     it("should retrieve data type by string", () => {
       const dataTypes = new Map([["Boolean", 1]]);
@@ -1325,6 +1403,88 @@ describe("UDA", () => {
 
       assert.deepStrictEqual(result.params, { multiplier: "3" });
       assert.deepStrictEqual(result.parameterTypes, { multiplier: -7 });
+    });
+
+    it("drops a blank optional parameter of the preview API", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        {
+          name: ".kxi.preview",
+          description: "",
+          params: [
+            {
+              name: "table",
+              description: "",
+              isReq: true,
+              type: [-11],
+              isVisible: true,
+              value: "trade",
+            },
+            {
+              name: "limit",
+              description: "",
+              isReq: false,
+              type: [-7],
+              isVisible: true,
+              value: "",
+            },
+          ],
+        },
+        connection(true),
+      );
+
+      // Nothing in the box means the documented default — a thousand rows over
+      // the whole range — rather than a blank for the gateway to cast.
+      assert.deepStrictEqual(result.params, { table: "trade" });
+      assert.deepStrictEqual(result.parameterTypes, { table: -11 });
+    });
+
+    it("keeps a preview parameter that was answered", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        {
+          name: ".kxi.preview",
+          description: "",
+          params: [
+            {
+              name: "table",
+              description: "",
+              isReq: true,
+              type: [-11],
+              isVisible: true,
+              value: "trade",
+            },
+            {
+              name: "limit",
+              description: "",
+              isReq: false,
+              type: [-7],
+              isVisible: true,
+              value: 25,
+            },
+          ],
+        },
+        connection(true),
+      );
+
+      assert.deepStrictEqual(result.params, { table: "trade", limit: 25 });
+    });
+
+    it("leaves a UDA's own blank parameter alone", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        uda([
+          multiplier("3"),
+          {
+            name: "fill",
+            description: "",
+            isReq: false,
+            type: [-11],
+            isVisible: true,
+            value: "",
+          },
+        ]),
+        connection(true),
+      );
+
+      assert.deepStrictEqual(result.params, { multiplier: "3", fill: "" });
     });
 
     it("asks for structured text while the results tab is up", async () => {

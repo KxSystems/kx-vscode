@@ -14,7 +14,7 @@
 import { isBaseVersionGreaterOrEqual } from "./core";
 import { convertTimeToTimestamp } from "./dataSource";
 import { cleanAssemblyName, cleanDapName } from "./shared";
-import { parseUDAList } from "./uda";
+import { parsePreviewApi, parseUDAList } from "./uda";
 import { getDataBodyPayload } from "../models/data";
 import {
   DataSourceFiles,
@@ -36,7 +36,14 @@ import {
 import { UDA, UDAParam } from "../models/uda";
 
 export function parseQueryList(meta: MetaObjectPayload): UDA[] {
-  return [createQsql(), createSql(), createGetData(), ...parseUDAList(meta)];
+  const preview = parsePreviewApi(meta);
+  return [
+    createQsql(),
+    createSql(),
+    createGetData(),
+    ...(preview ? [preview] : []),
+    ...parseUDAList(meta),
+  ];
 }
 
 /**

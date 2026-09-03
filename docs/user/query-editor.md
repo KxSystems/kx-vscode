@@ -2,17 +2,18 @@
 type: Reference
 title: Query Editor
 description:
-  Editing and running getData, qSQL, SQL and User Defined Analytics in a
-  .kxquery file.
-tags: [kdb, vscode, query, uda, getdata, qsql, sql, insights]
-timestamp: 2026-08-16
+  Editing and running getData, preview, qSQL, SQL and User Defined Analytics in
+  a .kxquery file.
+tags: [kdb, vscode, query, uda, getdata, preview, qsql, sql, insights]
+timestamp: 2026-09-03
 ---
 
 # Query Editor
 
 A `.kxquery` file holds one query and the values it is run with — one of the
 three every kdb Insights Enterprise connection answers (**qSQL**, **SQL** and
-**getData**), or a User Defined Analytic (UDA) deployed on the connection.
+**getData**), the **preview** API where the connection has one, or a User
+Defined Analytic (UDA) deployed on the connection.
 
 It opens in the query editor, a custom editor with a toolbar carrying
 **Connection**, **Run**, **Populate Scratchpad**, **Refresh** and **Save**.
@@ -28,11 +29,11 @@ Create one with **KX: New Query**, or with the **+** button on the Queries view.
 
 ## Choosing what to run
 
-The **API** dropdown lists qSQL, SQL, getData and the UDAs deployed on the
-selected connection. The first three are always offered, even before you
-connect; the UDAs come from the connection's meta, and **Refresh** reloads them.
-Type in the dropdown to filter it — a connection with hundreds of UDAs is a list
-no one wants to scroll.
+The **API** dropdown lists qSQL, SQL, getData, preview and the UDAs deployed on
+the selected connection. The first three are always offered, even before you
+connect; preview and the UDAs come from the connection's meta, and **Refresh**
+reloads them. Type in the dropdown to filter it — a connection with hundreds of
+UDAs is a list no one wants to scroll.
 
 The required parameters are shown straight away — for getData that is `table`,
 `startTS` and `endTS`. Everything else is added from the **+ Add parameter**
@@ -73,6 +74,25 @@ A workbook (`.kdb.q`, `.kdb.sql`) is still the better home for a query you are
 writing — it has the language server, diagnostics, per-statement execution and
 the run gutter — so reach for a `.kxquery` when what you want is a saved,
 re-runnable request beside the getData and UDA queries it belongs with.
+
+## Preview
+
+Preview is the cheap way to see what is in a table: name the table and it
+answers with a sample of it. It is the API behind the preview query the Insights
+web interface offers — `.kxi.preview` — and it appears in the dropdown only
+where the connection reports it, so a deployment too old to have it offers no
+preview at all.
+
+`table` is all it asks for. `startTS`, `endTS` and `limit` are added from the
+**+ Add parameter** list, and leaving one off asks for the API's own default:
+the whole available range, and a thousand rows. One that is shown and left blank
+counts as left off rather than being sent empty.
+
+Reach for it over getData when a look at the data is all you are after. getData
+is a general-purpose request and takes a slower path to satisfy a `limit`, while
+preview is built for this one question and searches all the available data for
+the rows it returns — though it promises nothing about _which_ rows those are.
+For a particular slice, aggregation or ordering, use getData.
 
 ## Scope
 

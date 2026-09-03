@@ -97,6 +97,14 @@ export const QSQL = "qSQL";
 export const SQL = "SQL";
 
 /**
+ * The API behind the Preview the Insights UI offers: a cheap sample of a table,
+ * asked for with a table name and at most a row count. It is a system API
+ * rather than a UDA — `uda: false` in the meta — so it is offered only where
+ * the meta lists it, and its form is the one the deployment declares.
+ */
+export const PREVIEW = ".kxi.preview";
+
+/**
  * The name Insights gives the target that leaves the instance out of a qSQL
  * request: the RC takes the query and fans it out over every tier of the
  * assembly. The target itself is the assembly on its own, so the word is a
@@ -124,9 +132,17 @@ export function isSql(query: UDA | undefined) {
   return query?.name === SQL;
 }
 
-/** One of the queries every connection answers, rather than a deployed UDA. */
+export function isPreview(query: UDA | undefined) {
+  return query?.name === PREVIEW;
+}
+
+/**
+ * An API Insights itself answers, rather than a deployed UDA: its parameters
+ * are the ones it registers, so the distinguished parameters a UDA is offered
+ * on top of its own have no place on it.
+ */
 export function isBuiltin(query: UDA | undefined) {
-  return isGetData(query) || isQsql(query) || isSql(query);
+  return isGetData(query) || isQsql(query) || isSql(query) || isPreview(query);
 }
 
 export const GET_DATA_PARAMS: UDAParam[] = [

@@ -32,7 +32,7 @@ import {
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { JwtUser } from "../models/jwt_user";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
-import { parseValue } from "../models/query";
+import { PREVIEW, parseValue } from "../models/query";
 import { StructuredTextResults } from "../models/queryResult";
 import { ScratchpadRequestBody } from "../models/scratchpad";
 import { ScratchpadResult } from "../models/scratchpadResult";
@@ -820,9 +820,13 @@ export class InsightsConnection {
     }
 
     if (this.meta.payload.api && Array.isArray(this.meta.payload.api)) {
+      // The preview API runs down the same path as a UDA but is registered as a
+      // system API, so the flag is not what says it is there — its presence in
+      // the meta is.
       return this.meta.payload.api.some(
         (apiItem: { api: string; uda: boolean }) =>
-          apiItem.api === udaName && apiItem.uda === true,
+          apiItem.api === udaName &&
+          (apiItem.uda === true || apiItem.api === PREVIEW),
       );
     }
 

@@ -14,7 +14,7 @@
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { MetaObjectPayload } from "../models/meta";
-import { parseValue } from "../models/query";
+import { PREVIEW, isPreview, parseValue } from "../models/query";
 import {
   InvalidParamFieldErrors,
   ParamFieldType,
@@ -209,6 +209,27 @@ export function createUDAObject(
     return: createUDAReturn(uda),
     incompatibleError,
   };
+}
+
+/**
+ * The preview API, when the connection has one. `.kxi.preview` is registered as
+ * a system API rather than a UDA, so it is picked out by name where
+ * `parseUDAList` goes by the flag, and a deployment without it offers no
+ * preview at all. The meta describes it in full — table, startTS, endTS and
+ * limit — so the form comes from the connection rather than from a copy of the
+ * signature kept here.
+ */
+export function parsePreviewApi(getMeta: MetaObjectPayload): UDA | undefined {
+  const preview = getMeta.api?.find((api) => api.api === PREVIEW);
+  if (!preview) {
+    return undefined;
+  }
+  const parsedParams = parseUDAParams(preview.params);
+  return createUDAObject(
+    preview,
+    parsedParams,
+    getIncompatibleError(parsedParams),
+  );
 }
 
 export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
@@ -459,6 +480,19 @@ export async function retrieveUDAtoCreateReqBody(
   const { params, parameterTypes, error } = processUDAParams(uda);
   if (error) {
     return error;
+  }
+
+  // A parameter shown and left blank is not an answer, and preview has a
+  // documented default behind each of the three optional ones: the whole
+  // available range, and a thousand rows. Dropping the empty box asks for that
+  // default rather than handing the gateway a blank to cast.
+  if (isPreview(uda)) {
+    for (const param of uda.params) {
+      if (!param.isReq && isBlank(params[param.name])) {
+        delete params[param.name];
+        delete parameterTypes[param.name];
+      }
+    }
   }
 
   // The form holds a target string; the request wants the dictionary it stands

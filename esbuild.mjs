@@ -59,14 +59,14 @@ const extensionConfig = {
 
 if (watch) {
   console.log("esbuild:started");
-  copyCodicons();
   Promise.all([
+    copyCodicons(),
     context(webviewConfig),
     context(queryConfig),
     context(serverConfig),
     context(extensionConfig),
   ])
-    .then((contexts) =>
+    .then(([, ...contexts]) =>
       Promise.all(contexts.map((ctx) => ctx.rebuild())).finally(() =>
         Promise.all(contexts.map((ctx) => ctx.watch({ delay: 500 })))
           .then(() => console.log("esbuild:watching"))
@@ -78,6 +78,7 @@ if (watch) {
     )
     .catch((error) => {
       console.error(error);
+      process.exit(1);
     });
 } else {
   Promise.all([

@@ -116,6 +116,28 @@ describe("query", () => {
       assert.strictEqual(queries[3].name, ".kxi.myUda");
       assert.strictEqual(queries.length, 4);
     });
+
+    it("should offer preview where the connection has it, beside getData", () => {
+      const queries = parseQueryList(<MetaObjectPayload>{
+        api: [
+          { api: ".kxi.preview", uda: false, params: [], return: { type: 98 } },
+          { api: ".kxi.myUda", uda: true, params: [], return: { type: [] } },
+        ],
+      });
+
+      assert.deepStrictEqual(
+        queries.map((query) => query.name),
+        ["qSQL", "SQL", ".kxi.getData", ".kxi.preview", ".kxi.myUda"],
+      );
+    });
+
+    it("should leave preview out of a connection that does not answer it", () => {
+      const queries = parseQueryList(<MetaObjectPayload>{
+        api: [{ api: ".kxi.qsql", uda: false, params: [] }],
+      });
+
+      assert.ok(!queries.some((query) => query.name === ".kxi.preview"));
+    });
   });
 
   describe("parseTargets", () => {
