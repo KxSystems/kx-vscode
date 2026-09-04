@@ -13,10 +13,7 @@
 
 import * as vscode from "vscode";
 
-import {
-  getAutoFocusOutputOnEntrySetting,
-  getConnShortName,
-} from "../utils/core";
+import { getConnShortName } from "../utils/core";
 
 const ANSI = {
   CRLF: "\r\n",
@@ -38,6 +35,18 @@ const KEY = {
  */
 export const OPEN_RESULTS_HINT = "kdb Results View";
 
+// The widest a q process renders its console to, and so the widest a result
+// can arrive.
+const MAX_COLUMNS = 2000;
+
+const SIZE_TO_CONTENT = "workbench.action.terminal.sizeToContentWidth";
+
+// A terminal's dimensions as a value that can be compared. VS Code reports a
+// placeholder size (80x30) before the panel has laid the terminal out, so the
+// first report carrying anything else is the layout it can be sized against.
+const layout = (dimensions?: vscode.TerminalDimensions): string =>
+  dimensions ? `${dimensions.columns}x${dimensions.rows}` : "";
+
 /**
  * An output-only pseudoterminal shown in the bottom-panel terminal list, one
  * per connected connection. Unlike {@link ReplConnection} it has no child
@@ -50,14 +59,15 @@ export class ConnectionConsole {
   private readonly onDidWrite = new vscode.EventEmitter<string>();
   private readonly pty: vscode.Terminal;
 
-  // Buffers output produced before the terminal is opened by VS Code; flushed
-  // in open() and then left undefined so writes go straight to the emitter.
+  // Buffers output produced before the console has been sized; flushed in
+  // begin() and then left undefined so writes go straight to the emitter.
   private buffer?: string[] = [];
   private _exited = false;
-  // How wide the terminal is, as VS Code reports it — 0 until it is opened and
-  // measured. Read by whoever formats a result, so a table can be cut to the
-  // width before it gets here (see convertRowsToConsole).
-  private _columns = 0;
+  // The size the terminal was opened with, whether the report echoing it has
+  // arrived, and whether the one sizing has been started — see {@link resize}.
+  private opened = "";
+  private echoed = false;
+  private sizing = false;
   // True while we are tearing the console down programmatically (dispose), so
   // the pty close handler can tell a user-initiated close apart from our own.
   private disposing = false;
@@ -79,9 +89,7 @@ export class ConnectionConsole {
         onDidWrite: this.onDidWrite.event,
         open: this.open.bind(this),
         close: this.close.bind(this),
-        setDimensions: (dimensions: vscode.TerminalDimensions) => {
-          this._columns = dimensions.columns;
-        },
+        setDimensions: this.resize.bind(this),
         handleInput: this.handleInput.bind(this),
       },
     });
@@ -93,10 +101,6 @@ export class ConnectionConsole {
 
   get exited(): boolean {
     return this._exited;
-  }
-
-  get columns(): number {
-    return this._columns;
   }
 
   private normalize(text: string): string {
@@ -111,10 +115,61 @@ export class ConnectionConsole {
     }
   }
 
-  private open(): void {
-    // Banner identifying which connection this output console belongs to.
+  /**
+   * Writes a blank line {@link MAX_COLUMNS} wide as the console opens, wide
+   * enough for any result a q process can render, and reveals the terminal so
+   * the panel lays it out. {@link resize} takes over from there; nothing is
+   * shown in the console until it has.
+   */
+  private open(dimensions?: vscode.TerminalDimensions): void {
+    this.opened = layout(dimensions);
+    this.onDidWrite.fire(" ".repeat(MAX_COLUMNS) + ANSI.CRLF);
+    this.pty.show(true);
+  }
+
+  /**
+   * Sizes the console to the wide line, once, as soon as the panel reports the
+   * layout it has given the terminal — the moment the line can be measured.
+   * The first report only echoes the size {@link open} was given, the terminal
+   * as it was before the panel laid it out, and sizing against that has no
+   * effect; the report after it is the layout.
+   */
+  private resize(dimensions: vscode.TerminalDimensions): void {
+    if (this.sizing || this._exited) {
+      return;
+    }
+    if (!this.echoed && layout(dimensions) === this.opened) {
+      this.echoed = true;
+      return;
+    }
+    this.sizing = true;
+    void this.size();
+  }
+
+  /**
+   * Runs the sizing and then starts the console. `sizeToContentWidth` sizes
+   * whichever terminal is active, so the console claims that first. The screen
+   * is cleared only once the sizing is done, the wide line being what it
+   * measures.
+   */
+  private async size(): Promise<void> {
+    try {
+      this.pty.show(true);
+      await vscode.commands.executeCommand(SIZE_TO_CONTENT);
+    } finally {
+      this.begin();
+    }
+  }
+
+  // Clears the screen the wide line was written to and identifies the
+  // connection it belongs to, then releases everything held back until now.
+  private begin(): void {
+    if (this._exited) {
+      return;
+    }
     this.onDidWrite.fire(
-      ANSI.BOLD_ON +
+      ANSI.CLEAR +
+        ANSI.BOLD_ON +
         `KX ${getConnShortName(this.connLabel)}` +
         ANSI.BOLD_OFF +
         ANSI.CRLF +
@@ -141,23 +196,25 @@ export class ConnectionConsole {
     }
   }
 
+  /**
+   * Writes text with no line of its own. Nothing outside the console uses it.
+   */
   append(text: string): void {
     this.send(this.normalize(text));
   }
 
   appendLine(text = ""): void {
-    this.send(this.normalize(text) + ANSI.CRLF);
+    this.write(text);
   }
 
-  /**
-   * Writes the lines of a result. Nothing is cut here: the process that ran the
-   * query renders its own console text to its `\c`, and a datasource result is
-   * fitted to {@link columns} by the formatter that builds its table.
-   */
+  /** Writes the lines of a result. */
   appendResult(lines: string[]): void {
-    for (const line of lines) {
-      this.appendLine(line);
-    }
+    this.write(lines.join("\n"));
+  }
+
+  /** Writes whole rows, each on a line of its own. */
+  private write(text: string): void {
+    this.send(this.normalize(text) + ANSI.CRLF);
   }
 
   clear(): void {
@@ -180,16 +237,13 @@ export class ConnectionConsole {
     );
   }
 
-  /** Reveal (and focus) the console — used on connect so it becomes active. */
+  /**
+   * Reveal the console without taking the caret — used on connect. The active
+   * target is set by the connect flow itself, so the console does not need
+   * focus to become the target unassigned files run on.
+   */
   reveal(): void {
-    this.pty.show(false);
-  }
-
-  /** Reveal without stealing focus, honouring the auto-focus-on-entry setting. */
-  show(): void {
-    if (getAutoFocusOutputOnEntrySetting()) {
-      this.pty.show(true);
-    }
+    this.pty.show(true);
   }
 
   dispose(): void {

@@ -3,6 +3,17 @@
 All notable changes to the **kdb VS Code extension** are documented in this
 file.
 
+# v1.20.1
+
+### Enhancements
+
+- A connection's
+  [output console](https://code.kx.com/vscode/guides/views/results.html#output-console)
+  is now as wide as the terminal can draw rather than as wide as the panel, so a
+  wide table can be scrolled across instead of being cut to the visible width. A
+  row too wide for even that is cut, as a q console cuts one to its `\c`, and
+  never wrapped.
+
 # v1.20.0
 
 ### Enhancements

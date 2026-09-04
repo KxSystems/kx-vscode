@@ -241,13 +241,8 @@ export async function runDataSource(
           res = res.errorMsg ? res.errorMsg : res.error;
         }
 
-        // Fit the table to the connection's console, which wraps what does not
-        // fit; 0 (no console open) leaves it unlimited.
         const rowData = res.columns
-          ? convertRows(
-              updatedExtractRowData(res),
-              ext.connectionConsoles.get(connLabel)?.columns ?? 0,
-            )
+          ? convertRows(updatedExtractRowData(res))
           : res;
 
         await writeQueryResultsToConsole(

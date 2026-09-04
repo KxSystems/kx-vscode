@@ -16,8 +16,8 @@ import { ext } from "../extensionVariables";
 /**
  * The single execution target that an unassigned file runs on — either the
  * REPL or a specific connection. It is determined by which KX target terminal
- * (a REPL terminal or a connection output console) was last focused. See
- * {@link ../classes/activeTargetTracker}.
+ * (a REPL terminal or a connection output console) the terminal panel last
+ * made active. See {@link ../classes/activeTargetTracker}.
  */
 export type ActiveTarget =
   | { kind: "repl" }
@@ -26,7 +26,7 @@ export type ActiveTarget =
 let activeTarget: ActiveTarget | undefined;
 
 /**
- * The current active target, or undefined when none has been focused yet (or a
+ * The current active target, or undefined when none has been active yet (or a
  * connection target whose console has since been disposed).
  */
 export function getActiveTarget(): ActiveTarget | undefined {

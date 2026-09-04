@@ -232,7 +232,7 @@ export function getSQLWrapper(query: string): string {
   return `s)${query.replace(/(?:\r\n|\n)/g, " ")}`;
 }
 
-export function convertRows(rows: any[], width = 0): any {
+export function convertRows(rows: any[]): any {
   if (rows.length === 0) {
     return [];
   }
@@ -249,20 +249,7 @@ export function convertRows(rows: any[], width = 0): any {
     });
     result.push(values.join("#$#;#$#"));
   }
-  return convertRowsToConsole(result, width).join("\n") + "\n\n";
-}
-
-// Marks a line the console could not show in full, as a q console marks one.
-const CUT = "..";
-
-// Cuts a line to the given width, as a q console cuts one to its `\c`. A width
-// of 0 means no limit — the shared output channel scrolls horizontally, where
-// a terminal only wraps, and a wrapped table is no longer a table.
-function fit(line: string, width: number): string {
-  if (!width || line.length <= width) {
-    return line;
-  }
-  return line.slice(0, Math.max(0, width - CUT.length)) + CUT;
+  return convertRowsToConsole(result).join("\n") + "\n\n";
 }
 
 // A cell that arrives with newlines in it — a nested list, rendered down the
@@ -282,7 +269,7 @@ function flatten(value: string) {
     .trimEnd();
 }
 
-export function convertRowsToConsole(rows: string[], width = 0): string[] {
+export function convertRowsToConsole(rows: string[]): string[] {
   if (rows.length === 0) {
     return [];
   }
@@ -320,7 +307,7 @@ export function convertRowsToConsole(rows: string[], width = 0): string[] {
     });
   });
 
-  const result = vector.map((row) => fit(row.join(""), width));
+  const result = vector.map((row) => row.join(""));
 
   if (haveHeader) {
     result.splice(1, 0, "-".repeat(result[0].length));
