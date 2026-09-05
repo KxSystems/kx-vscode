@@ -19,8 +19,11 @@ import { MessageKind, notify, Runner } from "./notifications";
 import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
-import { StructuredTextResults } from "../models/queryResult";
-import { ScratchpadStacktrace } from "../models/scratchpadResult";
+import { queryConstants, StructuredTextResults } from "../models/queryResult";
+import {
+  ScratchpadResult,
+  ScratchpadStacktrace,
+} from "../models/scratchpadResult";
 
 const logger = "queryUtils";
 
@@ -499,6 +502,24 @@ export function appendStacktrace(
     (Array.isArray(stacktrace)
       ? formatScratchpadStacktrace(stacktrace)
       : `${stacktrace}`)
+  );
+}
+
+const UDA_UNKNOWN_API = "Querying database using (UDA) raised - Unknown API:";
+
+export function formatScratchpadError(result: ScratchpadResult): string {
+  let message =
+    result.errorMsg ||
+    (typeof result.error === "string" ? result.error : "Unknown error");
+
+  if (message.includes(UDA_UNKNOWN_API)) {
+    message +=
+      ". A table, label, or scope parameter may be missing or incorrect.";
+  }
+
+  return appendStacktrace(
+    `${queryConstants.error} ${message}`,
+    result.stacktrace,
   );
 }
 

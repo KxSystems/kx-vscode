@@ -21,7 +21,7 @@ import { QueryResult, QueryResultType } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
 import { handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
-import { queryWrapper } from "../utils/queryUtils";
+import { appendStacktrace, queryWrapper } from "../utils/queryUtils";
 
 const logger = "localConnection";
 
@@ -184,7 +184,7 @@ export class LocalConnection {
         } else if (res.error) {
           resolve(
             handleQueryResults(
-              res.errorMsg + (res.stacktrace ? "\n" + res.stacktrace : ""),
+              appendStacktrace(`${res.errorMsg}`, res.stacktrace),
               QueryResultType.Error,
             ),
           );

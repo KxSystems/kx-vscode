@@ -353,6 +353,73 @@ describe("queryUtils", () => {
     });
   });
 
+  describe("formatScratchpadError", () => {
+    it("should prefix the error message", () => {
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: true,
+          errorMsg: "type",
+          sessionID: "1",
+        }),
+        "Error: type",
+      );
+    });
+
+    it("should fall back to a string error when there is no message", () => {
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: "Internal server error",
+          sessionID: "1",
+        }),
+        "Error: Internal server error",
+      );
+    });
+
+    it("should fall back to Unknown error when the error is a flag", () => {
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: true,
+          sessionID: "1",
+        }),
+        "Error: Unknown error",
+      );
+    });
+
+    it("should explain an unknown UDA", () => {
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: true,
+          errorMsg:
+            "Querying database using (UDA) raised - Unknown API: .kx.uda",
+          sessionID: "1",
+        }),
+        "Error: Querying database using (UDA) raised - Unknown API: .kx.uda. " +
+          "A table, label, or scope parameter may be missing or incorrect.",
+      );
+    });
+
+    it("should append the stacktrace", () => {
+      const stacktrace = [
+        { name: "f", isNested: false, text: ["{a:x*2;a", "+y}"] },
+      ];
+
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: true,
+          errorMsg: "type",
+          sessionID: "1",
+          stacktrace,
+        }),
+        "Error: type\n" + queryUtils.formatScratchpadStacktrace(stacktrace),
+      );
+    });
+  });
+
   describe("formatScratchpadStacktrace", () => {
     it("should format a Scratchpad stacktrace correctly", () => {
       const stacktrace = [
