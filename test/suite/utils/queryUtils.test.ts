@@ -351,6 +351,17 @@ describe("queryUtils", () => {
         "type\n" + queryUtils.formatScratchpadStacktrace(stacktrace),
       );
     });
+
+    it("should join a list of backtrace lines", () => {
+      assert.strictEqual(
+        queryUtils.appendStacktrace("type", ["[2] gw", "[1] rc"]),
+        "type\n[2] gw\n[1] rc",
+      );
+    });
+
+    it("should return the message alone for an empty frame list", () => {
+      assert.strictEqual(queryUtils.appendStacktrace("type", []), "type");
+    });
   });
 
   describe("formatScratchpadError", () => {

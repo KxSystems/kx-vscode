@@ -12,12 +12,13 @@
  */
 
 import { StructuredTextResults } from "./queryResult";
+import { ScratchpadStacktrace } from "./scratchpadResult";
 
 export type GetDataError = string | { buffer: ArrayBuffer };
 
 export type GetDataObjectPayload = {
   error: GetDataError;
-  stacktrace?: string;
+  stacktrace?: ScratchpadStacktrace | string[] | string;
   table?: {
     meta: {
       [column: string]: string;

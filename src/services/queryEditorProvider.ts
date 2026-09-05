@@ -138,11 +138,13 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
       }
     };
 
-    workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("kdb.connectionMap")) {
-        updateWebview();
-      }
-    });
+    const changeConfigurationSubscription = workspace.onDidChangeConfiguration(
+      (event) => {
+        if (event.affectsConfiguration("kdb.connectionMap")) {
+          updateWebview();
+        }
+      },
+    );
 
     const changeDocumentSubscription = workspace.onDidChangeTextDocument(
       (event) => {
@@ -159,6 +161,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
     });
 
     webviewPanel.onDidDispose(() => {
+      changeConfigurationSubscription.dispose();
       changeDocumentSubscription.dispose();
     });
 
@@ -313,7 +316,16 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
     if (text.trim().length === 0) {
       return createDefaultQueryFile();
     }
-    return JSON.parse(text);
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      notify(
+        `${getBasename(document.uri)} is not valid JSON, showing an empty query.`,
+        MessageKind.DEBUG,
+        { logger, params: error },
+      );
+      return createDefaultQueryFile();
+    }
   }
 
   private updateTextDocument(document: TextDocument, json: unknown) {

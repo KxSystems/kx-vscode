@@ -168,6 +168,23 @@ describe("KdbSelect", () => {
     });
   });
 
+  describe("click", () => {
+    function click(target?: unknown) {
+      (<any>select).handleClick(<Event>(<unknown>{ target }));
+    }
+
+    it("should open the list on the first click", () => {
+      click();
+      assert.strictEqual(select.open, true);
+    });
+
+    it("should close the list on the next click", () => {
+      click();
+      click();
+      assert.strictEqual(select.open, false);
+    });
+  });
+
   describe("keyboard", () => {
     it("should open on an arrow key without moving", () => {
       select.value = "sym";

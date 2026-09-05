@@ -35,6 +35,7 @@ import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
 import { ScratchpadFile } from "./models/scratchpad";
 import { ServerObject } from "./models/serverObject";
+import { allowedEmptyRequiredTypes } from "./models/uda";
 import {
   InsightsNode,
   KdbNode,
@@ -270,7 +271,7 @@ export namespace ext {
       "t",
       "s",
     ],
-    allowedEmptyRequiredTypes: [10, -11],
+    allowedEmptyRequiredTypes,
     dataTypes: new Map(
       Object.entries({
         "-1": "Boolean",

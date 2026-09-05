@@ -84,6 +84,38 @@ describe("queryEditorProvider", () => {
         provider.resolveCustomTextEditor(document, panel.panel),
       );
     });
+
+    it("should resolve a document that is not valid JSON", async () => {
+      const provider = new QueryEditorProvider(context);
+      const document = await vscode.workspace.openTextDocument({
+        language: "json",
+        content: "{ not json",
+      });
+      sinon.stub(utils, "getUri").value(() => "");
+      const panel = createPanel();
+      await assert.doesNotReject(() =>
+        provider.resolveCustomTextEditor(document, panel.panel),
+      );
+      assert.deepStrictEqual(panel.messages.at(-1)?.file, { version: 1 });
+    });
+
+    it("should let go of the configuration listener with the panel", async () => {
+      const provider = new QueryEditorProvider(context);
+      const document = await vscode.workspace.openTextDocument({
+        language: "json",
+        content: JSON.stringify({ version: 1 }),
+      });
+      sinon.stub(utils, "getUri").value(() => "");
+      const dispose = sinon.stub();
+      sinon
+        .stub(vscode.workspace, "onDidChangeConfiguration")
+        .returns({ dispose });
+      const panel = createPanel();
+      await provider.resolveCustomTextEditor(document, panel.panel);
+      panel.listeners.onDidDispose();
+
+      sinon.assert.calledOnce(dispose);
+    });
   });
 
   describe("getQueries", () => {

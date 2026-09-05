@@ -24,6 +24,7 @@ import { ServerType } from "../models/connectionsModels";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
+import { ScratchpadStacktrace } from "../models/scratchpadResult";
 import { UDARequestBody } from "../models/uda";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { noSelectedConnectionAction } from "../utils/core";
@@ -71,7 +72,6 @@ export async function populateScratchpad(
       connMngService.retrieveConnectedConnection(connLabel);
 
     if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      running = false;
       return;
     }
 
@@ -454,7 +454,10 @@ export function getQuery(
   }
 }
 
-export function parseError(error: GetDataError, stacktrace?: string) {
+export function parseError(
+  error: GetDataError,
+  stacktrace?: ScratchpadStacktrace | string[] | string,
+) {
   notify(`Datasource error.`, MessageKind.DEBUG, {
     logger,
     params: { error, stacktrace },

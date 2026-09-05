@@ -390,7 +390,9 @@ export class KdbSelect extends LitElement {
     if (input && event.target !== input) {
       input.focus();
     }
-    if (!this.open) {
+    if (this.open) {
+      this.dismiss();
+    } else {
       this.reveal();
     }
   };
@@ -540,7 +542,10 @@ export class KdbSelect extends LitElement {
           <button
             aria-label="Remove ${text}"
             @mousedown="${(event: Event) => event.preventDefault()}"
-            @click="${() => this.select(held)}">
+            @click="${(event: Event) => {
+              event.stopPropagation();
+              this.select(held);
+            }}">
             ✕
           </button>
         </span>

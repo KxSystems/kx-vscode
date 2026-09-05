@@ -12,7 +12,13 @@
  */
 
 import { aggOperators, filterOperators } from "./dataSource";
-import { ParamFieldType, SCOPE_DESCRIPTION, UDA, UDAParam } from "./uda";
+import {
+  ParamFieldType,
+  SCOPE_DESCRIPTION,
+  UDA,
+  UDAParam,
+  UDAParamField,
+} from "./uda";
 
 export interface QueryFile {
   version: number;
@@ -443,7 +449,7 @@ export function parseValue(value: unknown) {
   }
 }
 
-function toValues(text: string, typed = true) {
+export function toValues(text: string, typed = true) {
   const tokens = text
     .split(/[;\s]+/)
     .filter((token) => token !== "")
@@ -512,6 +518,27 @@ export function parseRows(param: UDAParam): string[][] {
   });
 }
 
+/**
+ * Whether a row was answered rather than half filled in. A field offering
+ * choices always holds one, so it says nothing; fields sharing a slot are
+ * alternatives, and one of them is enough. Anything else has to be there, so a
+ * filter naming a column with no value to match is dropped rather than sent as
+ * an empty list.
+ */
+function isComplete(fields: UDAParamField[], row: string[]) {
+  const slots = new Map<number, boolean>();
+
+  fields.forEach((field, index) => {
+    if (field.choices) {
+      return;
+    }
+    const at = field.at ?? index;
+    slots.set(at, slots.get(at) || false || !!row[index]);
+  });
+
+  return slots.size > 0 && [...slots.values()].every((given) => given);
+}
+
 /** The rows the editor shows, as the value the request wants. */
 export function serializeRows(param: UDAParam, rows: string[][]) {
   const fields = param.rows;
@@ -519,9 +546,7 @@ export function serializeRows(param: UDAParam, rows: string[][]) {
     return "";
   }
 
-  const filled = rows.filter((row) =>
-    row.some((value, index) => value !== "" && !fields[index]?.choices),
-  );
+  const filled = rows.filter((row) => isComplete(fields, row));
   if (filled.length === 0) {
     return "";
   }

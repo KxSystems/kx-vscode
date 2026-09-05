@@ -18,7 +18,6 @@ import {
   TextDocument,
   Uri,
   WebviewPanel,
-  commands,
   window,
 } from "vscode";
 
@@ -60,9 +59,9 @@ export class DataSourceConverterProvider implements CustomTextEditorProvider {
     webviewPanel.webview.options = { enableScripts: false };
     webviewPanel.webview.html = this.getWebviewContent(document);
 
-    const target = await convertDataSource(document.uri);
+    const conversion = await convertDataSource(document.uri);
 
-    if (!target) {
+    if (!conversion) {
       notify(
         `${getBasename(document.uri)} could not be converted. Open it as text to see what it holds.`,
         MessageKind.WARNING,
@@ -71,21 +70,24 @@ export class DataSourceConverterProvider implements CustomTextEditorProvider {
       return;
     }
 
+    const { target, written } = conversion;
+
     notify(
-      `${getBasename(document.uri)} was converted to ${getBasename(target)}.`,
+      written
+        ? `${getBasename(document.uri)} was converted to ${getBasename(target)}.`
+        : `${getBasename(document.uri)} was already converted, opening ${getBasename(target)}.`,
       MessageKind.INFO,
       { logger },
     );
 
-    ext.queryTreeProvider.reload();
-    ext.scratchpadTreeProvider.reload();
+    if (written) {
+      ext.queryTreeProvider.reload();
+      ext.scratchpadTreeProvider.reload();
+    }
 
     await openWith(target, QueryEditorProvider.viewType);
 
-    await commands.executeCommand(
-      "workbench.action.closeActiveEditor",
-      webviewPanel,
-    );
+    webviewPanel.dispose();
   }
 
   private getWebviewContent(document: TextDocument) {

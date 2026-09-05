@@ -130,6 +130,34 @@ describe("queryCommand", () => {
       assert.strictEqual(filter?.isVisible, true);
     });
 
+    it("should read a converted filter value the way the editor writes it", () => {
+      const query = toGetDataQuery(
+        createDataSource(DataSourceTypes.API, {
+          api: {
+            table: "trades",
+            startTS: "",
+            endTS: "",
+            optional: {
+              filters: [
+                {
+                  active: true,
+                  column: "month",
+                  operator: "=",
+                  values: "2022.04m",
+                },
+              ],
+              labels: [],
+              sorts: [],
+              aggs: [],
+              groups: [],
+            },
+          },
+        }),
+      );
+      const filter = query.params.find((param) => param.name === "filter");
+      assert.strictEqual(filter?.value, '[["=","month","2022.04m"]]');
+    });
+
     it("should leave an untouched parameter hidden", () => {
       const query = toGetDataQuery(
         createDataSource(DataSourceTypes.API, {
@@ -236,8 +264,9 @@ describe("queryCommand", () => {
           uda: { name: "test.uda", params: [] },
         }),
       );
-      const target = await convertDataSource(uri);
-      assert.ok(target?.path.endsWith("/datasource.kxquery"));
+      const conversion = await convertDataSource(uri);
+      assert.ok(conversion?.target.path.endsWith("/datasource.kxquery"));
+      assert.strictEqual(conversion?.written, true);
       assert.strictEqual(JSON.parse(written().content).query.name, "test.uda");
     });
 
@@ -247,8 +276,9 @@ describe("queryCommand", () => {
           api: { table: "trades", startTS: "", endTS: "" },
         }),
       );
-      const target = await convertDataSource(uri);
-      assert.ok(target?.path.endsWith("/datasource.kxquery"));
+      const conversion = await convertDataSource(uri);
+      assert.ok(conversion?.target.path.endsWith("/datasource.kxquery"));
+      assert.strictEqual(conversion?.written, true);
       assert.strictEqual(
         JSON.parse(written().content).query.name,
         ".kxi.getData",
@@ -261,8 +291,9 @@ describe("queryCommand", () => {
           qsql: { query: "select from trades", selectedTarget: "assembly qe" },
         }),
       );
-      const target = await convertDataSource(uri);
-      assert.ok(target?.path.endsWith("/datasource.kxquery"));
+      const conversion = await convertDataSource(uri);
+      assert.ok(conversion?.target.path.endsWith("/datasource.kxquery"));
+      assert.strictEqual(conversion?.written, true);
       const query = JSON.parse(written().content).query;
       assert.strictEqual(query.name, "qSQL");
       assert.strictEqual(
@@ -281,8 +312,9 @@ describe("queryCommand", () => {
           sql: { query: "select * from trades" },
         }),
       );
-      const target = await convertDataSource(uri);
-      assert.ok(target?.path.endsWith("/datasource.kxquery"));
+      const conversion = await convertDataSource(uri);
+      assert.ok(conversion?.target.path.endsWith("/datasource.kxquery"));
+      assert.strictEqual(conversion?.written, true);
       const query = JSON.parse(written().content).query;
       assert.strictEqual(query.name, "SQL");
       assert.strictEqual(
@@ -304,10 +336,12 @@ describe("queryCommand", () => {
       );
     });
 
-    it("should skip a file that was already converted", async () => {
+    it("should point at a file that was already converted", async () => {
       stubDocument(createDataSource(DataSourceTypes.UDA));
       stat.resolves(<any>{});
-      assert.strictEqual(await convertDataSource(uri), undefined);
+      const conversion = await convertDataSource(uri);
+      assert.ok(conversion?.target.path.endsWith("/datasource.kxquery"));
+      assert.strictEqual(conversion?.written, false);
       assert.strictEqual(writeFile.called, false);
     });
 
@@ -334,6 +368,15 @@ describe("queryCommand", () => {
       sinon.stub(vscode.workspace, "findFiles").resolves([]);
       const converted = await convertDataSources();
       assert.strictEqual(converted.length, 0);
+    });
+
+    it("should not count a file that was already converted", async () => {
+      sinon.stub(vscode.workspace, "findFiles").resolves([uri]);
+      stubDocument(createDataSource(DataSourceTypes.UDA));
+      stat.resolves(<any>{});
+      const converted = await convertDataSources();
+      assert.strictEqual(converted.length, 0);
+      assert.strictEqual(writeFile.called, false);
     });
   });
 });

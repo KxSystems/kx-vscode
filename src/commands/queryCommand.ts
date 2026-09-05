@@ -26,6 +26,7 @@ import {
   createGetData,
   createQsql,
   createSql,
+  toValues,
 } from "../models/query";
 import { UDA } from "../models/uda";
 import { MessageKind, notify } from "../utils/notifications";
@@ -132,13 +133,7 @@ function getLegacyApiBody(dataSource: DataSourceFiles) {
       .map((filter: any) => [
         filter.operator,
         filter.column,
-        ((values: string) => {
-          const tokens = values.split(/[;\s]+/).map((token: string) => {
-            const number = parseFloat(token);
-            return isNaN(number) ? token : number;
-          });
-          return tokens.length === 1 ? tokens[0] : tokens;
-        })(filter.values),
+        toValues(filter.values || ""),
       ]);
     if (filters.length) payload.filter = filters;
 
@@ -174,15 +169,22 @@ async function write(uri: Uri, content: string, source: Uri) {
   }
 }
 
+export interface Conversion {
+  target: Uri;
+  written: boolean;
+}
+
 /**
  * Converts one datasource to the format the query editor reads. Every type
  * becomes a `.kxquery`: API and UDA the query they named, QSQL and SQL the
  * builtin the editor holds for them. The original is left on disk.
  *
- * Returns the uri of the file it wrote, or undefined when there was nothing to
- * convert or the target was already there.
+ * Returns the query file the datasource stands for and whether this call is
+ * what wrote it, or undefined when there was nothing to convert.
  */
-export async function convertDataSource(uri: Uri): Promise<Uri | undefined> {
+export async function convertDataSource(
+  uri: Uri,
+): Promise<Conversion | undefined> {
   let content: any;
 
   try {
@@ -196,7 +198,7 @@ export async function convertDataSource(uri: Uri): Promise<Uri | undefined> {
 
   const target = replaceExtension(uri, /\.kdb\.json$/, ".kxquery");
   if (await exists(target)) {
-    return undefined;
+    return { target, written: false };
   }
 
   const file: QueryFile = {
@@ -205,7 +207,7 @@ export async function convertDataSource(uri: Uri): Promise<Uri | undefined> {
   };
 
   await write(target, JSON.stringify(file, null, 2), uri);
-  return target;
+  return { target, written: true };
 }
 
 export async function convertDataSources() {
@@ -213,9 +215,9 @@ export async function convertDataSources() {
   const converted: Uri[] = [];
 
   for (const file of files) {
-    const target = await convertDataSource(file);
-    if (target) {
-      converted.push(target);
+    const conversion = await convertDataSource(file);
+    if (conversion?.written) {
+      converted.push(conversion.target);
     }
   }
 

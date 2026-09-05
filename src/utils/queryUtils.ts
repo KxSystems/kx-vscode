@@ -489,19 +489,30 @@ export function addQueryHistory(
   ext.queryHistoryProvider.refresh();
 }
 
+function isScratchpadStacktrace(
+  value: unknown[],
+): value is ScratchpadStacktrace {
+  return value.every(
+    (frame: any) => frame && Array.isArray(frame.text) && "name" in frame,
+  );
+}
+
 export function appendStacktrace(
   message: string,
-  stacktrace?: ScratchpadStacktrace | string,
+  stacktrace?: ScratchpadStacktrace | string[] | string,
 ): string {
-  if (!stacktrace) {
+  if (!stacktrace || (Array.isArray(stacktrace) && stacktrace.length === 0)) {
     return message;
+  }
+  if (!Array.isArray(stacktrace)) {
+    return `${message}\n${stacktrace}`;
   }
   return (
     message +
     "\n" +
-    (Array.isArray(stacktrace)
+    (isScratchpadStacktrace(stacktrace)
       ? formatScratchpadStacktrace(stacktrace)
-      : `${stacktrace}`)
+      : stacktrace.map((line) => `${line}`).join("\n"))
   );
 }
 

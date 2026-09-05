@@ -399,6 +399,30 @@ describe("query", () => {
       );
     });
 
+    it("should drop a row that names a column with nothing to match", () => {
+      const query = getData();
+      assert.strictEqual(
+        serializeRows(param(query, "filter"), [["price", ">", ""]]),
+        "",
+      );
+      assert.strictEqual(
+        serializeRows(param(query, "filter"), [["", ">", "100"]]),
+        "",
+      );
+      assert.strictEqual(
+        serializeRows(param(query, "labels"), [["region", ""]]),
+        "",
+      );
+    });
+
+    it("should keep an aggregation given only one of its two columns", () => {
+      const query = getData();
+      assert.strictEqual(
+        serializeRows(param(query, "agg"), [["avgPx", "avg", "price", ""]]),
+        '[["avgPx","avg","price"]]',
+      );
+    });
+
     it("should send chosen columns under the agg key", () => {
       // getData has no column projection of its own; agg takes "column(s) to
       // select" as a plain symbol list.
