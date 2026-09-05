@@ -19,6 +19,7 @@ import { MessageKind, notify, Runner } from "./notifications";
 import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
+import { StructuredTextResults } from "../models/queryResult";
 import { ScratchpadStacktrace } from "../models/scratchpadResult";
 
 const logger = "queryUtils";
@@ -232,24 +233,88 @@ export function getSQLWrapper(query: string): string {
   return `s)${query.replace(/(?:\r\n|\n)/g, " ")}`;
 }
 
-export function convertRows(rows: any[], width = 0): any {
+// The encoding `convertRowsToConsole` accepts from a caller that has nothing
+// but strings: a row's cells joined with CELL, and a header row marked by a
+// leading HEADER. The header used to be told apart by the delimiter between
+// its own cells, which a one-column table never has, so it lost its rule and
+// read as a list (KXI-73276).
+const HEADER = "#$#;header;#$#";
+const CELL = "#$#;#$#";
+
+// What the console lays a table out from: the cells, the header row where the
+// result has one, and how many of the leading columns are keys — a
+// dictionary's key, or a keyed table's key columns, which q separates from the
+// values with a pipe.
+interface ConsoleTable {
+  cells: string[][];
+  header?: string[];
+  keys: number;
+}
+
+export function convertRows(
+  rows: any[],
+  width = 0,
+  results?: StructuredTextResults,
+): any {
+  const table = results ? structuredTable(rows, results) : objectTable(rows);
+  const lines = table ? layout(table, width) : [];
+  return lines.length === 0 ? [] : lines.join("\n") + "\n\n";
+}
+
+function cell(value: any): string {
+  return Array.isArray(value) ? value.join(" ") : String(value ?? "");
+}
+
+// Rows on their own carry no more than their column names, so a dictionary is
+// only recognizable where it arrived as a property/value pair.
+function objectTable(rows: any[]): ConsoleTable | undefined {
   if (rows.length === 0) {
-    return [];
+    return undefined;
   }
-  const keys = Object.keys(rows[0]);
-  const isObj = typeof rows[0] === "object";
-  const isPropVal = isObj ? checkIfIsPropVal(keys) : false;
-  const result = isPropVal ? [] : [keys.join("#$#;header;#$#")];
-  for (const row of rows) {
-    const values = keys.map((key) => {
-      if (Array.isArray(row[key])) {
-        return row[key].join(" ");
-      }
-      return row[key];
-    });
-    result.push(values.join("#$#;#$#"));
+  const names = Object.keys(rows[0]);
+  const isPropVal =
+    typeof rows[0] === "object" ? checkIfIsPropVal(names) : false;
+  return {
+    cells: rows.map((row) => names.map((name) => cell(row[name]))),
+    header: isPropVal ? undefined : names,
+    keys: isPropVal ? 1 : 0,
+  };
+}
+
+// A structured text result knows what the rows extracted from it cannot say:
+// which columns are keys, whether the result is a table at all, and the schema
+// of one that came back empty.
+function structuredTable(
+  rows: any[],
+  results: StructuredTextResults,
+): ConsoleTable | undefined {
+  const columns = Array.isArray(results.columns)
+    ? results.columns
+    : [results.columns];
+  if (columns.length === 0) {
+    return undefined;
   }
-  return convertRowsToConsole(result, width).join("\n") + "\n\n";
+  const names = columns.map((column) => column.name);
+  // Nothing in the payload says whether a result was a table: a list is the
+  // one column `values` that formatQ.q gives an unnamed result, and a
+  // dictionary the key/values pair, both of which q prints without column
+  // names. An empty result has nothing but its header, so that carries the
+  // types too — the schema is the whole answer there.
+  const isList =
+    !Array.isArray(results.columns) ||
+    (columns.length === 1 && names[0] === "values" && !columns[0].isKey);
+  const isDictionary =
+    columns.length === 2 && !!columns[0].isKey && names.join() === "key,values";
+  return {
+    cells: rows.map((row) => names.map((name) => cell(row[name]))),
+    header:
+      rows.length === 0
+        ? columns.map((column) => `${column.name} [${column.type}]`)
+        : isList || isDictionary
+          ? undefined
+          : names,
+    keys: columns.filter((column) => column.isKey).length,
+  };
 }
 
 // Marks a line the console could not show in full, as a q console marks one.
@@ -282,51 +347,70 @@ function flatten(value: string) {
     .trimEnd();
 }
 
+// The rule under a header carries the key separator through it, the way a
+// keyed table prints in q: `a b| c` over `---| -`.
+function rule(length: number, widths: number[], keys: number): string {
+  const line = "-".repeat(length);
+  const pipe = widths.slice(0, keys).reduce((sum, width) => sum + width, 0) - 2;
+  return keys > 0 && length > pipe + 1
+    ? line.slice(0, pipe) + "| " + line.slice(pipe + 2)
+    : line;
+}
+
+function layout(table: ConsoleTable, width: number): string[] {
+  const rows = table.header ? [table.header, ...table.cells] : table.cells;
+  if (rows.length === 0) {
+    return [];
+  }
+  // A result that is a single value — a lambda, a string, an atom — is not a
+  // table, and keeps the newlines it came with instead of being squared off
+  // into one cell (KXI-73276).
+  if (!table.header && rows.length === 1 && rows[0].length === 1) {
+    return rows[0][0].split("\n").map((line) => fit(line, width));
+  }
+  const cells = rows.map((row) => row.map(flatten));
+  const count = cells.reduce((max, row) => Math.max(max, row.length), 0);
+  const widths = Array.from(
+    { length: count },
+    (_unused, index) =>
+      cells.reduce((max, row) => Math.max(max, (row[index] || "").length), 0) +
+      2,
+  );
+  // The pipe separates a key block from what follows it; a dictionary with
+  // nothing to its right, or a line of plain console output, has no key block.
+  const keys = table.keys > 0 && table.keys < count ? table.keys : 0;
+  const lines = cells.map((row) =>
+    fit(
+      row
+        .map((value, index) =>
+          index === keys - 1
+            ? value.padEnd(widths[index] - 2) + "| "
+            : value.padEnd(widths[index]),
+        )
+        .join(""),
+      width,
+    ),
+  );
+  if (table.header) {
+    lines.splice(1, 0, rule(lines[0].length, widths, keys));
+  }
+  return lines;
+}
+
 export function convertRowsToConsole(rows: string[], width = 0): string[] {
   if (rows.length === 0) {
     return [];
   }
-  const haveHeader = rows[0].includes("#$#;header;#$#");
-  let header;
-  if (haveHeader) {
-    header = rows[0].split("#$#;header;#$#").map(flatten);
-    rows.shift();
-  }
-  const vector = rows.map((row) => row.split("#$#;#$#").map(flatten));
-  if (header) {
-    vector.unshift(header);
-  }
-
-  const columnCounters = vector[0].reduce((counters: number[], _, j) => {
-    const maxLength = vector.reduce(
-      (max, row) => Math.max(max, (row[j] || "").length),
-      0,
-    );
-    counters.push(maxLength + 2);
-    return counters;
-  }, []);
-
-  vector.forEach((row) => {
-    row.forEach((value, j) => {
-      const counter = columnCounters[j];
-      const diff = counter - value.length;
-      if (diff > 0) {
-        if (!haveHeader && j !== columnCounters.length - 1) {
-          row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
-        } else {
-          row[j] = value + " ".repeat(diff);
-        }
-      }
-    });
-  });
-
-  const result = vector.map((row) => fit(row.join(""), width));
-
-  if (haveHeader) {
-    result.splice(1, 0, "-".repeat(result[0].length));
-  }
-
-  return result;
+  const haveHeader = rows[0].startsWith(HEADER);
+  const header = haveHeader
+    ? rows[0].slice(HEADER.length).split(CELL)
+    : undefined;
+  const cells = (haveHeader ? rows.slice(1) : rows).map((row) =>
+    row.split(CELL),
+  );
+  // Rows that arrive without a header of their own are a dictionary's
+  // key/value pairs, which q prints with a pipe between them.
+  return layout({ cells, header, keys: haveHeader ? 0 : 1 }, width);
 }
 
 export function checkIfIsPropVal(columns: string[]): boolean {

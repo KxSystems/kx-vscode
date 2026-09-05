@@ -88,9 +88,116 @@ describe("queryUtils", () => {
     assert.equal(result, expectedRes);
   });
 
+  describe("convertRows from a structured text result", () => {
+    const column = (
+      name: string,
+      type: string,
+      values: string[],
+      isKey = false,
+    ) => ({ name, type, values, order: [], isKey });
+
+    it("should rule off a table with a single column", () => {
+      const results = {
+        count: 3,
+        columns: [column("trip_id", "long", ["1546339", "97738", "626"])],
+      };
+      const rows = [
+        { trip_id: "1546339" },
+        { trip_id: "97738" },
+        { trip_id: "626" },
+      ];
+      const result = queryUtils.convertRows(rows, 0, results);
+
+      assert.strictEqual(
+        result,
+        "trip_id  \n---------\n1546339  \n97738    \n626      \n\n",
+      );
+    });
+
+    it("should print a list without a header", () => {
+      const results = {
+        count: 3,
+        columns: [column("values", "longs", ["1", "2", "3"])],
+      };
+      const rows = [{ values: "1" }, { values: "2" }, { values: "3" }];
+      const result = queryUtils.convertRows(rows, 0, results);
+
+      assert.strictEqual(result, "1  \n2  \n3  \n\n");
+    });
+
+    it("should separate a dictionary's key with a pipe", () => {
+      const results = {
+        count: 3,
+        columns: [
+          column("key", "symbol", ["a", "bb", "c"], true),
+          column("values", "long", ["1", "2", "3"]),
+        ],
+      };
+      const rows = [
+        { key: "a", values: "1" },
+        { key: "bb", values: "2" },
+        { key: "c", values: "3" },
+      ];
+      const result = queryUtils.convertRows(rows, 0, results);
+
+      assert.strictEqual(result, "a | 1  \nbb| 2  \nc | 3  \n\n");
+    });
+
+    it("should carry a keyed table's key through the rule", () => {
+      const results = {
+        count: 3,
+        columns: [
+          column("a", "long", ["1", "2", "3"], true),
+          column("b", "long", ["4", "5", "6"]),
+        ],
+      };
+      const rows = [
+        { a: "1", b: "4" },
+        { a: "2", b: "5" },
+        { a: "3", b: "6" },
+      ];
+      const result = queryUtils.convertRows(rows, 0, results);
+
+      assert.strictEqual(result, "a| b  \n-| ---\n1| 4  \n2| 5  \n3| 6  \n\n");
+    });
+
+    it("should show the schema of an empty result", () => {
+      const results = {
+        count: 0,
+        columns: [
+          column("isFile", "boolean", []),
+          column("path", "symbol", []),
+        ],
+      };
+      const result = queryUtils.convertRows([], 0, results);
+
+      assert.strictEqual(
+        result,
+        "isFile [boolean]  path [symbol]  \n---------------------------------\n\n",
+      );
+    });
+
+    it("should keep the newlines of a single value", () => {
+      const lambda = "{[a;b;c]\n    c+: b;\n    c }";
+      const results = {
+        count: 1,
+        columns: [column("values", "lambda", [lambda])],
+      };
+      const result = queryUtils.convertRows([{ values: lambda }], 0, results);
+
+      assert.strictEqual(result, lambda + "\n\n");
+    });
+
+    it("should return nothing to show when there are no columns", () => {
+      const result = queryUtils.convertRows([], 0, { count: 0, columns: [] });
+
+      assert.deepStrictEqual(result, []);
+    });
+  });
+
   describe("convertRowsToConsole", () => {
     it("should work with headers", () => {
-      const rows = ["a#$#;header;#$#b", "1#$#;#$#2", "3#$#;#$#4"];
+      const rows = ["#$#;header;#$#a#$#;#$#b", "1#$#;#$#2", "3#$#;#$#4"];
       const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "];
       const result = queryUtils.convertRowsToConsole(rows);
 
@@ -107,7 +214,7 @@ describe("queryUtils", () => {
 
     it("should keep a column list on one line", () => {
       const rows = [
-        "id#$#;header;#$#components",
+        "#$#;header;#$#id#$#;#$#components",
         '"KXI-1"#$#;#$#"Insights UI"\n"Scratchpad"',
         '"KXI-2"#$#;#$#"Pipeline UI"',
       ];
@@ -123,7 +230,7 @@ describe("queryUtils", () => {
 
     it("should cut a row that does not fit the width", () => {
       const rows = [
-        "aa#$#;header;#$#bb#$#;header;#$#cc",
+        "#$#;header;#$#aa#$#;#$#bb#$#;#$#cc",
         "11#$#;#$#22#$#;#$#33",
       ];
       const result = queryUtils.convertRowsToConsole(rows, 11);
@@ -132,14 +239,14 @@ describe("queryUtils", () => {
     });
 
     it("should leave a row that fits the width alone", () => {
-      const rows = ["a#$#;header;#$#b", "1#$#;#$#2"];
+      const rows = ["#$#;header;#$#a#$#;#$#b", "1#$#;#$#2"];
       const result = queryUtils.convertRowsToConsole(rows, 40);
 
       assert.deepEqual(result, ["a  b  ", "------", "1  2  "]);
     });
 
     it("should keep the start of a column too wide to fit", () => {
-      const rows = ["id#$#;header;#$#text", "1#$#;#$#0123456789abcdef"];
+      const rows = ["#$#;header;#$#id#$#;#$#text", "1#$#;#$#0123456789abcdef"];
       const result = queryUtils.convertRowsToConsole(rows, 12);
 
       assert.deepEqual(result, [
@@ -150,7 +257,11 @@ describe("queryUtils", () => {
     });
 
     it("should keep a row with newlines in it on one line", () => {
-      const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
+      const rows = [
+        "#$#;header;#$#a#$#;#$#b",
+        "a1\na2#$#;#$#b1\nb2",
+        "3#$#;#$#4",
+      ];
       const expectedRes = [
         "a      b      ",
         "--------------",

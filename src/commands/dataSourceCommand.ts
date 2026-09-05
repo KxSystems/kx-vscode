@@ -215,6 +215,7 @@ export async function runDataSource(
           ? convertRows(
               updatedExtractRowData(res),
               ext.connectionConsoles.get(connLabel)?.columns ?? 0,
+              res,
             )
           : res;
 

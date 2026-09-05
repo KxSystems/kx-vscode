@@ -64,6 +64,12 @@ export class KdbResultsView extends LitElement {
         border-bottom-style: solid;
         border-bottom-width: 1px;
       }
+      /* A dictionary's key, or a keyed table's key columns, are tinted so they
+         read apart from the values without a rule down the middle. */
+      th.key,
+      td.key {
+        background-color: var(--vscode-list-inactiveSelectionBackground);
+      }
       th {
         font-weight: 600;
         line-height: 1.25;
@@ -200,7 +206,9 @@ export class KdbResultsView extends LitElement {
                   <tr>
                     ${this.columnDefs.map(
                       (col: any) =>
-                        html`<th nowrap>${this.getHeader(col.headerName)}</th>`,
+                        html`<th nowrap class=${col.isKey ? "key" : ""}>
+                          ${this.getHeader(col.headerName)}
+                        </th>`,
                     )}
                   </tr>
                 </thead>
@@ -210,8 +218,8 @@ export class KdbResultsView extends LitElement {
                       <tr class="rows">
                         ${this.columnDefs.map(
                           (col: any) =>
-                            html`<td nowrap>
-                              <span style="white-space: pre-line"
+                            html`<td nowrap class=${col.isKey ? "key" : ""}>
+                              <span style="white-space: pre-wrap"
                                 >${row[col.field]}</span
                               >
                             </td>`,

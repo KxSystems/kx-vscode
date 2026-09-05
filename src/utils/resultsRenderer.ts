@@ -138,14 +138,19 @@ export function updatedExtractColumnDefs(results: StructuredTextResults) {
   const columnDefs = columnsArray.map((column) => {
     const sanitizedKey = sanitizeString(column.name);
     const cellDataType = kdbToAgGridCellType(column.type);
-    const headerName = column.type
-      ? `${sanitizedKey} [${column.type}]`
-      : sanitizedKey;
+    // An attribute belongs with the type it qualifies: `s#1 2 3 arrives as a
+    // plain longs column carrying `attributes: "s"`, which never reached the
+    // header (KXI-73276).
+    const type = column.attributes
+      ? `${column.type} (${column.attributes})`
+      : column.type;
+    const headerName = column.type ? `${sanitizedKey} [${type}]` : sanitizedKey;
 
     return {
       field: column.name,
       headerName: headerName,
       cellDataType,
+      isKey: !!column.isKey,
       cellRendererParams: { disabled: cellDataType === "boolean" },
     };
   });

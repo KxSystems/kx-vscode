@@ -291,12 +291,14 @@ describe("ResultsPanelProvider", () => {
             field: "prop1",
             headerName: "prop1 [type1]",
             cellDataType: "text",
+            isKey: false,
             cellRendererParams: { disabled: false },
           },
           {
             field: "prop2",
             headerName: "prop2 [type2]",
             cellDataType: "text",
+            isKey: false,
             cellRendererParams: { disabled: false },
           },
         ],
@@ -840,12 +842,14 @@ describe("ResultsPanelProvider", () => {
           field: "date",
           headerName: "date [dates]",
           cellDataType: "text",
+          isKey: false,
           cellRendererParams: { disabled: false },
         },
         {
           field: "instance",
           headerName: "instance [symbols]",
           cellDataType: "text",
+          isKey: false,
           cellRendererParams: { disabled: false },
         },
       ];
@@ -853,6 +857,48 @@ describe("ResultsPanelProvider", () => {
       const columnDefs = renderer.updatedExtractColumnDefs(results);
 
       assert.deepEqual(columnDefs, expectedColumnDefs);
+    });
+
+    it("should show an attribute with the type it qualifies", () => {
+      const results: StructuredTextResults = {
+        columns: [
+          {
+            name: "values",
+            type: "longs",
+            order: [0, 1, 2],
+            values: ["1", "2", "3"],
+            attributes: "s",
+          },
+        ],
+        count: 3,
+      };
+
+      const columnDefs = renderer.updatedExtractColumnDefs(results);
+
+      assert.equal(columnDefs[0].headerName, "values [longs (s)]");
+    });
+
+    it("should mark the key columns of a keyed table", () => {
+      const results: StructuredTextResults = {
+        columns: [
+          {
+            name: "a",
+            type: "longs",
+            order: [0, 1],
+            values: ["1", "2"],
+            isKey: true,
+          },
+          { name: "b", type: "longs", order: [0, 1], values: ["3", "4"] },
+        ],
+        count: 2,
+      };
+
+      const columnDefs = renderer.updatedExtractColumnDefs(results);
+
+      assert.deepEqual(
+        columnDefs.map((def) => def.isKey),
+        [true, false],
+      );
     });
 
     it("should handle empty columns correctly", () => {
