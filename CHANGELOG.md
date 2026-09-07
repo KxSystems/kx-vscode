@@ -7,12 +7,11 @@ file.
 
 ### Enhancements
 
-- A connection's
-  [output console](https://code.kx.com/vscode/guides/views/results.html#output-console)
-  is now as wide as the terminal can draw rather than as wide as the panel, so a
-  wide table can be scrolled across instead of being cut to the visible width. A
-  row too wide for even that is cut, as a q console cuts one to its `\c`, and
-  never wrapped.
+- The [output console](../guides/views/results.md#output-console) now supports
+  wider output, allowing you to scroll horizontally through wide tables instead
+  of truncating them to the visible panel width. Rows that exceed the maximum
+  console width are truncated rather than wrapped, which is consistent with q
+  console behavior.
 
 # v1.20.0
 

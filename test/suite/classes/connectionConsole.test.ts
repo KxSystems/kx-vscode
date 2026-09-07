@@ -17,35 +17,48 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { ConnectionConsole } from "../../../src/classes/connectionConsole";
+import {
+  ConnectionConsole,
+  OPEN_RESULTS_HINT,
+} from "../../../src/classes/connectionConsole";
 
 const MAX_COLUMNS = 2000;
 const CLEAR = "\x1b[2J\x1b[3J\x1b[H";
+const WIDTH_QUERY = "\x1b7\x1b[999C\x1b[6n\x1b8";
 const FIT_COMMAND = "workbench.action.terminal.sizeToContentWidth";
 // The size a pty is opened with, echoed back in the first report, and the
 // layout the panel reports once it has laid the terminal out.
 const OPENED = { columns: 80, rows: 30 };
 const PANEL = { columns: 116, rows: 14 };
+const LAYOUT_TIMEOUT = 1000;
 
 describe("ConnectionConsole", () => {
   let written: string[];
   let pty: vscode.Pseudoterminal;
   let revealed: boolean[];
   let executed: string[];
+  let terminal: vscode.Terminal;
+  let active: vscode.Terminal | undefined;
+  let clock: sinon.SinonFakeTimers;
 
   beforeEach(() => {
     written = [];
     revealed = [];
     executed = [];
+    active = undefined;
+    clock = sinon.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     sinon.stub(vscode.window, "createTerminal").callsFake((options: any) => {
       pty = options.pty;
-      return <vscode.Terminal>(<any>{
+      terminal = <vscode.Terminal>(<any>{
         show(preserveFocus?: boolean) {
           revealed.push(!!preserveFocus);
+          active = terminal;
         },
         dispose() {},
       });
+      return terminal;
     });
+    sinon.stub(vscode.window, "activeTerminal").get(() => active);
     sinon
       .stub(vscode.commands, "executeCommand")
       .callsFake((command: string) => {
@@ -69,8 +82,14 @@ describe("ConnectionConsole", () => {
   // terminal out. Nothing is shown in the console yet.
   function open() {
     const console = create();
+    console.reveal();
     pty.open(OPENED);
     return console;
+  }
+
+  async function idle() {
+    await clock.tickAsync(LAYOUT_TIMEOUT);
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
   }
 
   // A report from the panel. The first echoes the size the pty was opened with;
@@ -96,6 +115,13 @@ describe("ConnectionConsole", () => {
     return console;
   }
 
+  async function sized(columns: number) {
+    const console = await started();
+    pty.handleInput?.(`\x1b[5;${columns}R`);
+    written.length = 0;
+    return console;
+  }
+
   function payload() {
     return written.join("");
   }
@@ -103,7 +129,10 @@ describe("ConnectionConsole", () => {
   it("should write the lines of a result as they are", async () => {
     const console = await started();
     console.appendResult(["a  b  ", "------", "1  2  "]);
-    assert.strictEqual(payload(), "a  b  \r\n------\r\n1  2  \r\n");
+    assert.strictEqual(
+      payload(),
+      "a  b  \r\n------\r\n1  2  \r\n" + WIDTH_QUERY,
+    );
   });
 
   it("should write a result in one write, not one per line", async () => {
@@ -120,9 +149,11 @@ describe("ConnectionConsole", () => {
     );
   });
 
-  it("should reveal itself when it opens so the panel lays it out", () => {
-    open();
-    assert.deepStrictEqual(revealed, [true]);
+  it("should not reveal itself when it opens", () => {
+    const console = create();
+    pty.open(OPENED);
+    assert.deepStrictEqual(revealed, []);
+    console.dispose();
   });
 
   it("should not size itself before the panel reports a layout", () => {
@@ -169,13 +200,57 @@ describe("ConnectionConsole", () => {
     assert.deepStrictEqual(executed, [FIT_COMMAND]);
   });
 
-  // The command sizes whichever terminal is active, so the console has to
-  // claim that before running it.
-  it("should claim the active terminal for the sizing", async () => {
+  it("should not take the panel back for the sizing", async () => {
     open();
     revealed.length = 0;
     await layout();
-    assert.deepStrictEqual(revealed, [true]);
+    assert.deepStrictEqual(revealed, []);
+  });
+
+  it("should not size a console the panel has not selected", async () => {
+    const console = create();
+    pty.open(OPENED);
+    await layout();
+    assert.deepStrictEqual(executed, []);
+    assert.ok(
+      payload().includes(CLEAR) && payload().includes("KX connection"),
+      `the console never started:\n${JSON.stringify(payload())}`,
+    );
+    console.dispose();
+  });
+
+  it("should start itself when no layout is ever reported", async () => {
+    open();
+    await idle();
+    assert.ok(
+      payload().includes(CLEAR) && payload().includes("KX connection"),
+      `the console never started:\n${JSON.stringify(payload())}`,
+    );
+  });
+
+  it("should size itself when no layout is ever reported", async () => {
+    open();
+    await idle();
+    assert.deepStrictEqual(executed, [FIT_COMMAND]);
+  });
+
+  it("should start once when a layout follows the wait", async () => {
+    open();
+    await idle();
+    await layout();
+    assert.strictEqual(payload().split(CLEAR).length - 1, 1);
+    assert.deepStrictEqual(executed, [FIT_COMMAND]);
+  });
+
+  it("should not start a console disposed before the wait is over", async () => {
+    const console = open();
+    console.dispose();
+    await idle();
+    assert.deepStrictEqual(executed, []);
+    assert.ok(
+      !payload().includes(CLEAR),
+      `the console started after it was disposed:\n${JSON.stringify(payload())}`,
+    );
   });
 
   it("should clear the line it was sized from, once it is sized", async () => {
@@ -235,21 +310,104 @@ describe("ConnectionConsole", () => {
     assert.deepStrictEqual(revealed, [true]);
   });
 
-  it("should write a row wider than the console as it is", async () => {
+  it("should write a row as it is until a width is reported", async () => {
     const console = await started();
     console.appendResult(["x".repeat(3000)]);
-    assert.strictEqual(payload(), "x".repeat(3000) + "\r\n");
+    assert.strictEqual(payload(), "x".repeat(3000) + "\r\n" + WIDTH_QUERY);
   });
 
-  it("should write every row of a result as it is", async () => {
+  it("should write every row as it is until a width is reported", async () => {
     const console = await started();
     console.appendResult(["a".repeat(3000), "b", "-".repeat(3000)]);
     assert.deepStrictEqual(payload().split("\r\n"), [
       "a".repeat(3000),
       "b",
       "-".repeat(3000),
-      "",
+      WIDTH_QUERY,
     ]);
+  });
+
+  it("should ask how wide it is once it is sized", async () => {
+    open();
+    await layout();
+    assert.ok(
+      payload().endsWith(WIDTH_QUERY),
+      `the console never asked how wide it is:\n${JSON.stringify(payload().slice(-40))}`,
+    );
+  });
+
+  it("should ask again after writing a result", async () => {
+    const console = await started();
+    console.appendResult(["a  b  "]);
+    assert.strictEqual(payload(), "a  b  \r\n" + WIDTH_QUERY);
+  });
+
+  it("should cut a row wider than the width it answered with", async () => {
+    const console = await sized(20);
+    console.appendResult(["x".repeat(30)]);
+    assert.strictEqual(payload(), "x".repeat(18) + ".." + "\r\n" + WIDTH_QUERY);
+  });
+
+  it("should leave a row no wider than the width it answered with", async () => {
+    const console = await sized(20);
+    console.appendResult(["x".repeat(20), "y"]);
+    assert.strictEqual(
+      payload(),
+      "x".repeat(20) + "\r\n" + "y" + "\r\n" + WIDTH_QUERY,
+    );
+  });
+
+  it("should cut every row of a result", async () => {
+    const console = await sized(10);
+    console.appendResult(["a".repeat(30), "b", "-".repeat(30)]);
+    assert.deepStrictEqual(payload().split("\r\n"), [
+      "a".repeat(8) + "..",
+      "b",
+      "-".repeat(8) + "..",
+      WIDTH_QUERY,
+    ]);
+  });
+
+  it("should cut to the width it answered with last", async () => {
+    const console = await sized(20);
+    pty.handleInput?.("\x1b[5;8R");
+    written.length = 0;
+    console.appendResult(["x".repeat(30)]);
+    assert.strictEqual(payload(), "x".repeat(6) + ".." + "\r\n" + WIDTH_QUERY);
+  });
+
+  it("should cut a result held back until a width is known", async () => {
+    const console = open();
+    console.appendResult(["x".repeat(30)]);
+    (<any>vscode.commands.executeCommand).callsFake(async () => {
+      pty.handleInput?.("\x1b[5;20R");
+    });
+    await layout();
+    assert.ok(
+      payload().includes("x".repeat(18) + ".." + "\r\n"),
+      `the result was not cut to the width it answered with:\n${JSON.stringify(payload().slice(-60))}`,
+    );
+  });
+
+  it("should not cut a line carrying ANSI", async () => {
+    const console = await sized(10);
+    console.appendResultsPointer();
+    assert.ok(
+      payload().includes(OPEN_RESULTS_HINT),
+      `the pointer was cut:\n${JSON.stringify(payload())}`,
+    );
+  });
+
+  it("should not cut a line that is not a result", async () => {
+    const console = await sized(10);
+    console.appendLine("y".repeat(30));
+    assert.strictEqual(payload(), "y".repeat(30) + "\r\n");
+  });
+
+  it("should clear the screen on ctrl+l", async () => {
+    await sized(10);
+    pty.handleInput?.("\x0c");
+    assert.strictEqual(payload(), CLEAR);
   });
 
   it("should not size a console disposed before the panel reports a layout", async () => {

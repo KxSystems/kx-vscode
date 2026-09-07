@@ -18,6 +18,10 @@ import { getConnShortName } from "../utils/core";
 const ANSI = {
   CRLF: "\r\n",
   CLEAR: "\x1b[2J\x1b[3J\x1b[H",
+  SAVE_CURSOR: "\x1b7",
+  RESTORE_CURSOR: "\x1b8",
+  TO_RIGHT_MARGIN: "\x1b[999C",
+  REPORT_CURSOR: "\x1b[6n",
   FAINT_ON: "\x1b[2m",
   FAINT_OFF: "\x1b[22m",
   BOLD_ON: "\x1b[1m",
@@ -39,7 +43,19 @@ export const OPEN_RESULTS_HINT = "kdb Results View";
 // can arrive.
 const MAX_COLUMNS = 2000;
 
+const CUT = "..";
+
+const WIDTH_QUERY =
+  ANSI.SAVE_CURSOR +
+  ANSI.TO_RIGHT_MARGIN +
+  ANSI.REPORT_CURSOR +
+  ANSI.RESTORE_CURSOR;
+
+const CURSOR_POSITION = /\[\d+;(\d+)R/;
+
 const SIZE_TO_CONTENT = "workbench.action.terminal.sizeToContentWidth";
+
+const LAYOUT_TIMEOUT = 1000;
 
 // A terminal's dimensions as a value that can be compared. VS Code reports a
 // placeholder size (80x30) before the panel has laid the terminal out, so the
@@ -61,13 +77,15 @@ export class ConnectionConsole {
 
   // Buffers output produced before the console has been sized; flushed in
   // begin() and then left undefined so writes go straight to the emitter.
-  private buffer?: string[] = [];
+  private buffer?: { text: string; fit: boolean }[] = [];
   private _exited = false;
   // The size the terminal was opened with, whether the report echoing it has
   // arrived, and whether the one sizing has been started — see {@link resize}.
   private opened = "";
   private echoed = false;
   private sizing = false;
+  private waiting?: NodeJS.Timeout;
+  private _columns = 0;
   // True while we are tearing the console down programmatically (dispose), so
   // the pty close handler can tell a user-initiated close apart from our own.
   private disposing = false;
@@ -107,24 +125,38 @@ export class ConnectionConsole {
     return text.replace(/(?:\r\n|[\r\n])/gs, ANSI.CRLF);
   }
 
-  private send(data: string): void {
+  private fit(text: string): string {
+    const width = this._columns;
+    if (!width) {
+      return text;
+    }
+    return text
+      .split(ANSI.CRLF)
+      .map((line) =>
+        line.length <= width
+          ? line
+          : line.slice(0, Math.max(0, width - CUT.length)) + CUT,
+      )
+      .join(ANSI.CRLF);
+  }
+
+  private send(data: string, fit = false): void {
     if (this.buffer) {
-      this.buffer.push(data);
+      this.buffer.push({ text: data, fit });
     } else {
-      this.onDidWrite.fire(data);
+      this.onDidWrite.fire(fit ? this.fit(data) + WIDTH_QUERY : data);
     }
   }
 
   /**
    * Writes a blank line {@link MAX_COLUMNS} wide as the console opens, wide
-   * enough for any result a q process can render, and reveals the terminal so
-   * the panel lays it out. {@link resize} takes over from there; nothing is
-   * shown in the console until it has.
+   * enough for any result a q process can render. Nothing is shown in the
+   * console until it has been sized.
    */
   private open(dimensions?: vscode.TerminalDimensions): void {
     this.opened = layout(dimensions);
     this.onDidWrite.fire(" ".repeat(MAX_COLUMNS) + ANSI.CRLF);
-    this.pty.show(true);
+    this.waiting = setTimeout(() => this.start(), LAYOUT_TIMEOUT);
   }
 
   /**
@@ -142,20 +174,29 @@ export class ConnectionConsole {
       this.echoed = true;
       return;
     }
+    this.start();
+  }
+
+  private start(): void {
+    if (this.sizing || this._exited) {
+      return;
+    }
     this.sizing = true;
+    clearTimeout(this.waiting);
+    this.waiting = undefined;
     void this.size();
   }
 
   /**
    * Runs the sizing and then starts the console. `sizeToContentWidth` sizes
-   * whichever terminal is active, so the console claims that first. The screen
-   * is cleared only once the sizing is done, the wide line being what it
-   * measures.
+   * whichever terminal is active. The screen is cleared only once the sizing
+   * is done, the wide line being what it measures.
    */
   private async size(): Promise<void> {
     try {
-      this.pty.show(true);
-      await vscode.commands.executeCommand(SIZE_TO_CONTENT);
+      if (vscode.window.activeTerminal === this.pty) {
+        await vscode.commands.executeCommand(SIZE_TO_CONTENT);
+      }
     } finally {
       this.begin();
     }
@@ -175,12 +216,23 @@ export class ConnectionConsole {
         ANSI.CRLF +
         ANSI.CRLF,
     );
-    this.buffer?.forEach((data) => this.onDidWrite.fire(data));
+    this.buffer?.forEach(({ text, fit }) =>
+      this.onDidWrite.fire(fit ? this.fit(text) + WIDTH_QUERY : text),
+    );
     this.buffer = undefined;
+    this.measure();
+  }
+
+  private measure(): void {
+    if (!this._exited) {
+      this.onDidWrite.fire(WIDTH_QUERY);
+    }
   }
 
   private close(): void {
     this._exited = true;
+    clearTimeout(this.waiting);
+    this.waiting = undefined;
     this.onDidWrite.dispose();
     // Closing the terminal from the UI disconnects the connection; when we are
     // the ones disposing it (disconnect flow) the flag suppresses the callback.
@@ -191,7 +243,10 @@ export class ConnectionConsole {
 
   // Output-only: the only accepted key is Ctrl+L to clear the screen.
   private handleInput(data: string): void {
-    if (data === KEY.CTRL_L) {
+    const position = CURSOR_POSITION.exec(data);
+    if (position) {
+      this._columns = parseInt(position[1], 10);
+    } else if (data === KEY.CTRL_L) {
       this.send(ANSI.CLEAR);
     }
   }
@@ -209,7 +264,7 @@ export class ConnectionConsole {
 
   /** Writes the lines of a result. */
   appendResult(lines: string[]): void {
-    this.write(lines.join("\n"));
+    this.send(this.normalize(lines.join("\n")) + ANSI.CRLF, true);
   }
 
   /** Writes whole rows, each on a line of its own. */
@@ -249,6 +304,8 @@ export class ConnectionConsole {
   dispose(): void {
     this._exited = true;
     this.disposing = true;
+    clearTimeout(this.waiting);
+    this.waiting = undefined;
     this.pty.dispose();
   }
 }
