@@ -1,0 +1,86 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag whose VSIX to publish (e.g. v1.20.0)"
+        required: true
+        default: v1.20.0
+      registry:
+        description: "Registry to publish to"
+        required: true
+        type: choice
+        default: open-vsx
+        options:
+          - open-vsx
+          - marketplace
+          - both
+
+permissions:
+  contents: read
+
+jobs:
+  publish-marketplace:
+    if: inputs.registry == 'marketplace' || inputs.registry == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Tag Var
+        id: vars
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          VERSION=${TAG#v}
+          echo "run_tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+      - name: Download VSIX file from the release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          gh release download "$TAG" \
+            --repo ${{ github.repository }} --pattern "*.vsix" --clobber
+          ls -l ./*.vsix
+      - name: Publish to VSCode Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          npx --yes @vscode/vsce@3.9.2 publish --skip-duplicate \
+            -i kdb-${{ steps.vars.outputs.run_tag }}.vsix
+
+  publish-openvsx:
+    if: inputs.registry == 'open-vsx' || inputs.registry == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Tag Var
+        id: vars
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          VERSION=${TAG#v}
+          echo "run_tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+      - name: Download VSIX file from the release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          gh release download "$TAG" \
+            --repo ${{ github.repository }} --pattern "*.vsix" --clobber
+          ls -l ./*.vsix
+      - name: Check Open VSX for the version
+        id: ovsx
+        run: |
+          URL=https://open-vsx.org/api/KX/kdb/${{ steps.vars.outputs.run_tag }}
+          if curl -sf -o /dev/null "$URL"; then
+            echo "::warning::${{ steps.vars.outputs.tag }} is already on Open VSX. Skipping publish."
+            echo "published=true" >> $GITHUB_OUTPUT
+          else
+            echo "published=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Publish to Open VSX Registry
+        if: steps.ovsx.outputs.published == 'false'
+        uses: HaaLeo/publish-vscode-extension@v2
+        with:
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
+          extensionFile: kdb-${{ steps.vars.outputs.run_tag }}.vsix

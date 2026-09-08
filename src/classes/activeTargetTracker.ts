@@ -19,12 +19,16 @@ import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 
 /**
- * Wires focus-driven activation: the last-focused KX target terminal (a REPL
- * terminal or a connection output console) becomes the single active target
- * that unassigned files run on. Focusing the editor or a non-KX terminal keeps
- * the current active target. The tree's green icon (`ext.activeConnection`) is
- * kept in sync — a focused connection console activates that connection; a
- * focused REPL clears the active connection so none shows as active.
+ * Wires terminal-driven activation: the KX target terminal the terminal panel
+ * has selected (a REPL terminal or a connection output console) becomes the
+ * single active target that unassigned files run on. Selecting the editor or a
+ * non-KX terminal keeps the current active target. The tree's green icon
+ * (`ext.activeConnection`) is kept in sync — an active connection console
+ * activates that connection; an active REPL clears the active connection so
+ * none shows as active.
+ *
+ * Selection, not keyboard focus: `Terminal.show(true)` preserves the caret but
+ * still makes the terminal active, so revealing a console activates it.
  */
 export function initActiveTargetTracking(): vscode.Disposable {
   const connMngService = new ConnectionManagementService();

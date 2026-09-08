@@ -393,6 +393,14 @@ describe("Executing on a kdb+ connection", () => {
 
       assert.ok(shown.includes(RESULT), `the result was not shown:\n${shown}`);
     });
+
+    it("can be sized to its content width", async () => {
+      const commands = await vscode.commands.getCommands(true);
+      assert.ok(
+        commands.includes("workbench.action.terminal.sizeToContentWidth"),
+        "VS Code no longer provides the size-to-content-width command",
+      );
+    });
   });
 
   // Last, because it takes the connection down and puts it back.
