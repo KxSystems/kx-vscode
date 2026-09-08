@@ -24,7 +24,7 @@ import {
 
 const MAX_COLUMNS = 2000;
 const CLEAR = "\x1b[2J\x1b[3J\x1b[H";
-const WIDTH_QUERY = "\x1b7\x1b[999C\x1b[6n\x1b8";
+const WIDTH_QUERY = `\x1b7\x1b[${MAX_COLUMNS}G\x1b[6n\x1b8`;
 const FIT_COMMAND = "workbench.action.terminal.sizeToContentWidth";
 // The size a pty is opened with, echoed back in the first report, and the
 // layout the panel reports once it has laid the terminal out.

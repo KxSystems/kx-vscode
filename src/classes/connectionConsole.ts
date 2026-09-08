@@ -15,12 +15,16 @@ import * as vscode from "vscode";
 
 import { getConnShortName } from "../utils/core";
 
+// The widest a q process renders its console to, and so the widest a result
+// can arrive.
+const MAX_COLUMNS = 2000;
+
 const ANSI = {
   CRLF: "\r\n",
   CLEAR: "\x1b[2J\x1b[3J\x1b[H",
   SAVE_CURSOR: "\x1b7",
   RESTORE_CURSOR: "\x1b8",
-  TO_RIGHT_MARGIN: "\x1b[999C",
+  TO_RIGHT_MARGIN: `\x1b[${MAX_COLUMNS}G`,
   REPORT_CURSOR: "\x1b[6n",
   FAINT_ON: "\x1b[2m",
   FAINT_OFF: "\x1b[22m",
@@ -38,10 +42,6 @@ const KEY = {
  * Results view — terminals do not allow `command:` hyperlinks directly.
  */
 export const OPEN_RESULTS_HINT = "kdb Results View";
-
-// The widest a q process renders its console to, and so the widest a result
-// can arrive.
-const MAX_COLUMNS = 2000;
 
 const CUT = "..";
 
