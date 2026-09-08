@@ -309,7 +309,7 @@ export class ConnectionManagementService {
       this.disconnect(connLabel),
     );
     ext.connectionConsoles.set(connLabel, console);
-    // Reveal (and focus) the new console so it becomes the active target.
+    // Reveal the new console, leaving the caret where it is.
     console.reveal();
   }
 

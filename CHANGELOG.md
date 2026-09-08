@@ -3,6 +3,16 @@
 All notable changes to the **kdb VS Code extension** are documented in this
 file.
 
+# v1.20.1
+
+### Enhancements
+
+- The [output console](../guides/views/results.md#output-console) now supports
+  wider output, allowing you to scroll horizontally through wide tables instead
+  of truncating them to the visible panel width. Rows that exceed the maximum
+  console width are truncated rather than wrapped, which is consistent with q
+  console behavior.
+
 # v1.20.0
 
 ### Enhancements
