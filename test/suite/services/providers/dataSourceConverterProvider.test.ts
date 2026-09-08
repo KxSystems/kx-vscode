@@ -23,7 +23,6 @@ import { QueryEditorProvider } from "../../../../src/services/queryEditorProvide
 import * as workspaceUtils from "../../../../src/utils/workspace";
 
 describe("dataSourceConverterProvider", () => {
-  const context = <vscode.ExtensionContext>{};
   const source = vscode.Uri.file("/tmp/datasource.kdb.json");
   const target = vscode.Uri.file("/tmp/datasource.kxquery");
   const document = <vscode.TextDocument>{ uri: source };
@@ -49,19 +48,11 @@ describe("dataSourceConverterProvider", () => {
     sinon.restore();
   });
 
-  it("should recognize the files it converts", () => {
-    assert.strictEqual(DataSourceConverterProvider.isConvertible(source), true);
-    assert.strictEqual(
-      DataSourceConverterProvider.isConvertible(target),
-      false,
-    );
-  });
-
   it("should open what it wrote and close itself", async () => {
     convertDataSource.resolves({ target, written: true });
     const panel = createPanel();
 
-    await new DataSourceConverterProvider(context).resolveCustomTextEditor(
+    await new DataSourceConverterProvider().resolveCustomTextEditor(
       document,
       panel.panel,
     );
@@ -75,7 +66,7 @@ describe("dataSourceConverterProvider", () => {
     convertDataSource.resolves({ target, written: false });
     const panel = createPanel();
 
-    await new DataSourceConverterProvider(context).resolveCustomTextEditor(
+    await new DataSourceConverterProvider().resolveCustomTextEditor(
       document,
       panel.panel,
     );
@@ -89,7 +80,7 @@ describe("dataSourceConverterProvider", () => {
     convertDataSource.resolves(undefined);
     const panel = createPanel();
 
-    await new DataSourceConverterProvider(context).resolveCustomTextEditor(
+    await new DataSourceConverterProvider().resolveCustomTextEditor(
       document,
       panel.panel,
     );

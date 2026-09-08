@@ -22,6 +22,7 @@ import * as dataSourceCommand from "../../../../src/commands/dataSourceCommand";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
 import { ext } from "../../../../src/extensionVariables";
 import { QueryCommand } from "../../../../src/models/messages";
+import { MetaObject, MetaObjectPayload } from "../../../../src/models/meta";
 import { createQsql } from "../../../../src/models/query";
 import { ConnectionManagementService } from "../../../../src/services/connectionManagerService";
 import { InsightsNode } from "../../../../src/services/kdbTreeProvider";
@@ -183,6 +184,57 @@ describe("queryEditorProvider", () => {
       assert.deepStrictEqual(
         queries.map((query) => query.name),
         ["qSQL", "SQL", ".kxi.getData"],
+      );
+    });
+
+    it("should offer the built in queries when the meta has no assembly key", async () => {
+      ext.connectedContextStrings.push(insightsConn.connLabel);
+      ext.connectedConnectionList.push(insightsConn);
+      isConnectedStub.returns(true);
+      insightsConn.meta = <MetaObject>{ payload: <MetaObjectPayload>{} };
+      const provider = new QueryEditorProvider(context);
+      const queries = await provider.getQueries(insightsConn.connLabel);
+      assert.deepStrictEqual(
+        queries.map((query) => query.name),
+        ["qSQL", "SQL", ".kxi.getData"],
+      );
+    });
+
+    it("should say a connection has no database only once", async () => {
+      ext.connectedContextStrings.push(insightsConn.connLabel);
+      ext.connectedConnectionList.push(insightsConn);
+      isConnectedStub.returns(true);
+      insightsConn.meta = getMetaNoAssemblyResponse;
+      const warning = sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves(<any>undefined);
+      const provider = new QueryEditorProvider(context);
+
+      await provider.getQueries(insightsConn.connLabel);
+      await provider.getQueries(insightsConn.connLabel);
+
+      sinon.assert.calledOnce(warning);
+    });
+
+    it("should notice a database that turns up later", async () => {
+      ext.connectedContextStrings.push(insightsConn.connLabel);
+      ext.connectedConnectionList.push(insightsConn);
+      isConnectedStub.returns(true);
+      insightsConn.meta = getMetaNoAssemblyResponse;
+      const provider = new QueryEditorProvider(context);
+
+      assert.notStrictEqual(
+        await provider.getQueries(insightsConn.connLabel),
+        await provider.getQueries(insightsConn.connLabel),
+        "a connection with no database should be asked again",
+      );
+
+      insightsConn.meta = getMetaResponse;
+
+      assert.strictEqual(
+        await provider.getQueries(insightsConn.connLabel),
+        await provider.getQueries(insightsConn.connLabel),
+        "the database that turned up should be read and held",
       );
     });
 

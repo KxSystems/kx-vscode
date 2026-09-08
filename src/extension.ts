@@ -226,7 +226,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
 
     QueryEditorProvider.register(context),
-    DataSourceConverterProvider.register(context),
+    DataSourceConverterProvider.register(),
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(

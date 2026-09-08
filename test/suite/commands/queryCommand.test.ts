@@ -30,6 +30,7 @@ import {
   DataSourceFiles,
   DataSourceTypes,
 } from "../../../src/models/dataSource";
+import { convertTimeToTimestamp } from "../../../src/utils/dataSource";
 
 describe("queryCommand", () => {
   const uri = vscode.Uri.file("/tmp/datasource.kdb.json");
@@ -98,7 +99,36 @@ describe("queryCommand", () => {
         query.params.map((param) => [param.name, param.value]),
       );
       assert.strictEqual(values.table, "trades");
-      assert.strictEqual(values.startTS, "2024-01-01T00:00:00.000000000");
+      assert.strictEqual(
+        values.startTS,
+        convertTimeToTimestamp("2024-01-01T00:00:00.000000000"),
+      );
+      assert.strictEqual(
+        values.endTS,
+        convertTimeToTimestamp("2024-01-02T00:00:00.000000000"),
+      );
+    });
+
+    it("should leave a time it cannot read alone", () => {
+      const query = toGetDataQuery(
+        createDataSource(DataSourceTypes.API, {
+          api: { table: "trades", startTS: "not a time", endTS: "" },
+        }),
+      );
+      const values = Object.fromEntries(
+        query.params.map((param) => [param.name, param.value]),
+      );
+      assert.strictEqual(values.startTS, "not a time");
+      assert.strictEqual(values.endTS, undefined);
+    });
+
+    it("should take a datasource with nothing in it", () => {
+      const query = toGetDataQuery(<DataSourceFiles>{});
+      assert.strictEqual(query.name, ".kxi.getData");
+      assert.ok(
+        query.params.every((param) => param.value === undefined),
+        "no parameter should have been given a value",
+      );
     });
 
     it("should fold the filter model into a JSON parameter", () => {

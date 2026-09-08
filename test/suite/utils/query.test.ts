@@ -186,6 +186,26 @@ describe("query", () => {
       ]);
     });
 
+    it("should offer no tier for a DAP with no instance", () => {
+      const targets = parseTargets(
+        <MetaObjectPayload>{
+          dap: [{ assembly: "assembly-qe", instance: "", dap: "rdb-1:1234" }],
+        },
+        "1.13",
+      );
+      assert.deepStrictEqual(targets, ["assembly"]);
+    });
+
+    it("should offer nothing at all for a DAP with no instance before 1.13", () => {
+      const targets = parseTargets(
+        <MetaObjectPayload>{
+          dap: [{ assembly: "assembly-qe", instance: "", dap: "rdb-1:1234" }],
+        },
+        "1.12",
+      );
+      assert.deepStrictEqual(targets, []);
+    });
+
     it("should leave the assembly out before 1.13", () => {
       const targets = parseTargets(
         <MetaObjectPayload>{
@@ -250,6 +270,13 @@ describe("query", () => {
     it("should send the limit as a number", () => {
       const payload = buildGetDataPayload(getData({ limit: "-500" }));
       assert.strictEqual(payload.limit, -500);
+    });
+
+    it("should refuse a limit that is not a number", () => {
+      assert.throws(
+        () => buildGetDataPayload(getData({ limit: "a lot" })),
+        /limit parameter is not a number/,
+      );
     });
 
     it("should refuse a structured parameter that is not JSON", () => {

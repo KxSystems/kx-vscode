@@ -612,6 +612,57 @@ describe("KdbQueryView", () => {
       view.setRows(filter, [["", ">", ""]]);
       assert.strictEqual(filter.value, "");
     });
+
+    it("should keep a half filled row over an update", () => {
+      const filter = view.query!.params.find(
+        (param) => param.name === "filter",
+      )!;
+      filter.isVisible = true;
+      view.setRows(filter, [["price", ">", ""]]);
+
+      view.message(createUpdate({ file: view.file, queries: [view.query!] }));
+
+      assert.deepStrictEqual(
+        view.rowsOf(
+          view.query!.params.find((param) => param.name === "filter")!,
+        ),
+        [["price", ">", ""]],
+      );
+    });
+
+    it("should take the rows of an update that changed them", () => {
+      const filter = view.query!.params.find(
+        (param) => param.name === "filter",
+      )!;
+      filter.isVisible = true;
+      view.setRows(filter, [["price", ">", ""]]);
+
+      const edited = createGetData();
+      const changed = edited.params.find((param) => param.name === "filter")!;
+      changed.isVisible = true;
+      changed.value = JSON.stringify([["<", "size", 10]]);
+      view.message(
+        createUpdate({
+          file: { version: 1, query: edited },
+          queries: [edited],
+        }),
+      );
+
+      assert.deepStrictEqual(view.rowsOf(changed), [["size", "<", "10"]]);
+    });
+
+    it("should forget the rows of the query it left", () => {
+      const filter = view.query!.params.find(
+        (param) => param.name === "filter",
+      )!;
+      filter.isVisible = true;
+      view.setRows(filter, [["price", ">", ""]]);
+
+      view.message(createUpdate({ file: { version: 1, query: createSql() } }));
+      view.message(createUpdate({ file: view.file, queries: [view.query!] }));
+
+      assert.strictEqual(view.query?.name, "SQL");
+    });
   });
 
   describe("text queries", () => {

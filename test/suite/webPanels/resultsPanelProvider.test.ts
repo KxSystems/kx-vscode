@@ -292,14 +292,12 @@ describe("ResultsPanelProvider", () => {
             headerName: "prop1 [type1]",
             cellDataType: "text",
             isKey: false,
-            cellRendererParams: { disabled: false },
           },
           {
             field: "prop2",
             headerName: "prop2 [type2]",
             cellDataType: "text",
             isKey: false,
-            cellRendererParams: { disabled: false },
           },
         ],
       });
@@ -843,14 +841,12 @@ describe("ResultsPanelProvider", () => {
           headerName: "date [dates]",
           cellDataType: "text",
           isKey: false,
-          cellRendererParams: { disabled: false },
         },
         {
           field: "instance",
           headerName: "instance [symbols]",
           cellDataType: "text",
           isKey: false,
-          cellRendererParams: { disabled: false },
         },
       ];
 

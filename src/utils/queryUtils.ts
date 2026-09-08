@@ -623,6 +623,7 @@ export function resetScratchpadStarted(connLabel: string) {
 }
 
 export const enum RunFlag {
+  Populate = 0b0000000000,
   Run = 0b0000000001,
   Workbook = 0b0000000010,
   Notebook = 0b0000000100,

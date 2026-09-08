@@ -148,6 +148,14 @@ optional — leaving `startTS` and `endTS` empty queries the table unbounded, so
 it is worth setting them on anything large. A parameter marked `*` is required;
 symbol and string parameters may be left empty.
 
+### Timestamps and timezones
+
+A timestamp is sent exactly as the field shows it — the editor does no timezone
+conversion of its own. Insights reads `startTS` and `endTS` as UTC unless the
+request says otherwise, so a query written as `09:30` asks for 09:30 UTC. Add
+`inputTZ` to have them read in another zone (`America/New_York`, say), and
+`outputTZ` to have the timestamp columns of the result reported in one.
+
 ## Running
 
 **Run** executes the query on the selected connection and writes the result to
@@ -167,6 +175,11 @@ Editing a field writes the file as you type; **Save** commits it to disk.
 | UDA           | a `.kxquery` running the same UDA                                                                   |
 | QSQL          | a `.kxquery` running qSQL, with the execution target, the aggregation and the labels carried over   |
 | SQL           | a `.kxquery` running SQL, with the query carried over                                               |
+
+Datasource time ranges were entered in local time and sent as UTC, so conversion
+rewrites `startTS` and `endTS` to the UTC instants the datasource asked for. The
+converted query therefore covers the same range as the original, and reads as
+UTC from then on like every other query file.
 
 A converted QSQL query keeps the target the datasource named even when the
 connection you open it against does not offer it, so nothing is lost by

@@ -29,6 +29,7 @@ import {
   toValues,
 } from "../models/query";
 import { UDA } from "../models/uda";
+import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { setParamValue } from "../utils/query";
 
@@ -98,8 +99,14 @@ function toQuery(dataSource: DataSourceFiles): UDA | undefined {
   }
 }
 
+function legacyTimestamp(value: string | undefined) {
+  return value && !isNaN(Date.parse(value))
+    ? convertTimeToTimestamp(value)
+    : value;
+}
+
 function getLegacyApiBody(dataSource: DataSourceFiles) {
-  const api = <any>dataSource.dataSource.api;
+  const api = <any>dataSource?.dataSource?.api || {};
   if (api.payload) {
     return api.payload;
   }
@@ -107,8 +114,8 @@ function getLegacyApiBody(dataSource: DataSourceFiles) {
   const optional = api.optional;
   const payload: any = {
     table: api.table,
-    startTS: api.startTS,
-    endTS: api.endTS,
+    startTS: legacyTimestamp(api.startTS),
+    endTS: legacyTimestamp(api.endTS),
   };
 
   if (optional) {
@@ -201,10 +208,18 @@ export async function convertDataSource(
     return { target, written: false };
   }
 
-  const file: QueryFile = {
-    version: 1,
-    query: toQuery(<DataSourceFiles>content),
-  };
+  let file: QueryFile;
+
+  try {
+    file = { version: 1, query: toQuery(<DataSourceFiles>content) };
+  } catch (error) {
+    notify(
+      `${uri.path} is not a datasource this can convert.`,
+      MessageKind.ERROR,
+      { logger, params: error },
+    );
+    return undefined;
+  }
 
   await write(target, JSON.stringify(file, null, 2), uri);
   return { target, written: true };

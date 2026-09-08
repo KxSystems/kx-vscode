@@ -14,9 +14,7 @@
 import {
   CustomTextEditorProvider,
   Disposable,
-  ExtensionContext,
   TextDocument,
-  Uri,
   WebviewPanel,
   window,
 } from "vscode";
@@ -38,18 +36,11 @@ const logger = "dataSourceConverterProvider";
 export class DataSourceConverterProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.dataSourceConverter";
 
-  public static register(context: ExtensionContext): Disposable {
-    const provider = new DataSourceConverterProvider(context);
+  public static register(): Disposable {
     return window.registerCustomEditorProvider(
       DataSourceConverterProvider.viewType,
-      provider,
+      new DataSourceConverterProvider(),
     );
-  }
-
-  constructor(private readonly context: ExtensionContext) {}
-
-  static isConvertible(uri: Uri) {
-    return uri.path.endsWith(".kdb.json");
   }
 
   async resolveCustomTextEditor(

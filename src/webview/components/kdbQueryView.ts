@@ -98,15 +98,29 @@ export class KdbQueryView extends LitElement {
       // carries whatever its .kdb.json held, so `params` may be absent
       // altogether or list none of the distinguished ones.
       const stored = msg.file.query;
+      const previous = this.query?.name;
       this.query =
         !stored || isBuiltin(stored)
           ? stored
           : this.withDistinguishedParams(stored);
       this.drafts = msg.file.drafts || [];
-      this.editing.clear();
+      if (this.query?.name === previous) {
+        this.pruneEditing();
+      } else {
+        this.editing.clear();
+      }
       this.requestUpdate();
     }
   };
+
+  private pruneEditing() {
+    for (const [name, rows] of this.editing) {
+      const param = this.query?.params?.find((item) => item.name === name);
+      if (!param?.rows || serializeRows(param, rows) !== (param.value ?? "")) {
+        this.editing.delete(name);
+      }
+    }
+  }
 
   get file(): QueryFile {
     const file: QueryFile = { version: 1, query: this.query };

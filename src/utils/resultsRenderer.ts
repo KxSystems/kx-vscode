@@ -151,7 +151,6 @@ export function updatedExtractColumnDefs(results: StructuredTextResults) {
       headerName: headerName,
       cellDataType,
       isKey: !!column.isKey,
-      cellRendererParams: { disabled: cellDataType === "boolean" },
     };
   });
 

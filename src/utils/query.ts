@@ -66,6 +66,9 @@ export function parseTargets(
     if (distributed) {
       targets.add(assembly);
     }
+    if (!dap.instance) {
+      continue;
+    }
     const tier = `${assembly} ${dap.instance}`;
     targets.add(tier);
     if (dap.dap) {
@@ -157,7 +160,13 @@ export function buildGetDataPayload(query: UDA): Partial<getDataBodyPayload> {
       }
       payload[name] = parseStructured(param.name, String(value)) as never;
     } else if (param.name === "limit") {
-      payload.limit = Number(value);
+      const limit = Number(value);
+      if (!Number.isFinite(limit)) {
+        throw new Error(
+          `The limit parameter is not a number. Give it a value like 1000.`,
+        );
+      }
+      payload.limit = limit;
     } else {
       payload[name] = String(value) as never;
     }

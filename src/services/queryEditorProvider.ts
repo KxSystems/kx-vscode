@@ -73,6 +73,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
   private cache = new Map<string, UDA[]>();
   private tables = new Map<string, { [table: string]: string[] }>();
   private targets = new Map<string, string[]>();
+  private warned = new Set<string>();
 
   constructor(private readonly context: ExtensionContext) {}
 
@@ -90,18 +91,21 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
     const connection = connMngService.retrieveConnectedConnection(connLabel);
     if (
       !(connection instanceof InsightsConnection) ||
-      !connection.meta ||
-      connection.meta.payload.assembly.length === 0
+      !connection.meta?.payload?.assembly?.length
     ) {
-      notify(
-        "No database running in this Insights connection.",
-        MessageKind.WARNING,
-        { logger },
-      );
+      if (!this.warned.has(connLabel)) {
+        this.warned.add(connLabel);
+        notify(
+          "No database running in this Insights connection.",
+          MessageKind.WARNING,
+          { logger },
+        );
+      }
       return parseQueryList(<MetaObjectPayload>{});
     }
 
     const queries = parseQueryList(connection.meta.payload);
+    this.warned.delete(connLabel);
     this.cache.set(connLabel, queries);
     this.tables.set(connLabel, parseTables(connection.meta.payload));
     this.targets.set(
@@ -221,6 +225,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
             this.cache.delete(selectedServer);
             this.tables.delete(selectedServer);
             this.targets.delete(selectedServer);
+            this.warned.delete(selectedServer);
             updateWebview();
           });
           runner.location = ProgressLocation.Notification;
@@ -302,7 +307,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
           runner.location = ProgressLocation.Notification;
           runner.title = `Populating scratchpad on ${msg.selectedServer}.`;
           await execute(runner);
-          notifyExecution(0, queryType(msg.file));
+          notifyExecution(RunFlag.Populate, queryType(msg.file));
           break;
         }
       }

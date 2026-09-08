@@ -582,6 +582,45 @@ describe("dataSourceCommand", () => {
       ext.connectedConnectionList.length = 0;
     });
 
+    it("should refuse the same file twice and let another one through", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      let release: (value: unknown) => void = () => undefined;
+      getDataInsightsStub.returns(
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+      );
+      ext.isResultsTabVisible = true;
+
+      const first = dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "one.kxquery",
+      );
+      const blocked = await dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "one.kxquery",
+      );
+      const other = dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "two.kxquery",
+      );
+
+      release({ error: "" });
+      await Promise.all([first, other]);
+
+      assert.strictEqual(blocked, undefined);
+      sinon.assert.calledTwice(getDataInsightsStub);
+
+      ext.connectedConnectionList.length = 0;
+    });
+
     it("should report and record a query that threw instead of returning", async () => {
       ext.connectedConnectionList.push(insightsConn);
       retrieveConnStub.resolves(insightsConn);

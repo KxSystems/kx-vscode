@@ -45,7 +45,7 @@ import { validateScratchpadOutputVariableName } from "../validators/interfaceVal
 
 const logger = "dataSourceCommand";
 
-let running = false;
+const running = new Set<string>();
 
 export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
@@ -98,7 +98,14 @@ export async function runDataSource(
   token?: CancellationToken,
   timeout?: number,
 ): Promise<any> {
-  if (running) {
+  const key = `${connLabel} ${executorName}`;
+
+  if (running.has(key)) {
+    notify(
+      `${executorName} is already running on ${connLabel}.`,
+      MessageKind.WARNING,
+      { logger },
+    );
     return;
   }
 
@@ -107,7 +114,7 @@ export async function runDataSource(
     return;
   }
 
-  running = true;
+  running.add(key);
   const connMngService = new ConnectionManagementService();
   const selectedConnection =
     connMngService.retrieveConnectedConnection(connLabel);
@@ -249,7 +256,7 @@ export async function runDataSource(
     }
   } finally {
     ext.isDatasourceExecution = false;
-    running = false;
+    running.delete(key);
   }
 }
 

@@ -1171,9 +1171,7 @@ describe("serverCommand", () => {
   });
 
   describe("activeConnection", () => {
-    let setActiveConnectionStub,
-      refreshDataSourcesPanelStub,
-      reloadStub: sinon.SinonStub;
+    let setActiveConnectionStub, reloadStub: sinon.SinonStub;
 
     beforeEach(() => {
       setActiveConnectionStub = sinon.stub(

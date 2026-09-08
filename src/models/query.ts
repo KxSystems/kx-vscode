@@ -533,7 +533,7 @@ function isComplete(fields: UDAParamField[], row: string[]) {
       return;
     }
     const at = field.at ?? index;
-    slots.set(at, slots.get(at) || false || !!row[index]);
+    slots.set(at, slots.get(at) || !!row[index]);
   });
 
   return slots.size > 0 && [...slots.values()].every((given) => given);
