@@ -98,7 +98,7 @@ before connecting.
 
 | Query   | Parameters                                                                                                                |
 | :------ | :------------------------------------------------------------------------------------------------------------------------ |
-| qSQL    | `target` (a tier, a DAP process, or an assembly alone for every tier of it, from Insights 1.13), `query`, `agg`, `labels` |
+| qSQL    | `target` (a tier, a DAP process, or an assembly alone for the RC to choose, from Insights 1.13), `query`, `agg`, `labels` |
 | SQL     | `query`                                                                                                                   |
 | getData | the fields of the getData request                                                                                         |
 

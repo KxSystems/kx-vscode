@@ -25,6 +25,7 @@ import { MetaObjectPayload } from "../models/meta";
 import {
   DISTRIBUTED_SINCE,
   GET_DATA,
+  LabelSet,
   QueryFile,
   createGetData,
   createQsql,
@@ -98,6 +99,31 @@ export function parseTables(meta: MetaObjectPayload) {
   }
 
   return tables;
+}
+
+const NOT_A_LABEL = new Set(["assembly", "tbls", "instances"]);
+
+export function parseLabels(meta: MetaObjectPayload): LabelSet[] {
+  const sets: LabelSet[] = [];
+
+  const named = (entry: [string, unknown]): entry is [string, string] =>
+    !NOT_A_LABEL.has(entry[0]) && typeof entry[1] === "string";
+
+  for (const assembly of meta.assembly || []) {
+    const labels = [
+      ...Object.entries(assembly).filter(named),
+      ...Object.entries(assembly.labels || {}).filter(named),
+    ];
+
+    if (labels.length > 0) {
+      sets.push({
+        tables: [...(assembly.tbls || [])],
+        labels: Object.fromEntries(labels),
+      });
+    }
+  }
+
+  return sets;
 }
 
 const TIMESTAMPS = ["startTS", "endTS"];

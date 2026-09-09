@@ -16,13 +16,14 @@
 import * as assert from "assert";
 
 import { DataSourceTypes } from "../../../src/models/dataSource";
-import { MetaObjectPayload } from "../../../src/models/meta";
+import { MetaAssembly, MetaObjectPayload } from "../../../src/models/meta";
 import {
   applyDraft,
   createGetData,
   createQsql,
   createRow,
   createSql,
+  labelsForTable,
   parseRows,
   serializeRows,
   toDraft,
@@ -34,6 +35,7 @@ import {
 } from "../../../src/models/uda";
 import {
   buildGetDataPayload,
+  parseLabels,
   parseQueryList,
   parseTables,
   parseTargets,
@@ -137,6 +139,92 @@ describe("query", () => {
       });
 
       assert.ok(!queries.some((query) => query.name === ".kxi.preview"));
+    });
+  });
+
+  describe("parseLabels", () => {
+    const meta = <MetaObjectPayload>{
+      assembly: <MetaAssembly[]>[
+        {
+          assembly: "trades-qe",
+          tbls: ["trade"],
+          labels: { kxname: "trades", region: "emea" },
+        },
+        {
+          assembly: "quotes-qe",
+          tbls: ["quote"],
+          labels: { kxname: "quotes", region: "amer" },
+        },
+      ],
+    };
+
+    it("should take the labels each assembly carries", () => {
+      assert.deepStrictEqual(parseLabels(meta), [
+        { tables: ["trade"], labels: { kxname: "trades", region: "emea" } },
+        { tables: ["quote"], labels: { kxname: "quotes", region: "amer" } },
+      ]);
+    });
+
+    it("should pass over an assembly with no labels of its own", () => {
+      assert.deepStrictEqual(
+        parseLabels(<MetaObjectPayload>{
+          assembly: <MetaAssembly[]>[{ assembly: "a", tbls: ["trade"] }],
+        }),
+        [],
+      );
+    });
+
+    it("should take the labels an entry spreads over itself", () => {
+      assert.deepStrictEqual(
+        parseLabels(<MetaObjectPayload>{
+          assembly: <MetaAssembly[]>[
+            { assembly: "trades-qe", tbls: ["trade"], kxname: "trades" },
+          ],
+        }),
+        [{ tables: ["trade"], labels: { kxname: "trades" } }],
+      );
+    });
+
+    it("should keep only the labels that name a value", () => {
+      assert.deepStrictEqual(
+        parseLabels(<MetaObjectPayload>{
+          assembly: <MetaAssembly[]>[
+            {
+              assembly: "a",
+              tbls: [],
+              labels: <never>{ kxname: "a", nested: { deep: "value" } },
+            },
+          ],
+        }),
+        [{ tables: [], labels: { kxname: "a" } }],
+      );
+    });
+
+    it("should narrow the suggestions to the table asked about", () => {
+      assert.deepStrictEqual(labelsForTable(parseLabels(meta), "quote"), {
+        kxname: ["quotes"],
+        region: ["amer"],
+      });
+    });
+
+    it("should offer every label while no table is named", () => {
+      assert.deepStrictEqual(labelsForTable(parseLabels(meta)), {
+        kxname: ["trades", "quotes"],
+        region: ["emea", "amer"],
+      });
+    });
+
+    it("should offer a value shared by two assemblies once", () => {
+      const sets = parseLabels(<MetaObjectPayload>{
+        assembly: <MetaAssembly[]>[
+          { assembly: "a", tbls: ["trade"], labels: { region: "emea" } },
+          { assembly: "b", tbls: ["trade"], labels: { region: "emea" } },
+        ],
+      });
+
+      assert.deepStrictEqual(labelsForTable(sets, "trade"), {
+        region: ["emea"],
+      });
     });
   });
 

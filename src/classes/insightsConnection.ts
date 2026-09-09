@@ -51,7 +51,10 @@ import {
 import { MessageKind, notify } from "../utils/notifications";
 import { getHeaders, isEncodedPng } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
-import { retrieveUDAtoCreateReqBody } from "../utils/uda";
+import {
+  retrieveUDAtoCreateReqBody,
+  toScratchpadParams,
+} from "../utils/uda";
 
 const logger = "insightsConnection";
 
@@ -719,7 +722,7 @@ export class InsightsConnection {
             });
             return;
           }
-          body.params = udaReqBody.params;
+          body.params = toScratchpadParams(udaReqBody);
           body.parameterTypes = udaReqBody.parameterTypes;
           body.language = udaReqBody.language;
           body.name = udaReqBody.name;

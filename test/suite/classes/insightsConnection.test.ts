@@ -517,7 +517,7 @@ describe("insightsConnection", () => {
       ],
     };
 
-    const withConnection = () => {
+    const withConnection = (target: any = uda) => {
       const conn = new InsightsConnection("conn", <any>{
         details: { alias: "conn", server: "https://test.kx.com" },
         label: "conn",
@@ -533,7 +533,7 @@ describe("insightsConnection", () => {
 
       return conn
         .importScratchpad("out", <any>{
-          dataSource: { selectedType: DataSourceTypes.UDA, uda },
+          dataSource: { selectedType: DataSourceTypes.UDA, uda: target },
         })
         .then(() => getOptions.getCall(0)?.args[4] as any);
     };
@@ -557,6 +557,27 @@ describe("insightsConnection", () => {
       // than the first one registered.
       assert.deepStrictEqual(body.parameterTypes, { value: -7 });
       assert.deepStrictEqual(body.params, { value: 44 });
+    });
+
+    it("sends a dictionary parameter as the text the scratchpad parses", async () => {
+      const body = await withConnection({
+        name: ".insightsUda.labelledAPI",
+        description: "",
+        params: [
+          {
+            name: "labels",
+            description: "",
+            isReq: false,
+            type: [99],
+            typeStrings: ["Dictionary"],
+            isVisible: true,
+            value: '{"kxname":["db"]}',
+          },
+        ],
+      });
+
+      assert.deepStrictEqual(body.params, { labels: '{"kxname":["db"]}' });
+      assert.deepStrictEqual(body.parameterTypes, { labels: 99 });
     });
 
     it("names the UDA and the variable it lands in", async () => {

@@ -143,10 +143,32 @@ UDA that names no table of its own offers columns once its `table` parameter is
 added and set. A value the meta does not mention is kept and shown, so opening a
 file written against another connection never empties it.
 
+A label key and its values are suggested from the connection's meta the same
+way, narrowed to the table the query names: pick one from the list, or type a
+label the meta does not mention. A key given twice is called out, since the
+request carries one value per key and only the last row would be sent.
+
 `table` is the only getData parameter that must be filled in. The time range is
 optional — leaving `startTS` and `endTS` empty queries the table unbounded, so
 it is worth setting them on anything large. A parameter marked `*` is required;
 symbol and string parameters may be left empty.
+
+An optional parameter added and then left blank is left out of the request, so
+the API applies whatever default it documents. A blank symbol or string is a
+value in its own right and is sent as one.
+
+### Types
+
+A typed field shows an example of what it takes — `2000.01.01` for a date,
+`0D00:00:00.000000000` for a timespan — and says so when what is in it is not
+that, before the request is made. A number is typed as text, so q's null and
+infinities (`0N`, `0W`, `0w`) go through as written, and byte, short, int and
+long values are held to the range their type has room for. A parameter
+registered with more than one type asks which one it is being given as.
+
+A parameter whose type the extension cannot send says so in place of a field.
+Where the UDA requires such a parameter it cannot be run at all, and neither can
+one the connection reports no metadata for.
 
 ### Timestamps and timezones
 

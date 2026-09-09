@@ -14,7 +14,7 @@
 import { ConnectionType } from "./connectionsModels";
 import { DataSourceFiles } from "./dataSource";
 import { MetaObjectPayload } from "./meta";
-import { QueryFile } from "./query";
+import { LabelSet, QueryFile } from "./query";
 import { UDA } from "./uda";
 
 export type DataSourceMessage = {
@@ -69,6 +69,7 @@ export interface QueryMessage {
   queries: UDA[];
   tables: { [table: string]: string[] };
   targets: string[];
+  labels: LabelSet[];
   isMetaLoaded: boolean;
   selectedServer: string;
 }

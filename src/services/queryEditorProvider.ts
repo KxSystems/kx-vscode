@@ -41,12 +41,13 @@ import {
 } from "../commands/workspaceCommand";
 import { QueryCommand, QueryMessage } from "../models/messages";
 import { MetaObjectPayload } from "../models/meta";
-import { QueryFile, createDefaultQueryFile } from "../models/query";
+import { LabelSet, QueryFile, createDefaultQueryFile } from "../models/query";
 import { UDA } from "../models/uda";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { MessageKind, Runner, notify } from "../utils/notifications";
 import {
+  parseLabels,
   parseQueryList,
   parseTables,
   parseTargets,
@@ -73,6 +74,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
   private cache = new Map<string, UDA[]>();
   private tables = new Map<string, { [table: string]: string[] }>();
   private targets = new Map<string, string[]>();
+  private labels = new Map<string, LabelSet[]>();
   private warned = new Set<string>();
 
   constructor(private readonly context: ExtensionContext) {}
@@ -112,6 +114,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
       connLabel,
       parseTargets(connection.meta.payload, connection.insightsVersion),
     );
+    this.labels.set(connLabel, parseLabels(connection.meta.payload));
     return queries;
   }
 
@@ -136,6 +139,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
           queries,
           tables: this.tables.get(selectedServer) || {},
           targets: this.targets.get(selectedServer) || [],
+          labels: this.labels.get(selectedServer) || [],
           isMetaLoaded: connMngService.isConnected(selectedServer),
           selectedServer,
         });
@@ -225,6 +229,7 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
             this.cache.delete(selectedServer);
             this.tables.delete(selectedServer);
             this.targets.delete(selectedServer);
+            this.labels.delete(selectedServer);
             this.warned.delete(selectedServer);
             updateWebview();
           });

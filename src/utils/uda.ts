@@ -13,8 +13,9 @@
 
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
-import { MetaObjectPayload } from "../models/meta";
-import { PREVIEW, isPreview, parseValue } from "../models/query";
+import { MetaApi, MetaObjectPayload } from "../models/meta";
+import { PREVIEW, parseValue } from "../models/query";
+import { typeProblem } from "../models/typeFormat";
 import {
   InvalidParamFieldErrors,
   ParamFieldType,
@@ -23,6 +24,7 @@ import {
   UDAParam,
   UDARequestBody,
   UDAReturn,
+  selectedParamType,
   sourceForParam,
 } from "../models/uda";
 
@@ -40,47 +42,20 @@ export function filterUDAParamsValidTypes(type: number | number[]): number[] {
   return typesArray.filter(validTypes.has, validTypes);
 }
 
-export function getUDAParamType(
-  type: ParamFieldType | ParamFieldType[],
-): string | string[] {
-  if (Array.isArray(type)) {
-    return type.map(
-      (t) => ext.constants.dataTypes.get(t.toString()) ?? t.toString(),
-    );
-  }
-  return ext.constants.dataTypes.get(type.toString()) ?? type.toString();
-}
-
 export function getUDAFieldType(type: number | number[]): ParamFieldType {
   if (!Array.isArray(type)) {
     return parseUDAParamTypes(type);
   }
 
-  const typeSet = new Set(type.map(parseUDAParamTypes));
+  const supported = type
+    .map(parseUDAParamTypes)
+    .filter((fieldType) => fieldType !== ParamFieldType.Invalid);
 
-  if (typeSet.size === 1) {
-    return typeSet.values().next().value ?? ParamFieldType.Invalid;
+  if (supported.length === 0) {
+    return ParamFieldType.Invalid;
   }
 
-  const typePriority = [
-    ParamFieldType.Text,
-    ParamFieldType.Number,
-    ParamFieldType.Boolean,
-    ParamFieldType.Timestamp,
-    ParamFieldType.JSON,
-  ];
-
-  let foundType: ParamFieldType | undefined;
-  for (const fieldType of typePriority) {
-    if (typeSet.has(fieldType)) {
-      if (foundType) {
-        return ParamFieldType.MultiType;
-      }
-      foundType = fieldType;
-    }
-  }
-
-  return foundType ?? ParamFieldType.Invalid;
+  return supported.length === 1 ? supported[0] : ParamFieldType.MultiType;
 }
 
 export function parseUDAParamTypes(type: number): ParamFieldType {
@@ -158,32 +133,21 @@ export function convertTypesToString(returnType: number[]): string[] {
   );
 }
 
-const MINUTE_PRECISION = /^(?:\d{4}-\d{2}-\d{2}T)?\d{2}:\d{2}$/;
-
-//TODO: Should remove this after add nanoseconds support in uda
-export function fixTimeAtUDARequestBody(
-  udaReqBody: UDARequestBody,
-): UDARequestBody {
-  const parameterTypes = udaReqBody.parameterTypes as {
-    [key: string]: number;
-  };
-  const params = udaReqBody.params as { [key: string]: any };
-
-  for (const key in parameterTypes) {
-    if (parameterTypes[key] === -12) {
-      const value = params[key];
-      if (typeof value === "string" && MINUTE_PRECISION.test(value)) {
-        params[key] = `${value}:00.000000000`;
-      }
-    }
-  }
-
-  return udaReqBody;
+export function hasNoMetadata(uda: Partial<MetaApi>): boolean {
+  return (
+    !uda.description &&
+    (uda.params || []).length === 0 &&
+    Object.keys(uda.return || {}).length === 0
+  );
 }
 
 export function getIncompatibleError(
+  uda: Partial<MetaApi>,
   parsedParams: any,
 ): InvalidParamFieldErrors | undefined {
+  if (hasNoMetadata(uda)) {
+    return InvalidParamFieldErrors.NoMetadata;
+  }
   if (parsedParams === ParamFieldType.Invalid) {
     return InvalidParamFieldErrors.BadField;
   }
@@ -228,7 +192,7 @@ export function parsePreviewApi(getMeta: MetaObjectPayload): UDA | undefined {
   return createUDAObject(
     preview,
     parsedParams,
-    getIncompatibleError(parsedParams),
+    getIncompatibleError(preview, parsedParams),
   );
 }
 
@@ -239,16 +203,12 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
     if (getMetaUDAs.length !== 0) {
       for (const uda of getMetaUDAs) {
         const parsedParams = parseUDAParams(uda.params);
-        const incompatibleError = getIncompatibleError(parsedParams);
+        const incompatibleError = getIncompatibleError(uda, parsedParams);
         UDAs.push(createUDAObject(uda, parsedParams, incompatibleError));
       }
     }
   }
   return UDAs;
-}
-
-export function retrieveDataTypeByString(type: string): number {
-  return ext.constants.reverseDataTypes.get(type) ?? 0;
 }
 
 export async function validateUDA(
@@ -280,13 +240,7 @@ export function processUDAParams(uda: UDA): {
   const parameterTypes: { [key: string]: number } = {};
 
   if (uda.incompatibleError) {
-    return {
-      params: {},
-      parameterTypes: {},
-      error: {
-        error: `The UDA you have selected cannot be queried because it has required fields with types that are not supported.`,
-      },
-    };
+    return failed(incompatibleMessage(uda.incompatibleError));
   }
 
   if (uda.params && uda.params.length > 0) {
@@ -296,23 +250,61 @@ export function processUDAParams(uda: UDA): {
         return validationError;
       }
 
-      if (param.isVisible) {
-        const type = resolveParamType(param);
-        const value = jsonValue(param, type);
-        if (value instanceof Error) {
-          return {
-            params: {},
-            parameterTypes: {},
-            error: { error: value.message },
-          };
-        }
-        params[param.name] = value;
-        parameterTypes[param.name] = type;
+      if (!param.isVisible) {
+        continue;
       }
+
+      if (param.fieldType === ParamFieldType.Invalid) {
+        return failed(
+          `The UDA: ${uda.name} cannot send the parameter: ${param.name}. Its type is not supported.`,
+        );
+      }
+
+      const type = resolveParamType(param);
+
+      if (isOmitted(param, type)) {
+        continue;
+      }
+
+      const problem = typeProblem(type, param.value);
+      if (problem) {
+        return failed(`The ${param.name} parameter expects ${problem}.`);
+      }
+
+      const value = jsonValue(param, type);
+      if (value instanceof Error) {
+        return failed(value.message);
+      }
+
+      params[param.name] = value;
+      parameterTypes[param.name] = type;
     }
   }
 
   return { params, parameterTypes };
+}
+
+function failed(error: string) {
+  return { params: {}, parameterTypes: {}, error: { error } };
+}
+
+function incompatibleMessage(error: string): string {
+  return error === InvalidParamFieldErrors.NoMetadata
+    ? "The UDA you have selected cannot be queried because there is no metadata associated with it."
+    : "The UDA you have selected cannot be queried because it has required fields with types that are not supported.";
+}
+
+function isOmitted(param: UDAParam, type: number): boolean {
+  if (param.isReq) {
+    return false;
+  }
+  if (param.value === undefined || param.value === null) {
+    return true;
+  }
+  return (
+    param.value === "" &&
+    !ext.constants.allowedEmptyRequiredTypes.includes(type)
+  );
 }
 
 /**
@@ -361,26 +353,6 @@ function validateParam(
     };
   }
   return null;
-}
-
-/**
- * The type a parameter is being given as: for a parameter registered with more
- * than one, the one picked on the form rather than the first declared.
- * Undefined where there is nothing to go on — a multi-typed parameter with no
- * pick yet, an empty type list, or a type the map does not name.
- */
-function selectedParamType(param: UDAParam): number | undefined {
-  if (!Array.isArray(param.type)) {
-    return typeof param.type === "number" ? param.type : undefined;
-  }
-  if (param.type.length > 1) {
-    if (!param.selectedMultiTypeString) {
-      return undefined;
-    }
-    const named = param.selectedMultiTypeString.replace("_", " ");
-    return ext.constants.reverseDataTypes.get(named);
-  }
-  return param.type[0];
 }
 
 /**
@@ -462,6 +434,25 @@ export function createUDARequestBody(
   };
 }
 
+export function toScratchpadParams(
+  udaReqBody: UDARequestBody,
+): Record<string, unknown> {
+  const params: Record<string, unknown> = {};
+
+  for (const [name, value] of Object.entries(udaReqBody.params)) {
+    const type = udaReqBody.parameterTypes[name];
+    const json =
+      typeof type === "number" &&
+      ext.jsonTypes.has(type) &&
+      value !== undefined &&
+      value !== null &&
+      value !== "";
+    params[name] = json ? JSON.stringify(value) : value;
+  }
+
+  return params;
+}
+
 export async function retrieveUDAtoCreateReqBody(
   uda: UDA | undefined,
   insightsConn: InsightsConnection,
@@ -480,19 +471,6 @@ export async function retrieveUDAtoCreateReqBody(
   const { params, parameterTypes, error } = processUDAParams(uda);
   if (error) {
     return error;
-  }
-
-  // A parameter shown and left blank is not an answer, and preview has a
-  // documented default behind each of the three optional ones: the whole
-  // available range, and a thousand rows. Dropping the empty box asks for that
-  // default rather than handing the gateway a blank to cast.
-  if (isPreview(uda)) {
-    for (const param of uda.params) {
-      if (!param.isReq && isBlank(params[param.name])) {
-        delete params[param.name];
-        delete parameterTypes[param.name];
-      }
-    }
   }
 
   // The form holds a target string; the request wants the dictionary it stands

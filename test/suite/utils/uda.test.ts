@@ -48,6 +48,10 @@ const scoping = () =>
   }) as unknown as InsightsConnection;
 
 describe("UDA", () => {
+  afterEach(() => {
+    sinon.restore();
+  });
+
   describe("filterUDAParamsValidTypes", () => {
     it("should filter valid types", () => {
       const types = [1, 2, 3];
@@ -60,30 +64,6 @@ describe("UDA", () => {
 
       const result = UDAUtils.filterUDAParamsValidTypes(types);
       assert.deepStrictEqual(result, [1, 2]);
-    });
-  });
-
-  describe("getUDAParamType", () => {
-    it("should return the correct type string", () => {
-      const type = ParamFieldType.Boolean;
-      const dataTypes = new Map([["1", "Boolean"]]);
-      sinon.stub(ext.constants, "dataTypes").value(dataTypes);
-
-      const result = UDAUtils.getUDAParamType(type);
-      assert.strictEqual(result, "boolean");
-    });
-
-    it("should return the correct types string", () => {
-      const type = [ParamFieldType.Boolean, ParamFieldType.Number];
-      const dataTypes = new Map([
-        ["1", "Boolean"],
-        ["2", "Number"],
-      ]);
-      const expectedRes = ["boolean", "number"];
-      sinon.stub(ext.constants, "dataTypes").value(dataTypes);
-
-      const result = UDAUtils.getUDAParamType(type);
-      assert.strictEqual(result.toString(), expectedRes.toString());
     });
   });
 
@@ -107,6 +87,20 @@ describe("UDA", () => {
 
       const result = UDAUtils.getUDAFieldType(types);
       assert.strictEqual(result, ParamFieldType.MultiType);
+    });
+  });
+
+  describe("getUDAFieldType", () => {
+    it("should ask for a type before a value when two share a widget", () => {
+      const result = UDAUtils.getUDAFieldType([-11, 11]);
+
+      assert.strictEqual(result, ParamFieldType.MultiType);
+    });
+
+    it("should take a GUID list as JSON", () => {
+      const result = UDAUtils.getUDAFieldType(2);
+
+      assert.strictEqual(result, ParamFieldType.JSON);
     });
   });
 
@@ -142,6 +136,9 @@ describe("UDA", () => {
       ];
       sinon.stub(ext, "booleanTypes").value(new Set([1]));
       sinon.stub(ext, "numberTypes").value(new Set([2]));
+      sinon.stub(ext, "textTypes").value(new Set([3]));
+      sinon.stub(ext, "timestampTypes").value(new Set([4]));
+      sinon.stub(ext, "jsonTypes").value(new Set([5]));
 
       const result = UDAUtils.parseUDAParams(params);
       assert.strictEqual(result.length, 2);
@@ -294,183 +291,47 @@ describe("UDA", () => {
     });
   });
 
-  describe("fixTimeAtUDARequestBody", () => {
-    it("should append ':00.000000000' when parameterTypes[key] is [-12] and params[key] is a valid string", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey: -12 },
-        params: { timeKey: "12:30" },
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const expected: UDARequestBody = {
-        ...input,
-        params: { timeKey: "12:30:00.000000000" },
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.deepStrictEqual(result, expected);
-    });
-
-    it("should not modify params[key] if parameterTypes[key] is not [-12]", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey: 1 },
-        params: { timeKey: "12:30" },
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.deepStrictEqual(result, input);
-    });
-
-    it("should not modify a value that already has seconds and nanoseconds", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey: -12 },
-        params: { timeKey: "2024-01-01T10:20:30.123456789" },
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.strictEqual(
-        result.params.timeKey,
-        "2024-01-01T10:20:30.123456789",
-      );
-    });
-
-    it("should fill out a date and time that stops at minutes", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey: -12 },
-        params: { timeKey: "2024-01-01T10:20" },
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.strictEqual(
-        result.params.timeKey,
-        "2024-01-01T10:20:00.000000000",
-      );
-    });
-
-    it("should not modify params[key] if params[key] is an empty string", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey: -12 },
-        params: { timeKey: "" },
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.deepStrictEqual(result, input);
-    });
-
-    it("should not modify params[key] if params[key] is undefined", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey: -12 },
-        params: {},
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.deepStrictEqual(result, input);
-    });
-
-    it("should not modify params[key] if parameterTypes[key] is not an array", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey: -12 },
-        params: { timeKey: "12:30" },
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.deepStrictEqual(result, input);
-    });
-
-    it("should not modify params[key] if parameterTypes[key] is an empty array", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey: [] },
-        params: { timeKey: "12:30" },
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.deepStrictEqual(result, input);
-    });
-
-    it("should handle multiple keys in parameterTypes and params", () => {
-      const input: UDARequestBody = {
-        language: "en",
-        name: "test",
-        parameterTypes: { timeKey1: -12, timeKey2: 1 },
-        params: { timeKey1: "12:30", timeKey2: "value" },
-        returnFormat: "json",
-        sampleFn: "sample",
-        sampleSize: 10,
-      };
-
-      const expected: UDARequestBody = {
-        ...input,
-        params: { timeKey1: "12:30:00.000000000", timeKey2: "value" },
-      };
-
-      const result = UDAUtils.fixTimeAtUDARequestBody(input);
-      assert.deepStrictEqual(result, expected);
-    });
-  });
-
   describe("getIncompatibleError", () => {
+    const described = {
+      description: "a described UDA",
+      params: [{ name: "table" }],
+      return: { type: [98], description: "the rows" },
+    };
+
     it("should return BadField error message", () => {
-      const result = UDAUtils.getIncompatibleError(ParamFieldType.Invalid);
+      const result = UDAUtils.getIncompatibleError(
+        described,
+        ParamFieldType.Invalid,
+      );
 
       assert.strictEqual(result, "badField");
     });
 
     it("should return undefined", () => {
-      const result = UDAUtils.getIncompatibleError(ParamFieldType.Boolean);
+      const result = UDAUtils.getIncompatibleError(
+        described,
+        ParamFieldType.Boolean,
+      );
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should report a UDA the meta says nothing about", () => {
+      const result = UDAUtils.getIncompatibleError({}, []);
+
+      assert.strictEqual(result, "noMetadata");
+    });
+
+    it("should take a description on its own as metadata", () => {
+      const result = UDAUtils.getIncompatibleError(
+        { description: "takes no arguments" },
+        [],
+      );
+
       assert.strictEqual(result, undefined);
     });
   });
 
   describe("UDAUtils.createUDAReturn", () => {
-    let convertTypesToStringStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      convertTypesToStringStub = sinon.stub(UDAUtils, "convertTypesToString");
-    });
-
-    afterEach(() => {
-      convertTypesToStringStub.restore();
-    });
-
     it("should return correct UDAReturn when metadata has return type and description", () => {
       const metadata = {
         return: {
@@ -478,20 +339,16 @@ describe("UDA", () => {
           description: "Test description",
         },
       };
-      convertTypesToStringStub.withArgs([1, 2]).returns(["type1", "type2"]);
-
       const result = UDAUtils.createUDAReturn(metadata);
 
       assert.deepStrictEqual(result, {
-        type: ["Boolean", "Number"],
+        type: ["Boolean List", "GUID List"],
         description: "Test description",
       });
     });
 
     it("should return empty type array and empty description when metadata is undefined", () => {
       const metadata = undefined;
-      convertTypesToStringStub.withArgs([]).returns([]);
-
       const result = UDAUtils.createUDAReturn(metadata);
 
       assert.deepStrictEqual(result, {
@@ -502,8 +359,6 @@ describe("UDA", () => {
 
     it("should return empty type array and empty description when metadata has no return", () => {
       const metadata = { api: ".uda.noReturn" };
-      convertTypesToStringStub.withArgs([]).returns([]);
-
       const result = UDAUtils.createUDAReturn(metadata);
 
       assert.deepStrictEqual(result, {
@@ -518,8 +373,6 @@ describe("UDA", () => {
           description: "Test description",
         },
       };
-      convertTypesToStringStub.withArgs([]).returns([]);
-
       const result = UDAUtils.createUDAReturn(metadata);
 
       assert.deepStrictEqual(result, {
@@ -534,12 +387,10 @@ describe("UDA", () => {
           type: [1, 2],
         },
       };
-      convertTypesToStringStub.withArgs([1, 2]).returns(["type1", "type2"]);
-
       const result = UDAUtils.createUDAReturn(metadata);
 
       assert.deepStrictEqual(result, {
-        type: ["Boolean", "Number"],
+        type: ["Boolean List", "GUID List"],
         description: "",
       });
     });
@@ -581,6 +432,7 @@ describe("UDA", () => {
         dap: [],
       };
       sinon.stub(ext, "booleanTypes").value(new Set([1]));
+      sinon.stub(ext, "jsonTypes").value(new Set([5]));
 
       const result = UDAUtils.parseUDAList(getMeta);
       assert.strictEqual(result.length, 1);
@@ -682,24 +534,6 @@ describe("UDA", () => {
       );
       // The table name is picked from the connection, the way getData asks it.
       assert.strictEqual(params[0].source, "tables");
-    });
-  });
-
-  describe("retrieveDataTypeByString", () => {
-    it("should retrieve data type by string", () => {
-      const dataTypes = new Map([["Boolean", 1]]);
-      sinon.stub(ext.constants, "reverseDataTypes").value(dataTypes);
-
-      const result = UDAUtils.retrieveDataTypeByString("Boolean");
-      assert.strictEqual(result, 1);
-    });
-
-    it("should return 0 if data type not found", () => {
-      const dataTypes = new Map([["Boolean", 1]]);
-      sinon.stub(ext.constants, "reverseDataTypes").value(dataTypes);
-
-      const result = UDAUtils.retrieveDataTypeByString("Number");
-      assert.strictEqual(result, 0);
     });
   });
 
@@ -1174,7 +1008,7 @@ describe("UDA", () => {
       assert.match(result.error?.error ?? "", /labels parameter is not valid/);
     });
 
-    it("leaves a JSON parameter shown but never filled in alone", () => {
+    it("drops a JSON parameter shown but never filled in", () => {
       const result = UDAUtils.processUDAParams(
         uda([
           {
@@ -1189,7 +1023,132 @@ describe("UDA", () => {
       );
 
       assert.strictEqual(result.error, undefined);
-      assert.deepStrictEqual(result.params, { labels: "" });
+      assert.deepStrictEqual(result.params, {});
+      assert.deepStrictEqual(result.parameterTypes, {});
+    });
+
+    it("drops an optional number parameter left blank", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "limit",
+            description: "",
+            isReq: false,
+            type: [-7],
+            isVisible: true,
+            value: "",
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, {});
+      assert.deepStrictEqual(result.parameterTypes, {});
+    });
+
+    it("keeps an optional symbol parameter answered with nothing", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "fill",
+            description: "",
+            isReq: false,
+            type: [-11],
+            isVisible: true,
+            value: "",
+          },
+        ]),
+      );
+
+      assert.deepStrictEqual(result.params, { fill: "" });
+    });
+
+    it("reports a value the type will not take", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "asOf",
+            description: "",
+            isReq: true,
+            type: [-14],
+            isVisible: true,
+            value: "yesterday",
+          },
+        ]),
+      );
+
+      assert.deepStrictEqual(result.params, {});
+      assert.match(
+        result.error?.error ?? "",
+        /asOf parameter expects a Date value, like 2000\.01\.01/,
+      );
+    });
+
+    it("reports a number outside what the type holds", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "size",
+            description: "",
+            isReq: true,
+            type: [-5],
+            isVisible: true,
+            value: "70000",
+          },
+        ]),
+      );
+
+      assert.match(result.error?.error ?? "", /between -32766 and 32766/);
+    });
+
+    it("takes the q null and infinity literals as values", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "size",
+            description: "",
+            isReq: true,
+            type: [-7],
+            isVisible: true,
+            value: "0W",
+          },
+        ]),
+      );
+
+      assert.strictEqual(result.error, undefined);
+      assert.deepStrictEqual(result.params, { size: "0W" });
+    });
+
+    it("refuses to send an optional parameter of an unsupported type", () => {
+      const result = UDAUtils.processUDAParams(
+        uda([
+          {
+            name: "fn",
+            description: "",
+            isReq: false,
+            type: [],
+            fieldType: ParamFieldType.Invalid,
+            isVisible: true,
+            value: "{x}",
+          },
+        ]),
+      );
+
+      assert.match(
+        result.error?.error ?? "",
+        /cannot send the parameter: fn\. Its type is not supported/,
+      );
+    });
+
+    it("says which UDAs the meta describes nothing about", () => {
+      const result = UDAUtils.processUDAParams({
+        name: ".uda.bare",
+        description: "",
+        params: [],
+        incompatibleError: "noMetadata",
+      });
+
+      assert.match(result.error?.error ?? "", /no metadata associated with it/);
     });
 
     it("leaves scope as the target string for the connection to resolve", () => {
@@ -1498,6 +1457,77 @@ describe("UDA", () => {
       assert.strictEqual(result.returnFormat, "structuredText");
     });
   });
+  describe("toScratchpadParams", () => {
+    beforeEach(() => {
+      sinon.stub(ext, "jsonTypes").value(new Set([0, 11, 98, 99]));
+    });
+
+    const body = (
+      params: { [key: string]: any },
+      parameterTypes: { [key: string]: number },
+    ): UDARequestBody => ({
+      language: "q",
+      name: ".uda.test",
+      params,
+      parameterTypes,
+      returnFormat: "structuredText",
+      sampleFn: "first",
+      sampleSize: 10000,
+    });
+
+    it("sends a dictionary as the text the scratchpad parses", () => {
+      const result = UDAUtils.toScratchpadParams(
+        body({ labels: { kxname: ["db"] } }, { labels: 99 }),
+      );
+
+      assert.deepStrictEqual(result, { labels: '{"kxname":["db"]}' });
+    });
+
+    it("sends a list as text too", () => {
+      const result = UDAUtils.toScratchpadParams(
+        body({ syms: ["aa", "bb"] }, { syms: 11 }),
+      );
+
+      assert.deepStrictEqual(result, { syms: '["aa","bb"]' });
+    });
+
+    it("sends a resolved scope as text", () => {
+      const result = UDAUtils.toScratchpadParams(
+        body(
+          { scope: { affinity: "soft", assembly: "a", tier: "hdb" } },
+          { scope: 99 },
+        ),
+      );
+
+      assert.deepStrictEqual(result, {
+        scope: '{"affinity":"soft","assembly":"a","tier":"hdb"}',
+      });
+    });
+
+    it("leaves a value of any other type as it is", () => {
+      const result = UDAUtils.toScratchpadParams(
+        body(
+          { table: "trade", multiplier: 44, on: false },
+          { table: -11, multiplier: -7, on: -1 },
+        ),
+      );
+
+      assert.deepStrictEqual(result, {
+        table: "trade",
+        multiplier: 44,
+        on: false,
+      });
+    });
+
+    it("leaves a JSON parameter with nothing in it alone", () => {
+      const result = UDAUtils.toScratchpadParams(
+        body({ labels: "" }, { labels: 99 }),
+      );
+
+      assert.deepStrictEqual(result, { labels: "" });
+    });
+  });
+
   describe("recastParams", () => {
     beforeEach(() => {
       sinon.stub(ext.constants, "reverseDataTypes").value(

@@ -68,6 +68,10 @@ export const baseStyles = css`
     color: var(--vscode-editorWarning-foreground);
   }
 
+  .help.error {
+    color: var(--vscode-errorForeground);
+  }
+
   .row {
     display: flex;
     flex-flow: row nowrap;
@@ -182,7 +186,9 @@ export const baseStyles = css`
     outline-offset: 1px;
   }
 
-  input:invalid {
+  input:invalid,
+  input.invalid,
+  textarea.invalid {
     border-color: var(--vscode-inputValidation-errorBorder);
   }
 

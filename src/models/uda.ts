@@ -11,6 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { TYPE_BY_NAME } from "./typeFormat";
+
 export const SCOPE = "scope";
 
 /**
@@ -36,7 +38,16 @@ export enum InvalidParamFieldErrors {
   NoMetadata = "noMetadata",
 }
 
-export type ParamSource = "tables" | "columns" | "targets";
+export type ParamSource =
+  | "tables"
+  | "columns"
+  | "targets"
+  | "labels"
+  | "labelValues";
+
+export function isSuggestion(source: ParamSource | undefined): boolean {
+  return source === "labels" || source === "labelValues";
+}
 
 export interface UDAParamField {
   name: string;
@@ -115,7 +126,10 @@ export const UDA_DISTINGUISHED_PARAMS: UDAParam[] = [
     isDistinguised: true,
     // Values stay strings: a label is a symbol, so a numeric-looking one like
     // 600519 must not be coerced to a number.
-    rows: [{ name: "key" }, { name: "value", many: true, typed: false }],
+    rows: [
+      { name: "key", source: "labels" },
+      { name: "value", many: true, typed: false, source: "labelValues" },
+    ],
   },
   {
     name: "scope",
@@ -195,6 +209,23 @@ export function sourceForParam(
     return "tables";
   }
   return COLUMN_PARAMS.test(key) ? "columns" : undefined;
+}
+
+export function selectedParamType(param: UDAParam): number | undefined {
+  const types = Array.isArray(param.type) ? param.type : [param.type];
+
+  if (types.length === 1) {
+    return typeof types[0] === "number" ? types[0] : undefined;
+  }
+
+  if (!param.selectedMultiTypeString) {
+    return undefined;
+  }
+
+  const named = param.selectedMultiTypeString.replace(/_/g, " ");
+  const at = (param.typeStrings || []).indexOf(named);
+
+  return at === -1 ? TYPE_BY_NAME.get(named) : types[at];
 }
 
 export const allowedEmptyRequiredTypes = [10, -11];

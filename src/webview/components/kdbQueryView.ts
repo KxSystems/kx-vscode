@@ -20,25 +20,32 @@ import { KdbSelect, SelectOption } from "./kdbSelect";
 import { queryStyles } from "./queryStyles";
 import { QueryCommand, QueryMessage } from "../../models/messages";
 import {
+  LabelSet,
   QueryDraft,
   QueryFile,
   applyDraft,
   createRow,
   isBuiltin,
+  isDictionary,
+  labelsForTable,
   parseRows,
   parseValue,
   serializeRows,
   targetLabel,
   toDraft,
 } from "../../models/query";
+import { exampleForType, typeProblem } from "../../models/typeFormat";
 import {
   ParamFieldType,
   ParamSource,
   UDA,
   UDAParam,
+  UDAParamField,
   UDA_DISTINGUISHED_PARAMS,
   allowedEmptyRequiredTypes,
   allowedEmptyRequiredTypesStrings,
+  isSuggestion,
+  selectedParamType,
 } from "../../models/uda";
 import {
   LOCAL,
@@ -68,6 +75,7 @@ export class KdbQueryView extends LitElement {
   query: UDA | undefined = undefined;
   tables: { [table: string]: string[] } = {};
   targets: string[] = [];
+  labels: LabelSet[] = [];
   private editing = new Map<string, string[][]>();
   private drafts: QueryDraft[] = [];
   isMetaLoaded = false;
@@ -91,6 +99,7 @@ export class KdbQueryView extends LitElement {
       this.queries = msg.queries;
       this.tables = msg.tables || {};
       this.targets = msg.targets || [];
+      this.labels = msg.labels || [];
       this.isMetaLoaded = msg.isMetaLoaded;
       this.selectedServer = msg.selectedServer;
       // The stored query gets the same treatment as one picked from the
@@ -370,7 +379,7 @@ export class KdbQueryView extends LitElement {
     `;
   }
 
-  suggestions(source: ParamSource): (string | SelectOption)[] {
+  suggestions(source: ParamSource, key = ""): (string | SelectOption)[] {
     if (source === "targets") {
       return this.targets.map((target) => ({
         value: target,
@@ -382,16 +391,24 @@ export class KdbQueryView extends LitElement {
       return Object.keys(this.tables).sort();
     }
 
-    // Only the table chosen has columns to offer, and until one is chosen
-    // there are none. The parameter holding it is the one drawing on the table
-    // list rather than the one called `table`, so a UDA naming it `tablename`
-    // narrows its columns the same way getData does.
+    if (source === "labels" || source === "labelValues") {
+      const labels = labelsForTable(this.labels, this.selectedTable());
+      return source === "labels"
+        ? Object.keys(labels).sort()
+        : [...(labels[key] || [])].sort();
+    }
+
+    const table = this.selectedTable();
+    const named = table ? this.tables[table] : undefined;
+
+    return named ? [...named].sort() : [];
+  }
+
+  private selectedTable() {
     const table = this.query?.params.find(
       (param) => param.source === "tables" && !!param.value,
     )?.value;
-    const named = table ? this.tables[String(table)] : undefined;
-
-    return named ? [...named].sort() : [];
+    return table === undefined ? undefined : String(table);
   }
 
   renderQueryDetails() {
@@ -479,6 +496,9 @@ export class KdbQueryView extends LitElement {
   }
 
   renderParam(param: UDAParam) {
+    if (param.fieldType === ParamFieldType.Invalid) {
+      return this.renderIncompatible(param);
+    }
     if (param.rows) {
       return this.renderRows(param);
     }
@@ -504,11 +524,28 @@ export class KdbQueryView extends LitElement {
         return this.renderTimestamp(param);
       case ParamFieldType.MultiType:
         return this.renderMultitype(param);
-      case ParamFieldType.Number:
-        return this.renderInput(param, "number");
       default:
-        return this.renderInput(param, "text");
+        return this.renderInput(param);
     }
+  }
+
+  renderIncompatible(param: UDAParam) {
+    return html`
+      <div class="param">
+        <div class="field">
+          <span class="label">${param.name}</span>
+          <div class="row control">
+            <p class="notice warning">
+              This parameter has a type that is not supported. Boolean, GUID,
+              Byte, Short, Int, Long, Float, Double, Char, Symbol, Timestamp,
+              Month, Date, DateTime, Timespan, Minute, Second, Time, String, Any
+              Map, Table, Dictionary and lists of those are.
+            </p>
+            ${this.renderRemove(param)}
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   rowsOf(param: UDAParam) {
@@ -539,9 +576,24 @@ export class KdbQueryView extends LitElement {
     this.setRows(param, rows);
   }
 
+  private duplicateKeys(param: UDAParam, rows: string[][]) {
+    if (!isDictionary(param)) {
+      return new Set<string>();
+    }
+    const seen = new Set<string>();
+    const twice = new Set<string>();
+    for (const [key] of rows) {
+      if (key) {
+        (seen.has(key) ? twice : seen).add(key);
+      }
+    }
+    return twice;
+  }
+
   renderRows(param: UDAParam) {
     const fields = param.rows || [];
     const rows = this.rowsOf(param);
+    const duplicates = this.duplicateKeys(param, rows);
 
     return html`
       <div class="param rows">
@@ -553,36 +605,7 @@ export class KdbQueryView extends LitElement {
             (row, index) => html`
               <span class="row control">
                 ${fields.map((field, column) =>
-                  field.choices || field.source
-                    ? this.renderSelect(
-                        row[column] || "",
-                        field.choices ||
-                          this.suggestions(field.source as ParamSource),
-                        (event: Event) => {
-                          row[column] = (event.target as KdbSelect).value;
-                          this.setRows(param, rows);
-                        },
-                        this.placeholder(field.name, field.source),
-                        field.name,
-                      )
-                    : html`
-                        <input
-                          type="text"
-                          class="row-field"
-                          placeholder="${field.name}"
-                          ${inputDefaults()}
-                          ${bind(
-                            row[column] || "",
-                            TEXT,
-                            `${param.name}-${index}-${column}`,
-                          )}
-                          @input="${(event: Event) => {
-                            row[column] = (
-                              event.target as HTMLInputElement
-                            ).value;
-                            this.setRows(param, rows);
-                          }}" />
-                      `,
+                  this.renderRowField(param, rows, row, index, field, column),
                 )}
                 <button
                   class="remove"
@@ -591,11 +614,86 @@ export class KdbQueryView extends LitElement {
                   ${this.renderIcon(ICON_TRASH)}
                 </button>
               </span>
+              ${duplicates.has(row[0])
+                ? html`
+                    <small class="help error">
+                      ${row[0]} is given more than once, and only the last row
+                      is sent.
+                    </small>
+                  `
+                : html``}
             `,
           )}
           <small class="help">${this.paramHelp(param)}</small>
+          ${this.labelHint(param)}
         </div>
       </div>
+    `;
+  }
+
+  private labelHint(param: UDAParam) {
+    const suggested = (param.rows || []).some((field) =>
+      isSuggestion(field.source),
+    );
+    if (!suggested || this.labels.length === 0 || this.selectedTable()) {
+      return html``;
+    }
+    return html`
+      <small class="help">Name a table to see the labels it carries.</small>
+    `;
+  }
+
+  private renderRowField(
+    param: UDAParam,
+    rows: string[][],
+    row: string[],
+    index: number,
+    field: UDAParamField,
+    column: number,
+  ) {
+    const setValue = (value: string) => {
+      row[column] = value;
+      this.setRows(param, rows);
+    };
+
+    if (field.choices || (field.source && !isSuggestion(field.source))) {
+      return this.renderSelect(
+        row[column] || "",
+        field.choices || this.suggestions(field.source as ParamSource),
+        (event: Event) => setValue((event.target as KdbSelect).value),
+        this.placeholder(field.name, field.source),
+        field.name,
+      );
+    }
+
+    const suggested = field.source
+      ? this.suggestions(field.source, row[0] || "")
+      : [];
+    const list = `${param.name}-${index}-${column}-list`;
+
+    return html`
+      <input
+        type="text"
+        class="row-field"
+        placeholder="${field.name}"
+        list="${suggested.length > 0 ? list : ""}"
+        ${inputDefaults()}
+        ${bind(row[column] || "", TEXT, `${param.name}-${index}-${column}`)}
+        @input="${(event: Event) =>
+          setValue((event.target as HTMLInputElement).value)}" />
+      ${suggested.length > 0
+        ? html`
+            <datalist id="${list}">
+              ${suggested.map(
+                (option) =>
+                  html`<option
+                    value="${typeof option === "string"
+                      ? option
+                      : option.value}"></option>`,
+              )}
+            </datalist>
+          `
+        : html``}
     `;
   }
 
@@ -684,14 +782,19 @@ export class KdbQueryView extends LitElement {
     `;
   }
 
-  renderInput(param: UDAParam, type: string, help = this.paramHelp(param)) {
+  renderInput(param: UDAParam, help = this.paramHelp(param)) {
+    const type = selectedParamType(param);
+    const problem = typeProblem(type, param.value ?? param.default);
+
     return html`
       <div class="param">
         <label class="field">
           <span class="label">${this.paramLabel(param)}</span>
           <span class="row control">
             <input
-              type="${type}"
+              type="text"
+              class="${problem ? "invalid" : ""}"
+              placeholder="${exampleForType(type)}"
               ${inputDefaults()}
               ${bind(param.value ?? param.default ?? "", TEXT, param.name)}
               @input="${(event: Event) =>
@@ -701,7 +804,9 @@ export class KdbQueryView extends LitElement {
                 )}" />
             ${this.renderRemove(param)}
           </span>
-          <small class="help">${help}</small>
+          <small class="help ${problem ? "error" : ""}">
+            ${problem ? `Expects ${problem}.` : help}
+          </small>
         </label>
       </div>
     `;
@@ -849,10 +954,8 @@ export class KdbQueryView extends LitElement {
         return this.renderTextarea(param, help);
       case ParamFieldType.Timestamp:
         return this.renderTimestamp(param, help);
-      case ParamFieldType.Number:
-        return this.renderInput(param, "number", help);
       default:
-        return this.renderInput(param, "text", help);
+        return this.renderInput(param, help);
     }
   }
 

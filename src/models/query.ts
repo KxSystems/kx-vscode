@@ -42,6 +42,29 @@ export interface QueryDraftParam {
   selectedMultiTypeString?: string;
 }
 
+export interface LabelSet {
+  tables: string[];
+  labels: { [key: string]: string };
+}
+
+export function labelsForTable(sets: LabelSet[], table?: string) {
+  const suggestions: { [key: string]: string[] } = {};
+
+  for (const set of sets) {
+    if (table && !set.tables.includes(table)) {
+      continue;
+    }
+    for (const [key, value] of Object.entries(set.labels)) {
+      const values = (suggestions[key] ||= []);
+      if (!values.includes(value)) {
+        values.push(value);
+      }
+    }
+  }
+
+  return suggestions;
+}
+
 export function createDefaultQueryFile(): QueryFile {
   return { version: 1 };
 }
@@ -112,9 +135,9 @@ export const PREVIEW = ".kxi.preview";
 
 /**
  * The name Insights gives the target that leaves the instance out of a qSQL
- * request: the RC takes the query and fans it out over every tier of the
- * assembly. The target itself is the assembly on its own, so the word is a
- * label, never part of the value.
+ * request: the RC picks the DAPs the query runs on, by the purview each of
+ * them reports. The target itself is the assembly on its own, so the word is
+ * a label, never part of the value.
  */
 export const DISTRIBUTED = "distributed";
 
@@ -254,7 +277,10 @@ export const GET_DATA_PARAMS: UDAParam[] = [
     typeStrings: ["Dictionary"],
     fieldType: ParamFieldType.JSON,
     isVisible: false,
-    rows: [{ name: "key" }, { name: "value" }],
+    rows: [
+      { name: "key", source: "labels" },
+      { name: "value", source: "labelValues" },
+    ],
   },
   {
     name: "fill",
@@ -345,7 +371,7 @@ export const QSQL_PARAMS: UDAParam[] = [
   {
     name: "target",
     description:
-      "Tier or DAP process to run the query on. An assembly on its own is the distributed target: every tier of it.",
+      "Tier or DAP process to run the query on. An assembly on its own is the distributed target: the resource coordinator picks the DAPs by purview.",
     isReq: true,
     type: [-11],
     typeStrings: ["Symbol"],
@@ -380,7 +406,10 @@ export const QSQL_PARAMS: UDAParam[] = [
     typeStrings: ["Dictionary"],
     fieldType: ParamFieldType.JSON,
     isVisible: false,
-    rows: [{ name: "key" }, { name: "value" }],
+    rows: [
+      { name: "key", source: "labels" },
+      { name: "value", source: "labelValues" },
+    ],
   },
 ];
 
@@ -414,7 +443,7 @@ export function createSql(): UDA {
   };
 }
 
-function isDictionary(param: UDAParam) {
+export function isDictionary(param: UDAParam) {
   return param.name === "labels";
 }
 

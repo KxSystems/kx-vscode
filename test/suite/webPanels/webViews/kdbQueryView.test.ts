@@ -806,6 +806,153 @@ describe("KdbQueryView", () => {
     });
   });
 
+  describe("typed fields", () => {
+    it("should show what the type takes as the placeholder", () => {
+      const param = createParam({ type: [-14], typeStrings: ["Date"] });
+      const rendered = markup(view.renderParam(param));
+
+      assert.ok(rendered.includes("2000.01.01"), rendered);
+    });
+
+    it("should say so when the value is not of the type", () => {
+      const param = createParam({
+        type: [-14],
+        typeStrings: ["Date"],
+        value: "yesterday",
+      });
+      const rendered = markup(view.renderParam(param));
+
+      assert.ok(rendered.includes("Expects a Date value"), rendered);
+      assert.ok(rendered.includes("invalid"), rendered);
+    });
+
+    it("should leave a value the type takes alone", () => {
+      const param = createParam({
+        type: [-14],
+        typeStrings: ["Date"],
+        value: "2024.01.01",
+      });
+      const rendered = markup(view.renderParam(param));
+
+      assert.ok(!rendered.includes("Expects a"), rendered);
+    });
+
+    it("should hold a number as text, since q writes 0N and 0w", () => {
+      const param = createParam({
+        type: [-7],
+        typeStrings: ["Long"],
+        fieldType: ParamFieldType.Number,
+        value: "0N",
+      });
+      const rendered = markup(view.renderParam(param));
+
+      assert.ok(!rendered.includes("Expects a"), rendered);
+      assert.ok(!rendered.includes('type="number"'), rendered);
+    });
+
+    it("should follow the type picked for a multi-typed parameter", () => {
+      const param = createParam({
+        type: [-11, -14],
+        typeStrings: ["Symbol", "Date"],
+        fieldType: ParamFieldType.MultiType,
+        multiFieldTypes: [
+          { Symbol: ParamFieldType.Text },
+          { Date: ParamFieldType.Text },
+        ],
+        selectedMultiTypeString: "Date",
+        value: "yesterday",
+      });
+      const rendered = markup(view.renderParam(param));
+
+      assert.ok(rendered.includes("Expects a Date value"), rendered);
+    });
+
+    it("should offer an unsupported parameter nothing to type into", () => {
+      const param = createParam({
+        name: "fn",
+        type: [],
+        typeStrings: [],
+        fieldType: ParamFieldType.Invalid,
+      });
+      const rendered = markup(view.renderParam(param));
+
+      assert.ok(rendered.includes("not supported"), rendered);
+      assert.ok(!rendered.includes("<input"), rendered);
+    });
+  });
+
+  describe("labels", () => {
+    function labelsParam() {
+      view.query = createGetData();
+      return view.query.params.find((param) => param.name === "labels")!;
+    }
+
+    beforeEach(() => {
+      view.labels = [
+        { tables: ["trade"], labels: { kxname: "trades", region: "emea" } },
+        { tables: ["quote"], labels: { kxname: "quotes" } },
+      ];
+    });
+
+    it("should suggest the label keys the connection reports", () => {
+      assert.deepStrictEqual(view.suggestions("labels"), ["kxname", "region"]);
+    });
+
+    it("should suggest the values a key takes", () => {
+      assert.deepStrictEqual(view.suggestions("labelValues", "kxname"), [
+        "quotes",
+        "trades",
+      ]);
+    });
+
+    it("should narrow the suggestions to the table the query names", () => {
+      const param = labelsParam();
+      view.query!.params.find((item) => item.name === "table")!.value = "quote";
+      view.setRows(param, [["kxname", ""]]);
+
+      assert.deepStrictEqual(view.suggestions("labels"), ["kxname"]);
+      const rendered = markup(view.renderParam(param));
+      assert.ok(rendered.includes("quotes"), rendered);
+      assert.ok(!rendered.includes("trades"), rendered);
+    });
+
+    it("should suggest rather than restrict what a label holds", () => {
+      const rendered = markup(view.renderParam(labelsParam()));
+
+      assert.ok(rendered.includes("<datalist"), rendered);
+      assert.ok(rendered.includes("<input"), rendered);
+      assert.ok(!rendered.includes("<kdb-select"), rendered);
+    });
+
+    it("should ask for a table while none is named", () => {
+      const rendered = markup(view.renderParam(labelsParam()));
+
+      assert.ok(rendered.includes("Name a table to see the labels"), rendered);
+    });
+
+    it("should call out a key given twice", () => {
+      const param = labelsParam();
+      view.setRows(param, [
+        ["region", "emea"],
+        ["region", "amer"],
+      ]);
+      const rendered = markup(view.renderParam(param));
+
+      assert.ok(rendered.includes("only the last row"), rendered);
+    });
+
+    it("should leave distinct keys alone", () => {
+      const param = labelsParam();
+      view.setRows(param, [
+        ["region", "emea"],
+        ["kxname", "trades"],
+      ]);
+      const rendered = markup(view.renderParam(param));
+
+      assert.ok(!rendered.includes("only the last row"), rendered);
+    });
+  });
+
   describe("render", () => {
     it("should render without a UDA", () => {
       view.message(createUpdate());
