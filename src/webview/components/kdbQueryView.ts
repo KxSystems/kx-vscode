@@ -388,20 +388,20 @@ export class KdbQueryView extends LitElement {
     }
 
     if (source === "tables") {
-      return Object.keys(this.tables).sort();
+      return Object.keys(this.tables).sort((a, b) => a.localeCompare(b));
     }
 
     if (source === "labels" || source === "labelValues") {
       const labels = labelsForTable(this.labels, this.selectedTable());
       return source === "labels"
-        ? Object.keys(labels).sort()
-        : [...(labels[key] || [])].sort();
+        ? Object.keys(labels).sort((a, b) => a.localeCompare(b))
+        : [...(labels[key] || [])].sort((a, b) => a.localeCompare(b));
     }
 
     const table = this.selectedTable();
     const named = table ? this.tables[table] : undefined;
 
-    return named ? [...named].sort() : [];
+    return named ? [...named].sort((a, b) => a.localeCompare(b)) : [];
   }
 
   private selectedTable() {

@@ -77,7 +77,7 @@ export function parseTargets(
     }
   }
 
-  return [...targets].sort();
+  return [...targets].sort((a, b) => a.localeCompare(b));
 }
 
 /**
