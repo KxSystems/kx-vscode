@@ -492,8 +492,18 @@ export function toValues(text: string, typed = true) {
   return tokens.length === 1 ? tokens[0] : tokens;
 }
 
+function asText(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 function fromValues(value: unknown) {
-  return Array.isArray(value) ? value.join(" ") : String(value ?? "");
+  return Array.isArray(value) ? value.map(asText).join(" ") : asText(value);
 }
 
 /** The stored value of a row parameter, as the rows the editor shows. */
@@ -512,7 +522,7 @@ export function parseRows(param: UDAParam): string[][] {
     const many = !!fields[1]?.many;
     return Object.entries(parsed).map(([key, value]) => [
       key,
-      many ? fromValues(value) : String(value ?? ""),
+      many ? fromValues(value) : asText(value),
     ]);
   }
 
@@ -522,7 +532,7 @@ export function parseRows(param: UDAParam): string[][] {
 
   return parsed.map((row) => {
     if (fields.length === 1) {
-      return [String(row ?? "")];
+      return [asText(row)];
     }
     const values = Array.isArray(row) ? row : [];
     const taken = new Map<number, number>();
@@ -540,9 +550,9 @@ export function parseRows(param: UDAParam): string[][] {
         const position = taken.get(at) || 0;
         taken.set(at, position + 1);
         const list = Array.isArray(value) ? value : [value];
-        return String(list[position] ?? "");
+        return asText(list[position]);
       }
-      return String(value ?? "");
+      return asText(value);
     });
   });
 }

@@ -17,13 +17,23 @@ export interface Converter<M> {
   toFormat(value: M): string;
 }
 
+function asText(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 class Text implements Converter<unknown> {
   toModel(value: string): unknown {
     return value;
   }
 
   toValue(value: unknown): string {
-    return value === undefined || value === null ? "" : String(value);
+    return asText(value);
   }
 
   toFormat(value: unknown): string {

@@ -182,9 +182,9 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
       // rejection nothing catches is an error the user never sees (KXI-69283).
       const execute = async (pending: Runner<unknown>) => {
         try {
-          if (connected) await pending.execute();
-          else if (await offerConnectAction(selectedServer))
+          if (connected || (await offerConnectAction(selectedServer))) {
             await pending.execute();
+          }
         } catch (error) {
           if (pending.cancelled) {
             return;
