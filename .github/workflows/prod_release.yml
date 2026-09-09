@@ -97,25 +97,56 @@ jobs:
       - name: Manual Approval
         run: echo "Manually approved"
 
-  publish:
+  publish-marketplace:
     needs: manual-approval
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-      - name: Install dependencies
-        run: npm ci --include=dev
+      - name: Set Tag Var
+        id: vars
+        run: echo "run_tag=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+      - name: Download VSIX file from the release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ github.ref_name }} \
+            --repo ${{ github.repository }} --pattern "*.vsix" --clobber
       - name: Publish to VSCode Marketplace
-        run: npm run publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          npx --yes @vscode/vsce@3.9.2 publish --skip-duplicate \
+            -i kdb-${{ steps.vars.outputs.run_tag }}.vsix
+
+  publish-openvsx:
+    needs: manual-approval
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Set Tag Var
+        id: vars
+        run: echo "run_tag=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+      - name: Download VSIX file from the release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ github.ref_name }} \
+            --repo ${{ github.repository }} --pattern "*.vsix" --clobber
+      - name: Check Open VSX for the version
+        id: ovsx
+        run: |
+          URL=https://open-vsx.org/api/KX/kdb/${{ steps.vars.outputs.run_tag }}
+          if curl -sf -o /dev/null "$URL"; then
+            echo "::warning::${{ github.ref_name }} is already on Open VSX. Skipping publish."
+            echo "published=true" >> $GITHUB_OUTPUT
+          else
+            echo "published=false" >> $GITHUB_OUTPUT
+          fi
       - name: Publish to Open VSX Registry
+        if: steps.ovsx.outputs.published == 'false'
         uses: HaaLeo/publish-vscode-extension@v2
         with:
           pat: ${{ secrets.OPEN_VSX_TOKEN }}
+          extensionFile: kdb-${{ steps.vars.outputs.run_tag }}.vsix

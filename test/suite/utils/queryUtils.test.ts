@@ -106,7 +106,7 @@ describe("queryUtils", () => {
         { trip_id: "97738" },
         { trip_id: "626" },
       ];
-      const result = queryUtils.convertRows(rows, 0, results);
+      const result = queryUtils.convertRows(rows, results);
 
       assert.strictEqual(
         result,
@@ -120,7 +120,7 @@ describe("queryUtils", () => {
         columns: [column("values", "longs", ["1", "2", "3"])],
       };
       const rows = [{ values: "1" }, { values: "2" }, { values: "3" }];
-      const result = queryUtils.convertRows(rows, 0, results);
+      const result = queryUtils.convertRows(rows, results);
 
       assert.strictEqual(result, "1  \n2  \n3  \n\n");
     });
@@ -138,7 +138,7 @@ describe("queryUtils", () => {
         { key: "bb", values: "2" },
         { key: "c", values: "3" },
       ];
-      const result = queryUtils.convertRows(rows, 0, results);
+      const result = queryUtils.convertRows(rows, results);
 
       assert.strictEqual(result, "a | 1  \nbb| 2  \nc | 3  \n\n");
     });
@@ -156,7 +156,7 @@ describe("queryUtils", () => {
         { a: "2", b: "5" },
         { a: "3", b: "6" },
       ];
-      const result = queryUtils.convertRows(rows, 0, results);
+      const result = queryUtils.convertRows(rows, results);
 
       assert.strictEqual(result, "a| b  \n-| ---\n1| 4  \n2| 5  \n3| 6  \n\n");
     });
@@ -169,7 +169,7 @@ describe("queryUtils", () => {
           column("path", "symbol", []),
         ],
       };
-      const result = queryUtils.convertRows([], 0, results);
+      const result = queryUtils.convertRows([], results);
 
       assert.strictEqual(
         result,
@@ -183,13 +183,13 @@ describe("queryUtils", () => {
         count: 1,
         columns: [column("values", "lambda", [lambda])],
       };
-      const result = queryUtils.convertRows([{ values: lambda }], 0, results);
+      const result = queryUtils.convertRows([{ values: lambda }], results);
 
       assert.strictEqual(result, lambda + "\n\n");
     });
 
     it("should return nothing to show when there are no columns", () => {
-      const result = queryUtils.convertRows([], 0, { count: 0, columns: [] });
+      const result = queryUtils.convertRows([], { count: 0, columns: [] });
 
       assert.deepStrictEqual(result, []);
     });
@@ -228,31 +228,14 @@ describe("queryUtils", () => {
       ]);
     });
 
-    it("should cut a row that does not fit the width", () => {
-      const rows = [
-        "#$#;header;#$#aa#$#;#$#bb#$#;#$#cc",
-        "11#$#;#$#22#$#;#$#33",
-      ];
-      const result = queryUtils.convertRowsToConsole(rows, 11);
-
-      assert.deepEqual(result, ["aa  bb  c..", "-----------", "11  22  3.."]);
-    });
-
-    it("should leave a row that fits the width alone", () => {
-      const rows = ["#$#;header;#$#a#$#;#$#b", "1#$#;#$#2"];
-      const result = queryUtils.convertRowsToConsole(rows, 40);
-
-      assert.deepEqual(result, ["a  b  ", "------", "1  2  "]);
-    });
-
-    it("should keep the start of a column too wide to fit", () => {
+    it("should leave a row wider than any terminal uncut", () => {
       const rows = ["#$#;header;#$#id#$#;#$#text", "1#$#;#$#0123456789abcdef"];
-      const result = queryUtils.convertRowsToConsole(rows, 12);
+      const result = queryUtils.convertRowsToConsole(rows);
 
       assert.deepEqual(result, [
-        "id  text  ..",
-        "------------",
-        "1   012345..",
+        "id  text              ",
+        "----------------------",
+        "1   0123456789abcdef  ",
       ]);
     });
 

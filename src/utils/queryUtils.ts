@@ -256,11 +256,10 @@ interface ConsoleTable {
 
 export function convertRows(
   rows: any[],
-  width = 0,
   results?: StructuredTextResults,
 ): any {
   const table = results ? structuredTable(rows, results) : objectTable(rows);
-  const lines = table ? layout(table, width) : [];
+  const lines = table ? layout(table) : [];
   return lines.length === 0 ? [] : lines.join("\n") + "\n\n";
 }
 
@@ -320,19 +319,6 @@ function structuredTable(
   };
 }
 
-// Marks a line the console could not show in full, as a q console marks one.
-const CUT = "..";
-
-// Cuts a line to the given width, as a q console cuts one to its `\c`. A width
-// of 0 means no limit — the shared output channel scrolls horizontally, where
-// a terminal only wraps, and a wrapped table is no longer a table.
-function fit(line: string, width: number): string {
-  if (!width || line.length <= width) {
-    return line;
-  }
-  return line.slice(0, Math.max(0, width - CUT.length)) + CUT;
-}
-
 // A cell that arrives with newlines in it — a nested list, rendered down the
 // page by whatever produced it — would otherwise carry the rest of its row
 // with it and leave every column after it hanging. A console table keeps one
@@ -360,7 +346,7 @@ function rule(length: number, widths: number[], keys: number): string {
     : line;
 }
 
-function layout(table: ConsoleTable, width: number): string[] {
+function layout(table: ConsoleTable): string[] {
   const rows = table.header ? [table.header, ...table.cells] : table.cells;
   if (rows.length === 0) {
     return [];
@@ -369,7 +355,7 @@ function layout(table: ConsoleTable, width: number): string[] {
   // table, and keeps the newlines it came with instead of being squared off
   // into one cell (KXI-73276).
   if (!table.header && rows.length === 1 && rows[0].length === 1) {
-    return rows[0][0].split("\n").map((line) => fit(line, width));
+    return rows[0][0].split("\n");
   }
   const cells = rows.map((row) => row.map(flatten));
   const count = cells.reduce((max, row) => Math.max(max, row.length), 0);
@@ -383,16 +369,13 @@ function layout(table: ConsoleTable, width: number): string[] {
   // nothing to its right, or a line of plain console output, has no key block.
   const keys = table.keys > 0 && table.keys < count ? table.keys : 0;
   const lines = cells.map((row) =>
-    fit(
-      row
-        .map((value, index) =>
-          index === keys - 1
-            ? value.padEnd(widths[index] - 2) + "| "
-            : value.padEnd(widths[index]),
-        )
-        .join(""),
-      width,
-    ),
+    row
+      .map((value, index) =>
+        index === keys - 1
+          ? value.padEnd(widths[index] - 2) + "| "
+          : value.padEnd(widths[index]),
+      )
+      .join(""),
   );
   if (table.header) {
     lines.splice(1, 0, rule(lines[0].length, widths, keys));
@@ -400,7 +383,7 @@ function layout(table: ConsoleTable, width: number): string[] {
   return lines;
 }
 
-export function convertRowsToConsole(rows: string[], width = 0): string[] {
+export function convertRowsToConsole(rows: string[]): string[] {
   if (rows.length === 0) {
     return [];
   }
@@ -413,7 +396,7 @@ export function convertRowsToConsole(rows: string[], width = 0): string[] {
   );
   // Rows that arrive without a header of their own are a dictionary's
   // key/value pairs, which q prints with a pipe between them.
-  return layout({ cells, header, keys: haveHeader ? 0 : 1 }, width);
+  return layout({ cells, header, keys: haveHeader ? 0 : 1 });
 }
 
 export function checkIfIsPropVal(columns: string[]): boolean {
