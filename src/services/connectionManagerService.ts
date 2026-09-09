@@ -36,7 +36,6 @@ import {
   updateServers,
   isQuickAlias,
 } from "../utils/core";
-import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { resetScratchpadStarted, sanitizeQuery } from "../utils/queryUtils";
 
@@ -182,7 +181,6 @@ export class ConnectionManagementService {
         } else {
           this.connectFailBehaviour(connLabel);
         }
-        refreshDataSourcesPanel();
       }
     } catch (error) {
       this.connectFailBehaviour(connLabel, error);

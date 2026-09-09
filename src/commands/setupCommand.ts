@@ -26,6 +26,7 @@ import {
 import { errorMessage } from "../utils/shared";
 import { writeLocalFile } from "../utils/storage";
 import { getUri } from "../utils/uriUtils";
+import { webviewReset } from "../utils/webviewPage";
 
 const logger = "setupTools";
 
@@ -115,26 +116,23 @@ function getWebviewContent(webview: vscode.Webview) {
   const getResource = (resource: string) =>
     getUri(webview, ext.context.extensionUri, resource.split("/"));
 
-  const getTheme = () =>
-    vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ||
-    vscode.window.activeColorTheme.kind ===
-      vscode.ColorThemeKind.HighContrastLight
-      ? "sl-theme-light"
-      : "sl-theme-dark";
+  const isDark = () =>
+    vscode.window.activeColorTheme.kind !== vscode.ColorThemeKind.Light &&
+    vscode.window.activeColorTheme.kind !==
+      vscode.ColorThemeKind.HighContrastLight;
 
   return /* html */ `
     <!DOCTYPE html>
-    <html lang="en" class="${getTheme()}">
+    <html lang="en">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <link rel="stylesheet" href="${getResource("out/light.css")}" />
-      <link rel="stylesheet" href="${getResource("out/style.css")}" />
+      ${webviewReset(getNonce())}
       <script type="module" nonce="${getNonce()}" src="${getResource("out/webview.js")}"></script>
       <title>Welcome to KDB-X</title>
     </head>
     <body>
-      <kdb-welcome-view image="${getResource("resources/images/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
+      <kdb-welcome-view image="${getResource("resources/images/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${isDark() ? "dark" : ""}"></kdb-welcome-view>
     </body>
     </html>
   `;

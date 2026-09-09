@@ -53,6 +53,77 @@ describe("ResultsPanelProvider", () => {
     resultsPanel["_view"] = viewStub;
   });
 
+  describe("resolveWebviewView", () => {
+    const createView = () => {
+      const posted: any[] = [];
+      let received: ((data: any) => void) | undefined;
+      const view = <vscode.WebviewView>(<unknown>{
+        webview: {
+          options: {},
+          html: "",
+          asWebviewUri: (uri: vscode.Uri) => uri,
+          cspSource: "self",
+          postMessage(message: any) {
+            posted.push(message);
+          },
+          onDidReceiveMessage(callback: (data: any) => void) {
+            received = callback;
+          },
+        },
+      });
+      return { view, posted, receive: (data: any) => received?.(data) };
+    };
+
+    beforeEach(() => {
+      resultsPanel["_view"] = undefined;
+      sinon.stub(ext, "context").value(<vscode.ExtensionContext>(<unknown>{
+        extensionUri: uriTest,
+      }));
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should let the page run scripts from the bundle directory", () => {
+      const { view } = createView();
+
+      resultsPanel.resolveWebviewView(view);
+
+      assert.strictEqual(view.webview.options.enableScripts, true);
+      assert.strictEqual(
+        view.webview.options.localResourceRoots?.[0].path.endsWith("out"),
+        true,
+      );
+    });
+
+    it("should mount the results element in the page it writes", () => {
+      const { view } = createView();
+
+      resultsPanel.resolveWebviewView(view);
+
+      assert.ok(view.webview.html.includes('<kdb-results-view size="100">'));
+      assert.ok(view.webview.html.includes("out/webview.js"));
+    });
+
+    it("should render what the webview sends back", () => {
+      const { view, posted, receive } = createView();
+      resultsPanel.resolveWebviewView(view);
+      posted.length = 0;
+
+      receive("a result");
+
+      assert.deepStrictEqual(
+        posted.map((message) => message.command),
+        ["loading", "setResultsContent"],
+      );
+      assert.strictEqual(
+        posted[1].results,
+        `<p class="results-txt">a result</p>`,
+      );
+    });
+  });
+
   describe("defineAgGridTheme()", () => {
     it("should return 'ag-theme-alpine' if the color theme is not dark", () => {
       resultsPanel._colorTheme = { kind: vscode.ColorThemeKind.Light };
@@ -220,13 +291,13 @@ describe("ResultsPanelProvider", () => {
             field: "prop1",
             headerName: "prop1 [type1]",
             cellDataType: "text",
-            cellRendererParams: { disabled: false },
+            isKey: false,
           },
           {
             field: "prop2",
             headerName: "prop2 [type2]",
             cellDataType: "text",
-            cellRendererParams: { disabled: false },
+            isKey: false,
           },
         ],
       });
@@ -326,6 +397,27 @@ describe("ResultsPanelProvider", () => {
 
       const output = renderer.convertToGrid(results, true);
       assert.equal(JSON.stringify(output), expectedOutput);
+    });
+
+    it("should keep booleans as q prints them (KXI-73119)", () => {
+      const results = {
+        count: 2,
+        columns: [
+          { name: "flag", type: "booleans", values: ["1b", "0b"] },
+          { name: "one", type: "boolean", values: ["1b"] },
+        ],
+      };
+
+      const output = renderer.convertToGrid(results, true, "1.20");
+
+      assert.deepStrictEqual(output.rowData, [
+        { index: 1, flag: "1b", one: "1b" },
+        { index: 2, flag: "0b" },
+      ]);
+      assert.deepStrictEqual(
+        output.columnDefs.map((col: any) => col.cellDataType),
+        ["number", "text", "text"],
+      );
     });
   });
 
@@ -456,6 +548,22 @@ describe("ResultsPanelProvider", () => {
       sinon.assert.calledWith(postMessageStub, {
         command: "setResultsContent",
         results: `<p class="results-txt">123</p>`,
+      });
+    });
+
+    it("should escape markup in a string queryResult", () => {
+      resultsPanel.updateWebView("{x<y} & z");
+      sinon.assert.calledWith(postMessageStub, {
+        command: "setResultsContent",
+        results: `<p class="results-txt">{x&lt;y} &amp; z</p>`,
+      });
+    });
+
+    it("should turn the newlines of a string queryResult into breaks", () => {
+      resultsPanel.updateWebView("type\n  [0] {1+x}\n        ^\n");
+      sinon.assert.calledWith(postMessageStub, {
+        command: "setResultsContent",
+        results: `<p class="results-txt">type<br/>  [0] {1+x}<br/>        ^<br/></p>`,
       });
     });
 
@@ -732,19 +840,61 @@ describe("ResultsPanelProvider", () => {
           field: "date",
           headerName: "date [dates]",
           cellDataType: "text",
-          cellRendererParams: { disabled: false },
+          isKey: false,
         },
         {
           field: "instance",
           headerName: "instance [symbols]",
           cellDataType: "text",
-          cellRendererParams: { disabled: false },
+          isKey: false,
         },
       ];
 
       const columnDefs = renderer.updatedExtractColumnDefs(results);
 
       assert.deepEqual(columnDefs, expectedColumnDefs);
+    });
+
+    it("should show an attribute with the type it qualifies", () => {
+      const results: StructuredTextResults = {
+        columns: [
+          {
+            name: "values",
+            type: "longs",
+            order: [0, 1, 2],
+            values: ["1", "2", "3"],
+            attributes: "s",
+          },
+        ],
+        count: 3,
+      };
+
+      const columnDefs = renderer.updatedExtractColumnDefs(results);
+
+      assert.equal(columnDefs[0].headerName, "values [longs (s)]");
+    });
+
+    it("should mark the key columns of a keyed table", () => {
+      const results: StructuredTextResults = {
+        columns: [
+          {
+            name: "a",
+            type: "longs",
+            order: [0, 1],
+            values: ["1", "2"],
+            isKey: true,
+          },
+          { name: "b", type: "longs", order: [0, 1], values: ["3", "4"] },
+        ],
+        count: 2,
+      };
+
+      const columnDefs = renderer.updatedExtractColumnDefs(results);
+
+      assert.deepEqual(
+        columnDefs.map((def) => def.isKey),
+        [true, false],
+      );
     });
 
     it("should handle empty columns correctly", () => {

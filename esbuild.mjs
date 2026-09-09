@@ -1,4 +1,5 @@
 import { context, build } from "esbuild";
+import { copyFile, mkdir } from "fs/promises";
 
 const minify = process.argv.includes("--minify");
 const sourcemap = process.argv.includes("--sourcemap");
@@ -12,19 +13,27 @@ const baseConfig = {
   bundle: true,
 };
 
-const cssConfig = {
-  ...baseConfig,
-  entryPoints: [
-    "./src/webview/styles/style.css",
-    "./src/webview/styles/light.css",
-  ],
-  outdir: "./out",
-};
-
 const webviewConfig = {
   ...baseConfig,
   entryPoints: ["./src/webview/main.ts"],
   outfile: "./out/webview.js",
+  format: "esm",
+  target: "es2020",
+  external: ["vscode"],
+};
+
+async function copyCodicons() {
+  await mkdir("./out", { recursive: true });
+  await copyFile(
+    "./node_modules/@vscode/codicons/dist/codicon.ttf",
+    "./out/codicon.ttf",
+  );
+}
+
+const queryConfig = {
+  ...baseConfig,
+  entryPoints: ["./src/webview/query.ts"],
+  outfile: "./out/query.js",
   format: "esm",
   target: "es2020",
   external: ["vscode"],
@@ -51,12 +60,13 @@ const extensionConfig = {
 if (watch) {
   console.log("esbuild:started");
   Promise.all([
-    context(cssConfig),
+    copyCodicons(),
     context(webviewConfig),
+    context(queryConfig),
     context(serverConfig),
     context(extensionConfig),
   ])
-    .then((contexts) =>
+    .then(([, ...contexts]) =>
       Promise.all(contexts.map((ctx) => ctx.rebuild())).finally(() =>
         Promise.all(contexts.map((ctx) => ctx.watch({ delay: 500 })))
           .then(() => console.log("esbuild:watching"))
@@ -68,13 +78,15 @@ if (watch) {
     )
     .catch((error) => {
       console.error(error);
+      process.exit(1);
     });
 } else {
   Promise.all([
-    build(cssConfig),
     build(webviewConfig),
+    build(queryConfig),
     build(serverConfig),
     build(extensionConfig),
+    copyCodicons(),
   ]).catch((error) => {
     console.error(error);
     process.exit(1);

@@ -11,6 +11,17 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { TYPE_BY_NAME } from "./typeFormat";
+
+export const SCOPE = "scope";
+
+/**
+ * What `scope` asks for, in the words the qSQL target uses: the two are the
+ * same question, and the same dropdown answers both.
+ */
+export const SCOPE_DESCRIPTION =
+  "Tier or DAP process to run the request on. An assembly on its own leaves the instance to the resource coordinator.";
+
 export enum ParamFieldType {
   Text = "text",
   Number = "number",
@@ -19,11 +30,32 @@ export enum ParamFieldType {
   Invalid = "invalid",
   MultiType = "multitype",
   JSON = "json",
+  Code = "code",
 }
 
 export enum InvalidParamFieldErrors {
   BadField = "badField",
   NoMetadata = "noMetadata",
+}
+
+export type ParamSource =
+  | "tables"
+  | "columns"
+  | "targets"
+  | "labels"
+  | "labelValues";
+
+export function isSuggestion(source: ParamSource | undefined): boolean {
+  return source === "labels" || source === "labelValues";
+}
+
+export interface UDAParamField {
+  name: string;
+  choices?: string[];
+  at?: number;
+  many?: boolean;
+  typed?: boolean;
+  source?: ParamSource;
 }
 
 export interface UDAParam {
@@ -37,8 +69,13 @@ export interface UDAParam {
   multiFieldTypes?: { [key: string]: ParamFieldType }[];
   selectedMultiTypeString?: string;
   value?: any;
+  /** Render the choices as a multi-select, holding a list rather than one. */
+  multiple?: boolean;
   isVisible?: boolean;
   isDistinguised?: boolean;
+  choices?: string[];
+  rows?: UDAParamField[];
+  source?: ParamSource;
 }
 
 export interface UDAReturn {
@@ -64,3 +101,133 @@ export interface UDARequestBody {
   sampleFn: string;
   sampleSize: number;
 }
+
+export const UDA_DISTINGUISHED_PARAMS: UDAParam[] = [
+  {
+    name: "table",
+    description: "Table to target.",
+    isReq: false,
+    type: [-11],
+    typeStrings: ["Symbol"],
+    isVisible: false,
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+    source: "tables",
+  },
+  {
+    name: "labels",
+    description:
+      "DAP labels to target. One key takes several values, separated by spaces or semicolons.",
+    isReq: false,
+    type: [99],
+    typeStrings: ["Dictionary"],
+    isVisible: false,
+    fieldType: ParamFieldType.JSON,
+    isDistinguised: true,
+    // Values stay strings: a label is a symbol, so a numeric-looking one like
+    // 600519 must not be coerced to a number.
+    rows: [
+      { name: "key", source: "labels" },
+      { name: "value", many: true, typed: false, source: "labelValues" },
+    ],
+  },
+  {
+    name: "scope",
+    description: SCOPE_DESCRIPTION,
+    isReq: false,
+    // See the getData definition of the same parameter: a dictionary on the
+    // wire, the target string the dropdown wrote on the form.
+    type: [99],
+    typeStrings: ["Dictionary"],
+    fieldType: ParamFieldType.Text,
+    isVisible: false,
+    source: "targets",
+    isDistinguised: true,
+  },
+  {
+    name: "startTS",
+    description: "Inclusive start time of the request.",
+    isReq: false,
+    type: [-12],
+    typeStrings: ["Timestamp"],
+    isVisible: false,
+    fieldType: ParamFieldType.Timestamp,
+    isDistinguised: true,
+  },
+  {
+    name: "endTS",
+    description: "Exclusive end time of the request.",
+    isReq: false,
+    type: [-12],
+    typeStrings: ["Timestamp"],
+    isVisible: false,
+    fieldType: ParamFieldType.Timestamp,
+    isDistinguised: true,
+  },
+  {
+    name: "inputTZ",
+    description: "Timezone of startTS and endTS (default: UTC).",
+    isReq: false,
+    type: [-11],
+    typeStrings: ["Symbol"],
+    isVisible: false,
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+  },
+  {
+    name: "outputTZ",
+    description:
+      "Timezone of the final result (.kxi.getData only). No effect on routing.",
+    isReq: false,
+    type: [-11],
+    typeStrings: ["Symbol"],
+    isVisible: false,
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+  },
+];
+
+const TABLE_PARAMS = /^(table|tablename)$/;
+const COLUMN_PARAMS = /^(column|columns|col|cols|sortcols|groupby|bycols|by)$/;
+
+export function sourceForParam(
+  name: string,
+  fieldType?: ParamFieldType,
+): ParamSource | undefined {
+  const key = name.toLowerCase();
+  // Ahead of the field type, which a scope can never satisfy: it is registered
+  // as a dictionary, so it arrives as JSON, and the dropdown answering it is
+  // the one the qSQL target uses. A UDA declaring its own scope gets the same
+  // widget as the distinguished one.
+  if (key === SCOPE) {
+    return "targets";
+  }
+  if (fieldType !== ParamFieldType.Text) {
+    return undefined;
+  }
+  if (TABLE_PARAMS.test(key)) {
+    return "tables";
+  }
+  return COLUMN_PARAMS.test(key) ? "columns" : undefined;
+}
+
+export function selectedParamType(param: UDAParam): number | undefined {
+  const types = Array.isArray(param.type) ? param.type : [param.type];
+
+  if (types.length === 1) {
+    return typeof types[0] === "number" ? types[0] : undefined;
+  }
+
+  if (!param.selectedMultiTypeString) {
+    return undefined;
+  }
+
+  const named = param.selectedMultiTypeString.replace(/_/g, " ");
+  const at = (param.typeStrings || []).indexOf(named);
+
+  return at === -1 ? TYPE_BY_NAME.get(named) : types[at];
+}
+
+export const allowedEmptyRequiredTypes = [10, -11];
+
+export const allowedEmptyRequiredTypesStrings = ["Symbol", "String"];

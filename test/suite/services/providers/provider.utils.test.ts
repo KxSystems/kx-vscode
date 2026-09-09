@@ -20,6 +20,8 @@ export function createPanel() {
     onDidChangeViewState: undefined,
     onDidDispose: undefined,
   };
+  const messages: any[] = [];
+  let disposed = 0;
   const panel = <WebviewPanel>{
     webview: {
       onDidReceiveMessage(e) {
@@ -27,6 +29,7 @@ export function createPanel() {
       },
       postMessage(e) {
         listeners.postMessage = e;
+        messages.push(e);
       },
     },
     onDidChangeViewState(e) {
@@ -35,9 +38,16 @@ export function createPanel() {
     onDidDispose(e) {
       listeners.onDidDispose = e;
     },
+    dispose() {
+      disposed++;
+    },
   };
   return {
     panel,
     listeners,
+    messages,
+    get disposed() {
+      return disposed;
+    },
   };
 }

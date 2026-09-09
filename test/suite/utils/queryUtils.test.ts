@@ -88,9 +88,116 @@ describe("queryUtils", () => {
     assert.equal(result, expectedRes);
   });
 
+  describe("convertRows from a structured text result", () => {
+    const column = (
+      name: string,
+      type: string,
+      values: string[],
+      isKey = false,
+    ) => ({ name, type, values, order: [], isKey });
+
+    it("should rule off a table with a single column", () => {
+      const results = {
+        count: 3,
+        columns: [column("trip_id", "long", ["1546339", "97738", "626"])],
+      };
+      const rows = [
+        { trip_id: "1546339" },
+        { trip_id: "97738" },
+        { trip_id: "626" },
+      ];
+      const result = queryUtils.convertRows(rows, results);
+
+      assert.strictEqual(
+        result,
+        "trip_id  \n---------\n1546339  \n97738    \n626      \n\n",
+      );
+    });
+
+    it("should print a list without a header", () => {
+      const results = {
+        count: 3,
+        columns: [column("values", "longs", ["1", "2", "3"])],
+      };
+      const rows = [{ values: "1" }, { values: "2" }, { values: "3" }];
+      const result = queryUtils.convertRows(rows, results);
+
+      assert.strictEqual(result, "1  \n2  \n3  \n\n");
+    });
+
+    it("should separate a dictionary's key with a pipe", () => {
+      const results = {
+        count: 3,
+        columns: [
+          column("key", "symbol", ["a", "bb", "c"], true),
+          column("values", "long", ["1", "2", "3"]),
+        ],
+      };
+      const rows = [
+        { key: "a", values: "1" },
+        { key: "bb", values: "2" },
+        { key: "c", values: "3" },
+      ];
+      const result = queryUtils.convertRows(rows, results);
+
+      assert.strictEqual(result, "a | 1  \nbb| 2  \nc | 3  \n\n");
+    });
+
+    it("should carry a keyed table's key through the rule", () => {
+      const results = {
+        count: 3,
+        columns: [
+          column("a", "long", ["1", "2", "3"], true),
+          column("b", "long", ["4", "5", "6"]),
+        ],
+      };
+      const rows = [
+        { a: "1", b: "4" },
+        { a: "2", b: "5" },
+        { a: "3", b: "6" },
+      ];
+      const result = queryUtils.convertRows(rows, results);
+
+      assert.strictEqual(result, "a| b  \n-| ---\n1| 4  \n2| 5  \n3| 6  \n\n");
+    });
+
+    it("should show the schema of an empty result", () => {
+      const results = {
+        count: 0,
+        columns: [
+          column("isFile", "boolean", []),
+          column("path", "symbol", []),
+        ],
+      };
+      const result = queryUtils.convertRows([], results);
+
+      assert.strictEqual(
+        result,
+        "isFile [boolean]  path [symbol]  \n---------------------------------\n\n",
+      );
+    });
+
+    it("should keep the newlines of a single value", () => {
+      const lambda = "{[a;b;c]\n    c+: b;\n    c }";
+      const results = {
+        count: 1,
+        columns: [column("values", "lambda", [lambda])],
+      };
+      const result = queryUtils.convertRows([{ values: lambda }], results);
+
+      assert.strictEqual(result, lambda + "\n\n");
+    });
+
+    it("should return nothing to show when there are no columns", () => {
+      const result = queryUtils.convertRows([], { count: 0, columns: [] });
+
+      assert.deepStrictEqual(result, []);
+    });
+  });
+
   describe("convertRowsToConsole", () => {
     it("should work with headers", () => {
-      const rows = ["a#$#;header;#$#b", "1#$#;#$#2", "3#$#;#$#4"];
+      const rows = ["#$#;header;#$#a#$#;#$#b", "1#$#;#$#2", "3#$#;#$#4"];
       const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "];
       const result = queryUtils.convertRowsToConsole(rows);
 
@@ -107,7 +214,7 @@ describe("queryUtils", () => {
 
     it("should keep a column list on one line", () => {
       const rows = [
-        "id#$#;header;#$#components",
+        "#$#;header;#$#id#$#;#$#components",
         '"KXI-1"#$#;#$#"Insights UI"\n"Scratchpad"',
         '"KXI-2"#$#;#$#"Pipeline UI"',
       ];
@@ -122,7 +229,7 @@ describe("queryUtils", () => {
     });
 
     it("should leave a row wider than any terminal uncut", () => {
-      const rows = ["id#$#;header;#$#text", "1#$#;#$#0123456789abcdef"];
+      const rows = ["#$#;header;#$#id#$#;#$#text", "1#$#;#$#0123456789abcdef"];
       const result = queryUtils.convertRowsToConsole(rows);
 
       assert.deepEqual(result, [
@@ -133,7 +240,11 @@ describe("queryUtils", () => {
     });
 
     it("should keep a row with newlines in it on one line", () => {
-      const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
+      const rows = [
+        "#$#;header;#$#a#$#;#$#b",
+        "a1\na2#$#;#$#b1\nb2",
+        "3#$#;#$#4",
+      ];
       const expectedRes = [
         "a      b      ",
         "--------------",
@@ -195,6 +306,111 @@ describe("queryUtils", () => {
         true,
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+    });
+  });
+
+  describe("appendStacktrace", () => {
+    it("should return the message alone when there is no stacktrace", () => {
+      assert.strictEqual(
+        queryUtils.appendStacktrace("type", undefined),
+        "type",
+      );
+    });
+
+    it("should append a string stacktrace as it arrived", () => {
+      assert.strictEqual(
+        queryUtils.appendStacktrace("type", "  [0] {1+x}\n        ^\n"),
+        "type\n  [0] {1+x}\n        ^\n",
+      );
+    });
+
+    it("should format a frame list before appending it", () => {
+      const stacktrace = [
+        { name: "f", isNested: false, text: ["{a:x*2;a", "+y}"] },
+      ];
+
+      assert.strictEqual(
+        queryUtils.appendStacktrace("type", stacktrace),
+        "type\n" + queryUtils.formatScratchpadStacktrace(stacktrace),
+      );
+    });
+
+    it("should join a list of backtrace lines", () => {
+      assert.strictEqual(
+        queryUtils.appendStacktrace("type", ["[2] gw", "[1] rc"]),
+        "type\n[2] gw\n[1] rc",
+      );
+    });
+
+    it("should return the message alone for an empty frame list", () => {
+      assert.strictEqual(queryUtils.appendStacktrace("type", []), "type");
+    });
+  });
+
+  describe("formatScratchpadError", () => {
+    it("should prefix the error message", () => {
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: true,
+          errorMsg: "type",
+          sessionID: "1",
+        }),
+        "Error: type",
+      );
+    });
+
+    it("should fall back to a string error when there is no message", () => {
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: "Internal server error",
+          sessionID: "1",
+        }),
+        "Error: Internal server error",
+      );
+    });
+
+    it("should fall back to Unknown error when the error is a flag", () => {
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: true,
+          sessionID: "1",
+        }),
+        "Error: Unknown error",
+      );
+    });
+
+    it("should explain an unknown UDA", () => {
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: true,
+          errorMsg:
+            "Querying database using (UDA) raised - Unknown API: .kx.uda",
+          sessionID: "1",
+        }),
+        "Error: Querying database using (UDA) raised - Unknown API: .kx.uda. " +
+          "A table, label, or scope parameter may be missing or incorrect.",
+      );
+    });
+
+    it("should append the stacktrace", () => {
+      const stacktrace = [
+        { name: "f", isNested: false, text: ["{a:x*2;a", "+y}"] },
+      ];
+
+      assert.strictEqual(
+        queryUtils.formatScratchpadError({
+          data: "",
+          error: true,
+          errorMsg: "type",
+          sessionID: "1",
+          stacktrace,
+        }),
+        "Error: type\n" + queryUtils.formatScratchpadStacktrace(stacktrace),
+      );
     });
   });
 

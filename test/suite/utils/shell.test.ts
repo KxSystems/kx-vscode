@@ -11,6 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as assert from "assert";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import * as sinon from "sinon";
 
 import * as shellUtils from "../../../src/utils/shell";
@@ -26,6 +30,15 @@ describe("shell", () => {
     it("should not execute command if pid is NaN", async () => {
       await shellUtils.killPid(NaN);
       sinon.assert.notCalled(tryExecuteCommandStub);
+    });
+  });
+
+  describe("readTextFile", () => {
+    it("should read the file as text", () => {
+      const target = join(mkdtempSync(join(tmpdir(), "kdb-shell-")), "a.q");
+      writeFileSync(target, "1+1\n");
+
+      assert.strictEqual(shellUtils.readTextFile(target), "1+1\n");
     });
   });
 });

@@ -11,8 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as fs from "fs";
-import path from "path";
 import { CancellationToken, InputBoxOptions, window } from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -24,59 +22,30 @@ import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ServerType } from "../models/connectionsModels";
 import { GetDataError, getDataBodyPayload } from "../models/data";
-import {
-  DataSourceFiles,
-  DataSourceTypes,
-  createDefaultDataSourceFile,
-} from "../models/dataSource";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
+import { ScratchpadStacktrace } from "../models/scratchpadResult";
 import { UDARequestBody } from "../models/uda";
-import { DataSourcesPanel } from "../panels/datasource";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { noSelectedConnectionAction } from "../utils/core";
 import {
   checkIfTimeParamIsCorrect,
-  convertTimeToTimestamp,
-  createKdbDataSourcesFolder,
   getConnectedInsightsNode,
 } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
+  appendStacktrace,
   convertRows,
   getQSQLWrapper,
 } from "../utils/queryUtils";
 import { updatedExtractRowData } from "../utils/resultsRenderer";
-import { retrieveUDAtoCreateReqBody } from "../utils/uda";
+import { recastParams, retrieveUDAtoCreateReqBody } from "../utils/uda";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
 const logger = "dataSourceCommand";
 
-export async function addDataSource(): Promise<void> {
-  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-
-  let length = 0;
-  let fileName = `datasource-${length}${ext.kdbDataSourceFileExtension}`;
-  let filePath = path.join(kdbDataSourcesFolderPath, fileName);
-
-  while (fs.existsSync(filePath)) {
-    length++;
-    fileName = `datasource-${length}${ext.kdbDataSourceFileExtension}`;
-    filePath = path.join(kdbDataSourcesFolderPath, fileName);
-  }
-  const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
-  const defaultDataSourceContent = createDefaultDataSourceFile();
-  const insightsNode = getConnectedInsightsNode();
-  defaultDataSourceContent.name = dataSourceName;
-  defaultDataSourceContent.insightsNode = insightsNode;
-
-  fs.writeFileSync(filePath, JSON.stringify(defaultDataSourceContent));
-  notify(
-    `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
-    MessageKind.INFO,
-    { logger },
-  );
-}
+const running = new Set<string>();
 
 export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
@@ -103,7 +72,6 @@ export async function populateScratchpad(
       connMngService.retrieveConnectedConnection(connLabel);
 
     if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      DataSourcesPanel.running = false;
       return;
     }
 
@@ -130,7 +98,14 @@ export async function runDataSource(
   token?: CancellationToken,
   timeout?: number,
 ): Promise<any> {
-  if (DataSourcesPanel.running) {
+  const key = `${connLabel} ${executorName}`;
+
+  if (running.has(key)) {
+    notify(
+      `${executorName} is already running on ${connLabel}.`,
+      MessageKind.WARNING,
+      { logger },
+    );
     return;
   }
 
@@ -139,7 +114,7 @@ export async function runDataSource(
     return;
   }
 
-  DataSourcesPanel.running = true;
+  running.add(key);
   const connMngService = new ConnectionManagementService();
   const selectedConnection =
     connMngService.retrieveConnectedConnection(connLabel);
@@ -178,17 +153,17 @@ export async function runDataSource(
           timeout,
         );
         break;
-      case "UDA":
-        res = await runUDADataSource(fileContent, selectedConnection, timeout);
-        break;
       case "SQL":
-      default:
         res = await runSqlDataSource(
           fileContent,
           selectedConnection,
           isNotebook || undefined,
           timeout,
         );
+        break;
+      case "UDA":
+      default:
+        res = await runUDADataSource(fileContent, selectedConnection, timeout);
         break;
     }
 
@@ -215,7 +190,7 @@ export async function runDataSource(
             logger,
           });
         } else if (!success) {
-          res = res.errorMsg ? res.errorMsg : res.error;
+          res = formatDataSourceError(res);
         }
 
         if (isNotebook) {
@@ -238,11 +213,11 @@ export async function runDataSource(
             { logger },
           );
         } else if (res.error) {
-          res = res.errorMsg ? res.errorMsg : res.error;
+          res = formatDataSourceError(res);
         }
 
         const rowData = res.columns
-          ? convertRows(updatedExtractRowData(res))
+          ? convertRows(updatedExtractRowData(res), res)
           : res;
 
         await writeQueryResultsToConsole(
@@ -257,13 +232,25 @@ export async function runDataSource(
       addDStoQueryHistory(dataSourceForm, success, connLabel, executorName);
     }
   } catch (error) {
-    notify(`Datasource error: ${error}.`, MessageKind.DEBUG, {
-      logger,
-      params: error,
-    });
-    DataSourcesPanel.running = false;
+    // Backstop for anything the per-type runners did not turn into a result.
+    // A notebook renders the failure into the cell that raised it, so let it
+    // through; everywhere else the query failed and must say so rather than
+    // logging out of sight, and the attempt is recorded so the query history
+    // still increments (KXI-69283).
+    if (executorName.endsWith(".kxnb")) {
+      throw error;
+    }
+    if (!token?.isCancellationRequested) {
+      notify(
+        `Datasource error: ${error instanceof Error ? error.message : error}`,
+        MessageKind.ERROR,
+        { logger, params: error },
+      );
+      addDStoQueryHistory(dataSourceForm, false, connLabel, executorName);
+    }
   } finally {
-    DataSourcesPanel.running = false;
+    ext.isDatasourceExecution = false;
+    running.delete(key);
   }
 }
 
@@ -307,10 +294,11 @@ export async function runApiDataSource(
   selectedConn: InsightsConnection,
   timeout?: number,
 ): Promise<any> {
-  const isTimeCorrect = checkIfTimeParamIsCorrect(
-    fileContent.dataSource.api.startTS,
-    fileContent.dataSource.api.endTS,
-  );
+  const payload = fileContent.dataSource.api.payload || {};
+  const isTimeCorrect =
+    !payload.startTS ||
+    !payload.endTS ||
+    checkIfTimeParamIsCorrect(payload.startTS, payload.endTS);
   if (!isTimeCorrect) {
     notify(
       "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS",
@@ -319,7 +307,7 @@ export async function runApiDataSource(
     );
     return;
   }
-  const apiBody = getApiBody(fileContent);
+  const apiBody = getApiBody(fileContent, selectedConn);
   const apiCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.API,
     apiBody,
@@ -327,7 +315,7 @@ export async function runApiDataSource(
   );
 
   if (apiCall?.error) {
-    return parseError(apiCall.error);
+    return parseError(apiCall.error, apiCall.stacktrace);
   } else if (apiCall?.results) {
     return apiCall.results;
   } else {
@@ -337,87 +325,11 @@ export async function runApiDataSource(
 
 export function getApiBody(
   fileContent: DataSourceFiles,
+  selectedConn: InsightsConnection,
 ): Partial<getDataBodyPayload> {
-  const api = fileContent.dataSource.api;
-
-  const apiBody: getDataBodyPayload = {
-    table: fileContent.dataSource.api.table,
-    startTS: convertTimeToTimestamp(api.startTS),
-    endTS: convertTimeToTimestamp(api.endTS),
-  };
-
-  const optional = api.optional;
-
-  if (optional) {
-    if (optional.filled) {
-      apiBody.fill = api.fill;
-    }
-    if (optional.temporal) {
-      apiBody.temporality = api.temporality;
-    }
-    if (optional.rowLimit && api.rowCountLimit) {
-      if (api.isRowLimitLast) {
-        apiBody.limit = -parseInt(api.rowCountLimit);
-      } else {
-        apiBody.limit = parseInt(api.rowCountLimit);
-      }
-    }
-
-    const labels = optional.labels.filter((label) => label.active);
-
-    if (labels.length > 0) {
-      apiBody.labels = Object.assign(
-        {},
-        ...labels.map((label) => ({ [label.key]: label.value })),
-      );
-    } else {
-      apiBody.labels = {};
-    }
-
-    const filters = optional.filters
-      .filter((filter) => filter.active)
-      .map((filter) => [
-        filter.operator,
-        filter.column,
-        ((values: string) => {
-          const tokens = values.split(/[;\s]+/).map((token) => {
-            const number = parseFloat(token);
-            return isNaN(number) ? token : number;
-          });
-          return tokens.length === 1 ? tokens[0] : tokens;
-        })(filter.values),
-      ]);
-
-    if (filters.length > 0) {
-      apiBody.filter = filters;
-    }
-
-    const sorts = optional.sorts
-      .filter((sort) => sort.active)
-      .map((sort) => sort.column);
-
-    if (sorts.length > 0) {
-      apiBody.sortCols = sorts;
-    }
-
-    const aggs = optional.aggs
-      .filter((agg) => agg.active)
-      .map((agg) => [agg.key, agg.operator, agg.column]);
-
-    if (aggs.length > 0) {
-      apiBody.agg = aggs;
-    }
-
-    const groups = optional.groups
-      .filter((group) => group.active)
-      .map((group) => group.column);
-
-    if (groups.length > 0) {
-      apiBody.groupBy = groups;
-    }
-  }
-
-  return apiBody;
+  return selectedConn.scopedApiPayload(
+    fileContent.dataSource.api.payload || {},
+  );
 }
 
 export async function runQsqlDataSource(
@@ -430,6 +342,10 @@ export async function runQsqlDataSource(
     fileContent.dataSource.qsql.query,
     fileContent.dataSource.qsql.selectedTarget,
     selectedConn.insightsVersion,
+    {
+      agg: fileContent.dataSource.qsql.agg,
+      labels: fileContent.dataSource.qsql.labels,
+    },
   );
 
   const qsqlCall = await selectedConn.getDatasourceQuery(
@@ -439,7 +355,7 @@ export async function runQsqlDataSource(
   );
 
   if (qsqlCall?.error) {
-    return parseError(qsqlCall.error);
+    return parseError(qsqlCall.error, qsqlCall.stacktrace);
   } else if (qsqlCall?.results) {
     return qsqlCall.results;
   } else {
@@ -463,7 +379,7 @@ export async function runSqlDataSource(
   );
 
   if (sqlCall?.error) {
-    return parseError(sqlCall.error);
+    return parseError(sqlCall.error, sqlCall.stacktrace);
   } else if (sqlCall?.results) {
     return sqlCall.results;
   } else {
@@ -488,6 +404,18 @@ export async function runUDADataSource(
     return udaReqBody;
   }
 
+  // A REST request carries no types of its own, so the gateway casts each
+  // parameter to the first type the UDA registered for it. Saying so beats
+  // returning quietly mistyped results, since the form let the type be chosen.
+  const recast = uda ? recastParams(uda) : [];
+  if (recast.length > 0) {
+    notify(
+      `The service gateway will read ${recast.join(", ")} as the first type the UDA registers, not the type chosen. Populate Scratchpad honours the choice.`,
+      MessageKind.WARNING,
+      { logger },
+    );
+  }
+
   return await executeUDARequest(selectedConn, udaReqBody, timeout);
 }
 
@@ -503,7 +431,7 @@ export async function executeUDARequest(
   );
 
   if (udaCall?.error) {
-    return parseError(udaCall.error);
+    return parseError(udaCall.error, udaCall.stacktrace);
   } else if (udaCall?.results) {
     return udaCall.results;
   } else {
@@ -517,25 +445,32 @@ export function getQuery(
 ): string {
   switch (selectedType) {
     case "API":
-      return `GetData - table: ${fileContent.dataSource.api.table}`;
+      return `GetData - table: ${fileContent.dataSource.api.payload?.table}`;
     case "QSQL":
       return fileContent.dataSource.qsql.query;
-    case "UDA":
-      return `Executed UDA: ${fileContent.dataSource.uda?.name}`;
     case "SQL":
-    default:
       return fileContent.dataSource.sql.query;
+    default:
+      return `Executed UDA: ${fileContent.dataSource.uda?.name}`;
   }
 }
 
-export function parseError(error: GetDataError) {
+export function parseError(
+  error: GetDataError,
+  stacktrace?: ScratchpadStacktrace | string[] | string,
+) {
   notify(`Datasource error.`, MessageKind.DEBUG, {
     logger,
-    params: error,
+    params: { error, stacktrace },
   });
-  return {
-    error,
-  };
+  return stacktrace ? { error, stacktrace } : { error };
+}
+
+export function formatDataSourceError(res: any) {
+  const message = res.errorMsg ? res.errorMsg : res.error;
+  return typeof message === "string"
+    ? appendStacktrace(message, res.stacktrace)
+    : message;
 }
 
 export function getPartialDatasourceFile(

@@ -13,14 +13,19 @@
 
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
-import { MetaObjectPayload } from "../models/meta";
+import { MetaApi, MetaObjectPayload } from "../models/meta";
+import { PREVIEW, parseValue } from "../models/query";
+import { typeProblem } from "../models/typeFormat";
 import {
   InvalidParamFieldErrors,
   ParamFieldType,
+  SCOPE,
   UDA,
   UDAParam,
   UDARequestBody,
   UDAReturn,
+  selectedParamType,
+  sourceForParam,
 } from "../models/uda";
 
 export function filterUDAParamsValidTypes(type: number | number[]): number[] {
@@ -37,47 +42,20 @@ export function filterUDAParamsValidTypes(type: number | number[]): number[] {
   return typesArray.filter(validTypes.has, validTypes);
 }
 
-export function getUDAParamType(
-  type: ParamFieldType | ParamFieldType[],
-): string | string[] {
-  if (Array.isArray(type)) {
-    return type.map(
-      (t) => ext.constants.dataTypes.get(t.toString()) ?? t.toString(),
-    );
-  }
-  return ext.constants.dataTypes.get(type.toString()) ?? type.toString();
-}
-
 export function getUDAFieldType(type: number | number[]): ParamFieldType {
   if (!Array.isArray(type)) {
     return parseUDAParamTypes(type);
   }
 
-  const typeSet = new Set(type.map(parseUDAParamTypes));
+  const supported = type
+    .map(parseUDAParamTypes)
+    .filter((fieldType) => fieldType !== ParamFieldType.Invalid);
 
-  if (typeSet.size === 1) {
-    return typeSet.values().next().value ?? ParamFieldType.Invalid;
+  if (supported.length === 0) {
+    return ParamFieldType.Invalid;
   }
 
-  const typePriority = [
-    ParamFieldType.Text,
-    ParamFieldType.Number,
-    ParamFieldType.Boolean,
-    ParamFieldType.Timestamp,
-    ParamFieldType.JSON,
-  ];
-
-  let foundType: ParamFieldType | undefined;
-  for (const fieldType of typePriority) {
-    if (typeSet.has(fieldType)) {
-      if (foundType) {
-        return ParamFieldType.MultiType;
-      }
-      foundType = fieldType;
-    }
-  }
-
-  return foundType ?? ParamFieldType.Invalid;
+  return supported.length === 1 ? supported[0] : ParamFieldType.MultiType;
 }
 
 export function parseUDAParamTypes(type: number): ParamFieldType {
@@ -138,6 +116,7 @@ export function parseUDAParams(
       fieldType,
       typeStrings,
       multiFieldTypes,
+      source: sourceForParam(param.name, fieldType),
       isVisible: param.isReq,
     });
   });
@@ -154,32 +133,21 @@ export function convertTypesToString(returnType: number[]): string[] {
   );
 }
 
-//TODO: Should remove this after add nanoseconds support in uda
-export function fixTimeAtUDARequestBody(
-  udaReqBody: UDARequestBody,
-): UDARequestBody {
-  const parameterTypes = udaReqBody.parameterTypes as {
-    [key: string]: number;
-  };
-
-  for (const key in parameterTypes) {
-    if (parameterTypes[key] === -12) {
-      if (
-        (udaReqBody.params as { [key: string]: any })[key] &&
-        (udaReqBody.params as { [key: string]: any })[key] !== ""
-      ) {
-        (udaReqBody.params as { [key: string]: any })[key] =
-          `${(udaReqBody.params as { [key: string]: any })[key]}:00.000000000`;
-      }
-    }
-  }
-
-  return udaReqBody;
+export function hasNoMetadata(uda: Partial<MetaApi>): boolean {
+  return (
+    !uda.description &&
+    (uda.params || []).length === 0 &&
+    Object.keys(uda.return || {}).length === 0
+  );
 }
 
 export function getIncompatibleError(
+  uda: Partial<MetaApi>,
   parsedParams: any,
 ): InvalidParamFieldErrors | undefined {
+  if (hasNoMetadata(uda)) {
+    return InvalidParamFieldErrors.NoMetadata;
+  }
   if (parsedParams === ParamFieldType.Invalid) {
     return InvalidParamFieldErrors.BadField;
   }
@@ -188,8 +156,8 @@ export function getIncompatibleError(
 
 export function createUDAReturn(uda: any): UDAReturn {
   return {
-    type: convertTypesToString(uda?.return.type || []),
-    description: uda?.return.description || "",
+    type: convertTypesToString(uda?.return?.type || []),
+    description: uda?.return?.description || "",
   };
 }
 
@@ -207,6 +175,27 @@ export function createUDAObject(
   };
 }
 
+/**
+ * The preview API, when the connection has one. `.kxi.preview` is registered as
+ * a system API rather than a UDA, so it is picked out by name where
+ * `parseUDAList` goes by the flag, and a deployment without it offers no
+ * preview at all. The meta describes it in full — table, startTS, endTS and
+ * limit — so the form comes from the connection rather than from a copy of the
+ * signature kept here.
+ */
+export function parsePreviewApi(getMeta: MetaObjectPayload): UDA | undefined {
+  const preview = getMeta.api?.find((api) => api.api === PREVIEW);
+  if (!preview) {
+    return undefined;
+  }
+  const parsedParams = parseUDAParams(preview.params);
+  return createUDAObject(
+    preview,
+    parsedParams,
+    getIncompatibleError(preview, parsedParams),
+  );
+}
+
 export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
   const UDAs: UDA[] = [];
   if (getMeta.api !== undefined) {
@@ -214,16 +203,12 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
     if (getMetaUDAs.length !== 0) {
       for (const uda of getMetaUDAs) {
         const parsedParams = parseUDAParams(uda.params);
-        const incompatibleError = getIncompatibleError(parsedParams);
+        const incompatibleError = getIncompatibleError(uda, parsedParams);
         UDAs.push(createUDAObject(uda, parsedParams, incompatibleError));
       }
     }
   }
   return UDAs;
-}
-
-export function retrieveDataTypeByString(type: string): number {
-  return ext.constants.reverseDataTypes.get(type) ?? 0;
 }
 
 export async function validateUDA(
@@ -255,13 +240,7 @@ export function processUDAParams(uda: UDA): {
   const parameterTypes: { [key: string]: number } = {};
 
   if (uda.incompatibleError) {
-    return {
-      params: {},
-      parameterTypes: {},
-      error: {
-        error: `The UDA you have selected cannot be queried because it has required fields with types that are not supported.`,
-      },
-    };
+    return failed(incompatibleMessage(uda.incompatibleError));
   }
 
   if (uda.params && uda.params.length > 0) {
@@ -271,14 +250,89 @@ export function processUDAParams(uda: UDA): {
         return validationError;
       }
 
-      if (param.isVisible) {
-        params[param.name] = param.value || "";
-        parameterTypes[param.name] = resolveParamType(param);
+      if (!param.isVisible) {
+        continue;
       }
+
+      if (param.fieldType === ParamFieldType.Invalid) {
+        return failed(
+          `The UDA: ${uda.name} cannot send the parameter: ${param.name}. Its type is not supported.`,
+        );
+      }
+
+      const type = resolveParamType(param);
+
+      if (isOmitted(param, type)) {
+        continue;
+      }
+
+      const problem = typeProblem(type, param.value);
+      if (problem) {
+        return failed(`The ${param.name} parameter expects ${problem}.`);
+      }
+
+      const value = jsonValue(param, type);
+      if (value instanceof Error) {
+        return failed(value.message);
+      }
+
+      params[param.name] = value;
+      parameterTypes[param.name] = type;
     }
   }
 
   return { params, parameterTypes };
+}
+
+function failed(error: string) {
+  return { params: {}, parameterTypes: {}, error: { error } };
+}
+
+function incompatibleMessage(error: string): string {
+  return error === InvalidParamFieldErrors.NoMetadata
+    ? "The UDA you have selected cannot be queried because there is no metadata associated with it."
+    : "The UDA you have selected cannot be queried because it has required fields with types that are not supported.";
+}
+
+function isOmitted(param: UDAParam, type: number): boolean {
+  if (param.isReq) {
+    return false;
+  }
+  if (param.value === undefined || param.value === null) {
+    return true;
+  }
+  return (
+    param.value === "" &&
+    !ext.constants.allowedEmptyRequiredTypes.includes(type)
+  );
+}
+
+/**
+ * The value a parameter is sent as. A JSON-typed one — a dictionary or a list —
+ * is edited as JSON text and held as that text, but has to reach the gateway as
+ * the value the text describes: sent as a string it is refused outright, with
+ * `Argument 'scope' is not a dictionary` or `Invalid labels. Not a dictionary`.
+ * Text that does not parse is returned as the Error to report, rather than left
+ * for the gateway to answer 400 to. `scope` is the exception: it holds a target
+ * string rather than JSON, and `retrieveUDAtoCreateReqBody` resolves it against
+ * the connection meta once there is a connection to resolve it against.
+ */
+function jsonValue(param: UDAParam, type: number): unknown {
+  const value = param.value ?? "";
+  if (
+    param.name === SCOPE ||
+    !ext.jsonTypes.has(type) ||
+    typeof value !== "string" ||
+    !value.trim()
+  ) {
+    return value;
+  }
+  const parsed = parseValue(value);
+  return parsed === undefined
+    ? new Error(
+        `The ${param.name} parameter is not valid JSON. Give it a value like ["a","b"] or {"key":"value"}.`,
+      )
+    : parsed;
 }
 
 function validateParam(
@@ -301,43 +355,66 @@ function validateParam(
   return null;
 }
 
+/**
+ * Whether a parameter has been left blank. A parameter given `false` or `0` has
+ * been answered, so neither counts as blank.
+ */
+function isBlank(value: unknown): boolean {
+  return value === undefined || value === null || value === "";
+}
+
+/**
+ * The parameters whose chosen type the service gateway will not honour. A REST
+ * request carries no type of its own: the gateway casts each parameter using
+ * the UDA's registered metadata, and "if multiple types are specified,
+ * auto-casting uses the first type in the list" — so a multi-typed parameter
+ * given anything but its first type is cast to something else. The scratchpad
+ * takes parameterTypes and does honour the choice, so this is about Run Query
+ * alone.
+ */
+export function recastParams(uda: UDA): string[] {
+  return (uda.params || [])
+    .filter((param) => {
+      if (!param.isVisible || !Array.isArray(param.type)) {
+        return false;
+      }
+      const selected = selectedParamType(param);
+      return (
+        param.type.length > 1 &&
+        selected !== undefined &&
+        selected !== param.type[0]
+      );
+    })
+    .map((param) => param.name);
+}
+
 export function resolveParamType(param: UDAParam): number {
+  const selected = selectedParamType(param);
+  if (selected !== undefined) {
+    return selected;
+  }
+  // Reached by a multi-typed parameter whose pick is missing or unrecognised;
+  // a single type has already come back from selectedParamType.
   if (Array.isArray(param.type) && param.type.length > 0) {
     return param.type[0];
-  } else if (typeof param.type === "number") {
-    return param.type;
-  } else {
-    throw new Error(
-      `Invalid type for parameter: ${param.name}. Expected number or array of numbers.`,
-    );
   }
+  throw new Error(
+    `Invalid type for parameter: ${param.name}. Expected number or array of numbers.`,
+  );
 }
 
 export function isInvalidRequiredParam(param: UDAParam): boolean {
   if (param.name === "table" && param.isReq) {
-    return !param.value || param.value === "";
+    return isBlank(param.value);
   }
 
-  let typeToValidate: number | undefined;
-
-  if (Array.isArray(param.type)) {
-    if (param.type.length === 1) {
-      typeToValidate = param.type[0];
-    } else if (param.type.length > 1 && param.selectedMultiTypeString) {
-      const selectedTypeFixed = param.selectedMultiTypeString.replace("_", " ");
-      typeToValidate = ext.constants.reverseDataTypes.get(selectedTypeFixed);
-    }
-  } else if (typeof param.type === "number") {
-    typeToValidate = param.type;
-  }
+  const typeToValidate = selectedParamType(param);
 
   const isAllowedEmptyType =
     typeof typeToValidate === "number" &&
     ext.constants.allowedEmptyRequiredTypes.includes(typeToValidate);
 
-  return (
-    !isAllowedEmptyType && param.isReq && (!param.value || param.value === "")
-  );
+  return !isAllowedEmptyType && param.isReq && isBlank(param.value);
 }
 
 export function createUDARequestBody(
@@ -355,6 +432,25 @@ export function createUDARequestBody(
     sampleFn: "first",
     sampleSize: 10000,
   };
+}
+
+export function toScratchpadParams(
+  udaReqBody: UDARequestBody,
+): Record<string, unknown> {
+  const params: Record<string, unknown> = {};
+
+  for (const [name, value] of Object.entries(udaReqBody.params)) {
+    const type = udaReqBody.parameterTypes[name];
+    const json =
+      typeof type === "number" &&
+      ext.jsonTypes.has(type) &&
+      value !== undefined &&
+      value !== null &&
+      value !== "";
+    params[name] = json ? JSON.stringify(value) : value;
+  }
+
+  return params;
 }
 
 export async function retrieveUDAtoCreateReqBody(
@@ -375,6 +471,18 @@ export async function retrieveUDAtoCreateReqBody(
   const { params, parameterTypes, error } = processUDAParams(uda);
   if (error) {
     return error;
+  }
+
+  // The form holds a target string; the request wants the dictionary it stands
+  // for, and only the connection can say what the gateway calls those names.
+  if (SCOPE in params) {
+    const scope = insightsConn.scopeValue(params[SCOPE]);
+    if (scope === undefined) {
+      delete params[SCOPE];
+      delete parameterTypes[SCOPE];
+    } else {
+      params[SCOPE] = scope;
+    }
   }
 
   const udaReqBody: UDARequestBody = createUDARequestBody(

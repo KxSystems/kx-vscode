@@ -47,6 +47,174 @@ export const apiConfig = (
   version,
 });
 
+type Param = {
+  name: string;
+  type: number | number[];
+  isReq: boolean;
+  description: string;
+};
+
+/**
+ * One UDA as the meta reports it. parseUDAList reads the description, the
+ * parameters and the return off the api entry itself rather than out of
+ * `metadata`, so that is where they go.
+ */
+const registered = (
+  api: string,
+  description: string,
+  params: Param[],
+  returns = "Data from insightsMultitypeTable",
+) => ({
+  api,
+  kxname: [ASSEMBLY],
+  aggFn: ".sgagg.aggFnDflt",
+  custom: true,
+  uda: true,
+  full: true,
+  description,
+  params,
+  return: { type: [98], description: returns },
+  procs: [],
+});
+
+const param = (
+  name: string,
+  type: number | number[],
+  isReq: boolean,
+  description: string,
+): Param => ({ name, type, isReq, description });
+
+const SCOPE = param(
+  "scope",
+  99,
+  false,
+  "A dictionary describing what RC and/or DAPs to target.",
+);
+
+/**
+ * The UDAs the stand-in reports. The first seven are the signatures the
+ * insights-uda-e2e-pkg package registers on a real instance — the same names,
+ * types and required flags its .kxi.metaParam calls carry — so what the query
+ * editor makes of them here is what it makes of them there.
+ *
+ * The last four have no counterpart in that package, which types every
+ * parameter singly, gives every parameter a value and registers a return for
+ * every UDA: a multi-typed parameter, a required type the form cannot render, a
+ * boolean, and a UDA registered without a .kxi.metaReturn. Each is something a
+ * real instance can report and the editor has to survive.
+ */
+export const UDAS = [
+  registered(
+    ".insightsUda.tableAPI",
+    "Example UDA for using just a table parameter",
+    [param("table", -11, true, "Table to query"), SCOPE],
+    "Specified table",
+  ),
+  registered(
+    ".insightsUda.noParamAPI",
+    "Example UDA that doesn't utilize any parameters",
+    [SCOPE],
+    "Returns insightsMultitypeTable with data from 1 Jan 2024 through tomorrow",
+  ),
+  registered(
+    ".insightsUda.startEndAPI",
+    "Example UDA for using 2 valid start/endTS parameters",
+    [
+      param("startTS", -12, true, "start timestamp"),
+      param("endTS", -12, true, "end timestamp"),
+      SCOPE,
+    ],
+    "Data from insightsMultitypeTable with values between start/endTS",
+  ),
+  registered(
+    ".insightsUda.singleMultiplierAPI",
+    "UDA for multiplying a single column",
+    [
+      param("column", -11, true, "Column to multiply"),
+      param("multiplier", -7, true, "Multiplier"),
+      SCOPE,
+    ],
+    "Data from insightsMultitypeTable with multiplied columns",
+  ),
+  registered(
+    ".insightsUda.fullMultiplierAPI",
+    "Example UDA for using multiple valid parameters",
+    [
+      param("table", -11, true, "Table to query"),
+      param("column", -11, true, "Column to multiply"),
+      param("multiplier", -7, true, "Multiplier"),
+      param("startTS", -12, true, "start timestamp"),
+      param("endTS", -12, true, "end timestamp"),
+      SCOPE,
+    ],
+    "Table with multiplied columns",
+  ),
+  registered(
+    ".insightsUda.evalAPI",
+    "Example UDA for using multiple valid parameters",
+    [param("x", 10, true, "String to evaluate"), SCOPE],
+    "Table evaluated from string",
+  ),
+  registered(
+    "unqualifiedTableAPI",
+    "Example UDA for using just a table parameter",
+    [param("table", -11, true, "Table to query"), SCOPE],
+    "Specified table",
+  ),
+  registered(
+    ".e2eUda.multiTypeAPI",
+    "UDA whose parameter is given as more than one type",
+    [param("value", [-11, -7], true, "Value as a symbol or a long"), SCOPE],
+    "Rows matching the value",
+  ),
+  registered(
+    ".e2eUda.badFieldAPI",
+    "UDA requiring a parameter of a type the editor cannot render",
+    [param("fn", 100, true, "Function to apply"), SCOPE],
+    "Whatever the function returned",
+  ),
+  // The UDA from the KXI-65951 description: one parameter registered as every q
+  // type. Lambda (100) is not a type the form can render and is dropped, so the
+  // dropdown offers the other 22.
+  registered(
+    ".e2eUda.identityAPI",
+    "UDA for the identity function",
+    [
+      param(
+        "x",
+        [
+          0, -1, -2, -4, -5, -6, -7, -8, -9, -10, 10, -11, -12, -13, -14, -15,
+          -16, -17, -18, -19, 98, 99, 100,
+        ],
+        true,
+        "Parameter taking on any Q type",
+      ),
+      SCOPE,
+    ],
+    "Returns the parameter defined",
+  ),
+  registered(
+    ".e2eUda.flagAPI",
+    "UDA requiring a boolean parameter",
+    [param("flag", -1, true, "Whether to do the thing"), SCOPE],
+    "Rows, or none",
+  ),
+  // A UDA whose registration left the return out. metaReturn is optional in q,
+  // and `return` is optional in MetaApi, so the meta can carry an api entry
+  // without one.
+  {
+    api: ".e2eUda.noReturnAPI",
+    kxname: [ASSEMBLY],
+    aggFn: ".sgagg.aggFnDflt",
+    custom: true,
+    uda: true,
+    full: true,
+    description: "UDA registered without a metaReturn",
+    params: [param("table", -11, true, "Table to query"), SCOPE],
+    procs: [],
+  },
+];
+
 export const meta = {
   header: {
     ac: "0",
@@ -97,6 +265,7 @@ export const meta = {
         full: true,
         procs: [],
       },
+      ...UDAS,
     ],
     agg: [
       {

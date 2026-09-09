@@ -72,7 +72,6 @@ async function showSurveyDialog() {
 }
 
 export async function handleFeedbackSurvey() {
-  /* c8 ignore start */
   const context = ext.context;
 
   const hideSurvey = vscode.workspace
@@ -99,5 +98,4 @@ export async function handleFeedbackSurvey() {
     "extSurveyTriggerCount",
     updatedValues.extSurveyTriggerCount,
   );
-  /* c8 ignore stop */
 }

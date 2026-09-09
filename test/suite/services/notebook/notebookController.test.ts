@@ -245,8 +245,14 @@ describe("Controller", () => {
         });
 
         describe("Connection Exists", () => {
+          let runDataSourceStub: sinon.SinonStub;
+
           beforeEach(() => {
             runOn(sinon.createStubInstance(InsightsConnection));
+
+            runDataSourceStub = sinon
+              .stub(dataSourceCommand, "runDataSource")
+              .resolves(undefined);
 
             createInstance();
           });
@@ -257,7 +263,30 @@ describe("Controller", () => {
               notebookTestUtils.createNotebook(),
               createController(),
             );
+            sinon.assert.calledOnce(runDataSourceStub);
             assert.strictEqual(success, true);
+          });
+
+          it("should fail the cell when the datasource query fails", async () => {
+            const writeOutput = sinon.stub(
+              controlller.KxNotebookController.prototype,
+              "writeOutput",
+            );
+            runDataSourceStub.rejects(
+              new Error("Request failed with status 502: Bad Gateway"),
+            );
+
+            await instance.execute(
+              [notebookTestUtils.createCell("sql")],
+              notebookTestUtils.createNotebook(),
+              createController(),
+            );
+
+            assert.strictEqual(success, false);
+            assert.match(
+              writeOutput.firstCall.args[1].text,
+              /502: Bad Gateway/,
+            );
           });
         });
 
@@ -289,6 +318,73 @@ describe("Controller", () => {
             assert.strictEqual(success, true);
             sinon.assert.calledOnce(populateScratchpadStub);
           });
+        });
+      });
+
+      describe("Output escaping", () => {
+        let writeOutputStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          const conn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
+          sinon
+            .stub(
+              ConnectionManagementService.prototype,
+              "retrieveConnectedConnection",
+            )
+            .returns(conn);
+          runOn(conn);
+          writeOutputStub = sinon.stub(
+            controlller.KxNotebookController.prototype,
+            "writeOutput",
+          );
+          createInstance();
+        });
+
+        const rendered = () => writeOutputStub.lastCall.args[1];
+
+        it("should escape markup in a column name and a cell value", async () => {
+          executeQueryStub.resolves({
+            count: 1,
+            columns: [
+              {
+                name: "x<y",
+                type: "symbols",
+                values: ["<b>a</b> & b"],
+                order: [0],
+              },
+            ],
+          });
+
+          await instance.execute(
+            [notebookTestUtils.createCell("sql")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          assert.strictEqual(rendered().mime, "text/html");
+          assert.ok(
+            rendered().text.includes("<th>x&lt;y [symbols]</th>"),
+            rendered().text,
+          );
+          assert.ok(
+            rendered().text.includes("<td>&lt;b&gt;a&lt;/b&gt; &amp; b</td>"),
+            rendered().text,
+          );
+        });
+
+        it("should escape markup in a text result", async () => {
+          executeQueryStub.resolves("{x<y}\n     ^");
+
+          await instance.execute(
+            [notebookTestUtils.createCell("q")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          assert.strictEqual(
+            rendered().text,
+            `<p class="results-txt">{x&lt;y}<br/>     ^</p>`,
+          );
         });
       });
 

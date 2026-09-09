@@ -25,6 +25,8 @@
     "insights.kxnb": "TESTINSIGHTS",
     "insights.error.q": "TESTINSIGHTS",
     "target.q": "TESTINSIGHTS",
+    "rc.target.q": "TESTINSIGHTS",
+    "sg.target.q": "TESTINSIGHTS",
     "populate.kxnb": "TESTINSIGHTS",
     "image.kxnb": "TESTINSIGHTS",
     "timeout.q": "TESTINSIGHTS",
@@ -37,6 +39,8 @@
   },
   "kdb.targetMap": {
     "target.q": "e2e-assembly tp",
+    "rc.target.q": "e2e-assembly tp",
+    "sg.target.q": "e2e-assembly tp",
     "timeout.target.q": "e2e-assembly tp"
   },
   "kdb.timeoutMap": {

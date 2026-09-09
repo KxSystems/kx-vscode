@@ -21,6 +21,8 @@ import {
   InsightsConnection,
 } from "../../../src/classes/insightsConnection";
 import { ext } from "../../../src/extensionVariables";
+import { DataSourceTypes } from "../../../src/models/dataSource";
+import * as loggers from "../../../src/utils/loggers";
 
 describe("insightsConnection", () => {
   describe("scratchpad logger lifecycle", () => {
@@ -239,6 +241,576 @@ describe("insightsConnection", () => {
 
       assert.strictEqual(result.error, false);
       assert.strictEqual(result.data, encoded);
+    });
+  });
+
+  describe("getDatasourceQuery for a UDA", () => {
+    const withConnection = (body: any, timeout?: number) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        serviceGateway: { udaBase: "servicegateway/" },
+      };
+      const getOptions = sinon
+        .stub(<any>conn, "getOptions")
+        .resolves(undefined);
+
+      return conn
+        .getDatasourceQuery(DataSourceTypes.UDA, body, timeout)
+        .then(() => getOptions.getCall(0).args);
+    };
+
+    const request = () => ({
+      language: "q",
+      name: ".insightsUda.singleMultiplierAPI",
+      params: { column: "price", multiplier: "3" },
+      parameterTypes: { column: -11, multiplier: -7 },
+      returnFormat: "text",
+      sampleFn: "first",
+      sampleSize: 10000,
+    });
+
+    afterEach(() => sinon.restore());
+
+    it("names the UDA in the path, dots as slashes and the namespace dropped", async () => {
+      const args = await withConnection(request());
+
+      assert.strictEqual(
+        args[3],
+        "https://test.kx.com/servicegateway/insightsUda/singleMultiplierAPI",
+      );
+    });
+
+    it("sends the parameters as the whole body", async () => {
+      const args = await withConnection(request());
+
+      assert.deepStrictEqual(args[4], {
+        column: "price",
+        multiplier: "3",
+      });
+    });
+
+    it("drops the parameter types on the way to the gateway", async () => {
+      const args = await withConnection(request());
+
+      // Deliberate for now: getDatasourceQuery does `body = body.params`, so
+      // Run Query sends no parameterTypes while Populate Scratchpad does. The
+      // TODO beside it waits on the endpoint accepting the key — until then a
+      // multi-typed parameter is read by the gateway as its first type.
+      assert.strictEqual(args[4].parameterTypes, undefined);
+    });
+
+    it("adds the timeout the caller asked for, in milliseconds", async () => {
+      const args = await withConnection(request(), 30);
+
+      assert.deepStrictEqual(args[4].opts, { timeout: 30000 });
+    });
+
+    it("reaches the preview API down the same path", async () => {
+      const args = await withConnection({
+        ...request(),
+        name: ".kxi.preview",
+        params: { table: "trade", limit: 10 },
+      });
+
+      assert.strictEqual(
+        args[3],
+        "https://test.kx.com/servicegateway/kxi/preview",
+      );
+      assert.deepStrictEqual(args[4], { table: "trade", limit: 10 });
+    });
+  });
+
+  describe("isUDAAvailable", () => {
+    const withApi = (api: unknown[]) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        serviceGateway: { udaBase: "servicegateway/" },
+      };
+      (<any>conn).meta = { payload: { api } };
+      return conn;
+    };
+
+    it("finds a deployed UDA", async () => {
+      const conn = withApi([{ api: ".insightsUda.testAPI", uda: true }]);
+
+      assert.strictEqual(
+        await conn.isUDAAvailable(".insightsUda.testAPI"),
+        true,
+      );
+    });
+
+    it("finds the preview API, which the meta does not flag as a UDA", async () => {
+      const conn = withApi([{ api: ".kxi.preview", uda: false }]);
+
+      assert.strictEqual(await conn.isUDAAvailable(".kxi.preview"), true);
+    });
+
+    it("still refuses the other system APIs", async () => {
+      const conn = withApi([{ api: ".kxi.qsql", uda: false }]);
+
+      assert.strictEqual(await conn.isUDAAvailable(".kxi.qsql"), false);
+    });
+
+    it("refuses an API the connection does not list", async () => {
+      const conn = withApi([{ api: ".kxi.preview", uda: false }]);
+
+      assert.strictEqual(await conn.isUDAAvailable(".uda.missing"), false);
+    });
+  });
+
+  describe("getDatasourceQuery errors", () => {
+    let adapter: any;
+
+    const rejectWith = (header: any) => {
+      axios.defaults.adapter = async () => {
+        throw { response: { status: 400, data: { header } } };
+      };
+    };
+
+    const withConnection = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        serviceGateway: { data: "servicegateway/kxi/getData" },
+      };
+      sinon
+        .stub(<any>conn, "getOptions")
+        .resolves({ url: "https://test.kx.com/getData", method: "POST" });
+      return conn;
+    };
+
+    beforeEach(() => {
+      ext.outputChannel = window.createOutputChannel("kdb", { log: true });
+      adapter = axios.defaults.adapter;
+    });
+
+    afterEach(() => {
+      axios.defaults.adapter = adapter;
+      sinon.restore();
+    });
+
+    it("should return the stack trace the gateway sent beside the message", async () => {
+      rejectWith({
+        ai: "Executing code using (Q) raised - type: Mismatched types",
+        bt: "  [0] {1+x}\n        ^\n",
+      });
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.API,
+        { table: "trade" },
+      );
+
+      assert.strictEqual(
+        result?.error,
+        "Executing code using (Q) raised - type: Mismatched types",
+      );
+      assert.strictEqual(result?.stacktrace, "  [0] {1+x}\n        ^\n");
+    });
+
+    it("should leave the stack trace out when the gateway sends none", async () => {
+      rejectWith({ ai: "table does not exist" });
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.API,
+        { table: "trade" },
+      );
+
+      assert.strictEqual(result?.error, "table does not exist");
+      assert.strictEqual(result?.stacktrace, undefined);
+    });
+
+    it("should surface a plain-text 500 when the coordinator is killed mid-query", async () => {
+      axios.defaults.adapter = async () => {
+        throw {
+          response: {
+            status: 500,
+            statusText: "Internal Server Error",
+            data: "Coordinator connection has closed",
+          },
+        };
+      };
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.API,
+        { table: "trade" },
+      );
+
+      assert.strictEqual(
+        result?.error,
+        "Request failed with status 500: Coordinator connection has closed",
+      );
+      assert.strictEqual(result?.stacktrace, undefined);
+    });
+
+    it("should surface an HTML 502 when the gateway is killed mid-query", async () => {
+      axios.defaults.adapter = async () => {
+        throw {
+          response: {
+            status: 502,
+            statusText: "Bad Gateway",
+            data: "<html><head><title>502 Bad Gateway</title></head></html>",
+          },
+        };
+      };
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.UDA,
+        { name: ".test.uda", params: {} },
+      );
+
+      assert.strictEqual(
+        result?.error,
+        "Request failed with status 502: Bad Gateway",
+      );
+    });
+
+    it("should surface a dropped socket with no response", async () => {
+      axios.defaults.adapter = async () => {
+        throw new Error("socket hang up");
+      };
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.QSQL,
+        { query: "select from trade" },
+      );
+
+      assert.strictEqual(result?.error, "socket hang up");
+    });
+
+    it("should fall back to the request error when the header carries no message", async () => {
+      rejectWith({ ai: "" });
+
+      const result = await withConnection().getDatasourceQuery(
+        DataSourceTypes.API,
+        { table: "trade" },
+      );
+
+      assert.strictEqual(result?.error, "Request failed with status 400");
+    });
+  });
+
+  describe("importScratchpad for a UDA", () => {
+    const uda = {
+      name: ".insightsUda.multiplierAPI",
+      description: "",
+      params: [
+        {
+          name: "value",
+          description: "",
+          isReq: true,
+          type: [-11, -7],
+          selectedMultiTypeString: "Long",
+          isVisible: true,
+          value: 44,
+        },
+      ],
+    };
+
+    const withConnection = (target: any = uda) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        scratchpad: { importUDA: "scratchpadmanager/scratchpad/importUDA" },
+      };
+      sinon.stub(conn, "isUDAAvailable").resolves(true);
+      const getOptions = sinon
+        .stub(<any>conn, "getOptions")
+        .resolves(undefined);
+
+      return conn
+        .importScratchpad("out", <any>{
+          dataSource: { selectedType: DataSourceTypes.UDA, uda: target },
+        })
+        .then(() => getOptions.getCall(0)?.args[4] as any);
+    };
+
+    beforeEach(() => {
+      sinon.stub(ext.constants, "allowedEmptyRequiredTypes").value([10, -11]);
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+    });
+
+    afterEach(() => sinon.restore());
+
+    it("carries the parameter types the scratchpad needs", async () => {
+      const body = await withConnection();
+
+      // The key KXI-65951 asks for, with the type picked on the form rather
+      // than the first one registered.
+      assert.deepStrictEqual(body.parameterTypes, { value: -7 });
+      assert.deepStrictEqual(body.params, { value: 44 });
+    });
+
+    it("sends a dictionary parameter as the text the scratchpad parses", async () => {
+      const body = await withConnection({
+        name: ".insightsUda.labelledAPI",
+        description: "",
+        params: [
+          {
+            name: "labels",
+            description: "",
+            isReq: false,
+            type: [99],
+            typeStrings: ["Dictionary"],
+            isVisible: true,
+            value: '{"kxname":["db"]}',
+          },
+        ],
+      });
+
+      assert.deepStrictEqual(body.params, { labels: '{"kxname":["db"]}' });
+      assert.deepStrictEqual(body.parameterTypes, { labels: 99 });
+    });
+
+    it("names the UDA and the variable it lands in", async () => {
+      const body = await withConnection();
+
+      assert.strictEqual(body.name, ".insightsUda.multiplierAPI");
+      assert.strictEqual(body.output, "out");
+      assert.strictEqual(body.language, "q");
+    });
+  });
+
+  describe("importScratchpad errors", () => {
+    let adapter: any;
+    let kdbOutputLog: sinon.SinonStub;
+
+    const respondWith = (data: unknown) => {
+      axios.defaults.adapter = async (config: any) =>
+        <any>{
+          data,
+          status: 200,
+          statusText: "OK",
+          headers: {},
+          config,
+        };
+    };
+
+    const withConnection = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://test.kx.com" },
+        label: "conn",
+      });
+      conn.connected = true;
+      (<any>conn).connEndpoints = {
+        scratchpad: { importQsql: "scratchpadmanager/scratchpad/importQSQL" },
+      };
+      sinon
+        .stub(<any>conn, "getOptions")
+        .resolves({ url: "https://test.kx.com/importQSQL", method: "POST" });
+      return conn;
+    };
+
+    beforeEach(() => {
+      ext.outputChannel = window.createOutputChannel("kdb", { log: true });
+      adapter = axios.defaults.adapter;
+      sinon.stub(window, "showErrorMessage").resolves(undefined);
+      kdbOutputLog = sinon.stub(loggers, "kdbOutputLog");
+    });
+
+    afterEach(() => {
+      axios.defaults.adapter = adapter;
+      sinon.restore();
+    });
+
+    it("should log the stack trace the scratchpad returned", async () => {
+      respondWith({
+        error: true,
+        errorMsg: "Executing code using (Q) raised - type: Mismatched types",
+        data: null,
+        stacktrace: "  [0] {1+x}\n        ^\n",
+      });
+
+      await withConnection().importScratchpad("out", <any>{
+        dataSource: {
+          selectedType: DataSourceTypes.QSQL,
+          qsql: { query: "1+`a", selectedTarget: "assembly rdb" },
+        },
+      });
+
+      sinon.assert.calledWithMatch(kdbOutputLog, "  [0] {1+x}");
+    });
+  });
+
+  describe("generateQSqlBody", () => {
+    const withMeta = (version: string) => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://example.com" },
+        label: "conn",
+      });
+      conn.insightsVersion = version;
+      (<any>conn).meta = {
+        payload: { dap: [{ assembly: "assembly-qe", instance: "rdb" }] },
+      };
+      return conn;
+    };
+
+    it("should leave the body alone when neither is given", () => {
+      const body = <any>(
+        withMeta("1.20").generateQSqlBody("q", "assembly rdb", "1.20")
+      );
+
+      assert.strictEqual("agg" in body, false);
+      assert.strictEqual("labels" in body, false);
+    });
+
+    it("should send the agg and the labels beside the scope", () => {
+      const body = <any>withMeta("1.20").generateQSqlBody(
+        "q",
+        "assembly rdb",
+        "1.20",
+        {
+          agg: "distinct",
+          labels: { kxname: "db" },
+        },
+      );
+
+      assert.strictEqual(body.agg, "distinct");
+      assert.deepStrictEqual(body.labels, { kxname: "db" });
+      assert.strictEqual(body.scope.assembly, "assembly-qe");
+    });
+
+    it("should leave the instance out of a distributed scope", () => {
+      const body = <any>(
+        withMeta("1.20").generateQSqlBody("q", "assembly", "1.20")
+      );
+
+      assert.strictEqual(body.scope.assembly, "assembly-qe");
+      assert.strictEqual(body.scope.tier, undefined);
+      assert.strictEqual(body.scope.dap, undefined);
+    });
+
+    it("should name only the parts the target gives", () => {
+      const scope = <any>withMeta("1.20").scopeForTarget("assembly");
+
+      assert.deepStrictEqual(scope, {
+        affinity: "soft",
+        assembly: "assembly-qe",
+      });
+    });
+
+    it("should leave the tier out when a DAP names one", () => {
+      const conn = withMeta("1.20");
+      (<any>conn).meta = {
+        payload: {
+          dap: [{ assembly: "assembly-qe", instance: "rdb", dap: "rdb:1234" }],
+        },
+      };
+
+      assert.deepStrictEqual(conn.scopeForTarget("assembly rdb rdb"), {
+        affinity: "soft",
+        assembly: "assembly-qe",
+        dap: "rdb:1234",
+      });
+    });
+
+    it("should send them on the older body shape too", () => {
+      const body = <any>withMeta("1.12").generateQSqlBody(
+        "q",
+        "assembly rdb",
+        "1.12",
+        {
+          agg: "distinct",
+        },
+      );
+
+      assert.strictEqual(body.agg, "distinct");
+      assert.strictEqual(body.assembly, "assembly-qe");
+      assert.strictEqual("scope" in body, false);
+    });
+  });
+
+  describe("scopeValue", () => {
+    const withMeta = () => {
+      const conn = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://example.com" },
+        label: "conn",
+      });
+      (<any>conn).meta = {
+        payload: { dap: [{ assembly: "assembly-qe", instance: "rdb" }] },
+      };
+      return conn;
+    };
+
+    it("should resolve a target string the dropdown wrote", () => {
+      assert.deepStrictEqual(withMeta().scopeValue("assembly rdb"), {
+        affinity: "soft",
+        assembly: "assembly-qe",
+        tier: "rdb",
+      });
+    });
+
+    it("should keep a dictionary a file already holds as JSON text", () => {
+      assert.deepStrictEqual(
+        withMeta().scopeValue('{"assembly":"written-by-hand"}'),
+        { assembly: "written-by-hand" },
+      );
+    });
+
+    it("should keep a dictionary that arrives as an object", () => {
+      assert.deepStrictEqual(withMeta().scopeValue({ assembly: "converted" }), {
+        assembly: "converted",
+      });
+    });
+
+    it("should have nothing to send when no target was chosen", () => {
+      assert.strictEqual(withMeta().scopeValue(""), undefined);
+      assert.strictEqual(withMeta().scopeValue("   "), undefined);
+      assert.strictEqual(withMeta().scopeValue(undefined), undefined);
+    });
+  });
+
+  describe("scopedApiPayload", () => {
+    const conn = () => {
+      const built = new InsightsConnection("conn", <any>{
+        details: { alias: "conn", server: "https://example.com" },
+        label: "conn",
+      });
+      (<any>built).meta = {
+        payload: { dap: [{ assembly: "assembly-qe", instance: "rdb" }] },
+      };
+      return built;
+    };
+
+    it("should leave a payload carrying no scope alone", () => {
+      const payload = { table: "trades" };
+
+      assert.strictEqual(conn().scopedApiPayload(payload), payload);
+    });
+
+    it("should swap the target string for the dictionary", () => {
+      assert.deepStrictEqual(
+        conn().scopedApiPayload({ table: "trades", scope: "assembly rdb" }),
+        {
+          table: "trades",
+          scope: { affinity: "soft", assembly: "assembly-qe", tier: "rdb" },
+        },
+      );
+    });
+
+    it("should drop a scope with no target in it", () => {
+      assert.deepStrictEqual(
+        conn().scopedApiPayload({ table: "trades", scope: "" }),
+        { table: "trades" },
+      );
     });
   });
 });

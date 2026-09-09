@@ -417,7 +417,6 @@ export class KdbTreeProvider
     connLabel: string,
     iconType: string,
   ): QServerNode[] {
-    /* c8 ignore start */
     return objects.map(
       (x) =>
         new QServerNode(
@@ -429,7 +428,6 @@ export class KdbTreeProvider
           connLabel,
         ),
     );
-    /* c8 ignore stop */
   }
 
   private async getMetaObjects(

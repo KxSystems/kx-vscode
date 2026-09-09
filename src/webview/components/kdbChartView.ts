@@ -14,12 +14,13 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
-import { chartStyles, shoelaceStyles } from "./styles";
+import { baseStyles } from "./baseStyles";
+import { chartStyles } from "./styles";
 import { Plot } from "../../models/plot";
 
 @customElement("kdb-chart-view")
 export class KdbChartView extends LitElement {
-  static styles = [shoelaceStyles, chartStyles];
+  static styles = [baseStyles, chartStyles];
 
   readonly vscode = acquireVsCodeApi();
 
