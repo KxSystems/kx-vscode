@@ -535,6 +535,20 @@ describe("UDA", () => {
       // The table name is picked from the connection, the way getData asks it.
       assert.strictEqual(params[0].source, "tables");
     });
+
+    it("leaves the unbounded range to the API rather than showing it", () => {
+      const params = UDAUtils.parsePreviewApi(meta([preview]))?.params || [];
+
+      assert.deepStrictEqual(
+        params.map((param) => [param.name, param.default]),
+        [
+          ["table", undefined],
+          ["startTS", undefined],
+          ["endTS", undefined],
+          ["limit", 1000],
+        ],
+      );
+    });
   });
 
   describe("isInvalidRequiredParam", () => {

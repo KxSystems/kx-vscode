@@ -74,6 +74,7 @@ export class ScratchpadLogger {
       return;
     }
     this.connecting = true;
+    this.isManualClose = false;
     try {
       await this.open();
     } finally {
@@ -90,6 +91,10 @@ export class ScratchpadLogger {
       !!insecure,
     );
 
+    if (this.isManualClose) {
+      return;
+    }
+
     if (!token) {
       notify(
         `Unable to get token for ${this.connection.alias}`,
@@ -101,7 +106,6 @@ export class ScratchpadLogger {
       return;
     }
 
-    this.isManualClose = false;
     this.ws = new WebSocket(this.url, {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,

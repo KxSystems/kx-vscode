@@ -15,6 +15,8 @@ import * as assert from "assert";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { webviewReset } from "../../../../src/utils/webviewPage";
+
 const NULLABLE = new Map<string, string>([
   ["--vscode-input-border", "dark, light"],
   ["--vscode-button-border", "dark, light"],
@@ -60,6 +62,17 @@ describe("theme tokens", () => {
     }
 
     assert.deepStrictEqual(offenders, []);
+  });
+
+  it("should draw native controls in the dark scheme on a dark theme", () => {
+    const reset = webviewReset("nonce");
+
+    assert.ok(reset.includes('body[data-vscode-theme-kind="vscode-dark"]'));
+    assert.ok(
+      reset.includes('body[data-vscode-theme-kind="vscode-high-contrast"]'),
+    );
+    assert.ok(reset.includes("color-scheme: dark"));
+    assert.ok(!reset.includes("vscode-high-contrast-light"));
   });
 
   it("should not reference Shoelace tokens", () => {

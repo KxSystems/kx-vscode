@@ -251,6 +251,50 @@ describe("queryEditorProvider", () => {
         udas,
       );
     });
+
+    const withTable = (table: string) =>
+      <MetaObject>{
+        ...getMetaResponse,
+        payload: <MetaObjectPayload>{
+          ...getMetaResponse.payload,
+          schema: <any>[{ table, columns: [{ column: "time" }] }],
+        },
+      };
+
+    it("should offer nothing of a connection that has gone", () => {
+      ext.connectedContextStrings.push(insightsConn.connLabel);
+      ext.connectedConnectionList.push(insightsConn);
+      insightsConn.meta = withTable("trades");
+      const provider = new QueryEditorProvider(context);
+
+      assert.deepStrictEqual(
+        Object.keys(provider.getQueryMeta(insightsConn.connLabel).tables),
+        ["trades"],
+      );
+
+      ext.connectedContextStrings.length = 0;
+      ext.connectedConnectionList.length = 0;
+
+      assert.deepStrictEqual(
+        provider.getQueryMeta(insightsConn.connLabel).tables,
+        {},
+      );
+    });
+
+    it("should read the meta a connection has now rather than one it had", () => {
+      ext.connectedContextStrings.push(insightsConn.connLabel);
+      ext.connectedConnectionList.push(insightsConn);
+      const provider = new QueryEditorProvider(context);
+
+      insightsConn.meta = withTable("insightsMultitypeTable");
+      provider.getQueryMeta(insightsConn.connLabel);
+      insightsConn.meta = withTable("nsansUdaTable");
+
+      assert.deepStrictEqual(
+        Object.keys(provider.getQueryMeta(insightsConn.connLabel).tables),
+        ["nsansUdaTable"],
+      );
+    });
   });
 
   describe("messages", () => {

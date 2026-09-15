@@ -60,11 +60,14 @@ describe("KdbSelect", () => {
       assert.strictEqual(select.entries()[0].value, "");
     });
 
-    it("should keep a value the options do not list", () => {
+    it("should not offer a value the options do not list", () => {
       select.value = "gone";
-      assert.deepStrictEqual(values(select.entries()).slice(0, 2), [
+      assert.deepStrictEqual(values(select.entries()), [
         "",
-        "gone",
+        "price",
+        "sym",
+        "time",
+        "sprice",
       ]);
     });
 
@@ -240,6 +243,17 @@ describe("KdbSelect", () => {
       assert.strictEqual(select.open, false);
     });
 
+    it("should leave a value the options do not list alone on Enter", () => {
+      const dispatch = sinon.stub(select, "dispatchEvent");
+      select.value = "gone";
+      select.reveal();
+      press("Enter");
+      assert.strictEqual(select.value, "gone");
+      assert.strictEqual(dispatch.called, false);
+      select.dismiss();
+      assert.strictEqual(select.shown(), "gone");
+    });
+
     it("should ignore Enter while closed", () => {
       const dispatch = sinon.stub(select, "dispatchEvent");
       press("Enter");
@@ -314,9 +328,9 @@ describe("KdbSelect", () => {
       assert.ok(!values(select.entries()).includes(""));
     });
 
-    it("should keep a value the options no longer list", () => {
+    it("should not offer a value the options no longer list", () => {
       select.values = ["deleted"];
-      assert.deepStrictEqual(values(select.entries())[0], "deleted");
+      assert.ok(!values(select.entries()).includes("deleted"));
     });
 
     it("should drop the last badge on Backspace with nothing typed", () => {
@@ -347,6 +361,129 @@ describe("KdbSelect", () => {
       const rendered = markup(select.renderList());
       assert.ok(rendered.includes("✓"));
       assert.ok(rendered.includes('aria-multiselectable="'));
+    });
+  });
+
+  describe("editable", () => {
+    function type(text: string) {
+      (<any>select).handleInput(<Event>(<unknown>{
+        target: { value: text },
+        stopPropagation() {},
+      }));
+    }
+
+    function leave() {
+      (<any>select).handleBlur();
+    }
+
+    beforeEach(() => {
+      select.editable = true;
+      select.options = ["emea", "amer", "apac"];
+    });
+
+    it("should offer no empty option", () => {
+      assert.deepStrictEqual(values(select.entries()), [
+        "emea",
+        "amer",
+        "apac",
+      ]);
+    });
+
+    it("should hold what is typed as the value", () => {
+      const dispatch = sinon.stub(select, "dispatchEvent");
+      type("custom");
+      assert.strictEqual(select.value, "custom");
+      assert.deepStrictEqual(
+        dispatch.args.map((args) => (args[0] as Event).type),
+        ["input", "change"],
+      );
+    });
+
+    it("should keep a typed value the options do not list", () => {
+      type("custom");
+      leave();
+      assert.strictEqual(select.value, "custom");
+      assert.strictEqual(select.shown(), "custom");
+    });
+
+    it("should narrow the suggestions to what is typed", () => {
+      type("am");
+      assert.deepStrictEqual(values(select.filtered()), ["amer"]);
+    });
+
+    it("should offer every suggestion when opened on a value", () => {
+      select.value = "emea";
+      select.reveal();
+      assert.deepStrictEqual(values(select.filtered()), [
+        "emea",
+        "amer",
+        "apac",
+      ]);
+      assert.strictEqual(select.shown(), "emea");
+    });
+
+    it("should keep what is typed on Enter until a suggestion is walked to", () => {
+      type("a");
+      press("Enter");
+      assert.strictEqual(select.value, "a");
+      assert.strictEqual(select.open, false);
+    });
+
+    it("should take the suggestion walked to on Enter", () => {
+      type("a");
+      press("ArrowDown");
+      press("Enter");
+      assert.strictEqual(select.value, "amer");
+    });
+
+    it("should walk up from the end of the suggestions", () => {
+      type("a");
+      press("ArrowUp");
+      assert.strictEqual(select.active, select.filtered().length - 1);
+    });
+
+    it("should render no list when nothing matches", () => {
+      type("zzz");
+      assert.ok(!markup(select.renderList()).includes('role="listbox"'));
+    });
+
+    describe("multiple", () => {
+      beforeEach(() => {
+        select.multiple = true;
+      });
+
+      it("should add each value typed before a separator", () => {
+        type("emea amer;ap");
+        assert.deepStrictEqual(select.values, ["emea", "amer"]);
+        assert.strictEqual(select.filter, "ap");
+      });
+
+      it("should add what is left typed on leaving the field", () => {
+        type("custom");
+        leave();
+        assert.deepStrictEqual(select.values, ["custom"]);
+        assert.strictEqual(select.filter, "");
+      });
+
+      it("should add what is typed on Enter with no suggestion walked to", () => {
+        type("a");
+        press("Enter");
+        assert.deepStrictEqual(select.values, ["a"]);
+      });
+
+      it("should not add a value twice", () => {
+        select.values = ["emea"];
+        type("emea ");
+        assert.deepStrictEqual(select.values, ["emea"]);
+      });
+
+      it("should clear what was typed once a suggestion is picked", () => {
+        type("am");
+        press("ArrowDown");
+        press("Enter");
+        assert.deepStrictEqual(select.values, ["amer"]);
+        assert.strictEqual(select.filter, "");
+      });
     });
   });
 
@@ -385,6 +522,13 @@ describe("KdbSelect", () => {
       select.filter = "zzz";
       select.open = true;
       assert.ok(markup(select.renderList()).includes("No matches"));
+    });
+
+    it("should say when there is nothing to pick", () => {
+      select.options = [];
+      select.required = true;
+      select.reveal();
+      assert.ok(markup(select.renderList()).includes("No options"));
     });
 
     it("should name the empty option after the placeholder", () => {

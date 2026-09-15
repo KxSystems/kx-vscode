@@ -273,6 +273,19 @@ describe("ScratchpadLogger", () => {
     sinon.assert.calledOnce(tokenStub);
   });
 
+  it("should not open a socket once disconnected while the token was awaited", async () => {
+    let release: (token: unknown) => void = () => {};
+    tokenStub.returns(new Promise((resolve) => (release = resolve)));
+    logger = new ScratchpadLoggerClass(mockConnection);
+
+    const connecting = logger.connect();
+    logger.disconnect();
+    release({ accessToken: "mock-token" });
+    await connecting;
+
+    sinon.assert.notCalled(wsStub);
+  });
+
   describe("image channel", () => {
     const png = "iVBORw0KGgo=";
 

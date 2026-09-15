@@ -76,6 +76,46 @@ describe("KdbQueryView", () => {
     return strings + (template.values || []).map(markup).join("");
   }
 
+  function handlers(template: any, found: any[] = []): any[] {
+    if (!template || typeof template !== "object") {
+      return found;
+    }
+    if (Array.isArray(template)) {
+      template.forEach((each) => handlers(each, found));
+      return found;
+    }
+    for (const value of template.values || []) {
+      if (typeof value === "function") {
+        found.push(value);
+      } else {
+        handlers(value, found);
+      }
+    }
+    return found;
+  }
+
+  function bound(template: any, attribute: string): unknown {
+    if (!template || typeof template !== "object") {
+      return undefined;
+    }
+    if (!Array.isArray(template)) {
+      const at = (template.strings || []).findIndex((part: string) =>
+        part.endsWith(`${attribute}="`),
+      );
+      if (at >= 0) {
+        return template.values[at];
+      }
+    }
+    const parts = Array.isArray(template) ? template : template.values || [];
+    for (const part of parts) {
+      const found = bound(part, attribute);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+
   function createValueEvent(value: string) {
     return <Event>(<unknown>{ target: { value } });
   }
@@ -446,8 +486,8 @@ describe("KdbQueryView", () => {
         (param) => param.name === "filter",
       )!;
       const rendered = markup(view.renderParam(filter));
-      assert.ok(rendered.includes("Select a column..."));
-      assert.ok(rendered.includes("Select an operator..."));
+      assert.ok(rendered.includes("Select column..."));
+      assert.ok(rendered.includes("Select operator..."));
     });
 
     it("should render a select for the table parameter", () => {
@@ -522,14 +562,30 @@ describe("KdbQueryView", () => {
       view.tables = { trades: ["time"] };
       assert.strictEqual(
         view.placeholder("column", "columns"),
-        "Select a table first...",
+        "Select a table to view available columns...",
       );
       view.query!.params.find((param) => param.name === "table")!.value =
         "trades";
       assert.strictEqual(
         view.placeholder("column", "columns"),
-        "Select a column...",
+        "Select column...",
       );
+    });
+
+    it("should name a field for what it holds, one or many", () => {
+      assert.strictEqual(view.placeholder("columns"), "Select columns...");
+      assert.strictEqual(view.placeholder("sortCols"), "Select sortCols...");
+      assert.strictEqual(view.placeholder("API"), "Select API...");
+    });
+
+    it("should offer no empty choice for a parameter that has to be given", () => {
+      const table = view.query!.params.find((param) => param.name === "table")!;
+      assert.strictEqual(bound(view.renderParam(table), "?required"), true);
+    });
+
+    it("should keep the empty choice for a parameter that may be left out", () => {
+      const fill = view.query!.params.find((param) => param.name === "fill")!;
+      assert.strictEqual(bound(view.renderParam(fill), "?required"), false);
     });
 
     it("should render a dropdown for a parameter with a source", () => {
@@ -720,6 +776,14 @@ describe("KdbQueryView", () => {
       );
     });
 
+    it("should offer no empty target to pick", () => {
+      view.query = createQsql();
+      assert.strictEqual(
+        bound(view.renderParam(named("target")), "?required"),
+        true,
+      );
+    });
+
     it("should keep a target the connection does not list", () => {
       view.query = createQsql();
       view.targets = ["assembly rdb"];
@@ -751,24 +815,6 @@ describe("KdbQueryView", () => {
   });
 
   describe("renderMultitype", () => {
-    function handlers(template: any, found: any[] = []): any[] {
-      if (!template || typeof template !== "object") {
-        return found;
-      }
-      if (Array.isArray(template)) {
-        template.forEach((each) => handlers(each, found));
-        return found;
-      }
-      for (const value of template.values || []) {
-        if (typeof value === "function") {
-          found.push(value);
-        } else {
-          handlers(value, found);
-        }
-      }
-      return found;
-    }
-
     function createMultitype(param: Partial<UDAParam> = {}) {
       return createParam({
         fieldType: ParamFieldType.MultiType,
@@ -919,15 +965,38 @@ describe("KdbQueryView", () => {
     it("should suggest rather than restrict what a label holds", () => {
       const rendered = markup(view.renderParam(labelsParam()));
 
-      assert.ok(rendered.includes("<datalist"), rendered);
-      assert.ok(rendered.includes("<input"), rendered);
-      assert.ok(!rendered.includes("<kdb-select"), rendered);
+      assert.ok(rendered.includes("<kdb-select"), rendered);
+      assert.ok(rendered.includes("editable"), rendered);
+      assert.ok(!rendered.includes("<datalist"), rendered);
+    });
+
+    it("should hold each value a UDA label key takes as its own", () => {
+      view.query = view.withDistinguishedParams(createUDA());
+      const param = view.query.params.find((item) => item.name === "labels")!;
+      const rows = [["region", "emea"]];
+      const template = (<any>view).renderRowField(
+        param,
+        rows,
+        rows[0],
+        0,
+        param.rows![1],
+        1,
+      );
+      const [input] = handlers(template);
+
+      input(<Event>(<unknown>{ target: { values: ["emea", "amer"] } }));
+
+      assert.ok(markup(template).includes("multiple"), markup(template));
+      assert.strictEqual(param.value, '{"region":["emea","amer"]}');
     });
 
     it("should ask for a table while none is named", () => {
       const rendered = markup(view.renderParam(labelsParam()));
 
-      assert.ok(rendered.includes("Name a table to see the labels"), rendered);
+      assert.ok(
+        rendered.includes("Select a table to view only the labels"),
+        rendered,
+      );
     });
 
     it("should call out a key given twice", () => {

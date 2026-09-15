@@ -40,5 +40,10 @@ export function webviewReset(nonce: string) {
         color: var(--vscode-foreground);
         background-color: var(--vscode-editor-background);
       }
+
+      body[data-vscode-theme-kind="vscode-dark"],
+      body[data-vscode-theme-kind="vscode-high-contrast"] {
+        color-scheme: dark;
+      }
     </style>`;
 }

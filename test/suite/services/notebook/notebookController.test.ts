@@ -574,6 +574,7 @@ describe("Controller", () => {
       cell.kind = vscode.NotebookCellKind.Code;
       cell.index = 0;
       cell.outputs = [];
+      cell.notebook.cellAt = () => cell;
 
       applyEditStub = sinon
         .stub(vscode.workspace, "applyEdit")

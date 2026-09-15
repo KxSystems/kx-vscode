@@ -227,8 +227,7 @@ export class ConnectionManagementService {
 
   public disconnect(connLabel: string): void {
     const connection = this.retrieveConnectedConnection(connLabel);
-    const connectionNode = this.retrieveConnection(connection?.connLabel ?? "");
-    if (!connection || !connectionNode) {
+    if (!connection) {
       return;
     }
     connection.disconnect();

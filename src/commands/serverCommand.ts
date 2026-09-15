@@ -963,14 +963,17 @@ export async function executeQuery(
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
-        notify("GG Plot displayed", MessageKind.DEBUG, {
-          logger,
-          telemetry:
-            "Results.Graphics.Displayed" +
-            (isInsights ? ".ie" : ".kdb") +
-            (isPython ? ".py" : ".q"),
-        });
-        await writePlotToFile(data);
+        await writeQueryResultsToPlot(
+          data,
+          query,
+          connLabel,
+          executorName,
+          isInsights,
+          isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+          isPython,
+          duration,
+          isFromConnTree,
+        );
       } else {
         await writeQueryResultsToView(
           results,
@@ -1362,6 +1365,40 @@ export async function writeQueryResultsToView(
   }
 }
 
+export async function writeQueryResultsToPlot(
+  data: string,
+  query: string,
+  connLabel: string,
+  executorName: string,
+  isInsights: boolean,
+  type?: string,
+  isPython?: boolean,
+  duration?: string,
+  isFromConnTree?: boolean,
+): Promise<void> {
+  notify("GG Plot displayed", MessageKind.DEBUG, {
+    logger,
+    telemetry:
+      "Results.Graphics.Displayed" +
+      (isInsights ? ".ie" : ".kdb") +
+      (isPython ? ".py" : ".q"),
+  });
+  await writePlotToFile(data);
+  addQueryHistory(
+    query,
+    executorName,
+    connLabel,
+    isInsights ? ServerType.INSIGHTS : ServerType.KDB,
+    true,
+    isPython,
+    type === "WORKBOOK",
+    undefined,
+    undefined,
+    duration,
+    isFromConnTree,
+  );
+}
+
 export async function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
@@ -1385,11 +1422,16 @@ export async function writeScratchpadResult(
   const plot = errorMsg ? undefined : resultToBase64(result);
 
   if (plot) {
-    notify("GG Plot displayed", MessageKind.DEBUG, {
-      logger,
-      telemetry: "Results.Graphics.Displayed.ie" + (isPython ? ".py" : ".q"),
-    });
-    await writePlotToFile(plot);
+    await writeQueryResultsToPlot(
+      plot,
+      query,
+      connLabel,
+      executorName,
+      true,
+      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      isPython,
+      duration,
+    );
     return;
   }
 

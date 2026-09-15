@@ -18,6 +18,7 @@ import { baseStyles } from "./baseStyles";
 import { inputDefaults } from "../directives";
 
 const PLACEHOLDER = "Select...";
+const SEPARATORS = /[;\s]+/;
 
 export interface SelectOption {
   value: string;
@@ -274,6 +275,7 @@ export class KdbSelect extends LitElement {
   @property({ type: String }) label = "";
   @property({ type: Boolean }) required = false;
   @property({ type: Boolean }) multiple = false;
+  @property({ type: Boolean }) editable = false;
 
   @state() open = false;
   @state() filter = "";
@@ -298,18 +300,12 @@ export class KdbSelect extends LitElement {
           },
     );
 
-    const unlisted = this.chosen()
-      .filter((held) => !given.some((entry) => entry.value === held))
-      .map((held) => ({ value: held, text: held, group: "", color: "" }));
-
-    const listed = [...unlisted, ...given];
-
-    return !this.required && !this.multiple
+    return !this.required && !this.multiple && !this.editable
       ? [
           { value: "", text: this.empty || PLACEHOLDER, group: "", color: "" },
-          ...listed,
+          ...given,
         ]
-      : listed;
+      : given;
   }
 
   textOf(value: string) {
@@ -343,11 +339,9 @@ export class KdbSelect extends LitElement {
   }
 
   reveal() {
+    const at = this.entries().findIndex((entry) => entry.value === this.value);
     this.filter = "";
-    this.active = Math.max(
-      this.entries().findIndex((entry) => entry.value === this.value),
-      0,
-    );
+    this.active = at;
     this.open = true;
   }
 
@@ -361,6 +355,10 @@ export class KdbSelect extends LitElement {
       this.values = this.values.includes(option)
         ? this.values.filter((held) => held !== option)
         : [...this.values, option];
+      if (this.editable) {
+        this.filter = "";
+        this.active = -1;
+      }
       this.report();
       return;
     }
@@ -378,11 +376,43 @@ export class KdbSelect extends LitElement {
     this.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
   }
 
+  private add(tokens: string[]) {
+    const fresh = [...new Set(tokens)].filter(
+      (token) => token && !this.values.includes(token),
+    );
+    if (fresh.length) {
+      this.values = [...this.values, ...fresh];
+      this.report();
+    }
+  }
+
+  private commit() {
+    if (this.editable && this.multiple) {
+      this.add(this.filter.split(SEPARATORS));
+    }
+  }
+
   private handleInput = (event: Event) => {
     event.stopPropagation();
-    this.filter = (event.target as HTMLInputElement).value;
-    this.active = 0;
+    const text = (event.target as HTMLInputElement).value;
     this.open = true;
+    if (!this.editable) {
+      this.filter = text;
+      this.active = 0;
+      return;
+    }
+    this.active = -1;
+    if (this.multiple) {
+      const tokens = text.split(SEPARATORS);
+      this.filter = tokens.pop() ?? "";
+      this.add(tokens);
+      return;
+    }
+    this.filter = text;
+    if (text !== this.value) {
+      this.value = text;
+      this.report();
+    }
   };
 
   private handleClick = (event: Event) => {
@@ -398,6 +428,7 @@ export class KdbSelect extends LitElement {
   };
 
   private handleBlur = () => {
+    this.commit();
     this.dismiss();
   };
 
@@ -412,7 +443,8 @@ export class KdbSelect extends LitElement {
           this.reveal();
         } else if (items.length) {
           const step = event.key === "ArrowDown" ? 1 : -1;
-          this.active = (this.active + step + items.length) % items.length;
+          const from = this.active >= 0 ? this.active : step > 0 ? -1 : 0;
+          this.active = (from + step + items.length) % items.length;
         }
         break;
       case "Home":
@@ -425,8 +457,11 @@ export class KdbSelect extends LitElement {
       case "Enter":
         if (this.open) {
           event.preventDefault();
-          if (this.active < items.length) {
+          if (this.active >= 0 && this.active < items.length) {
             this.select(items[this.active].value);
+          } else if (this.editable) {
+            this.commit();
+            this.dismiss();
           }
         }
         break;
@@ -444,6 +479,7 @@ export class KdbSelect extends LitElement {
         }
         break;
       case "Tab":
+        this.commit();
         this.dismiss();
         break;
     }
@@ -498,13 +534,19 @@ export class KdbSelect extends LitElement {
       ?.scrollIntoView({ block: "nearest" });
   }
 
+  shown() {
+    if (this.editable) {
+      return this.multiple ? this.filter : this.value;
+    }
+    if (this.open) {
+      return this.filter;
+    }
+    return this.multiple ? "" : this.textOf(this.value);
+  }
+
   updated() {
     const input = this.renderRoot?.querySelector<HTMLInputElement>("input");
-    const text = this.open
-      ? this.filter
-      : this.multiple
-        ? ""
-        : this.textOf(this.value);
+    const text = this.shown();
     if (input && input.value !== text) {
       input.value = text;
     }
@@ -579,11 +621,12 @@ export class KdbSelect extends LitElement {
   }
 
   renderList() {
-    if (!this.open) {
+    const items = this.open ? this.filtered() : [];
+
+    if (!this.open || (this.editable && !items.length)) {
       return html``;
     }
 
-    const items = this.filtered();
     let group = "";
 
     return html`
@@ -604,7 +647,9 @@ export class KdbSelect extends LitElement {
               group = entry.group;
               return html`${header}${this.renderOption(entry, index)}`;
             })
-          : html`<li class="none">No matches</li>`}
+          : html`<li class="none">
+              ${this.filter.trim() ? "No matches" : "No options"}
+            </li>`}
       </ul>
     `;
   }
@@ -616,7 +661,7 @@ export class KdbSelect extends LitElement {
       ? this.values.length
         ? ""
         : named
-      : this.open
+      : this.open && !this.editable
         ? text || named
         : named;
 
@@ -630,7 +675,9 @@ export class KdbSelect extends LitElement {
             aria-autocomplete="list"
             aria-controls="options"
             aria-expanded="${this.open}"
-            aria-activedescendant="${this.open ? `option-${this.active}` : ""}"
+            aria-activedescendant="${this.open && this.active >= 0
+              ? `option-${this.active}`
+              : ""}"
             aria-label="${this.label}"
             placeholder="${placeholder}"
             ${inputDefaults()}

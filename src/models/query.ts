@@ -371,7 +371,7 @@ export const QSQL_PARAMS: UDAParam[] = [
   {
     name: "target",
     description:
-      "Tier or DAP process to run the query on. An assembly on its own is the distributed target: the resource coordinator picks the DAPs by purview.",
+      "Tier or DAP process to run the query on, or distributed to have the resource coordinator pick the DAPs by purview.",
     isReq: true,
     type: [-11],
     typeStrings: ["Symbol"],

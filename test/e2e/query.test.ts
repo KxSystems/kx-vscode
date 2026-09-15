@@ -240,9 +240,12 @@ describe("Query editor view", () => {
   const typeRow = (name: string, text: string) =>
     view.eval(
       (root: string, placeholder: string, value: string) => {
-        const input = __find(root).shadowRoot.querySelector(
-          `input.row-field[placeholder="${placeholder}"]`,
-        );
+        const shadow = __find(root).shadowRoot;
+        const input =
+          shadow
+            .querySelector(`kdb-select[editable][label="${placeholder}"]`)
+            ?.shadowRoot.querySelector("input") ??
+          shadow.querySelector(`input.row-field[placeholder="${placeholder}"]`);
         if (!input) {
           throw new Error(`no ${placeholder} row field on the form`);
         }
@@ -317,7 +320,7 @@ describe("Query editor view", () => {
     await show();
 
     assert.deepStrictEqual(await options("API"), [
-      "Select an API...",
+      "Select API...",
       QSQL,
       SQL,
       GET_DATA,
@@ -366,16 +369,13 @@ describe("Query editor view", () => {
     await show();
     await pick("API", GET_DATA);
 
-    assert.deepStrictEqual(await options("table *"), [
-      "Select a table...",
-      "trade",
-    ]);
+    assert.deepStrictEqual(await options("table *"), ["trade"]);
 
     await pick("table *", "trade");
     await pick("Add parameter", "groupBy");
 
     assert.deepStrictEqual(await options("column"), [
-      "Select a column...",
+      "Select column...",
       "price",
       "size",
       "sym",
@@ -388,7 +388,6 @@ describe("Query editor view", () => {
     await pick("API", QSQL);
 
     assert.deepStrictEqual(await options("target"), [
-      "Select a target...",
       `${ASSEMBLY} distributed`,
       `${ASSEMBLY} ${TIER}`,
       `${ASSEMBLY} ${TIER} ${DAP}`,
@@ -553,10 +552,7 @@ describe("Query editor view", () => {
     await show();
     await pick("API", TABLE_UDA);
 
-    assert.deepStrictEqual(await options("table *"), [
-      "Select a table...",
-      "trade",
-    ]);
+    assert.deepStrictEqual(await options("table *"), ["trade"]);
   });
 
   it("offers no columns to a UDA until it is pointed at a table", async () => {
@@ -566,15 +562,20 @@ describe("Query editor view", () => {
     // The UDA names no table of its own, so until the distinguished one is
     // added and set there is nothing to choose a column from, and the field
     // says as much in place of the usual placeholder.
-    assert.deepStrictEqual(await options("column"), [
-      "Select a table first...",
-    ]);
+    assert.deepStrictEqual(await options("column"), []);
+    assert.strictEqual(
+      await view.eval(
+        (path: string) =>
+          __find(path).shadowRoot.querySelector("input").placeholder,
+        select("column"),
+      ),
+      "Select a table to view available columns...",
+    );
 
     await pick("Add parameter", "table");
     await pick("table", "trade");
 
     assert.deepStrictEqual(await options("column"), [
-      "Select a column...",
       "price",
       "size",
       "sym",
@@ -587,12 +588,7 @@ describe("Query editor view", () => {
     await pick("API", FULL_UDA);
     await pick("table *", "quote");
 
-    assert.deepStrictEqual(await options("column"), [
-      "Select a column...",
-      "ask",
-      "bid",
-      "time",
-    ]);
+    assert.deepStrictEqual(await options("column"), ["ask", "bid", "time"]);
   });
 
   it("describes the UDA and what it returns", async () => {
@@ -885,7 +881,7 @@ describe("Query editor view", () => {
     await pick("Add parameter", "labels");
 
     await typeRow("key", "exchange");
-    await typeRow("value", "TSX TSXV");
+    await typeRow("value", "TSX TSXV ");
     await settled();
 
     await tool("Run");

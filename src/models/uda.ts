@@ -20,7 +20,7 @@ export const SCOPE = "scope";
  * same question, and the same dropdown answers both.
  */
 export const SCOPE_DESCRIPTION =
-  "Tier or DAP process to run the request on. An assembly on its own leaves the instance to the resource coordinator.";
+  "Tier or DAP process to run the request on, or distributed to leave the choice of DAPs to the resource coordinator.";
 
 export enum ParamFieldType {
   Text = "text",

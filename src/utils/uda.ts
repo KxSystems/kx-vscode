@@ -28,6 +28,11 @@ import {
   sourceForParam,
 } from "../models/uda";
 
+const UNBOUNDED_TIMESTAMPS = [
+  "1707-09-22T00:12:43.145224193",
+  "2292-04-10T23:47:16.854775807",
+];
+
 export function filterUDAParamsValidTypes(type: number | number[]): number[] {
   const validTypes = new Set([
     ...ext.booleanTypes,
@@ -110,7 +115,7 @@ export function parseUDAParams(
       hasInvalidRequiredParam = true;
     }
 
-    parsedParams.push({
+    const parsed: UDAParam = {
       ...param,
       type: validTypes,
       fieldType,
@@ -118,7 +123,14 @@ export function parseUDAParams(
       multiFieldTypes,
       source: sourceForParam(param.name, fieldType),
       isVisible: param.isReq,
-    });
+    };
+    if (
+      fieldType === ParamFieldType.Timestamp &&
+      UNBOUNDED_TIMESTAMPS.includes(param.default)
+    ) {
+      delete parsed.default;
+    }
+    parsedParams.push(parsed);
   });
 
   return hasInvalidRequiredParam ? ParamFieldType.Invalid : parsedParams;

@@ -85,8 +85,9 @@ preview at all.
 
 `table` is all it asks for. `startTS`, `endTS` and `limit` are added from the
 **+ Add parameter** list, and leaving one off asks for the API's own default:
-the whole available range, and a thousand rows. One that is shown and left blank
-counts as left off rather than being sent empty.
+the whole available range, and a thousand rows. An added `startTS` or `endTS`
+starts out blank rather than at the far ends of that range, and one that is
+shown and left blank counts as left off rather than being sent empty.
 
 Reach for it over getData when a look at the data is all you are after. getData
 is a general-purpose request and takes a slower path to satisfy a `limit`, while
@@ -98,7 +99,7 @@ For a particular slice, aggregation or ordering, use getData.
 
 `scope` says where a request runs, and it is asked the way qSQL asks it: the
 same dropdown, listing the tiers the connection reports and the DAP processes
-inside them, with the assembly on its own above them. Add it from **+ Add
+inside them, with `assembly distributed` above them. Add it from **+ Add
 parameter** and pick a target — getData, a UDA and qSQL all answer the question
 once, in the same words. What the request carries is the assembly, tier and DAP
 the target stands for, resolved against the connection when the query runs, so a
@@ -135,18 +136,24 @@ Anything that names a table or a column is chosen from a dropdown filled from
 the connection's meta: `table` lists the tables it reports, and the column
 fields of `filter`, `agg`, `groupBy`, `sortCols` and `outputTZCols` list the
 columns of the table the query names. A column belongs to a table, so until one
-is picked these dropdowns are empty and say `Select a table first...`. A UDA
-gets the same lists: its distinguished `table` parameter, any parameter it
-declares called `table` or `tableName`, and its symbol parameters named for
-columns (`column`, `columns`, `col`, `cols`, `sortCols`, `groupBy`, `by`) — so a
-UDA that names no table of its own offers columns once its `table` parameter is
-added and set. A value the meta does not mention is kept and shown, so opening a
-file written against another connection never empties it.
+is picked these dropdowns are empty and say
+`Select a table to view available columns...`. A UDA gets the same lists: its
+distinguished `table` parameter, any parameter it declares called `table` or
+`tableName`, and its symbol parameters named for columns (`column`, `columns`,
+`col`, `cols`, `sortCols`, `groupBy`, `by`) — so a UDA that names no table of
+its own offers columns once its `table` parameter is added and set. A value the
+meta does not mention stays in its field but is not offered in the dropdown, so
+opening a file written against another connection never empties it, and never
+suggests a table or target that connection does not have. A parameter that has
+to be given has no empty entry to pick.
 
 A label key and its values are suggested from the connection's meta the same
 way, narrowed to the table the query names: pick one from the list, or type a
-label the meta does not mention. A key given twice is called out, since the
-request carries one value per key and only the last row would be sent.
+label the meta does not mention. The list opens on every suggestion, whatever
+the field already holds. Where a key takes several values, as a UDA's `labels`
+does, each value is a badge of its own — type one and press Enter, Space or `;`
+to add it. A key given twice is called out, since the request carries one value
+per key and only the last row would be sent.
 
 `table` is the only getData parameter that must be filled in. The time range is
 optional — leaving `startTS` and `endTS` empty queries the table unbounded, so

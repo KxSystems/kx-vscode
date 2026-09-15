@@ -35,15 +35,18 @@ describe("plotUtils", () => {
   });
 
   function makeCell(): any {
-    return {
+    const notebook: any = { uri: Uri.file("/tmp/a.kxnb") };
+    const create = () => ({
       kind: 2,
       index: 0,
       metadata: {},
       executionSummary: undefined,
       outputs: [],
       document: { getText: () => "1+1", languageId: "q" },
-      notebook: { uri: Uri.file("/tmp/a.kxnb") },
-    };
+      notebook,
+    });
+    notebook.cellAt = create;
+    return create();
   }
 
   describe("writePlotToFile", () => {
@@ -188,6 +191,28 @@ describe("plotUtils", () => {
 
       sinon.assert.calledOnce(applyEdit);
       sinon.assert.notCalled(addWorkspaceFile);
+    });
+
+    it("should keep writing to the cell an earlier image replaced", async () => {
+      const cell = makeCell();
+      const target = plotUtils.registerImageTarget("req-1", <any>{}, cell);
+      target.endedAt = Date.now();
+      const applyEdit = sinon.stub(workspace, "applyEdit").callsFake(() => {
+        cell.index = -1;
+        return Promise.resolve(true);
+      });
+      const addWorkspaceFile = sinon
+        .stub(workspaceUtils, "addWorkspaceFile")
+        .resolves(Uri.file("/tmp/plot-1.plot"));
+      sinon.stub(workspaceUtils, "workspaceHas").returns(true);
+      sinon.stub(workspaceUtils, "setUriContent");
+
+      await plotUtils.renderImage("req-1", data);
+      await plotUtils.renderImage("req-1", data);
+
+      sinon.assert.calledTwice(applyEdit);
+      sinon.assert.notCalled(addWorkspaceFile);
+      assert.strictEqual(target.outputs.length, 2);
     });
 
     it("should fall back to a file for an unknown requestID", async () => {

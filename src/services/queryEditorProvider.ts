@@ -40,7 +40,7 @@ import {
   pickConnection,
 } from "../commands/workspaceCommand";
 import { QueryCommand, QueryMessage } from "../models/messages";
-import { MetaObjectPayload } from "../models/meta";
+import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { LabelSet, QueryFile, createDefaultQueryFile } from "../models/query";
 import { UDA } from "../models/uda";
 import { getBasename, offerConnectAction } from "../utils/core";
@@ -60,6 +60,22 @@ import { webviewReset } from "../utils/webviewPage";
 
 const logger = "queryEditorProvider";
 
+interface QueryMeta {
+  queries: UDA[];
+  tables: { [table: string]: string[] };
+  targets: string[];
+  labels: LabelSet[];
+}
+
+function unparsed(): QueryMeta {
+  return {
+    queries: parseQueryList(<MetaObjectPayload>{}),
+    tables: {},
+    targets: [],
+    labels: [],
+  };
+}
+
 export class QueryEditorProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.queryEditor";
 
@@ -71,23 +87,19 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
     );
   }
 
-  private cache = new Map<string, UDA[]>();
-  private tables = new Map<string, { [table: string]: string[] }>();
-  private targets = new Map<string, string[]>();
-  private labels = new Map<string, LabelSet[]>();
+  private parsed = new WeakMap<MetaObject, QueryMeta>();
   private warned = new Set<string>();
 
   constructor(private readonly context: ExtensionContext) {}
 
   async getQueries(connLabel: string): Promise<UDA[]> {
-    const cached = this.cache.get(connLabel);
-    if (cached) {
-      return cached;
-    }
+    return this.getQueryMeta(connLabel).queries;
+  }
 
+  getQueryMeta(connLabel: string): QueryMeta {
     const connMngService = new ConnectionManagementService();
     if (!connMngService.isConnected(connLabel)) {
-      return parseQueryList(<MetaObjectPayload>{});
+      return unparsed();
     }
 
     const connection = connMngService.retrieveConnectedConnection(connLabel);
@@ -103,19 +115,22 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
           { logger },
         );
       }
-      return parseQueryList(<MetaObjectPayload>{});
+      return unparsed();
     }
 
-    const queries = parseQueryList(connection.meta.payload);
     this.warned.delete(connLabel);
-    this.cache.set(connLabel, queries);
-    this.tables.set(connLabel, parseTables(connection.meta.payload));
-    this.targets.set(
-      connLabel,
-      parseTargets(connection.meta.payload, connection.insightsVersion),
-    );
-    this.labels.set(connLabel, parseLabels(connection.meta.payload));
-    return queries;
+    const meta = connection.meta;
+    let parsed = this.parsed.get(meta);
+    if (!parsed) {
+      parsed = {
+        queries: parseQueryList(meta.payload),
+        tables: parseTables(meta.payload),
+        targets: parseTargets(meta.payload, connection.insightsVersion),
+        labels: parseLabels(meta.payload),
+      };
+      this.parsed.set(meta, parsed);
+    }
+    return parsed;
   }
 
   async resolveCustomTextEditor(
@@ -132,14 +147,15 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
       if (changing === 0) {
         const selectedServer = getServerForUri(document.uri) || "";
         await getConnectionForServer(selectedServer);
-        const queries = await this.getQueries(selectedServer);
+        const { queries, tables, targets, labels } =
+          this.getQueryMeta(selectedServer);
         webview.postMessage(<QueryMessage>{
           command: QueryCommand.Update,
           file: this.getDocumentAsJson(document),
           queries,
-          tables: this.tables.get(selectedServer) || {},
-          targets: this.targets.get(selectedServer) || [],
-          labels: this.labels.get(selectedServer) || [],
+          tables,
+          targets,
+          labels,
           isMetaLoaded: connMngService.isConnected(selectedServer),
           selectedServer,
         });
@@ -226,10 +242,6 @@ export class QueryEditorProvider implements CustomTextEditorProvider {
         case QueryCommand.Refresh: {
           runner = Runner.create(async () => {
             await connMngService.refreshGetMeta(selectedServer);
-            this.cache.delete(selectedServer);
-            this.tables.delete(selectedServer);
-            this.targets.delete(selectedServer);
-            this.labels.delete(selectedServer);
             this.warned.delete(selectedServer);
             updateWebview();
           });

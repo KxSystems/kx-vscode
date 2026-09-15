@@ -314,9 +314,9 @@ export class KdbQueryView extends LitElement {
 
   placeholder(name: string, source?: ParamSource) {
     if (source === "columns" && this.suggestions(source).length === 0) {
-      return "Select a table first...";
+      return "Select a table to view available columns...";
     }
-    return `Select ${/^[aeiou]/i.test(name) ? "an" : "a"} ${name}...`;
+    return `Select ${name}...`;
   }
 
   visibleParams() {
@@ -368,12 +368,14 @@ export class KdbQueryView extends LitElement {
     handler: (event: Event) => void,
     empty = "",
     label = "",
+    required = false,
   ) {
     return html`
       <kdb-select
         value="${value}"
         empty="${empty}"
         label="${label}"
+        ?required="${required}"
         .options="${options}"
         @input="${handler}"></kdb-select>
     `;
@@ -639,7 +641,9 @@ export class KdbQueryView extends LitElement {
       return html``;
     }
     return html`
-      <small class="help">Name a table to see the labels it carries.</small>
+      <small class="help">
+        Select a table to view only the labels it carries.
+      </small>
     `;
   }
 
@@ -656,44 +660,66 @@ export class KdbQueryView extends LitElement {
       this.setRows(param, rows);
     };
 
-    if (field.choices || (field.source && !isSuggestion(field.source))) {
+    if (isSuggestion(field.source)) {
+      return this.renderSuggestion(field, row, column, setValue);
+    }
+
+    if (field.choices || field.source) {
       return this.renderSelect(
         row[column] || "",
         field.choices || this.suggestions(field.source as ParamSource),
         (event: Event) => setValue((event.target as KdbSelect).value),
         this.placeholder(field.name, field.source),
         field.name,
+        !!field.choices,
       );
     }
-
-    const suggested = field.source
-      ? this.suggestions(field.source, row[0] || "")
-      : [];
-    const list = `${param.name}-${index}-${column}-list`;
 
     return html`
       <input
         type="text"
         class="row-field"
         placeholder="${field.name}"
-        list="${suggested.length > 0 ? list : ""}"
         ${inputDefaults()}
         ${bind(row[column] || "", TEXT, `${param.name}-${index}-${column}`)}
         @input="${(event: Event) =>
           setValue((event.target as HTMLInputElement).value)}" />
-      ${suggested.length > 0
-        ? html`
-            <datalist id="${list}">
-              ${suggested.map(
-                (option) =>
-                  html`<option
-                    value="${typeof option === "string"
-                      ? option
-                      : option.value}"></option>`,
-              )}
-            </datalist>
-          `
-        : html``}
+    `;
+  }
+
+  private renderSuggestion(
+    field: UDAParamField,
+    row: string[],
+    column: number,
+    setValue: (value: string) => void,
+  ) {
+    const options = this.suggestions(field.source as ParamSource, row[0] || "");
+
+    if (field.many) {
+      return html`
+        <kdb-select
+          editable
+          multiple
+          empty="${field.name}"
+          label="${field.name}"
+          .values="${(row[column] || "").split(/[;\s]+/).filter(Boolean)}"
+          .options="${options}"
+          @input="${(event: Event) =>
+            setValue(
+              (event.target as KdbSelect).values.join(" "),
+            )}"></kdb-select>
+      `;
+    }
+
+    return html`
+      <kdb-select
+        editable
+        value="${row[column] || ""}"
+        empty="${field.name}"
+        label="${field.name}"
+        .options="${options}"
+        @input="${(event: Event) =>
+          setValue((event.target as KdbSelect).value)}"></kdb-select>
     `;
   }
 
@@ -759,6 +785,7 @@ export class KdbQueryView extends LitElement {
                 this.setParam(param, (event.target as KdbSelect).value),
               this.placeholder(param.name, param.source),
               this.paramLabel(param),
+              param.isReq,
             )}
             ${this.renderRemove(param)}
           </span>

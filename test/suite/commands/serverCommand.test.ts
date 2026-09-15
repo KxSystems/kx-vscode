@@ -45,6 +45,7 @@ import { ExecutionConsole } from "../../../src/utils/executionConsole";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
 import * as plotUtils from "../../../src/utils/plotUtils";
+import * as queryUtils from "../../../src/utils/queryUtils";
 import * as kdbValidators from "../../../src/validators/kdbValidator";
 import { createMockDatasource } from "../../fixtures/config/datasource";
 
@@ -790,6 +791,7 @@ describe("serverCommand", () => {
     it("should write an encoded png to a plot", async () => {
       const png = "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAYAAAALpr0T";
       const writePlotToFileStub = sinon.stub(plotUtils, "writePlotToFile");
+      const addQueryHistoryStub = sinon.stub(queryUtils, "addQueryHistory");
       sinon.stub(notifications, "notify");
       scratchpadResult.data = png;
       isVisibleStub.returns(false);
@@ -811,6 +813,12 @@ describe("serverCommand", () => {
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
+      sinon.assert.calledOnceWithMatch(
+        addQueryHistoryStub,
+        "dummy query",
+        "testFile.kdb.q",
+        "connLabel",
+      );
     });
   });
 
