@@ -30,4 +30,30 @@ describe("kdbWelcomeView", () => {
   it("should exists", () => {
     assert.ok(view);
   });
+
+  it("should keep the startup choice and tell the extension host", () => {
+    const post = sinon.stub(view.vscode, "postMessage");
+    const handler = handlers(view["render"]())[1];
+    handler({ target: { checked: false } });
+    assert.strictEqual(view.checked, "false");
+    assert.strictEqual(post.calledOnceWith(<any>false), true);
+  });
 });
+
+function handlers(template: any, found: any[] = []): any[] {
+  if (!template || typeof template !== "object") {
+    return found;
+  }
+  if (Array.isArray(template)) {
+    template.forEach((each) => handlers(each, found));
+    return found;
+  }
+  for (const value of template.values || []) {
+    if (typeof value === "function") {
+      found.push(value);
+    } else {
+      handlers(value, found);
+    }
+  }
+  return found;
+}

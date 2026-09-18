@@ -75,6 +75,15 @@ export class FakeInsights {
   // Any query carrying this comes back as a failure instead of a result.
   static readonly FAILS = "FAIL_QUERY";
 
+  // The two ways an Insights process dying mid-query answers, neither of which
+  // carries the JSON header a gateway error has (KXI-69283): killing the
+  // coordinator gives a 500 whose body is the plain-text reason, and killing
+  // the service gateway gives openresty's 502 HTML page.
+  static readonly KILLS_RC = "KILL_COORDINATOR";
+  static readonly KILLS_SG = "KILL_GATEWAY";
+
+  static readonly RC_DIED = "Coordinator connection has closed";
+
   // A query calling this shows an image on the way to its result, which reaches
   // the extension on the log websocket rather than in the response.
   static readonly SHOWS_IMAGE = "showImage";
@@ -295,12 +304,28 @@ export class FakeInsights {
     }
 
     if (path.startsWith("/servicegateway/")) {
+      const asked = JSON.stringify(body);
+
+      if (asked.includes(FakeInsights.KILLS_RC)) {
+        res.writeHead(500, { "Content-Type": "text/plain" });
+        return res.end(FakeInsights.RC_DIED);
+      }
+
+      if (asked.includes(FakeInsights.KILLS_SG)) {
+        res.writeHead(502, { "Content-Type": "text/html" });
+        return res.end(
+          "<html>\n<head><title>502 Bad Gateway</title></head>\n" +
+            "<body>\n<center><h1>502 Bad Gateway</h1></center>\n" +
+            "<hr><center>openresty</center>\n</body>\n</html>\n",
+        );
+      }
+
       // A failing datasource answers with a status the extension reads the
       // reason out of, rather than a body carrying an error flag.
       // The payload is structured text because that is what the extension's
       // struct-text accept header asks these endpoints for — rows here instead
       // leave the notebook renderer with nothing it can lay out.
-      return JSON.stringify(body).includes(FakeInsights.FAILS)
+      return asked.includes(FakeInsights.FAILS)
         ? send(500, { header: { ai: FAILURE }, payload: {} })
         : send(200, { payload: structuredText() });
     }

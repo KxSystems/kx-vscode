@@ -116,6 +116,14 @@ bundled extension, so a test cannot reach the providers either. Tree contents
 are covered in `test/suite` instead; what a tree item's command does when it is
 run is still driven from here, with the item the tree would hand it.
 
+A webview's content is out of reach for the same reason — it runs in an iframe,
+and postMessage is the only way in. So a panel of the test's own takes its
+place: `webview.ts` mounts the component from the bundle the real page loads
+(`out/query.js` for the query editor, `out/webview.js` for the rest) and drives
+it from a script running inside the page, which reports what it found back over
+that channel. The component, its shadow DOM and the controls it is built from
+are all real; only the panel hosting them belongs to the test.
+
 The workspace also turns off everything the workbench would otherwise put in
 front of a test: `files.simpleDialog.enable` replaces the system file dialog
 with a quick pick, so a dialog `dialog.ts` has not been told how to answer

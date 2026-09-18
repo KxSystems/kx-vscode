@@ -46,13 +46,14 @@ describe("Commands", () => {
         "kdb.install.kdbx",
         "kdb.connections.export.all",
         "kdb.connections.import",
-        "kdb.datasource.create",
         "kdb.scratchpad.create",
         "kdb.scratchpad.python.create",
         "kdb.scratchpad.sql.create",
         "kdb.connections.add",
         "kdb.repl.start",
         "kdb.createNotebook",
+        "kdb.query.create",
+        "kdb.query.convert",
       ];
       const shown = palette.filter((cmd: any) => cmd.when === "true");
       assert.strictEqual(shown.length, visible.length);

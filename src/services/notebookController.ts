@@ -41,7 +41,11 @@ import {
   notifyExecution,
   RunFlag,
 } from "../utils/queryUtils";
-import { convertToGrid, formatResult } from "../utils/resultsRenderer";
+import {
+  convertToGrid,
+  escapeHtml,
+  formatResult,
+} from "../utils/resultsRenderer";
 
 const logger = "notebookController";
 
@@ -233,7 +237,7 @@ export class KxNotebookController {
         this.writeOutput(
           execution,
           {
-            text: `<p>Execution stopped.</p><p>${error instanceof Error ? error.message : error}</p>`,
+            text: `<p>Execution stopped.</p><p>${escapeHtml(`${error instanceof Error ? error.message : error}`)}</p>`,
             mime: "text/html",
           },
           cellTarget,
@@ -369,61 +373,52 @@ interface Rendered {
   mime: string;
 }
 
+function renderTable(table: any): string {
+  const defs: any[] = table.columnDefs;
+  const fields: string[] = defs.map((def) =>
+    "field" in def ? def.field || "" : "",
+  );
+
+  const rows: string[] = ["<table>", "<thead>", "<tr>"];
+
+  for (const def of defs) {
+    rows.push(`<th>${escapeHtml(`${def.headerName}`)}</th>`);
+  }
+  rows.push("</tr>", "</thead>", "<tbody>");
+
+  for (const row of table.rowData || []) {
+    rows.push("<tr>");
+    for (const field of fields) {
+      rows.push(`<td>${field ? escapeHtml(`${row[field]}`) : "n/a"}</td>`);
+    }
+    rows.push("</tr>");
+  }
+  rows.push("</tbody>", "</table>");
+
+  return rows.join("\n");
+}
+
 function render(
   results: any,
   isPython: boolean,
   isInsights: boolean,
   connVersion?: string,
 ): Rendered {
-  let text = "No results.";
-  let mime = "text/plain";
-
   const plot = resultToBase64(results);
-
   if (plot) {
-    text = `<img src="${plot}"/>`;
-    mime = "text/html";
-  } else {
-    if (typeof results === "string" || typeof results === "number") {
-      text = formatResult(results);
-      mime = "text/html";
-    } else if (results) {
-      const rows: string[] = [];
-      const table = convertToGrid(results, isInsights, connVersion, isPython);
-      if (table.columnDefs) {
-        rows.push("<table>");
+    return { text: `<img src="${plot}"/>`, mime: "text/html" };
+  }
 
-        rows.push("<thead>");
-        rows.push("<tr>");
-        const fields: string[] = [];
-        for (const def of table.columnDefs) {
-          rows.push(`<th>${def.headerName}</th>`);
-          if ("field" in def) {
-            fields.push(def.field || "");
-          } else {
-            fields.push("");
-          }
-        }
-        rows.push("</tr>");
-        rows.push("</thead>");
+  if (typeof results === "string" || typeof results === "number") {
+    return { text: formatResult(results), mime: "text/html" };
+  }
 
-        rows.push("<tbody>");
-        if (table.rowData) {
-          for (const row of table.rowData) {
-            rows.push("<tr>");
-            for (const field of fields) {
-              rows.push(`<td>${field ? row[field] : "n/a"}</td>`);
-            }
-            rows.push("</tr>");
-          }
-        }
-        rows.push("</tbody>");
-
-        rows.push("</table>");
-        text = rows.join("\n");
-        mime = "text/html";
-      }
+  if (results) {
+    const table = convertToGrid(results, isInsights, connVersion, isPython);
+    if (table.columnDefs) {
+      return { text: renderTable(table), mime: "text/html" };
     }
   }
-  return { text, mime };
+
+  return { text: "No results.", mime: "text/plain" };
 }
