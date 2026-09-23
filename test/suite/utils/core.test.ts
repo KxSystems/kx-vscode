@@ -12,6 +12,7 @@
  */
 
 import * as assert from "assert";
+import path from "node:path";
 import { env } from "node:process";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
@@ -25,6 +26,7 @@ import {
 import * as coreUtils from "../../../src/utils/core";
 import * as cpUtils from "../../../src/utils/cpUtils";
 import * as loggers from "../../../src/utils/loggers";
+import * as shellUtils from "../../../src/utils/shell";
 
 describe("core", () => {
   describe("checkOpenSslInstalled", () => {
@@ -887,7 +889,152 @@ describe("core", () => {
     });
   });
 
+  // Drive qualified on Windows, where the helpers resolve against the drive of
+  // the current working directory.
+  const absolute = (...parts: string[]) =>
+    path.resolve(path.join(path.sep, ...parts));
+
+  describe("resolveQHome", () => {
+    const exists = (...targets: string[]) => {
+      const set = new Set(targets);
+      return (target: string) => set.has(target);
+    };
+
+    it("should find a KDB-X installation", () => {
+      const target = absolute("kx", "bin", "q");
+      const result = coreUtils.resolveQHome(
+        absolute("kx"),
+        "linux",
+        "x64",
+        exists(target),
+      );
+      assert.deepStrictEqual(result, { path: target, kdbx: true });
+    });
+
+    it("should find a kdb+ installation on Windows", () => {
+      const target = absolute("q", "w64", "q.exe");
+      const result = coreUtils.resolveQHome(
+        absolute("q"),
+        "win32",
+        "x64",
+        exists(target),
+      );
+      assert.deepStrictEqual(result, { path: target, kdbx: false });
+    });
+
+    it("should find a kdb+ installation on Linux arm", () => {
+      const target = absolute("q", "l64arm", "q");
+      const result = coreUtils.resolveQHome(
+        absolute("q"),
+        "linux",
+        "arm64",
+        exists(target),
+      );
+      assert.deepStrictEqual(result, { path: target, kdbx: false });
+    });
+
+    it("should prefer the KDB-X layout", () => {
+      const target = absolute("kx", "bin", "q");
+      const result = coreUtils.resolveQHome(
+        absolute("kx"),
+        "linux",
+        "x64",
+        exists(target, absolute("kx", "l64", "q")),
+      );
+      assert.deepStrictEqual(result, { path: target, kdbx: true });
+    });
+
+    it("should return undefined when nothing is found", () => {
+      const result = coreUtils.resolveQHome(
+        absolute("kx"),
+        "linux",
+        "x64",
+        exists(),
+      );
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should return undefined on an unsupported platform", () => {
+      const result = coreUtils.resolveQHome(
+        absolute("kx"),
+        "aix",
+        "x64",
+        exists(absolute("kx", "w64", "q.exe")),
+      );
+      assert.strictEqual(result, undefined);
+    });
+  });
+
+  describe("classifyQBinary", () => {
+    it("should classify a KDB-X binary", () => {
+      const result = coreUtils.classifyQBinary(
+        absolute("kx", "bin", "q"),
+        "linux",
+        "x64",
+      );
+      assert.deepStrictEqual(result, { home: absolute("kx"), kdbx: true });
+    });
+
+    it("should classify a Windows kdb+ binary", () => {
+      const result = coreUtils.classifyQBinary(
+        absolute("q", "w64", "q.exe"),
+        "win32",
+        "x64",
+      );
+      assert.deepStrictEqual(result, { home: absolute("q"), kdbx: false });
+    });
+
+    it("should ignore trailing whitespace", () => {
+      const result = coreUtils.classifyQBinary(
+        absolute("kx", "bin", "q") + " ",
+        "linux",
+        "x64",
+      );
+      assert.deepStrictEqual(result, { home: absolute("kx"), kdbx: true });
+    });
+
+    it("should reject an unrelated folder", () => {
+      const result = coreUtils.classifyQBinary(
+        absolute("usr", "local", "q"),
+        "linux",
+        "x64",
+      );
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should reject an unrelated binary", () => {
+      const result = coreUtils.classifyQBinary(
+        absolute("kx", "bin", "qq"),
+        "linux",
+        "x64",
+      );
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should reject an empty entry", () => {
+      const result = coreUtils.classifyQBinary("", "linux", "x64");
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should reject a platform folder from another platform", () => {
+      const result = coreUtils.classifyQBinary(
+        absolute("q", "w64", "q.exe"),
+        "linux",
+        "x64",
+      );
+      assert.strictEqual(result, undefined);
+    });
+  });
+
   describe("getEnvironment", () => {
+    beforeEach(() => {
+      // Without a q home to resolve, getEnvironment looks q up on the PATH,
+      // which shells out to where.exe on Windows: too slow for the suite's two
+      // second timeout, and it would make the result depend on whether the
+      // machine running the tests happens to have q installed.
+      sinon.stub(shellUtils, "which").returns([]);
+    });
+
     afterEach(() => {
       sinon.restore();
     });

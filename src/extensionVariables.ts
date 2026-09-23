@@ -15,12 +15,16 @@ import {
   ExtensionContext,
   languages,
   LogOutputChannel,
+  NotebookCell,
+  NotebookCellExecution,
+  NotebookCellOutput,
   OutputChannel,
   StatusBarItem,
   TextEditor,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 
+import { ConnectionConsole } from "./classes/connectionConsole";
 import { InsightsConnection } from "./classes/insightsConnection";
 import { LocalConnection } from "./classes/localConnection";
 import { kdbAuthMap } from "./models/connectionsModels";
@@ -31,6 +35,8 @@ import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
 import { ScratchpadFile } from "./models/scratchpad";
 import { ServerObject } from "./models/serverObject";
+import { TYPE_BY_NAME, TYPE_NAMES } from "./models/typeFormat";
+import { allowedEmptyRequiredTypes } from "./models/uda";
 import {
   InsightsNode,
   KdbNode,
@@ -52,9 +58,13 @@ export namespace ext {
   export let serverProvider: KdbTreeProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
+  // Output destination toggle, driven by the editor-toolbar selector: when true
+  // query results render in the kdb Results View, when false they go to the
+  // connection's output console (Terminal). Mirrored to the
+  // "kdb.showResultsInView" context key for the selector's menu state.
   export let isResultsTabVisible: boolean;
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
-  export let dataSourceTreeProvider: WorkspaceTreeProvider;
+  export let queryTreeProvider: WorkspaceTreeProvider;
   export let runScratchpadItem: StatusBarItem;
   export let pickTimeoutItem: StatusBarItem;
   export const activeScratchPadList: Array<ScratchpadFile> = [];
@@ -72,6 +82,19 @@ export namespace ext {
   export const connectedConnectionList: Array<
     LocalConnection | InsightsConnection
   > = [];
+  // One output-only console terminal per connected connection, keyed by
+  // connLabel. Created on connect, disposed on disconnect.
+  export const connectionConsoles = new Map<string, ConnectionConsole>();
+  export interface CellExecutionTarget {
+    execution: NotebookCellExecution;
+    cell: NotebookCell;
+    index: number;
+    outputs: NotebookCellOutput[];
+    applied?: Thenable<void>;
+    endedAt?: number;
+    superseded?: boolean;
+  }
+  export const pendingImageTargets = new Map<string, CellExecutionTarget>();
   export const connectedContextStrings: Array<string> = [];
   export const queryHistoryAvailableToCopy: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
@@ -81,7 +104,6 @@ export namespace ext {
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
   export const kdbDataSourceFileGlob = "*.ds";
-  export let oldDSformatExists: boolean;
   export const kdbDataSourceRootNodes: string[] = [];
   export const kdbQueryHistoryNodes: string[] = [];
   export const kdbQueryHistoryList: QueryHistory[] = [];
@@ -104,7 +126,7 @@ export namespace ext {
   ]);
   export const timestampTypes = new Set([-12]);
   export const jsonTypes = new Set([
-    0, 1, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 77, 98, 99,
+    0, 1, 2, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 77, 98, 99,
   ]);
   export const scratchpadStarted = new Set<string>();
 
@@ -190,7 +212,18 @@ export namespace ext {
     // "Namespaces", removed to investigate
   ];
 
-  export const qNamespaceFilters = [".q", ".Q", ".h", ".z", ".o", ".j", ".m"];
+  // The namespaces a process keeps to itself, which are its own business
+  // rather than the user's and so are left out of the listing.
+  export const qNamespaceFilters = [
+    ".q",
+    ".Q",
+    ".h",
+    ".z",
+    ".o",
+    ".j",
+    ".m",
+    ".s",
+  ];
 
   export const constants = {
     names: [
@@ -239,99 +272,11 @@ export namespace ext {
       "t",
       "s",
     ],
-    allowedEmptyRequiredTypes: [10, -11],
+    allowedEmptyRequiredTypes,
     dataTypes: new Map(
-      Object.entries({
-        "-1": "Boolean",
-        "-2": "GUID",
-        "-4": "Byte",
-        "-5": "Short",
-        "-6": "Int",
-        "-7": "Long",
-        "-8": "Float",
-        "-9": "Double",
-        "-10": "Char",
-        "-11": "Symbol",
-        "-12": "Timestamp",
-        "-13": "Month",
-        "-14": "Date",
-        "-15": "DateTime",
-        "-16": "Timespan",
-        "-17": "Minute",
-        "-18": "Second",
-        "-19": "Time",
-        "0": "List",
-        "1": "Boolean List",
-        "2": "GUID List",
-        "4": "Byte List",
-        "5": "Short List",
-        "6": "Int List",
-        "7": "Long List",
-        "8": "Float List",
-        "9": "Double List",
-        "10": "String",
-        "11": "Symbol List",
-        "12": "Timestamp List",
-        "13": "Month List",
-        "14": "Date List",
-        "15": "DateTime List",
-        "16": "Timespan List",
-        "17": "Minute List",
-        "18": "Second List",
-        "19": "Time List",
-        "77": "Any Map",
-        "98": "Table",
-        "99": "Dictionary",
-        "100": "Lambda",
-        "101": "Unary",
-      }),
+      [...TYPE_NAMES].map(([type, name]) => [type.toString(), name]),
     ),
-    reverseDataTypes: new Map(
-      Object.entries({
-        Boolean: -1,
-        GUID: -2,
-        Byte: -4,
-        Short: -5,
-        Int: -6,
-        Long: -7,
-        Float: -8,
-        Double: -9,
-        Char: -10,
-        Symbol: -11,
-        Timestamp: -12,
-        Month: -13,
-        Date: -14,
-        DateTime: -15,
-        Timespan: -16,
-        Minute: -17,
-        Second: -18,
-        Time: -19,
-        List: 0,
-        "Boolean List": 1,
-        "GUID List": 2,
-        "Byte List": 4,
-        "Short List": 5,
-        "Int List": 6,
-        "Long List": 7,
-        "Float List": 8,
-        "Double List": 9,
-        String: 10,
-        "Symbol List": 11,
-        "Timestamp List": 12,
-        "Month List": 13,
-        "Date List": 14,
-        "DateTime List": 15,
-        "Timespan List": 16,
-        "Minute List": 17,
-        "Second List": 18,
-        "Time List": 19,
-        "Any Map": 77,
-        Table: 98,
-        Dictionary: 99,
-        Lambda: 100,
-        Unary: 101,
-      }),
-    ),
+    reverseDataTypes: new Map(TYPE_BY_NAME),
     listSeparator: [
       ";",
       "",

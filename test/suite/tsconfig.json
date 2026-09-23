@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "noEmit": true
+  },
+  "include": ["./**/*", "../../src/webview/vscode-webview.d.ts"]
+}

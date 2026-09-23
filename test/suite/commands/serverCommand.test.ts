@@ -41,10 +41,11 @@ import {
 } from "../../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../../src/utils/core";
-import * as dataSourceUtils from "../../../src/utils/dataSource";
 import { ExecutionConsole } from "../../../src/utils/executionConsole";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
+import * as plotUtils from "../../../src/utils/plotUtils";
+import * as queryUtils from "../../../src/utils/queryUtils";
 import * as kdbValidators from "../../../src/validators/kdbValidator";
 import { createMockDatasource } from "../../fixtures/config/datasource";
 
@@ -786,6 +787,39 @@ describe("serverCommand", () => {
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
     });
+
+    it("should write an encoded png to a plot", async () => {
+      const png = "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAYAAAALpr0T";
+      const writePlotToFileStub = sinon.stub(plotUtils, "writePlotToFile");
+      const addQueryHistoryStub = sinon.stub(queryUtils, "addQueryHistory");
+      sinon.stub(notifications, "notify");
+      scratchpadResult.data = png;
+      isVisibleStub.returns(false);
+
+      await serverCommand.writeScratchpadResult(
+        scratchpadResult,
+        "dummy query",
+        "connLabel",
+        "testFile.kdb.q",
+        false,
+        true,
+        "2",
+        "0",
+      );
+
+      sinon.assert.calledOnceWithExactly(
+        writePlotToFileStub,
+        `data:image/png;base64,${png}`,
+      );
+      sinon.assert.notCalled(writeQueryResultsToViewStub);
+      sinon.assert.notCalled(writeQueryResultsToConsoleStub);
+      sinon.assert.calledOnceWithMatch(
+        addQueryHistoryStub,
+        "dummy query",
+        "testFile.kdb.q",
+        "connLabel",
+      );
+    });
   });
 
   describe("resetScratchPad", () => {
@@ -1145,18 +1179,12 @@ describe("serverCommand", () => {
   });
 
   describe("activeConnection", () => {
-    let setActiveConnectionStub,
-      refreshDataSourcesPanelStub,
-      reloadStub: sinon.SinonStub;
+    let setActiveConnectionStub, reloadStub: sinon.SinonStub;
 
     beforeEach(() => {
       setActiveConnectionStub = sinon.stub(
         ConnectionManagementService.prototype,
         "setActiveConnection",
-      );
-      refreshDataSourcesPanelStub = sinon.stub(
-        dataSourceUtils,
-        "refreshDataSourcesPanel",
       );
       reloadStub = sinon.stub(ext.serverProvider, "reload");
     });
@@ -1164,11 +1192,10 @@ describe("serverCommand", () => {
       sinon.restore();
     });
 
-    it("should set active connection and refresh panel", () => {
+    it("should set active connection and reload the tree", () => {
       serverCommand.activeConnection(kdbNode);
 
       assert.ok(setActiveConnectionStub.calledWith(kdbNode));
-      assert.ok(refreshDataSourcesPanelStub.calledOnce);
       assert.ok(reloadStub.calledOnce);
     });
   });
@@ -1312,6 +1339,9 @@ describe("serverCommand", () => {
     beforeEach(() => {
       windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");
       retrieveConnectionStub = sinon.stub(connService, "retrieveConnection");
+      // connect() starts the console for real, which opens a fresh output
+      // channel on a host that is no longer accepting them.
+      sinon.stub(ExecutionConsole, "start").returns(_executionConsole);
     });
 
     afterEach(() => {

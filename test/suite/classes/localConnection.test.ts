@@ -81,4 +81,38 @@ describe("LocalConnection", () => {
     const conn = localConn.getConnection();
     assert.strictEqual(conn, "fakeConnection");
   });
+  describe("loadServerObjects", () => {
+    /**
+     * What a process answers the memory listing with, in the shape listMem.q
+     * reports it: a namespace has a row of its own, marked isNs.
+     */
+    const listing = [
+      { name: ".q", fname: ".q", typeNum: 99, namespace: ".", isNs: true },
+      { name: ".s", fname: ".s", typeNum: 99, namespace: ".", isNs: true },
+      { name: ".e2e", fname: ".e2e", typeNum: 99, namespace: ".", isNs: true },
+      {
+        name: "trade",
+        fname: "trade",
+        typeNum: 98,
+        namespace: ".",
+        isNs: false,
+      },
+    ];
+
+    it("should leave out the namespaces a process keeps to itself", async () => {
+      localConn["connection"] = <any>{};
+      // The process has the .vscode namespace loaded, so the listing is asked
+      // for by name rather than by sending listMem.q over.
+      localConn.useAPI = true;
+      sinon.stub(localConn, "executeQueryRaw").resolves(listing);
+
+      const result = await localConn.loadServerObjects();
+
+      assert.deepStrictEqual(
+        result.map((object) => object.name),
+        [".e2e", "trade"],
+        "an internal namespace was listed",
+      );
+    });
+  });
 });

@@ -71,11 +71,18 @@ export async function addWorkspaceFile(
     const folder = uri ? workspace.getWorkspaceFolder(uri) : folders[0];
     if (folder) {
       let i = 1;
+      let uri: Uri;
       while (true) {
+        uri = Uri.joinPath(folder.uri, directory, `${name}-${i}${ext}`).with({
+          scheme: "untitled",
+        });
         const files = await workspace.findFiles(
           `${directory}/${name}-${i}${ext}`,
         );
-        if (files.length === 0) {
+        // findFiles only sees the disk, so a document that is still untitled is
+        // invisible to it. Without the second check the same name is handed out
+        // again and the unsaved document is overwritten by the next caller.
+        if (files.length === 0 && !workspaceHas(uri)) {
           break;
         }
         i++;
@@ -83,14 +90,6 @@ export async function addWorkspaceFile(
           throw new Error("No available file name found");
         }
       }
-
-      const uri = Uri.joinPath(
-        folder.uri,
-        directory,
-        `${name}-${i}${ext}`,
-      ).with({
-        scheme: "untitled",
-      });
 
       notify("Workbook created.", MessageKind.DEBUG, { logger });
       return uri;

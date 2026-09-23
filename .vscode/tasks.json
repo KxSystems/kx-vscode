@@ -24,6 +24,12 @@
       "script": "build",
       "group": "build",
       "label": "npm: build"
+    },
+    {
+      "type": "npm",
+      "script": "pretest:e2e",
+      "group": "build",
+      "label": "npm: pretest:e2e"
     }
   ]
 }

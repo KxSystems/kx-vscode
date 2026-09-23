@@ -17,6 +17,7 @@ import { InsightsNode } from "./kdbTreeProvider";
 import {
   getConnectionForServer,
   getServerForUri,
+  onDidChangeSessionMaps,
 } from "../commands/workspaceCommand";
 import { CellKind } from "../models/notebook";
 
@@ -34,6 +35,7 @@ export class KxNotebookTargetActionProvider
         this._onDidChangeCellStatusBarItems.fire();
       }
     });
+    onDidChangeSessionMaps(() => this._onDidChangeCellStatusBarItems.fire());
   }
 
   async provideCellStatusBarItems(

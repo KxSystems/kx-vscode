@@ -18,6 +18,7 @@ import * as path from "node:path";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { setActiveTarget } from "../../../src/classes/activeTarget";
 import { ReplConnection } from "../../../src/classes/replConnection";
 import * as serverCommand from "../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../src/commands/workspaceCommand";
@@ -26,8 +27,7 @@ import { ExecutionTypes } from "../../../src/models/execution";
 import { ConnectionManagementService } from "../../../src/services/connectionManagerService";
 import { InsightsNode, KdbNode } from "../../../src/services/kdbTreeProvider";
 import { WorkspaceTreeProvider } from "../../../src/services/workspaceTreeProvider";
-import * as dataSourceUtils from "../../../src/utils/dataSource";
-import * as loggers from "../../../src/utils/loggers";
+import * as coreUtils from "../../../src/utils/core";
 import * as notifications from "../../../src/utils/notifications";
 import * as widgets from "../../../src/utils/widgets";
 
@@ -35,6 +35,9 @@ describe("workspaceCommand", () => {
   const kdbUri = vscode.Uri.file("test-kdb.q");
   const insightsUri = vscode.Uri.file("tests.q");
   const pythonUri = vscode.Uri.file("test-python.q");
+  const replUri = vscode.Uri.file("test-repl.q");
+  const notebookUri = vscode.Uri.file("test.kxnb");
+  const queryUri = vscode.Uri.file("test.kxquery");
 
   const updateConfStub = sinon.stub();
 
@@ -81,6 +84,15 @@ describe("workspaceCommand", () => {
     sinon
       .stub(ConnectionManagementService.prototype, "retrieveMetaContent")
       .returns(JSON.stringify([{ assembly: "assembly", target: "target" }]));
+    sinon.stub(vscode.workspace, "getWorkspaceFolder").value(
+      () =>
+        <vscode.WorkspaceFolder>{
+          uri: vscode.Uri.file("/"),
+          name: "test",
+          index: 0,
+        },
+    );
+
     sinon.stub(vscode.workspace, "getConfiguration").value(() => {
       const relativePath = (uri: vscode.Uri) =>
         vscode.workspace.asRelativePath(uri, false);
@@ -97,6 +109,9 @@ describe("workspaceCommand", () => {
                 [relativePath(kdbUri)]: "connection2",
                 [relativePath(pythonUri)]: "connection1",
                 [relativePath(insightsUri)]: "connection1",
+                [relativePath(replUri)]: ext.REPL,
+                [relativePath(notebookUri)]: "connection1",
+                [relativePath(queryUri)]: "connection1",
               };
             case "targetMap":
               return {
@@ -131,7 +146,7 @@ describe("workspaceCommand", () => {
         onDidCreate: (cb) => (cb1 = cb),
         onDidDelete: (cb) => (cb2 = cb),
       }));
-      ext.dataSourceTreeProvider = <WorkspaceTreeProvider>{
+      ext.queryTreeProvider = <WorkspaceTreeProvider>{
         reload() {
           dsTree = true;
         },
@@ -142,10 +157,123 @@ describe("workspaceCommand", () => {
         },
       };
       workspaceCommand.connectWorkspaceCommands();
-      cb1(vscode.Uri.file("test.kdb.json"));
+      cb1(vscode.Uri.file("test.kxquery"));
       assert.strictEqual(dsTree, true);
       cb2(vscode.Uri.file("test.kdb.q"));
       assert.strictEqual(wbTree, true);
+    });
+
+    it("should reload both views when the workspace folders change", () => {
+      let dsTree, wbTree;
+      sinon.stub(vscode.workspace, "createFileSystemWatcher").value(() => ({
+        onDidCreate: () => undefined,
+        onDidDelete: () => undefined,
+      }));
+      const folders = sinon.stub(
+        vscode.workspace,
+        "onDidChangeWorkspaceFolders",
+      );
+      ext.queryTreeProvider = <WorkspaceTreeProvider>{
+        reload() {
+          dsTree = true;
+        },
+      };
+      ext.scratchpadTreeProvider = <WorkspaceTreeProvider>{
+        reload() {
+          wbTree = true;
+        },
+      };
+
+      workspaceCommand.connectWorkspaceCommands();
+      folders.firstCall.args[0](<any>undefined);
+
+      assert.strictEqual(dsTree, true);
+      assert.strictEqual(wbTree, true);
+    });
+  });
+
+  describe("updateStatusBarItems", () => {
+    const stubActiveTab = (input?: unknown) =>
+      sinon.stub(vscode.window, "tabGroups").value({
+        activeTabGroup: { activeTab: input ? { input } : undefined },
+      });
+
+    it("should show the connection of the active notebook", async () => {
+      stubActiveTab(new vscode.TabInputNotebook(notebookUri, "kx-notebook"));
+      const spy = sinon.spy(ext.runScratchpadItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+      assert.strictEqual(ext.runScratchpadItem.text, "$(cloud) connection1");
+    });
+
+    it("should show the timeout of the active notebook", async () => {
+      stubActiveTab(new vscode.TabInputNotebook(notebookUri, "kx-notebook"));
+      const spy = sinon.spy(ext.pickTimeoutItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+    });
+
+    it("should offer the active connection for an unassigned notebook", async () => {
+      stubActiveTab(
+        new vscode.TabInputNotebook(
+          vscode.Uri.file("unassigned.kxnb"),
+          "kx-notebook",
+        ),
+      );
+      const spy = sinon.spy(ext.runScratchpadItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+      assert.strictEqual(ext.runScratchpadItem.text, "$(cloud) (active)");
+    });
+
+    it("should show the connection of the active query", async () => {
+      stubActiveTab(new vscode.TabInputCustom(queryUri, "kdb.queryEditor"));
+      const spy = sinon.spy(ext.runScratchpadItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+      assert.strictEqual(ext.runScratchpadItem.text, "$(cloud) connection1");
+    });
+
+    it("should show the timeout of the active query", async () => {
+      stubActiveTab(new vscode.TabInputCustom(queryUri, "kdb.queryEditor"));
+      const spy = sinon.spy(ext.pickTimeoutItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+    });
+
+    it("should offer a connection for an unassigned query", async () => {
+      stubActiveTab(
+        new vscode.TabInputCustom(
+          vscode.Uri.file("unassigned.kxquery"),
+          "kdb.queryEditor",
+        ),
+      );
+      const spy = sinon.spy(ext.runScratchpadItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+      assert.strictEqual(ext.runScratchpadItem.text, "$(cloud) (none)");
+    });
+
+    it("should show the timeout of an unassigned query", async () => {
+      stubActiveTab(
+        new vscode.TabInputCustom(
+          vscode.Uri.file("unassigned.kxquery"),
+          "kdb.queryEditor",
+        ),
+      );
+      const spy = sinon.spy(ext.pickTimeoutItem, "show");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+    });
+
+    it("should hide the items without an active file", async () => {
+      stubActiveTab();
+      ext.activeTextEditor = undefined;
+      const spy = sinon.spy(ext.runScratchpadItem, "hide");
+      const timeoutSpy = sinon.spy(ext.pickTimeoutItem, "hide");
+      await workspaceCommand.updateStatusBarItems();
+      sinon.assert.called(spy);
+      sinon.assert.called(timeoutSpy);
     });
   });
 
@@ -153,6 +281,21 @@ describe("workspaceCommand", () => {
     it("should return insights server aliases as array", () => {
       const result = workspaceCommand.getInsightsServers();
       assert.strictEqual(result[0], "connection1");
+    });
+
+    it("should return the aliases in alphabetical order", () => {
+      sinon.stub(vscode.workspace, "getConfiguration").value(() => ({
+        get: (key: string) =>
+          key === "insightsEnterpriseConnections"
+            ? [{ alias: "zeta" }, { alias: "alpha" }, { alias: "Mid" }]
+            : {},
+      }));
+
+      assert.deepStrictEqual(workspaceCommand.getInsightsServers(), [
+        "alpha",
+        "Mid",
+        "zeta",
+      ]);
     });
   });
 
@@ -164,6 +307,83 @@ describe("workspaceCommand", () => {
           "connection1",
         ),
       );
+    });
+  });
+
+  describe("files outside the workspace", () => {
+    const outsideUri = vscode.Uri.file("/outside/test.q");
+    let notifyStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      sinon.stub(vscode.workspace, "getWorkspaceFolder").value(() => undefined);
+      notifyStub = sinon.stub(notifications, "notify");
+    });
+
+    afterEach(async () => {
+      await workspaceCommand.setServerForUri(outsideUri, undefined);
+      await workspaceCommand.setTargetForUri(outsideUri, undefined);
+      await workspaceCommand.setTimeoutForUri(outsideUri, undefined);
+    });
+
+    it("should associate a server in memory without notifying an error", async () => {
+      await workspaceCommand.setServerForUri(outsideUri, "connection1");
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(outsideUri),
+        "connection1",
+      );
+      sinon.assert.notCalled(notifyStub);
+      sinon.assert.notCalled(updateConfStub);
+    });
+
+    it("should associate a quick connection in memory", async () => {
+      await workspaceCommand.setServerForUri(outsideUri, "localhost:5001");
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(outsideUri),
+        "localhost:5001",
+      );
+    });
+
+    it("should clear the association", async () => {
+      await workspaceCommand.setServerForUri(outsideUri, "connection1");
+      await workspaceCommand.setServerForUri(outsideUri, undefined);
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(outsideUri),
+        undefined,
+      );
+    });
+
+    it("should not leak the association to other uris", async () => {
+      await workspaceCommand.setServerForUri(outsideUri, "connection1");
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(vscode.Uri.file("/outside/other.q")),
+        undefined,
+      );
+    });
+
+    it("should associate a target in memory", async () => {
+      await workspaceCommand.setTargetForUri(outsideUri, "assembly target");
+      assert.strictEqual(
+        workspaceCommand.getTargetForUri(outsideUri),
+        "assembly target",
+      );
+      sinon.assert.notCalled(updateConfStub);
+    });
+
+    it("should associate a timeout in memory", async () => {
+      await workspaceCommand.setTimeoutForUri(outsideUri, 45);
+      assert.deepStrictEqual(workspaceCommand.getTimeoutForUri(outsideUri), {
+        source: "uri",
+        value: 45,
+      });
+      sinon.assert.notCalled(updateConfStub);
+    });
+
+    it("should fall back to the default timeout", async () => {
+      await workspaceCommand.setTimeoutForUri(outsideUri, undefined);
+      assert.deepStrictEqual(workspaceCommand.getTimeoutForUri(outsideUri), {
+        source: "workspace",
+        value: 30,
+      });
     });
   });
 
@@ -247,11 +467,86 @@ describe("workspaceCommand", () => {
   });
 
   describe("pickConnection", () => {
-    it("should return undefined from (none)", async () => {
-      sinon.stub(widgets, "showInputPicker").value(async () => "(none)");
+    it("should return undefined from (active)", async () => {
+      sinon.stub(widgets, "showInputPicker").value(async () => "(active)");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should return REPL", async () => {
+      sinon.stub(widgets, "showInputPicker").value(async () => ext.REPL);
+      const result = await workspaceCommand.pickConnection(
+        vscode.Uri.file("test.kdb.q"),
+      );
+      assert.strictEqual(result, ext.REPL);
+    });
+
+    it("should offer the connections in the order the tree lists them", async () => {
+      sinon.stub(vscode.workspace, "getConfiguration").value(() => ({
+        get: (key: string) =>
+          key === "servers"
+            ? [{ serverAlias: "local2" }, { serverAlias: "local1" }]
+            : key === "insightsEnterpriseConnections"
+              ? [{ alias: "zeta" }, { alias: "alpha" }]
+              : {},
+      }));
+
+      let offered: readonly string[] = [];
+      sinon
+        .stub(widgets, "showInputPicker")
+        .value(async (items: readonly string[]) => {
+          offered = items;
+          return undefined;
+        });
+
+      await workspaceCommand.pickConnection(vscode.Uri.file("test.kdb.q"));
+
+      assert.deepStrictEqual(offered.slice(0, 6), [
+        "(active)",
+        ext.REPL,
+        "local1",
+        "local2",
+        "alpha",
+        "zeta",
+      ]);
+    });
+  });
+
+  describe("getActiveFileUri", () => {
+    const notebookUri = vscode.Uri.file("notebook.kxnb");
+
+    function activeTab(input?: unknown) {
+      sinon.stub(vscode.window, "tabGroups").value({
+        activeTabGroup: { activeTab: input ? { input } : undefined },
+      });
+    }
+
+    it("should take the uri the notebook toolbar passes", () => {
+      activeTab();
+      const result = workspaceCommand.getActiveFileUri({
+        notebookEditor: { notebookUri },
+      });
+      assert.strictEqual(result, notebookUri);
+    });
+
+    it("should take the notebook showing in front, no cell focused", () => {
+      activeTab(new vscode.TabInputNotebook(notebookUri, "kx-notebook"));
+      const result = workspaceCommand.getActiveFileUri();
+      assert.strictEqual(result?.toString(), notebookUri.toString());
+    });
+
+    it("should take the active text editor otherwise", () => {
+      activeTab(new vscode.TabInputText(insightsUri));
+      const result = workspaceCommand.getActiveFileUri();
+      assert.strictEqual(result, insightsUri);
+    });
+
+    it("should return undefined without an editor", () => {
+      activeTab();
+      ext.activeTextEditor = undefined;
+      const result = workspaceCommand.getActiveFileUri();
       assert.strictEqual(result, undefined);
     });
   });
@@ -291,58 +586,7 @@ describe("workspaceCommand", () => {
     });
   });
 
-  describe("checkOldDatasourceFiles", () => {
-    let oldFilesExistsStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      oldFilesExistsStub = sinon.stub(dataSourceUtils, "oldFilesExists");
-    });
-
-    afterEach(() => {
-      oldFilesExistsStub.restore();
-    });
-  });
-
-  describe("importOldDSFiles", () => {
-    let windowErrorStub: sinon.SinonStub;
-    let windowWithProgressStub: sinon.SinonStub;
-    let windowShowInfo: sinon.SinonStub;
-    let workspaceFolderStub: sinon.SinonStub;
-    let tokenOnCancellationRequestedStub: sinon.SinonStub;
-    let kdbOutputLogStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");
-      windowWithProgressStub = sinon.stub(vscode.window, "withProgress");
-      windowShowInfo = sinon.stub(vscode.window, "showInformationMessage");
-      workspaceFolderStub = sinon.stub(vscode.workspace, "workspaceFolders");
-      tokenOnCancellationRequestedStub = sinon.stub();
-      windowWithProgressStub.callsFake((options, task) => {
-        const token = {
-          onCancellationRequested: tokenOnCancellationRequestedStub,
-        };
-        task({}, token);
-      });
-
-      kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
-    });
-
-    afterEach(() => {
-      sinon.restore();
-    });
-
-    it("should show info message if old files do not exist", async () => {
-      ext.oldDSformatExists = false;
-      await workspaceCommand.importOldDSFiles();
-      sinon.assert.calledOnce(windowShowInfo);
-    });
-
-    it("should show error message if workspace do not exist", async () => {
-      ext.oldDSformatExists = true;
-      await workspaceCommand.importOldDSFiles();
-      sinon.assert.calledOnce(windowErrorStub);
-    });
-
+  describe("editor commands", () => {
     describe("runOnRepl", () => {
       let notifyStub, executeStub: sinon.SinonStub;
       const editor = <vscode.TextEditor>{
@@ -360,15 +604,27 @@ describe("workspaceCommand", () => {
 
       beforeEach(() => {
         notifyStub = sinon.stub(notifications, "notify");
-        executeStub = sinon.stub(notifications.Runner.prototype, "execute");
       });
 
+      // Only the tests that reach the REPL stub it, so the nested startRepl
+      // describes are free to stub getOrCreateInstance themselves.
+      function stubRepl() {
+        executeStub = sinon.stub().resolves({});
+        sinon
+          .stub(ReplConnection, "getOrCreateInstance")
+          .resolves(<ReplConnection>(
+            (<unknown>{ show() {}, executeQuery: executeStub })
+          ));
+      }
+
       it("should execute q file", async () => {
+        stubRepl();
         await workspaceCommand.runOnRepl(editor, ExecutionTypes.QueryFile);
         sinon.assert.calledOnce(executeStub);
       });
 
       it("should execute q selection", async () => {
+        stubRepl();
         await workspaceCommand.runOnRepl(editor, ExecutionTypes.QuerySelection);
         sinon.assert.calledOnce(executeStub);
       });
@@ -382,6 +638,7 @@ describe("workspaceCommand", () => {
       });
 
       it("should notify execution error", async () => {
+        stubRepl();
         executeStub.rejects(new Error("Test"));
         await workspaceCommand.runOnRepl(editor, ExecutionTypes.QueryFile);
         sinon.assert.calledOnce(notifyStub);
@@ -452,6 +709,67 @@ describe("workspaceCommand", () => {
           sinon.assert.calledOnce(getOrCreate);
         });
       });
+    });
+  });
+
+  describe("resolveRunTarget", () => {
+    const unassignedUri = vscode.Uri.file("unassigned.q");
+    const conn = <any>{ connLabel: "local" };
+    let retrieveConnectedConnectionStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      retrieveConnectedConnectionStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "retrieveConnectedConnection",
+      );
+      sinon.stub(notifications, "notify");
+      setActiveTarget(undefined);
+    });
+
+    afterEach(() => {
+      setActiveTarget(undefined);
+      ext.connectionConsoles.clear();
+    });
+
+    it("should return the REPL for a file assigned to the REPL", async () => {
+      const result = await workspaceCommand.resolveRunTarget(replUri);
+      assert.deepStrictEqual(result, { kind: "repl" });
+    });
+
+    it("should return the connection a file is assigned to", async () => {
+      retrieveConnectedConnectionStub.returns(conn);
+      const result = await workspaceCommand.resolveRunTarget(kdbUri);
+      assert.deepStrictEqual(result, { kind: "connection", conn });
+    });
+
+    it("should return undefined when the assigned connection is not connected", async () => {
+      retrieveConnectedConnectionStub.returns(undefined);
+      sinon.stub(coreUtils, "offerConnectAction").resolves(false);
+      const result = await workspaceCommand.resolveRunTarget(kdbUri);
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should fall back to the active connection target", async () => {
+      ext.connectionConsoles.set("local", <any>{});
+      setActiveTarget({ kind: "connection", connLabel: "local" });
+      retrieveConnectedConnectionStub.returns(conn);
+
+      const result = await workspaceCommand.resolveRunTarget(unassignedUri);
+      assert.deepStrictEqual(result, { kind: "connection", conn });
+    });
+
+    it("should fall back to the REPL when the active connection is gone", async () => {
+      ext.connectionConsoles.set("local", <any>{});
+      setActiveTarget({ kind: "connection", connLabel: "local" });
+      retrieveConnectedConnectionStub.returns(undefined);
+
+      const result = await workspaceCommand.resolveRunTarget(unassignedUri);
+      assert.deepStrictEqual(result, { kind: "repl" });
+    });
+
+    it("should fall back to the REPL when there is no active target", async () => {
+      const result = await workspaceCommand.resolveRunTarget(unassignedUri);
+      assert.deepStrictEqual(result, { kind: "repl" });
     });
   });
 

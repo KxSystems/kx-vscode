@@ -1,0 +1,27 @@
+{
+  "cells": [
+    {
+      "kind": 2,
+      "languageId": "q",
+      "value": "\"POPULATE_Q\"",
+      "target": "e2e-assembly tp",
+      "variable": "populatedQ",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "sql",
+      "value": "select sym, px from trades where px > 300",
+      "variable": "populatedSql",
+      "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "python",
+      "value": "print(\"POPULATE_PY\")",
+      "target": "e2e-assembly tp",
+      "variable": "populatedPy",
+      "outputs": []
+    }
+  ]
+}

@@ -22,7 +22,6 @@ import { errorMessage } from "./shared";
 const logger = "storage";
 
 export async function writeLocalFile(name: string, content: string) {
-  /* c8 ignore start */
   try {
     const fsPath = ext.context.globalStorageUri.fsPath;
     await mkdir(fsPath, { recursive: true });
@@ -33,11 +32,9 @@ export async function writeLocalFile(name: string, content: string) {
     notify(errorMessage(error), MessageKind.DEBUG, { logger });
   }
   return "";
-  /* c8 ignore stop */
 }
 
 export function readLocalFile(name: string) {
-  /* c8 ignore start */
   try {
     const target = resolve(ext.context.globalStorageUri.fsPath, name);
     return readFileSync(target, { encoding: "utf8" });
@@ -45,28 +42,22 @@ export function readLocalFile(name: string) {
     notify(errorMessage(error), MessageKind.DEBUG, { logger });
   }
   return "";
-  /* c8 ignore stop */
 }
 
 export function getLocalSetting(key: string, value?: any) {
-  /* c8 ignore start */
   const settings = readSettings();
   return settings[key] ?? value;
-  /* c8 ignore stop */
 }
 
 export async function setLocalSetting(key: string, value: any) {
-  /* c8 ignore start */
   const settings = readSettings();
   settings[key] = value;
   await writeSettings(settings);
-  /* c8 ignore stop */
 }
 
 let cachedSettings: any;
 
 function readSettings() {
-  /* c8 ignore start */
   if (cachedSettings) return cachedSettings;
   try {
     const settings = readLocalFile("settings.json");
@@ -77,12 +68,9 @@ function readSettings() {
     notify(errorMessage(error), MessageKind.DEBUG, { logger });
   }
   return cachedSettings;
-  /* c8 ignore stop */
 }
 
 function writeSettings(settings: any) {
-  /* c8 ignore start */
   cachedSettings = settings;
   return writeLocalFile("settings.json", JSON.stringify(settings));
-  /* c8 ignore stop */
 }

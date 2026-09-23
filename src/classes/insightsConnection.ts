@@ -12,6 +12,7 @@
  */
 
 import axios, { AxiosRequestConfig } from "axios";
+import * as crypto from "crypto";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
 import { CancellationToken } from "vscode-languageclient";
@@ -23,14 +24,19 @@ import {
   InsightsConfig,
   InsightsEndpoints,
 } from "../models/config";
-import { GetDataObjectPayload } from "../models/data";
+import {
+  GetDataObjectPayload,
+  Scope,
+  getDataBodyPayload,
+} from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { JwtUser } from "../models/jwt_user";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
+import { PREVIEW, parseValue } from "../models/query";
 import { StructuredTextResults } from "../models/queryResult";
 import { ScratchpadRequestBody } from "../models/scratchpad";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { UDARequestBody } from "../models/uda";
+import { SCOPE, UDARequestBody } from "../models/uda";
 import {
   getCurrentToken,
   getHttpsAgent,
@@ -42,11 +48,13 @@ import {
   invalidUsernameJWT,
   tokenUndefinedError,
 } from "../utils/core";
-import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { getHeaders } from "../utils/queryUtils";
+import { getHeaders, isEncodedPng } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
-import { retrieveUDAtoCreateReqBody } from "../utils/uda";
+import {
+  retrieveUDAtoCreateReqBody,
+  toScratchpadParams,
+} from "../utils/uda";
 
 const logger = "insightsConnection";
 
@@ -96,33 +104,52 @@ export class InsightsConnection {
       await this.getConfig();
       await this.getApiConfig();
       await this.getMeta();
+      this.startLogger();
     } else this.connected = false;
     return this.connected;
   }
 
   public disconnect(): boolean {
     ext.context.secrets.delete(this.node.details.alias);
+    if (this.scratchpadLogger) {
+      this.scratchpadLogger.disconnect();
+      this.scratchpadLogger = undefined;
+    }
     this.connected = false;
     return this.connected;
   }
 
-  public async setActive() {
+  /**
+   * Opens the scratchpad log websocket, which carries the stdout the extension
+   * renders as images. Bound to the connection rather than to which connection
+   * is active, because notebooks and workbooks run against the connection they
+   * are mapped to — closing this when another connection became active meant
+   * their output never arrived. Safe to call repeatedly.
+   */
+  private startLogger() {
     if (
       this.insightsVersion &&
       isBaseVersionGreaterOrEqual(this.insightsVersion, "1.18")
     ) {
       if (!this.scratchpadLogger) {
-        this.scratchpadLogger = new ScratchpadLogger(this.node.details);
+        this.scratchpadLogger = new ScratchpadLogger(
+          this.node.details,
+          this.connLabel,
+        );
       }
 
       this.scratchpadLogger.connect();
     }
   }
 
+  public async setActive() {
+    // A safety net only: the logger normally starts on connect. Still called
+    // here for connections that were established before the version was known.
+    this.startLogger();
+  }
+
   public setInactive() {
-    if (this.scratchpadLogger) {
-      this.scratchpadLogger.disconnect();
-    }
+    // Deliberately does not close the log websocket — see startLogger().
   }
 
   public update() {
@@ -252,8 +279,15 @@ export class InsightsConnection {
   }
 
   public async getApiConfig() {
+    if (!this.connected) {
+      return undefined;
+    }
+
+    // The endpoint itself only exists from 1.13; all it decides is whether the
+    // query environment prefix is used. The endpoints are resolved either way —
+    // an older instance has its own set, and until they are defined nothing,
+    // not even the meta, can be requested.
     if (
-      this.connected &&
       this.insightsVersion &&
       isBaseVersionGreaterOrEqual(this.insightsVersion, "1.13")
     ) {
@@ -268,20 +302,19 @@ export class InsightsConnection {
         configUrl.toString(),
       );
 
-      if (options === undefined) {
-        return undefined;
+      if (options !== undefined) {
+        notify("REST", MessageKind.DEBUG, {
+          logger,
+          params: { url: options.url },
+        });
+
+        const configResponse = await axios(options);
+
+        this.apiConfig = configResponse.data;
       }
-
-      notify("REST", MessageKind.DEBUG, {
-        logger,
-        params: { url: options.url },
-      });
-
-      const configResponse = await axios(options);
-
-      this.apiConfig = configResponse.data;
-      this.defineEndpoints();
     }
+
+    this.defineEndpoints();
   }
 
   public async getConfig() {
@@ -435,30 +468,97 @@ export class InsightsConnection {
     return new url.URL(endpoint, this.node.details.server).toString();
   }
 
+  /**
+   * The scope a target string stands for. The names the dropdown offers are the
+   * cleaned ones — no `-qe` suffix, no `:port` — so each is looked up in the
+   * meta to get the name the gateway knows. An instance is left out when a DAP
+   * names one already, and both are left out for an assembly on its own, which
+   * is what hands the request to the resource coordinator.
+   */
+  public scopeForTarget(target: string): Scope {
+    const [plainAssembly, tier, plainDap] =
+      normalizeAssemblyTarget(target).split(/\s+/);
+
+    const dap = this.retrieveCorrectDAPName(plainDap, tier);
+    const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
+
+    // Only the keys there is something to say about: a scope carrying
+    // `tier: undefined` reads as a tier that was named and not found.
+    return {
+      affinity: "soft",
+      ...(assembly === undefined ? {} : { assembly }),
+      ...(dap || !tier ? {} : { tier }),
+      ...(dap === undefined ? {} : { dap }),
+    };
+  }
+
+  /**
+   * What a `scope` parameter is sent as. The form holds the target string the
+   * dropdown wrote, and the request wants the dictionary it stands for. A value
+   * that is already a dictionary is sent as it is — a file written before the
+   * dropdown, or a datasource converted from one, kept working. Nothing chosen
+   * is nothing to send.
+   */
+  public scopeValue(value: unknown): Scope | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+    if (typeof value !== "string") {
+      return <Scope>value;
+    }
+    if (!value.trim()) {
+      return undefined;
+    }
+    const parsed = parseValue(value);
+    return parsed && typeof parsed === "object"
+      ? <Scope>parsed
+      : this.scopeForTarget(value);
+  }
+
+  /**
+   * A getData payload with its scope as the request wants it. The payload is
+   * built where no connection is at hand — the query file has no idea which one
+   * it will run on — so the target string it carries is resolved here.
+   */
+  public scopedApiPayload(
+    payload: Partial<getDataBodyPayload>,
+  ): Partial<getDataBodyPayload> {
+    if (!(SCOPE in payload)) {
+      return payload;
+    }
+    const { scope: _, ...rest } = payload;
+    const scope = this.scopeValue(payload.scope);
+    return scope === undefined ? rest : { ...rest, scope };
+  }
+
   public generateQSqlBody(
     query: string,
     assemblyTarget: string,
     version?: string,
+    options?: { agg?: string; labels?: { [key: string]: string } },
   ) {
-    const [plainAssembly, tier, plainDap] =
-      normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
+    const scope = this.scopeForTarget(assemblyTarget);
 
-    const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
-    const dap = this.retrieveCorrectDAPName(plainDap, tier);
+    const extras = {
+      ...(options?.agg === undefined ? {} : { agg: options.agg }),
+      ...(options?.labels === undefined ? {} : { labels: options.labels }),
+    };
 
     if (version && isBaseVersionGreaterOrEqual(version, "1.13")) {
-      return {
-        query,
-        scope: {
-          affinity: "soft",
-          assembly,
-          tier: dap ? undefined : tier,
-          dap: dap,
-        },
-      };
+      return { query, scope, ...extras };
     }
 
-    return { query, assembly, tier, dap };
+    // The older body names the parts rather than nesting them, and carries the
+    // tier as it was given: leaving it out is what 1.13 added.
+    const [, tier] = normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
+
+    return {
+      query,
+      assembly: scope.assembly,
+      tier,
+      dap: scope.dap,
+      ...extras,
+    };
   }
 
   public retrieveCorrectAssemblyName(
@@ -500,12 +600,15 @@ export class InsightsConnection {
         ? (body as UDARequestBody).name
         : "";
       if (udaName !== "") {
+        // The parameters are the whole body, and parameterTypes is dropped on
+        // purpose: a REST request has nowhere to put it. The gateway casts each
+        // parameter using the type the UDA registered, and where a parameter
+        // registers several, "auto-casting uses the first type in the list"
+        // (kdb Insights, .kxi.metaParam). Sending the key would only add a
+        // parameter the UDA has no argument for. runUDADataSource warns when a
+        // chosen type is about to be overridden this way; the scratchpad path,
+        // which does take parameterTypes, honours the choice.
         body = body.params;
-        // TODO: This will be necessary when the parametertypes issue is fixed just remove the line above
-        // body = {
-        //   ...body.params,
-        //   parameterTypes: body.parameterTypes,
-        // };
       }
       if (timeout) {
         body.opts = {
@@ -544,13 +647,24 @@ export class InsightsConnection {
           };
         })
         .catch((error: any) => {
+          // Only a gateway error carries a header; when the coordinator or the
+          // gateway goes away mid-query the body is plain text or an HTML error
+          // page, and a dropped socket has no response at all. Reading
+          // error.response.data.header on those threw a TypeError out of this
+          // handler, which runDataSource logged and never showed (KXI-69283).
+          const errorMsg = extractInsightsRequestError(error);
           notify(
-            `Datasource execution status: ${error.response.status}.`,
+            `Datasource execution failed: ${errorMsg}`,
             MessageKind.DEBUG,
-            { logger, params: error },
+            {
+              logger,
+              params: { status: error?.response?.status, error },
+            },
           );
+          const header = error?.response?.data?.header;
           return {
-            error: error.response.data.header.ai,
+            error: header?.ai || errorMsg,
+            stacktrace: header?.bt,
             arrayBuffer: undefined,
           };
         });
@@ -572,11 +686,9 @@ export class InsightsConnection {
       };
       switch (params.dataSource.selectedType) {
         case DataSourceTypes.API: {
-          body.params = {
-            table: params.dataSource.api.table,
-            startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
-            endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
-          };
+          body.params = this.scopedApiPayload(
+            params.dataSource.api.payload || {},
+          );
           coreUrl = this.connEndpoints.scratchpad.import;
           break;
         }
@@ -590,6 +702,10 @@ export class InsightsConnection {
             params.dataSource.qsql.query,
             params.dataSource.qsql.selectedTarget,
             this.insightsVersion,
+            {
+              agg: params.dataSource.qsql.agg,
+              labels: params.dataSource.qsql.labels,
+            },
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;
@@ -606,7 +722,7 @@ export class InsightsConnection {
             });
             return;
           }
-          body.params = udaReqBody.params;
+          body.params = toScratchpadParams(udaReqBody);
           body.parameterTypes = udaReqBody.parameterTypes;
           body.language = udaReqBody.language;
           body.name = udaReqBody.name;
@@ -648,7 +764,10 @@ export class InsightsConnection {
                 silent ? MessageKind.DEBUG : MessageKind.ERROR,
                 {
                   logger,
-                  params: { status: response.status },
+                  params: {
+                    status: response.status,
+                    stacktrace: response.data.stacktrace,
+                  },
                 },
               );
             } else {
@@ -704,9 +823,13 @@ export class InsightsConnection {
     }
 
     if (this.meta.payload.api && Array.isArray(this.meta.payload.api)) {
+      // The preview API runs down the same path as a UDA but is registered as a
+      // system API, so the flag is not what says it is there — its presence in
+      // the meta is.
       return this.meta.payload.api.some(
         (apiItem: { api: string; uda: boolean }) =>
-          apiItem.api === udaName && apiItem.uda === true,
+          apiItem.api === udaName &&
+          (apiItem.uda === true || apiItem.api === PREVIEW),
       );
     }
 
@@ -769,6 +892,7 @@ export class InsightsConnection {
     isPython?: boolean,
     isTableView?: boolean,
     timeout?: number,
+    requestID?: string,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       if (isTableView === undefined) {
@@ -784,6 +908,7 @@ export class InsightsConnection {
         context: context || ".",
         sampleFn: "first",
         sampleSize: 10000,
+        requestID: requestID || crypto.randomUUID(),
       };
 
       if (this.insightsVersion) {
@@ -826,7 +951,7 @@ export class InsightsConnection {
               logger,
             });
             if (!response.data.error) {
-              if (isTableView) {
+              if (isTableView && !isEncodedPng(response.data.data)) {
                 if (
                   this.insightsVersion &&
                   isBaseVersionGreaterOrEqual(this.insightsVersion, "1.12")
@@ -892,9 +1017,12 @@ export class InsightsConnection {
           );
           return true;
         })
-        .catch((_error: any) => {
+        .catch((error: any) => {
           notify(
-            `Scratchpad cancel request error: ${_error.response.data.message}`,
+            `Scratchpad cancel request error: ${
+              error?.response?.data?.message ??
+              extractInsightsRequestError(error)
+            }`,
             MessageKind.ERROR,
             { logger },
           );

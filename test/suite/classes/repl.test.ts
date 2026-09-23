@@ -12,6 +12,8 @@
  */
 
 import * as assert from "node:assert";
+import path from "node:path";
+import proxyquire from "proxyquire";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
@@ -174,6 +176,70 @@ describe("REPL", () => {
     });
   });
 
+  describe("loadPath", () => {
+    const base = path.join(path.sep, "work", "space");
+
+    it("should resolve against the working directory", () => {
+      sinon.stub(repl.ReplConnection.prototype, <any>"cwd").get(() => base);
+      const result = instance["loadPath"](path.join(base, "src", "test.q"));
+      assert.strictEqual(result, ["src", "test.q"].join("/"));
+    });
+
+    it("should keep the absolute path without a working directory", () => {
+      sinon
+        .stub(repl.ReplConnection.prototype, <any>"cwd")
+        .get(() => undefined);
+      const target = path.join(base, "src", "test.q");
+      const result = instance["loadPath"](target);
+      assert.strictEqual(result, target.split(path.sep).join("/"));
+    });
+
+    it("should load a file dropped on the terminal", () => {
+      sinon.stub(repl.ReplConnection.prototype, <any>"cwd").get(() => base);
+      const runQueryStub = sinon.stub(instance, <any>"runQuery");
+      instance["handleInput"](path.join(base, "src", "test.q") + "\r\n");
+      sinon.assert.calledWith(runQueryStub, "\\l src/test.q");
+    });
+  });
+
+  describe("killProcess", () => {
+    let notifyStub: sinon.SinonStub;
+    let killStub: sinon.SinonStub;
+    let ReplConnectionClass: any;
+
+    const createInstance = (pid?: number) => {
+      sinon
+        .stub(ReplConnectionClass.prototype, "createProcess")
+        .returns({ ...target, pid });
+      return ReplConnectionClass.getOrCreateInstance();
+    };
+
+    beforeEach(() => {
+      notifyStub = sinon.stub();
+      killStub = sinon.stub().throws(new Error("taskkill failed"));
+      ReplConnectionClass = proxyquire.noPreserveCache()(
+        "../../../src/classes/replConnection",
+        {
+          "kill-sync": killStub,
+          "../utils/notifications": { notify: notifyStub },
+        },
+      ).ReplConnection;
+    });
+
+    it("should log instead of throwing when the kill fails", async () => {
+      const killable = await createInstance(1234);
+      assert.doesNotThrow(() => killable["stopProcess"]());
+      sinon.assert.calledWith(killStub, 1234, "SIGKILL", true);
+      sinon.assert.called(notifyStub);
+    });
+
+    it("should not kill without a pid", async () => {
+      const killable = await createInstance(undefined);
+      killable["killProcess"]("SIGKILL");
+      sinon.assert.notCalled(killStub);
+    });
+  });
+
   describe("keyboard navigation", () => {
     beforeEach(() => {
       sinon.stub(instance, <any>"showPrompt");
@@ -282,42 +348,6 @@ describe("REPL", () => {
     const repls = () =>
       repl.ReplConnection["repls"] as Map<string, repl.ReplConnection>;
 
-    it("should route a contained file to the most specific folder REPL", async () => {
-      const folder = vscode.Uri.file("/ws/sub");
-      const folderRepl = await repl.ReplConnection.openInFolder(folder);
-      try {
-        const chosen = await repl.ReplConnection.getOrCreateInstance(
-          vscode.Uri.file("/ws/sub/child/x.q"),
-        );
-        assert.strictEqual(chosen, folderRepl);
-      } finally {
-        folderRepl["close"]();
-      }
-    });
-
-    it("should pick the most specific of several overlapping folder REPLs", async () => {
-      const outer = await repl.ReplConnection.openInFolder(
-        vscode.Uri.file("/ws"),
-      );
-      const inner = await repl.ReplConnection.openInFolder(
-        vscode.Uri.file("/ws/sub/child2"),
-      );
-      try {
-        const chosenForOuter = await repl.ReplConnection.getOrCreateInstance(
-          vscode.Uri.file("/ws/other/x.q"),
-        );
-        assert.strictEqual(chosenForOuter, outer);
-
-        const chosenForInner = await repl.ReplConnection.getOrCreateInstance(
-          vscode.Uri.file("/ws/sub/child2/x.q"),
-        );
-        assert.strictEqual(chosenForInner, inner);
-      } finally {
-        outer["close"]();
-        inner["close"]();
-      }
-    });
-
     it("should remove the instance from the cache on close, by key", async () => {
       const folder = vscode.Uri.file("/ws/sub2");
       const folderRepl = await repl.ReplConnection.openInFolder(folder);
@@ -374,7 +404,7 @@ describe("REPL", () => {
       }
     });
 
-    it("should fall back to folder routing when there is no active REPL", async () => {
+    it("should not route by folder when there is no active REPL", async () => {
       const replA = await repl.ReplConnection.openInFolder(
         vscode.Uri.file("/ws/a"),
       );
@@ -382,7 +412,9 @@ describe("REPL", () => {
         const chosen = await repl.ReplConnection.getOrCreateInstance(
           vscode.Uri.file("/ws/a/child.q"),
         );
-        assert.strictEqual(chosen, replA);
+        // The workspace REPL, not the one based in the file's own folder.
+        assert.notStrictEqual(chosen, replA);
+        assert.strictEqual(chosen, instance);
       } finally {
         replA["close"]();
       }

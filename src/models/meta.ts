@@ -89,8 +89,14 @@ export type MetaApiMetadata = {
 export type MetaAssembly = {
   assembly: string;
   tbls: string[];
+  labels?: { [label: string]: string };
   instances?: MetaDap[];
-  [additionalProp: string]: string | string[] | MetaDap[] | undefined;
+  [additionalProp: string]:
+    | string
+    | string[]
+    | MetaDap[]
+    | { [label: string]: string }
+    | undefined;
 };
 
 export type MetaSchema = {

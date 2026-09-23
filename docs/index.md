@@ -1,6 +1,6 @@
 ---
 type: Index
-title: kdb VS Code Extension Docs
+title: kdb VS Code Extension Wiki
 description:
   In-tree documentation for the kdb VS Code extension, split into user notes and
   developer notes.

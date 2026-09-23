@@ -26,4 +26,5 @@ export interface ScratchpadRequestBody {
   sampleSize: number;
   isTableView?: boolean;
   returnFormat?: string;
+  requestID?: string;
 }

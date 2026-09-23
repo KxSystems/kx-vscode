@@ -12,8 +12,8 @@
       "pattern": "kx-vscode.*/test/suite/.+\\.test\\.ts$"
     },
     {
-      "name": "UI Test Selected File",
-      "pattern": "kx-vscode.*/test/ui/.+\\.test\\.ts$"
+      "name": "E2E Test Selected File",
+      "pattern": "kx-vscode.*/test/e2e/.+\\.test\\.ts$"
     }
   ]
 }

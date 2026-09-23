@@ -1,0 +1,11 @@
+feature REPL execution
+    before
+        .test.setup: "QUKE_SETUP"
+
+    should evaluate a selected expression as plain q
+        expect a string literal to come back unchanged
+            "QUKE_SELECTED"
+
+    should evaluate the caret's line when nothing is selected
+        expect the same of the line under the caret
+            "QUKE_LINE"

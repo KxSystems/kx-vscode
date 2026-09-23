@@ -55,7 +55,13 @@ export class KdbTreeService {
     const serverObjects = await conn.loadServerObjects();
     if (serverObjects !== undefined) {
       const funcs = serverObjects.filter((value) => {
-        return value.typeNum === 100 && !value.isNs && value.namespace === ns
+        // Everything callable, not only lambdas: 100 through 112 covers
+        // primitives, operators and iterators as well as the projections and
+        // compositions a lambda is partially applied into.
+        return value.typeNum >= 100 &&
+          value.typeNum <= 112 &&
+          !value.isNs &&
+          value.namespace === ns
           ? value
           : undefined;
       });

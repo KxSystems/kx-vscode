@@ -12,7 +12,6 @@
  */
 
 import {
-  ColorThemeKind,
   CustomTextEditorProvider,
   Disposable,
   ExtensionContext,
@@ -25,6 +24,7 @@ import {
 
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/uriUtils";
+import { webviewReset } from "../utils/webviewPage";
 
 export class ChartEditorProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.chartEditor";
@@ -80,17 +80,11 @@ export class ChartEditorProvider implements CustomTextEditorProvider {
 
     return /* html */ `
         <!DOCTYPE html>
-        <html lang="en" class="${
-          window.activeColorTheme.kind === ColorThemeKind.Light ||
-          window.activeColorTheme.kind === ColorThemeKind.HighContrastLight
-            ? "sl-theme-light"
-            : "sl-theme-dark"
-        }">
+        <html lang="en">
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <link rel="stylesheet" href="${getResource("light.css")}" />
-          <link rel="stylesheet" href="${getResource("style.css")}" />
+          ${webviewReset(getNonce())}
           <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
           <title>GG PLOT</title>
         </head>

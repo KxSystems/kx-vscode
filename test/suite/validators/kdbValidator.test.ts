@@ -54,7 +54,7 @@ describe("kdbValidator", () => {
     );
     assert.strictEqual(
       result,
-      `Input value must be between 1 and ${kdbValidators.MAX_STR_LEN} alphanumeric characters in length.`,
+      `Server Name must be between 1 and ${kdbValidators.MAX_STR_LEN} characters in length.`,
       "Input was outside the size limits.",
     );
   });
@@ -101,8 +101,17 @@ describe("kdbValidator", () => {
     );
     assert.strictEqual(
       result,
-      `Input value must be between 1 and ${kdbValidators.MAX_STR_LEN} alphanumeric characters in length.`,
+      `Connection address must be between 1 and ${kdbValidators.MAX_STR_LEN} characters in length.`,
       "Input was outside the size limits.",
+    );
+  });
+
+  it("Should return fail naming the field for server name that is empty", () => {
+    const result = kdbValidators.validateServerName("  ");
+    assert.strictEqual(
+      result,
+      "Connection address is required (for example, 127.0.0.1 or localhost).",
+      "Empty server name should report the connection address field.",
     );
   });
 
@@ -115,11 +124,20 @@ describe("kdbValidator", () => {
     );
   });
 
+  it("Should return fail naming the field for server port that is empty", () => {
+    const result = kdbValidators.validateServerPort("");
+    assert.strictEqual(
+      result,
+      "Port number is required.",
+      "Empty server port should report the port number field.",
+    );
+  });
+
   it("Should return fail for server port that is not a number", () => {
     const result = kdbValidators.validateServerPort("test");
     assert.strictEqual(
       result,
-      "Input value must be a number.",
+      "Port number must be a number.",
       "Input was not a number for server port.",
     );
   });
@@ -153,7 +171,7 @@ describe("kdbValidator", () => {
     );
     assert.strictEqual(
       result,
-      `Input value must be between 1 and ${kdbValidators.MAX_STR_LEN} alphanumeric characters in length.`,
+      `Username must be between 1 and ${kdbValidators.MAX_STR_LEN} characters in length.`,
       "Input was outside the size limits.",
     );
   });
@@ -173,7 +191,7 @@ describe("kdbValidator", () => {
     );
     assert.strictEqual(
       result,
-      `Input value must be between 1 and ${kdbValidators.MAX_STR_LEN} alphanumeric characters in length.`,
+      `Password must be between 1 and ${kdbValidators.MAX_STR_LEN} characters in length.`,
       "Input was outside the size limits.",
     );
   });

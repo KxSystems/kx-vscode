@@ -232,6 +232,37 @@ describe("ConnectionManagementService", () => {
     });
   });
 
+  describe("clearActiveConnection", () => {
+    beforeEach(() => {
+      ext.activeConnection = undefined;
+      ext.serverProvider = new KdbTreeProvider(servers, insights);
+    });
+
+    afterEach(() => {
+      ext.activeConnection = undefined;
+      ext.connectionNode = undefined;
+      sinon.restore();
+    });
+
+    it("Should do nothing if there is no active connection", () => {
+      const connSpy = sinon.spy(localConn, "setInactive");
+      connectionManagerService.clearActiveConnection();
+      sinon.assert.notCalled(connSpy);
+    });
+
+    it("Should clear the active connection and set it as inactive", () => {
+      ext.activeConnection = localConn;
+      ext.connectionNode = kdbNode;
+
+      const connSpy = sinon.spy(localConn, "setInactive");
+      connectionManagerService.clearActiveConnection();
+
+      sinon.assert.calledOnce(connSpy);
+      assert.strictEqual(ext.activeConnection, undefined);
+      assert.strictEqual(ext.connectionNode, undefined);
+    });
+  });
+
   describe("disconnect", () => {
     let retrieveConnectionStub,
       retrieveConnectedConnectionStub: sinon.SinonStub;
@@ -260,6 +291,21 @@ describe("ConnectionManagementService", () => {
       const result = await connectionManagerService.disconnect("testLabel");
 
       assert.strictEqual(result, undefined);
+    });
+
+    it("Should disconnect a connection whose tree node is gone", () => {
+      const disconnect = sinon.stub(localConn, "disconnect");
+      const disconnectBehaviour = sinon.stub(
+        connectionManagerService,
+        "disconnectBehaviour",
+      );
+      retrieveConnectedConnectionStub.returns(localConn);
+      retrieveConnectionStub.returns(undefined);
+
+      connectionManagerService.disconnect(localConn.connLabel);
+
+      sinon.assert.calledOnce(disconnect);
+      sinon.assert.calledOnceWithExactly(disconnectBehaviour, localConn);
     });
   });
 

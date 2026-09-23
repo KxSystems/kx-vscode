@@ -42,13 +42,10 @@ import {
 } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
-import { Plot } from "../models/plot";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { DataSourcesPanel } from "../panels/datasource";
 import { NewConnectionPannel } from "../panels/newConnection";
-import { ChartEditorProvider } from "../services/chartEditorProvider";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import {
   InsightsMetaNode,
@@ -68,25 +65,19 @@ import {
   updateInsights,
   updateServers,
 } from "../utils/core";
-import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { MessageKind, Runner, notify } from "../utils/notifications";
+import { writePlotToFile } from "../utils/plotUtils";
 import {
   checkIfIsDatasource,
   addQueryHistory,
-  formatScratchpadStacktrace,
+  formatScratchpadError,
   resultToBase64,
   needsScratchpad,
   getSQLWrapper,
 } from "../utils/queryUtils";
 import { openUrl } from "../utils/uriUtils";
-import {
-  addWorkspaceFile,
-  openWith,
-  setUriContent,
-  workspaceHas,
-} from "../utils/workspace";
 import {
   validateInsightsServerUrl,
   validateServerAlias,
@@ -846,14 +837,12 @@ export async function connect(connLabel: string): Promise<void> {
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
-  refreshDataSourcesPanel();
   ext.serverProvider.reload();
 }
 
 export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   const connMngService = new ConnectionManagementService();
   connMngService.setActiveConnection(viewItem);
-  refreshDataSourcesPanel();
   ext.serverProvider.reload();
 }
 
@@ -876,9 +865,7 @@ export async function disconnect(connLabel: string): Promise<void> {
   connMngService.disconnect(connLabel);
 
   if (ext.connectedConnectionList.length === 0) {
-    const queryConsole = ExecutionConsole.start();
-    queryConsole.dispose();
-    DataSourcesPanel.close();
+    ExecutionConsole.current?.dispose();
     ext.serverProvider.reload();
   }
 }
@@ -893,6 +880,7 @@ export async function executeQuery(
   isFromConnTree?: boolean,
   token?: CancellationToken,
   timeout?: number,
+  requestID?: string,
 ): Promise<any> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
@@ -944,6 +932,7 @@ export async function executeQuery(
     isStringfy,
     isPython,
     timeout,
+    requestID,
   );
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
@@ -974,33 +963,17 @@ export async function executeQuery(
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
-        notify("GG Plot displayed", MessageKind.DEBUG, {
-          logger,
-          telemetry:
-            "Results.Graphics.Displayed" +
-            (isInsights ? ".ie" : ".kdb") +
-            (isPython ? ".py" : ".q"),
-        });
-        const active = ext.activeTextEditor;
-        if (active) {
-          const plot = <Plot>{
-            charts: [{ data }],
-          };
-          const uri = await addWorkspaceFile(
-            active.document.uri,
-            "plot",
-            ".plot",
-          );
-          if (!workspaceHas(uri)) {
-            await workspace.openTextDocument(uri);
-            await openWith(
-              uri,
-              ChartEditorProvider.viewType,
-              ViewColumn.Beside,
-            );
-          }
-          await setUriContent(uri, JSON.stringify(plot));
-        }
+        await writeQueryResultsToPlot(
+          data,
+          query,
+          connLabel,
+          executorName,
+          isInsights,
+          isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+          isPython,
+          duration,
+          isFromConnTree,
+        );
       } else {
         await writeQueryResultsToView(
           results,
@@ -1363,6 +1336,10 @@ export async function writeQueryResultsToView(
     connVersion,
     isPython,
   );
+  // Results went to the (possibly hidden) Results view — leave a clickable
+  // pointer in the connection's console so the user knows where they landed and
+  // can open the view on demand.
+  ext.connectionConsoles.get(connLabel)?.appendResultsPointer();
   let isSuccess = true;
 
   if (!checkIfIsDatasource(type)) {
@@ -1388,6 +1365,40 @@ export async function writeQueryResultsToView(
   }
 }
 
+export async function writeQueryResultsToPlot(
+  data: string,
+  query: string,
+  connLabel: string,
+  executorName: string,
+  isInsights: boolean,
+  type?: string,
+  isPython?: boolean,
+  duration?: string,
+  isFromConnTree?: boolean,
+): Promise<void> {
+  notify("GG Plot displayed", MessageKind.DEBUG, {
+    logger,
+    telemetry:
+      "Results.Graphics.Displayed" +
+      (isInsights ? ".ie" : ".kdb") +
+      (isPython ? ".py" : ".q"),
+  });
+  await writePlotToFile(data);
+  addQueryHistory(
+    query,
+    executorName,
+    connLabel,
+    isInsights ? ServerType.INSIGHTS : ServerType.KDB,
+    true,
+    isPython,
+    type === "WORKBOOK",
+    undefined,
+    undefined,
+    duration,
+    isFromConnTree,
+  );
+}
+
 export async function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
@@ -1401,20 +1412,27 @@ export async function writeScratchpadResult(
   let errorMsg;
 
   if (result.error) {
-    errorMsg = "Error: " + result.errorMsg;
-
-    if (result.stacktrace) {
-      errorMsg =
-        errorMsg +
-        "\n" +
-        (Array.isArray(result.stacktrace)
-          ? formatScratchpadStacktrace(result.stacktrace)
-          : `${result.stacktrace}`);
-    }
+    errorMsg = formatScratchpadError(result);
   }
 
   if (executorName.endsWith(".kxnb")) {
     return errorMsg ?? result;
+  }
+
+  const plot = errorMsg ? undefined : resultToBase64(result);
+
+  if (plot) {
+    await writeQueryResultsToPlot(
+      plot,
+      query,
+      connLabel,
+      executorName,
+      true,
+      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      isPython,
+      duration,
+    );
+    return;
   }
 
   if (ext.isResultsTabVisible) {

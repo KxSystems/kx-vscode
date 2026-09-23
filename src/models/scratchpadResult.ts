@@ -21,8 +21,8 @@ export type ScratchpadStacktrace = StacktraceItem[];
 
 export type ScratchpadResult = {
   data: string;
-  error: boolean;
-  errorMsg: string;
+  error: boolean | string;
+  errorMsg?: string;
   sessionID: string;
   stacktrace?: ScratchpadStacktrace;
 };

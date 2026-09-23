@@ -18,7 +18,14 @@ async function main() {
   try {
     const extensionDevelopmentPath = path.join(__dirname, "../../");
     const extensionTestsPath = path.join(__dirname, "./suite/index");
-    await runTests({ extensionDevelopmentPath, extensionTestsPath });
+    await runTests({
+      extensionDevelopmentPath,
+      extensionTestsPath,
+      // The same isolation the debug configurations run under: nothing but the
+      // extension under development, and a throwaway profile rather than the
+      // developer's own.
+      launchArgs: ["--disable-extensions", "--profile-temp"],
+    });
   } catch (err) {
     console.error(err);
     process.exit(1);

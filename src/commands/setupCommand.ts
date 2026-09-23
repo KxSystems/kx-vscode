@@ -26,6 +26,7 @@ import {
 import { errorMessage } from "../utils/shared";
 import { writeLocalFile } from "../utils/storage";
 import { getUri } from "../utils/uriUtils";
+import { webviewReset } from "../utils/webviewPage";
 
 const logger = "setupTools";
 
@@ -33,8 +34,29 @@ let panel: vscode.WebviewPanel | undefined;
 
 export async function showSetupError(workspace?: vscode.WorkspaceFolder) {
   /* c8 ignore start */
+  const scope = workspace ? " for workspace " + workspace.name : "";
+
+  // KDB-X has no native Windows build, so point at an existing kdb+ install
+  // instead of offering an installation that cannot run.
+  if (process.platform === "win32") {
+    const res = await notify(
+      `KDB installation not found${scope}. Set the q home directory to a kdb+ installation.`,
+      MessageKind.WARNING,
+      { logger, params: workspace?.name },
+      "Set q Home Directory",
+      "Dismiss",
+    );
+    if (res === "Set q Home Directory") {
+      await vscode.commands.executeCommand(
+        "workbench.action.openSettings",
+        "kdb.qHomeDirectory",
+      );
+    }
+    return;
+  }
+
   const res = await notify(
-    `KDB intallation not found${workspace ? " for workspace " + workspace.name : ""}.`,
+    `KDB installation not found${scope}.`,
     MessageKind.WARNING,
     { logger, params: workspace?.name },
     "Install KDB-X",
@@ -94,26 +116,23 @@ function getWebviewContent(webview: vscode.Webview) {
   const getResource = (resource: string) =>
     getUri(webview, ext.context.extensionUri, resource.split("/"));
 
-  const getTheme = () =>
-    vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ||
-    vscode.window.activeColorTheme.kind ===
-      vscode.ColorThemeKind.HighContrastLight
-      ? "sl-theme-light"
-      : "sl-theme-dark";
+  const isDark = () =>
+    vscode.window.activeColorTheme.kind !== vscode.ColorThemeKind.Light &&
+    vscode.window.activeColorTheme.kind !==
+      vscode.ColorThemeKind.HighContrastLight;
 
   return /* html */ `
     <!DOCTYPE html>
-    <html lang="en" class="${getTheme()}">
+    <html lang="en">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <link rel="stylesheet" href="${getResource("out/light.css")}" />
-      <link rel="stylesheet" href="${getResource("out/style.css")}" />
+      ${webviewReset(getNonce())}
       <script type="module" nonce="${getNonce()}" src="${getResource("out/webview.js")}"></script>
       <title>Welcome to KDB-X</title>
     </head>
     <body>
-      <kdb-welcome-view image="${getResource("resources/images/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
+      <kdb-welcome-view image="${getResource("resources/images/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${isDark() ? "dark" : ""}"></kdb-welcome-view>
     </body>
     </html>
   `;

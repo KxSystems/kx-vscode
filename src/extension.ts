@@ -21,8 +21,11 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 
+import { initActiveTargetTracking } from "./classes/activeTargetTracker";
+import { OPEN_RESULTS_HINT } from "./classes/connectionConsole";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
+import { convertDataSources } from "./commands/queryCommand";
 import {
   activeConnection,
   addAuthConnection,
@@ -49,7 +52,7 @@ import { installKdbX, showWelcome } from "./commands/setupCommand";
 import {
   ConnectionLensProvider,
   connectWorkspaceCommands,
-  importOldDSFiles,
+  getActiveFileUri,
   pickConnection,
   pickTarget,
   pickTimeout,
@@ -67,12 +70,12 @@ import {
   Server,
   ServerDetails,
 } from "./models/connectionsModels";
-import { createDefaultDataSourceFile } from "./models/dataSource";
 import { ExecutionTypes } from "./models/execution";
+import { createDefaultQueryFile } from "./models/query";
 import { QueryResult } from "./models/queryResult";
 import { ChartEditorProvider } from "./services/chartEditorProvider";
 import { CompletionProvider } from "./services/completionProvider";
-import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
+import { DataSourceConverterProvider } from "./services/dataSourceConverterProvider";
 import { HelpFeedbackProvider } from "./services/helpFeedbackProvider";
 import {
   InsightsMetaNode,
@@ -87,6 +90,7 @@ import {
   KxNotebookTargetActionProvider,
 } from "./services/notebookProviders";
 import { KxNotebookSerializer } from "./services/notebookSerializer";
+import { QueryEditorProvider } from "./services/queryEditorProvider";
 import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
@@ -122,6 +126,22 @@ import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
 
 const logger = "extension";
 
+// Sets where query results are written — the kdb Results View (true) or the
+// connection's output console/Terminal (false) — and mirrors it into a context
+// key so the editor-toolbar selector reflects the current destination. When
+// switching to the Results View, reveal it so results are immediately visible.
+function setResultsDestination(showInView: boolean) {
+  ext.isResultsTabVisible = showInView;
+  vscode.commands.executeCommand(
+    "setContext",
+    "kdb.showResultsInView",
+    showInView,
+  );
+  if (showInView) {
+    vscode.commands.executeCommand(`${KdbResultsViewProvider.viewType}.focus`);
+  }
+}
+
 let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -150,6 +170,9 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "kdb.connected", []);
   vscode.commands.executeCommand("setContext", "kdb.kdbQHCopyList", []);
 
+  // Default query results to the output console (Terminal), not the view.
+  setResultsDestination(false);
+
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
 
@@ -162,8 +185,8 @@ export async function activate(context: vscode.ExtensionContext) {
     "**/*.kdb.{q,py,sql}",
     "scratchpad",
   );
-  ext.dataSourceTreeProvider = new WorkspaceTreeProvider(
-    "**/*.kdb.json",
+  ext.queryTreeProvider = new WorkspaceTreeProvider(
+    "**/*.kxquery",
     "datasource",
   );
 
@@ -180,8 +203,8 @@ export async function activate(context: vscode.ExtensionContext) {
     ext.scratchpadTreeProvider,
   );
   vscode.window.registerTreeDataProvider(
-    "kdb-datasource-explorer",
-    ext.dataSourceTreeProvider,
+    "kdb-query-explorer",
+    ext.queryTreeProvider,
   );
 
   vscode.window.registerTreeDataProvider(
@@ -202,7 +225,8 @@ export async function activate(context: vscode.ExtensionContext) {
       { webviewOptions: { retainContextWhenHidden: true } },
     ),
 
-    DataSourceEditorProvider.register(context),
+    QueryEditorProvider.register(context),
+    DataSourceConverterProvider.register(),
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(
@@ -217,7 +241,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ext.diagnosticCollection,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("kdb.connectionMap")) {
-        ext.dataSourceTreeProvider.reload();
+        ext.queryTreeProvider.reload();
         ext.scratchpadTreeProvider.reload();
       }
       if (event.affectsConfiguration("kdb.connectionLabelsMap")) {
@@ -271,6 +295,38 @@ export async function activate(context: vscode.ExtensionContext) {
       "kx-notebook",
       new KxNotebookTargetActionProvider(),
     ),
+  );
+
+  // Track the last-focused KX target terminal (REPL or connection console) as
+  // the active execution target for unassigned files.
+  context.subscriptions.push(initActiveTargetTracking());
+
+  // Make the KDB Results view discoverable from a connection console: the
+  // console prints an "Open KDB Results View" hint, which this provider turns
+  // into a clickable link (terminals disallow command: hyperlinks directly)
+  // that reveals the KDB Results view in the bottom panel.
+  const resultsLinkProvider: vscode.TerminalLinkProvider = {
+    provideTerminalLinks: (linkContext: vscode.TerminalLinkContext) => {
+      const index = linkContext.line.indexOf(OPEN_RESULTS_HINT);
+      if (index === -1) {
+        return [];
+      }
+      return [
+        {
+          startIndex: index,
+          length: OPEN_RESULTS_HINT.length,
+          tooltip: "Open kdb Results View",
+        },
+      ];
+    },
+    handleTerminalLink: () => {
+      vscode.commands.executeCommand(
+        `${KdbResultsViewProvider.viewType}.focus`,
+      );
+    },
+  };
+  context.subscriptions.push(
+    vscode.window.registerTerminalLinkProvider(resultsLinkProvider),
   );
 
   //q language server
@@ -461,32 +517,39 @@ function registerResultsPanelCommands(): CommandRegistration[] {
       command: "kdb.resultsPanel.export.csv",
       callback: () => ext.resultsViewProvider.exportToCsv(),
     },
+    {
+      // Editor-toolbar selector: route query results to the connection's
+      // output console (Terminal).
+      command: "kdb.results.destination.terminal",
+      callback: () => setResultsDestination(false),
+    },
+    {
+      // Editor-toolbar selector: route query results to the kdb Results View.
+      command: "kdb.results.destination.view",
+      callback: () => setResultsDestination(true),
+    },
   ];
 
   return resultsCommands;
 }
 
-function registerDatasourceCommands(): CommandRegistration[] {
-  const dataSourceCommands: CommandRegistration[] = [
+function registerQueryCommands(): CommandRegistration[] {
+  const queryCommands: CommandRegistration[] = [
     {
-      command: "kdb.datasource.import",
-      callback: async () => await importOldDSFiles(),
-    },
-    {
-      command: "kdb.datasource.create",
+      command: "kdb.query.create",
       callback: async (item: FileTreeItem) => {
-        if (hasWorkspaceOrShowOption("adding datasources")) {
+        if (hasWorkspaceOrShowOption("adding queries")) {
           const uri = await addWorkspaceFile(
             item ? item.resourceUri : undefined,
-            "datasource",
-            ".kdb.json",
+            "query",
+            ".kxquery",
           );
           await vscode.workspace.openTextDocument(uri);
           await setUriContent(
             uri,
-            JSON.stringify(createDefaultDataSourceFile(), null, 2),
+            JSON.stringify(createDefaultQueryFile(), null, 2),
           );
-          await openWith(uri, DataSourceEditorProvider.viewType);
+          await openWith(uri, QueryEditorProvider.viewType);
           await vscode.commands.executeCommand(
             "workbench.action.files.save",
             uri,
@@ -496,12 +559,16 @@ function registerDatasourceCommands(): CommandRegistration[] {
       },
     },
     {
-      command: "kdb.datasource.refreshDataSourceExplorer",
-      callback: () => ext.dataSourceTreeProvider.reload(),
+      command: "kdb.query.convert",
+      callback: async () => await convertDataSources(),
+    },
+    {
+      command: "kdb.query.refresh",
+      callback: () => ext.queryTreeProvider.reload(),
     },
   ];
 
-  return dataSourceCommands;
+  return queryCommands;
 }
 
 function registerScratchpadCommands(): CommandRegistration[] {
@@ -897,8 +964,8 @@ function registerFileCommands(): CommandRegistration[] {
       command: "kdb.file.rename",
       callback: async (item: FileTreeItem) => {
         if (item && item.resourceUri) {
-          if (item.resourceUri.path.endsWith(".kdb.json")) {
-            await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
+          if (item.resourceUri.path.endsWith(".kxquery")) {
+            await openWith(item.resourceUri, QueryEditorProvider.viewType);
           } else {
             const document = await vscode.workspace.openTextDocument(
               item.resourceUri,
@@ -914,8 +981,8 @@ function registerFileCommands(): CommandRegistration[] {
       command: "kdb.file.delete",
       callback: async (item: FileTreeItem) => {
         if (item && item.resourceUri) {
-          if (item.resourceUri.path.endsWith(".kdb.json")) {
-            await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
+          if (item.resourceUri.path.endsWith(".kxquery")) {
+            await openWith(item.resourceUri, QueryEditorProvider.viewType);
           } else {
             const document = await vscode.workspace.openTextDocument(
               item.resourceUri,
@@ -929,28 +996,28 @@ function registerFileCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.file.pickConnection",
-      callback: async () => {
-        const editor = ext.activeTextEditor;
-        if (editor) {
-          await pickConnection(editor.document.uri);
+      callback: async (context?: unknown) => {
+        const uri = getActiveFileUri(context);
+        if (uri) {
+          await pickConnection(uri);
         }
       },
     },
     {
       command: "kdb.file.pickTarget",
       callback: async (cell?: vscode.NotebookCell) => {
-        const editor = ext.activeTextEditor;
-        if (editor) {
-          await pickTarget(editor.document.uri, cell);
+        const uri = cell ? cell.notebook.uri : getActiveFileUri();
+        if (uri) {
+          await pickTarget(uri, cell);
         }
       },
     },
     {
       command: "kdb.file.pickTimeout",
       callback: async () => {
-        const editor = ext.activeTextEditor;
-        if (editor) {
-          await pickTimeout(editor.document.uri);
+        const uri = getActiveFileUri();
+        if (uri) {
+          await pickTimeout(uri);
         }
       },
     },
@@ -1036,7 +1103,7 @@ function registerAllExtensionCommands(): void {
     ...registerSetupCommands(),
     ...registerHelpCommands(),
     ...registerResultsPanelCommands(),
-    ...registerDatasourceCommands(),
+    ...registerQueryCommands(),
     ...registerScratchpadCommands(),
     ...registerQueryHistoryCommands(),
     ...registerConnectionsCommands(),
