@@ -8,8 +8,11 @@
 #
 # SECURITY: this workflow runs with secrets in scope while analysing untrusted
 # fork code. It only READS fork source (the SonarQube scanner does not execute
-# it) and installs dependencies with lifecycle scripts disabled
-# (ignore_scripts: true). Do NOT add steps here that execute fork-authored code.
+# it), installs dependencies with lifecycle scripts disabled and replaces the
+# fork's scanner config with the base repo's (untrusted_checkout: true). The
+# triggering run executes the fork's own workflow files, so nothing it produces
+# is trusted except the lcov coverage data; PR details come from the GitHub API.
+# Do NOT add steps here that execute fork-authored code.
 #
 # Note: fork CI cannot run the `test-q` job (needs GitLab registry / KDB license
 # secrets), so the triggering run rarely concludes 'success'. We therefore do
@@ -28,6 +31,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
   actions: read
   statuses: write
 
@@ -39,27 +43,52 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.head_repository.full_name != github.event.workflow_run.repository.full_name
     outputs:
-      pr_number: ${{ steps.meta.outputs.PR_NUMBER }}
-      head_repo: ${{ steps.meta.outputs.PR_HEAD_REPO }}
-      head_sha: ${{ steps.meta.outputs.PR_HEAD_SHA }}
-      head_ref: ${{ steps.meta.outputs.PR_HEAD_REF }}
-      base_ref: ${{ steps.meta.outputs.PR_BASE_REF }}
+      pr_number: ${{ steps.meta.outputs.pr_number }}
+      head_repo: ${{ steps.meta.outputs.head_repo }}
+      head_sha: ${{ steps.meta.outputs.head_sha }}
+      head_ref: ${{ steps.meta.outputs.head_ref }}
+      base_ref: ${{ steps.meta.outputs.base_ref }}
     steps:
-      - name: Download PR metadata
-        uses: actions/download-artifact@v4
-        with:
-          name: pr-meta
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Parse PR metadata
+      - name: Resolve the fork PR
         id: meta
-        # pr.env is produced from GitHub context values in the CI workflow (not
-        # from fork file contents); git ref/name charset rules keep these safe
-        # to append as step outputs.
-        run: cat pr.env >> "$GITHUB_OUTPUT"
+        uses: actions/github-script@v7
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        with:
+          script: |
+            const { HEAD_SHA, HEAD_REPO, HEAD_OWNER, HEAD_BRANCH } = process.env;
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              head: `${HEAD_OWNER}:${HEAD_BRANCH}`,
+            });
+            const pr = pulls.find(
+              (p) => p.head.sha === HEAD_SHA && p.head.repo?.full_name === HEAD_REPO,
+            );
+            if (!pr) {
+              core.notice(`No open pull request is at ${HEAD_REPO}@${HEAD_SHA}.`);
+              return;
+            }
+            const safeRef = /^[\w.\/+@-]+$/;
+            for (const ref of [pr.head.ref, pr.base.ref]) {
+              if (!safeRef.test(ref)) {
+                core.setFailed(`Unsupported characters in branch name "${ref}".`);
+                return;
+              }
+            }
+            core.setOutput("pr_number", String(pr.number));
+            core.setOutput("head_repo", pr.head.repo.full_name);
+            core.setOutput("head_sha", pr.head.sha);
+            core.setOutput("head_ref", pr.head.ref);
+            core.setOutput("base_ref", pr.base.ref);
 
   app-sec:
     needs: meta
+    if: needs.meta.outputs.pr_number != ''
     uses: ./.github/workflows/app-sec-template.yml
     with:
       # Not 'dev'/'main', so Snyk Monitor is skipped for PR analysis.
@@ -70,25 +99,28 @@ jobs:
       pr_key: ${{ needs.meta.outputs.pr_number }}
       pr_branch: ${{ needs.meta.outputs.head_ref }}
       pr_base: ${{ needs.meta.outputs.base_ref }}
-      ignore_scripts: true
+      untrusted_checkout: true
     secrets: inherit
 
   status:
     needs: [meta, app-sec]
-    if: always() && needs.meta.result == 'success'
+    if: always() && needs.meta.outputs.pr_number != ''
     runs-on: ubuntu-latest
     steps:
       - name: Report app-sec result to the PR
         uses: actions/github-script@v7
+        env:
+          RESULT: ${{ needs.app-sec.result }}
+          HEAD_SHA: ${{ needs.meta.outputs.head_sha }}
         with:
           script: |
-            const state = '${{ needs.app-sec.result }}' === 'success' ? 'success' : 'failure';
+            const state = process.env.RESULT === "success" ? "success" : "failure";
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: '${{ needs.meta.outputs.head_sha }}',
+              sha: process.env.HEAD_SHA,
               state,
-              context: 'app-sec (fork)',
-              description: state === 'success' ? 'App-sec passed' : 'App-sec failed',
+              context: "app-sec (fork)",
+              description: state === "success" ? "App-sec passed" : "App-sec failed",
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
