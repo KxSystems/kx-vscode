@@ -198,7 +198,9 @@ export function getHeaders(
   }
 
   if (timeout) {
-    headers["timeout"] = String(timeout);
+    // the gateway expects a whole number of seconds; a decimal (e.g. "19.8")
+    // fails to parse server-side and falls back to a short default timeout.
+    headers["timeout"] = String(Math.round(timeout));
   }
 
   return headers;

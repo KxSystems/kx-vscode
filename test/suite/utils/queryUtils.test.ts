@@ -18,6 +18,7 @@ import * as sinon from "sinon";
 import { ext } from "../../../src/extensionVariables";
 import { ServerType } from "../../../src/models/connectionsModels";
 import { DataSourceTypes } from "../../../src/models/dataSource";
+import * as coreUtils from "../../../src/utils/core";
 import * as queryUtils from "../../../src/utils/queryUtils";
 
 describe("queryUtils", () => {
@@ -509,6 +510,25 @@ describe("queryUtils", () => {
     it("should return Structured Text headers with timeout", () => {
       const res = queryUtils.getHeaders(30, "struct-text");
       assert.deepStrictEqual(res, { ...structTextHeaders, timeout: "30" });
+    });
+
+    it("should round a decimal timeout to a whole number of seconds", () => {
+      const res = queryUtils.getHeaders(19.8, "json");
+      assert.deepStrictEqual(res, { ...jsonHeaders, timeout: "20" });
+    });
+
+    it("should round down a decimal timeout below the half-second mark", () => {
+      const res = queryUtils.getHeaders(4.2, "json");
+      assert.deepStrictEqual(res, { ...jsonHeaders, timeout: "4" });
+    });
+
+    it("should round a decimal number of seconds converted from minutes", () => {
+      // 0.21 minutes picked as the timeout unit/value -> 12.6 seconds
+      const res = queryUtils.getHeaders(
+        coreUtils.calculateSeconds(0.21, "Minutes"),
+        "json",
+      );
+      assert.deepStrictEqual(res, { ...jsonHeaders, timeout: "13" });
     });
   });
 
