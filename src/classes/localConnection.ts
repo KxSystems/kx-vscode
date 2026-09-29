@@ -17,7 +17,11 @@ import { join } from "path";
 import { commands } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { QueryResult, QueryResultType } from "../models/queryResult";
+import {
+  QueryResult,
+  QueryResultType,
+  queryConstants,
+} from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
 import { handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
@@ -180,11 +184,19 @@ export class LocalConnection {
 
       this.connection.k(wrapper, args, (err: Error, res: QueryResult) => {
         if (err) {
-          reject(handleQueryResults(err.toString(), QueryResultType.Error));
+          resolve(
+            handleQueryResults(
+              `${queryConstants.error} ${err.message}`,
+              QueryResultType.Error,
+            ),
+          );
         } else if (res.error) {
           resolve(
             handleQueryResults(
-              appendStacktrace(`${res.errorMsg}`, res.stacktrace),
+              appendStacktrace(
+                `${queryConstants.error} ${res.errorMsg}`,
+                res.stacktrace,
+              ),
               QueryResultType.Error,
             ),
           );
