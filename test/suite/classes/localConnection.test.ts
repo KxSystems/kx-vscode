@@ -81,6 +81,63 @@ describe("LocalConnection", () => {
     const conn = localConn.getConnection();
     assert.strictEqual(conn, "fakeConnection");
   });
+
+  describe("executeQuery", () => {
+    beforeEach(() => {
+      // executeQuery() also fires off a trailing updateGlobal() call; stub
+      // it away so each test only has to answer the query's own callback.
+      sinon.stub(localConn, "updateGlobal" as any);
+      // Avoids queryWrapper() reading evaluateQ.q/formatQ.q off disk via
+      // ext.context.asAbsolutePath, which isn't available in this suite.
+      localConn.useAPI = true;
+    });
+
+    it("should resolve (not reject) with an 'Error:'-prefixed message on a syntax error (e.g. a missing bracket)", async () => {
+      // A missing closing bracket breaks tokenizing itself, before
+      // evalInContext ever runs, so it surfaces as a raw IPC-level error
+      // with no stacktrace, not a graceful res.error dict.
+      localConn["connection"] = <any>{
+        k: sinon.stub().callsArgWith(2, new Error("{")),
+      };
+
+      const result = await localConn.executeQuery("f:{[x] x+1");
+
+      assert.strictEqual(result, "Error: {");
+    });
+
+    it("should prefix a graceful type error (e.g. char + int) with 'Error:'", async () => {
+      localConn["connection"] = <any>{
+        k: sinon.stub().callsArgWith(2, null, {
+          data: null,
+          error: true,
+          errorMsg: "type",
+        }),
+      };
+
+      const result = await localConn.executeQuery('1+"a"');
+
+      assert.strictEqual(result, "Error: type");
+    });
+
+    it("should prefix a graceful undefined-variable error with 'Error:' and keep its stacktrace", async () => {
+      localConn["connection"] = <any>{
+        k: sinon.stub().callsArgWith(2, null, {
+          data: null,
+          error: true,
+          errorMsg: "undefinedFn",
+          stacktrace: "  [1]  b:undefinedFn[2];\n         ^\n",
+        }),
+      };
+
+      const result = await localConn.executeQuery("a:1;b:undefinedFn[2];a+b");
+
+      assert.strictEqual(
+        result,
+        "Error: undefinedFn\n  [1]  b:undefinedFn[2];\n         ^\n",
+      );
+    });
+  });
+
   describe("loadServerObjects", () => {
     /**
      * What a process answers the memory listing with, in the shape listMem.q
