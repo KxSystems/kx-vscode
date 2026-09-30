@@ -40,9 +40,16 @@ function items() {
     {},
   );
 
+  const repls = vscode.window.terminals
+    .map((found) => /^KX REPL \((.+)\)$/s.exec(found.name)?.[1])
+    .filter((label): label is string => !!label)
+    .sort((a, b) => a.localeCompare(b))
+    .map((label) => `REPL (${label})`);
+
   return [
     "(active)",
     "REPL",
+    ...repls,
     ...Object.keys(servers).map((key) => servers[key].serverAlias),
     ...Object.keys(insights).map((key) => insights[key].alias),
   ];

@@ -42,6 +42,7 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+import { KxNotebookController } from "./services/notebookController";
 import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
@@ -58,6 +59,7 @@ export namespace ext {
   export let serverProvider: KdbTreeProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
+  export let notebookController: KxNotebookController;
   // Output destination toggle, driven by the editor-toolbar selector: when true
   // query results render in the kdb Results View, when false they go to the
   // connection's output console (Terminal). Mirrored to the
@@ -138,7 +140,7 @@ export namespace ext {
 
   export const urlLinks = {
     survey: "https://t.maze.co/333268148",
-    suggestFeature: "https://kx-features.ideas.aha.io/ideas/new",
+    suggestFeature: "https://forum.kx.com/c/ideas-feature-requests",
     reportBug: "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
   };
 

@@ -1005,52 +1005,42 @@ export async function executeQuery(
   }
 }
 
+// matches '\d .foo' or 'system "d .foo"'
+const CONTEXT_PATTERN = /^(system[\t ]*"d|\\d)[\t ]+([^\s"]+)/gm;
+
+function withoutBlockComments(text: string) {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm, "");
+}
+
+export function contextAbove(text: string): string {
+  const matches = [...withoutBlockComments(text).matchAll(CONTEXT_PATTERN)];
+  return matches.length ? matches[matches.length - 1][2] : ".";
+}
+
+function leadingContext(text: string): string {
+  const code = withoutBlockComments(text);
+  const [match] = code.matchAll(CONTEXT_PATTERN);
+  if (!match) return ".";
+  const above = code.slice(0, match.index).replace(/^[\t ]*\/.*$/gm, "");
+  return above.trim() ? "." : match[2];
+}
+
 export function getQueryContext(lineNum?: number): string {
-  let context = ".";
-  const editor = ext.activeTextEditor;
-  const fullText = typeof lineNum !== "number";
-
-  if (editor) {
-    const document = editor.document;
-    let text;
-
-    if (fullText) {
-      text = editor.document.getText();
-    } else {
-      const line = document.lineAt(lineNum);
-      text = editor.document.getText(
-        new Range(
-          new Position(0, 0),
-          new Position(lineNum, line.range.end.character),
+  const document = ext.activeTextEditor?.document;
+  if (!document) return ".";
+  return typeof lineNum === "number"
+    ? contextAbove(
+        document.getText(
+          new Range(new Position(0, 0), new Position(lineNum, 0)),
         ),
-      );
-    }
-
-    // matches '\d .foo' or 'system "d .foo"'
-    const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
-
-    const matches = [...text.matchAll(pattern)];
-    if (matches.length) {
-      // fullText should use first defined context
-      // a selection should use the last defined context
-      context = fullText ? matches[0][2] : matches[matches.length - 1][2];
-    }
-  }
-
-  return context;
+      )
+    : leadingContext(document.getText());
 }
 
 export function getConextForRerunQuery(query: string): string {
-  let context = ".";
-  // matches '\d .foo' or 'system "d .foo"'
-  const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
-  const matches = [...query.matchAll(pattern)];
-  if (matches.length) {
-    // fullText should use first defined context
-    // a selection should use the last defined context
-    context = query ? matches[0][2] : matches[matches.length - 1][2];
-  }
-  return context;
+  return leadingContext(query);
 }
 
 export async function runQuery(
@@ -1082,7 +1072,7 @@ export async function runQuery(
       query = selection.isEmpty
         ? editor.document.lineAt(selection.active.line).text
         : editor.document.getText(selection);
-      context = getQueryContext(selection.end.line);
+      context = getQueryContext(selection.start.line);
       if (type === ExecutionTypes.PythonQuerySelection) {
         isPython = true;
       }

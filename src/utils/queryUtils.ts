@@ -153,11 +153,11 @@ export function normalizeQuery(query: string): string {
         matched.replace(/(?:\r\n|[\r\n])/gs, "\\n"),
       )
       // Remove none end of statement new lines
-      .replace(/(?:\r\n|[\r\n])+(?=[\t ])/gs, "")
+      .replace(/[\r\n]+(?=[\t ])/g, "")
       // Comments and blank lines removed above can leave runs of consecutive
       // newlines; collapse each run to a single CRLF so the q process still
       // sees one statement per line.
-      .replace(/(?:\r\n|[\r\n])+/g, "\r\n")
+      .replace(/[\r\n]+/g, "\r\n")
   );
 }
 
@@ -167,16 +167,15 @@ export function normalizeQSQLQuery(query: string): string {
       // Trim white space
       .trim()
       // Replace end of statements
-      .replace(/(?<!;[\t ]*)(\r\n|[\r\n])+(?![\t\r\n ])/gs, ";$1")
+      .replace(/(?<!;[\t ]*)[\r\n]*?(\r\n|[\r\n])(?![\t\r\n ])/g, ";$1")
   );
 }
 
 export function normalizePyQuery(query: string): string {
-  return (
-    queryLimitCheck(query)
-      // Replace double quotes
-      .replace(/"/gs, '\\"')
-  );
+  return queryLimitCheck(query)
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\r\n|[\r\n]/g, "\\n");
 }
 
 /**
@@ -212,14 +211,9 @@ export function getPythonWrapper(
   query: string,
   returnFormat: "serialized" | "text" | "structuredText",
 ): string {
-  const wrapper = queryWrapper(true, false);
-  const args = {
-    returnFormat,
-    code: normalizePyQuery(query),
-    sample_fn: "first",
-    sample_size: 10000,
-  };
-  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`error;res\`errorMsg;res\`data]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
+  const wrapper = queryWrapper(true, false).trim();
+  const code = normalizePyQuery(query);
+  return `{[args] res:${wrapper} args;$[res\`error;res\`errorMsg;res\`data]}[\`returnFormat\`code\`sample_fn\`sample_size!("${returnFormat}";"${code}";"first";10000)]`;
 }
 
 export function getQSQLWrapper(
@@ -254,10 +248,7 @@ interface ConsoleTable {
   keys: number;
 }
 
-export function convertRows(
-  rows: any[],
-  results?: StructuredTextResults,
-): any {
+export function convertRows(rows: any[], results?: StructuredTextResults): any {
   const table = results ? structuredTable(rows, results) : objectTable(rows);
   const lines = table ? layout(table) : [];
   return lines.length === 0 ? [] : lines.join("\n") + "\n\n";

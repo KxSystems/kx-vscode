@@ -84,6 +84,10 @@ export class FakeInsights {
 
   static readonly RC_DIED = "Coordinator connection has closed";
 
+  static readonly RETURNS_LAMBDA = "RETURN_LAMBDA";
+
+  static readonly LAMBDA = "{[x]\n    a:1;\n    h:x+a;\n    h\n    }";
+
   // A query calling this shows an image on the way to its result, which reaches
   // the extension on the log websocket rather than in the response.
   static readonly SHOWS_IMAGE = "showImage";
@@ -325,6 +329,22 @@ export class FakeInsights {
       // The payload is structured text because that is what the extension's
       // struct-text accept header asks these endpoints for — rows here instead
       // leave the notebook renderer with nothing it can lay out.
+      if (asked.includes(FakeInsights.RETURNS_LAMBDA)) {
+        return send(200, {
+          payload: {
+            count: 1,
+            columns: [
+              {
+                name: "values",
+                type: "lambda",
+                values: [FakeInsights.LAMBDA],
+                order: [0],
+              },
+            ],
+          },
+        });
+      }
+
       return asked.includes(FakeInsights.FAILS)
         ? send(500, { header: { ai: FAILURE }, payload: {} })
         : send(200, { payload: structuredText() });

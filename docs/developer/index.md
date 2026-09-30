@@ -34,5 +34,7 @@ Architecture and contributor notes for the kdb VS Code extension. See also the
   datasources are removed, and the design of `.kxquery` and its editor.
 - [KXI Datasource Issues — `ee-webviews` Worklist](kxi-datasource-issues.md) —
   the tracked datasource issues, each classified against the branch code.
+- [KXI REPL Issues - `ee-repl` Worklist](kxi-repl-issues.md) - the in progress
+  REPL issues, fixed one at a time on the branch.
 - [PR #796 Review — Resolutions](pr-796-review.md) — every review comment on the
   query view pull request, and what the branch did about it.

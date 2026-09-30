@@ -700,6 +700,47 @@ describe("queryUtils", () => {
     });
   });
 
+  describe("normalizePyQuery escapes", () => {
+    it("should keep backslashes and line breaks for Python", () => {
+      assert.strictEqual(
+        queryUtils.normalizePyQuery('print("a\\nb")\r\nre.findall(r"\\d+", s)'),
+        'print(\\"a\\\\nb\\")\\nre.findall(r\\"\\\\d+\\", s)',
+      );
+    });
+  });
+
+  describe("getPythonWrapper", () => {
+    beforeEach(() => {
+      const root = path.resolve(__dirname, "..", "..", "..", "..");
+      sinon.stub(ext, "context").value({
+        asAbsolutePath: (relative: string) => path.join(root, relative),
+      });
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should normalize to a single statement", () => {
+      const res = queryUtils.normalizeQuery(
+        queryUtils.getPythonWrapper("x = 1\nx + 1", "serialized"),
+      );
+
+      assert.ok(!/[\r\n]/.test(res));
+    });
+
+    it("should call evaluatePy with a dictionary of arguments", () => {
+      const res = queryUtils.getPythonWrapper('a="test"', "serialized");
+
+      assert.ok(res.startsWith("{[args] res:{[args]"));
+      assert.ok(
+        res.endsWith(
+          '}[`returnFormat`code`sample_fn`sample_size!("serialized";"a=\\"test\\"";"first";10000)]',
+        ),
+      );
+    });
+  });
+
   describe("getHeaders", () => {
     const jsonHeaders = {
       Accept: "application/json",

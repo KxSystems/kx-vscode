@@ -48,6 +48,17 @@ SonarQube results can be viewed at https://sonarqube.dl.kx.com/dashboard?branch=
 
 Pressing F5 with a file in the extension open will launch a VSCode instance running the extension built from source, with the debugger open in the original VSCode instance.
 
+On VS Code 1.139, whose bundled JavaScript debugger (js-debug 1.117) cannot
+attach on Node 24.20
+([vscode-js-debug#2416](https://github.com/microsoft/vscode-js-debug/issues/2416)),
+F5 leaves the new instance stopped on its first line and reports "Extension
+host did not start in 10 seconds". Run Without Debugging (Ctrl+F5) still works.
+To debug, install
+[JavaScript Debugger (Nightly)](https://marketplace.visualstudio.com/items?itemName=ms-vscode.js-debug-nightly)
+and disable the built-in one (search the extensions for
+`@builtin @id:ms-vscode.js-debug`), then reload the window. Revert both once VS
+Code ships js-debug 1.140 or later.
+
 Extension [Unit Tests](https://github.com/KxSystems/kx-vscode/tree/dev/test/suite) can be debugged by selecting `Extension Tests` target from run and debug tab.
 
 Testing will stop at any breakpoint set in test or source file.

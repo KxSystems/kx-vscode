@@ -287,7 +287,7 @@ export async function activate(context: vscode.ExtensionContext) {
       "kx-notebook",
       new KxNotebookSerializer(),
     ),
-    new KxNotebookController(),
+    (ext.notebookController = new KxNotebookController()),
   );
 
   context.subscriptions.push(
@@ -944,7 +944,13 @@ function registerExecuteCommands(): CommandRegistration[] {
     {
       command: "kdb.execute.selectedQuery",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.QuerySelection);
+        const editor = vscode.window.activeTextEditor;
+        const cell = ext.notebookController.findCell(editor);
+        if (cell) {
+          await ext.notebookController.executeSelection(editor, cell);
+        } else {
+          await runActiveEditor(ExecutionTypes.QuerySelection);
+        }
       },
     },
     {

@@ -42,7 +42,7 @@ import {
 import { getActiveTarget } from "../classes/activeTarget";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
-import { ReplConnection } from "../classes/replConnection";
+import { QNotFoundError, ReplConnection } from "../classes/replConnection";
 import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
 import { DISTRIBUTED, DISTRIBUTED_SINCE } from "../models/query";
@@ -146,8 +146,35 @@ export async function updateStatusBarItems() {
   }
 }
 
+const REPL_LABEL = new RegExp(`^${ext.REPL} \\((.+)\\)$`, "s");
+
+export function replServer(label: string) {
+  return `${ext.REPL} (${label})`;
+}
+
+export function isRepl(server?: string): boolean {
+  return server === ext.REPL || (!!server && REPL_LABEL.test(server));
+}
+
+export function replLabelOf(server?: string) {
+  return server ? REPL_LABEL.exec(server)?.[1] : undefined;
+}
+
+export function replChoices(server?: string) {
+  const choices = ReplConnection.labels().map(replServer);
+  if (server && replLabelOf(server) && !choices.includes(server)) {
+    choices.push(server);
+  }
+  return [ext.REPL, ...choices];
+}
+
+export function runItemText(text: string) {
+  const active = ReplConnection.activeLabel;
+  return text === ext.REPL && active ? `${ext.REPL} → ${active}` : text;
+}
+
 function setRunScratchpadItemText(uri: Uri, text: string) {
-  ext.runScratchpadItem.text = `$(cloud) ${text}`;
+  ext.runScratchpadItem.text = `$(cloud) ${runItemText(text)}`;
   ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
 }
 
@@ -229,7 +256,7 @@ function getQuickServers(uri: Uri) {
     ...sessionConnectionMap.values(),
   ];
   targets.forEach((target) => {
-    if (target.includes(":") && !quickServers.includes(target)) {
+    if (isQuick(target) && !quickServers.includes(target)) {
       quickServers.push(target);
     }
   });
@@ -343,7 +370,7 @@ export function getServerForUri(uri: Uri) {
   const servers = getServers();
 
   return isQuick(server) ||
-    (server && (server === ext.REPL || servers.includes(server)))
+    (server && (isRepl(server) || servers.includes(server)))
     ? server
     : undefined;
 }
@@ -488,7 +515,12 @@ export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
   const items = insightsOnly
     ? getInsightsServers()
-    : ["(active)", ext.REPL, ...getServers(), ...getQuickServers(uri)];
+    : [
+        "(active)",
+        ...replChoices(server),
+        ...getServers(),
+        ...getQuickServers(uri),
+      ];
 
   let picked = await showInputPicker(items, {
     title: insightsOnly
@@ -524,14 +556,14 @@ export async function pickConnection(uri: Uri) {
   } else if (picked === "(active)") {
     picked = undefined;
     await setTargetForUri(uri, undefined);
-  } else if (picked === ext.REPL) {
-    // The REPL has no execution targets, drop any stale assignment.
-    await setTargetForUri(uri, undefined);
   } else if (!items.includes(picked)) {
     notify(`Connection "${picked}" is not found.`, MessageKind.ERROR, {
       logger,
     });
     return undefined;
+  } else if (isRepl(picked)) {
+    // The REPL has no execution targets, drop any stale assignment.
+    await setTargetForUri(uri, undefined);
   }
 
   if (picked || isConnectableFile(uri)) {
@@ -552,7 +584,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   /* c8 ignore start */
   let server = getServerForUri(uri);
   if (!server) server = await pickConnection(uri);
-  if (!server || server === ext.REPL) return;
+  if (!server || isRepl(server)) return;
 
   const conn = await findConnection(uri);
   const isInsights = conn instanceof InsightsConnection;
@@ -852,8 +884,19 @@ function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
+export function reportReplError(error: unknown) {
+  if (error instanceof QNotFoundError) return;
+  notify(errorMessage(error), MessageKind.ERROR, { logger, params: error });
+}
+
 export async function startRepl() {
-  const instance = await ReplConnection.getOrCreateInstance();
+  let instance: ReplConnection;
+  try {
+    instance = await ReplConnection.getOrCreateInstance();
+  } catch (error) {
+    reportReplError(error);
+    return;
+  }
   instance.start();
   notify("REPL started.", MessageKind.DEBUG, {
     logger,
@@ -874,7 +917,13 @@ export async function startReplInFolder(uri?: Uri) {
   } catch {
     // Unable to stat the resource; fall back to using it as the base directory.
   }
-  const instance = await ReplConnection.openInFolder(base);
+  let instance: ReplConnection;
+  try {
+    instance = await ReplConnection.openInFolder(base);
+  } catch (error) {
+    reportReplError(error);
+    return;
+  }
   instance.start();
   notify("REPL started.", MessageKind.DEBUG, {
     logger,
@@ -882,7 +931,11 @@ export async function startReplInFolder(uri?: Uri) {
   });
 }
 
-export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
+export async function runOnRepl(
+  editor: TextEditor,
+  type?: ExecutionTypes,
+  label?: string,
+) {
   const uri = editor.document.uri;
   const basename = getBasename(uri);
 
@@ -915,7 +968,9 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 
   try {
-    const repl = await ReplConnection.getOrCreateInstance(uri);
+    const repl = label
+      ? await ReplConnection.forLabel(label)
+      : await ReplConnection.getOrCreateInstance(uri);
     repl.show();
     await repl.executeQuery(
       isPython(uri)
@@ -923,17 +978,16 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
         : isSql(uri)
           ? getSQLWrapper(text)
           : text,
+      undefined,
+      isPython(uri) ? text : undefined,
     );
   } catch (error) {
-    notify(errorMessage(error), MessageKind.ERROR, {
-      logger,
-      params: error,
-    });
+    reportReplError(error);
   }
 }
 
 export type RunTarget =
-  | { kind: "repl" }
+  | { kind: "repl"; label?: string }
   | { kind: "connection"; conn: InsightsConnection | LocalConnection };
 
 /**
@@ -950,8 +1004,9 @@ export async function resolveRunTarget(
 ): Promise<RunTarget | undefined> {
   const server = getServerForUri(uri);
 
-  if (server === ext.REPL) {
-    return { kind: "repl" };
+  if (isRepl(server)) {
+    const label = replLabelOf(server);
+    return label ? { kind: "repl", label } : { kind: "repl" };
   }
 
   if (server !== undefined) {
@@ -981,7 +1036,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       return;
     }
     if (runTarget.kind === "repl") {
-      await runOnRepl(ext.activeTextEditor, type);
+      await runOnRepl(ext.activeTextEditor, type, runTarget.label);
       notifyExecution(
         RunFlag.Run |
           RunFlag.Repl |
@@ -1185,6 +1240,7 @@ export function connectWorkspaceCommands() {
   window.onDidChangeActiveNotebookEditor(() => updateStatusBarItems());
   window.tabGroups.onDidChangeTabs(() => updateStatusBarItems());
   window.tabGroups.onDidChangeTabGroups(() => updateStatusBarItems());
+  ReplConnection.onDidChangeActive(() => updateStatusBarItems());
   activeEditorChanged(window.activeTextEditor);
 }
 

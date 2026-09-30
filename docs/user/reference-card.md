@@ -1,35 +1,46 @@
 ---
 type: Reference
 title: Reference Card
-description: Command palette entries, keybindings, settings, execution matrix and telemetry events for the kdb VS Code extension.
+description:
+  Command palette entries, keybindings, settings, execution matrix and telemetry
+  events for the kdb VS Code extension.
 tags: [kdb, vscode, reference, keybindings, settings, telemetry]
 timestamp: 2026-07-10
 ---
 
 ## Command Palette
 
-| Command                | Command                   | Command                             |
-| :--------------------- | :------------------------ | :---------------------------------- |
-| KX: Welcome to KDB-X   | KX: New Connection        | KX: Focus on Connections view       |
-| KX: Install KDB-X      | KX: New Notebook          | KX: Focus on Queries view       |
-| KX: Start REPL         | KX: New Workbook (q)      | KX: Focus on Workbooks view         |
-| KX: Import Connections | KX: New Workbook (Python) | KX: Focus on Query History view     |
-| KX: Export Connections | KX: New Workbook (SQL)    | KX: Focus on Help and Feedback view |
-|                        | KX: New Query             | KX: Focus on KDB Results view       |
-|                        | KX: Convert datasources to queries |                            |
+| Command                | Command                            | Command                             |
+| :--------------------- | :--------------------------------- | :---------------------------------- |
+| KX: Welcome to KDB-X   | KX: New Connection                 | KX: Focus on Connections view       |
+| KX: Install KDB-X      | KX: New Notebook                   | KX: Focus on Queries view           |
+| KX: Start REPL         | KX: New Workbook (q)               | KX: Focus on Workbooks view         |
+| KX: Import Connections | KX: New Workbook (Python)          | KX: Focus on Query History view     |
+| KX: Export Connections | KX: New Workbook (SQL)             | KX: Focus on Help and Feedback view |
+|                        | KX: New Query                      | KX: Focus on KDB Results view       |
+|                        | KX: Convert datasources to queries |                                     |
 
 ## Keybindings
 
 | Command                       | When                  | Windows / Linux          | macOS            |
 | :---------------------------- | :-------------------- | :----------------------- | :--------------- |
 | KX: Execute Entire File       | `q` `py` `sql`        | `ctrl`+`shift`+`d`       | `⌘`+`⇧`+`d`      |
-| KX: Execute Current Selection | `q` `py` `sql`        | `ctrl`+`d`               | `⌘`+`d`          |
+| KX: Execute Current Selection | `q` `py` `sql` `kxnb` | `ctrl`+`d`               | `⌘`+`d`          |
 | KX: Execute Current Block     | `q`                   | `ctrl`+`shift`+`e`       | `⌘`+`⇧`+`e`      |
 | KX: Populate Scratchpad       | `q` `py` `sql`        | `ctrl`+`shift`+`alt`+`p` | `⌘`+`⇧`+`⌥`+`p`  |
 | KX: Reset Scratchpad          | `q` `py` `sql` `kxnb` | `ctrl`+`shift`+`delete`  | `⌘`+`⇧`+`fn`+`⌫` |
 | KX: Choose Connection         | `q` `py` `sql` `kxnb` |                          |                  |
 | KX: Choose Execution Target   | `q` `py` `sql`        | `ctrl`+`alt`+`t`         | `⌘`+`⌥`+`t`      |
 | KX: Toggle Parameter Cache    | `q`                   | `ctrl`+`shift`+`y`       | `⌘`+`⇧`+`y`      |
+
+**Choose Connection** offers `REPL`, which runs on the REPL last started or
+focused, and each open REPL by name, such as `REPL (folderA)`, which always runs
+on that REPL, starting it in its folder if it is not running. The status bar
+names the REPL a file runs on.
+
+In a KX notebook cell, **Execute Current Selection** runs the selection, or the
+current line when nothing is selected, and shows its result in the cell's
+output. `ctrl`+`enter` runs the whole cell, as in any VS Code notebook.
 
 ### REPL
 
@@ -55,33 +66,44 @@ timestamp: 2026-07-10
 | Reset                               | `ctrl`+`d`        | `⌃`+`d`                |
 | Clear the REPL                      | `ctrl`+`l`        | `⌃`+`l`                |
 
+With `kdb.hideSourceExpressions` off, code the REPL runs from a file, a
+selection or a notebook cell is shown statement by statement, each at a prompt
+of its own before its output, the way a q console transcript reads. Python is
+shown as written.
+
+Pasted code is never run as it lands. A single line goes into the input at the
+cursor. Several lines are shown under the prompt and held: `RETURN` runs them,
+`ctrl`+`c` discards them (and stops a running query), and a further paste adds
+to them. Whether a right click pastes is VS Code's
+`terminal.integrated.rightClickBehavior` setting.
+
 ## Settings
 
-| Setting                                             | Scope    | Type      | Default       |
-| :-------------------------------------------------- | :------- | :-------- | :------------ |
-| [kdb.qHomeDirectory](q-home-directory.md)           | machine  | `string`  | `""`          |
-| kdb.servers                                         | machine  | `object`  | `{}`          |
-| kdb.insightsEnterpriseConnections                   | machine  | `object`  | `{}`          |
-| kdb.connectionLabels                                | machine  | `array`   | `[]`          |
-| kdb.labelsConnectionMap                             | machine  | `array`   | `[]`          |
-| kdb.hideSurvey                                      | machine  | `boolean` | `false`       |
-| kdb.hideSourceExpressions                           | machine  | `boolean` | `true`        |
-| kdb.hideSubscribeRegistrationNotification           | machine  | `boolean` | `false`       |
-| kdb.neverShowQInstallAgain                          | machine  | `boolean` | `false`       |
-| kdb.autoFocusOutputOnEntry                          | machine  | `boolean` | `true`        |
-| [kdb.qHomeDirectoryWorkspace](q-home-directory.md)  | resource | `string`  | `""`          |
-| kdb.connectionMap                                   | resource | `object`  | `{}`          |
-| kdb.targetMap                                       | resource | `object`  | `{}`          |
-| kdb.timeoutMap                                       | resource | `object`  | `{}`          |
-| kdb.defaultTimeout                                  | resource | `number`  | `30`          |
-| kdb.linting                                         | resource | `boolean` | `false`       |
-| kdb.refactoring                                     | resource | `string`  | `"Workspace"` |
+| Setting                                            | Scope    | Type      | Default       |
+| :------------------------------------------------- | :------- | :-------- | :------------ |
+| [kdb.qHomeDirectory](q-home-directory.md)          | machine  | `string`  | `""`          |
+| kdb.servers                                        | machine  | `object`  | `{}`          |
+| kdb.insightsEnterpriseConnections                  | machine  | `object`  | `{}`          |
+| kdb.connectionLabels                               | machine  | `array`   | `[]`          |
+| kdb.labelsConnectionMap                            | machine  | `array`   | `[]`          |
+| kdb.hideSurvey                                     | machine  | `boolean` | `false`       |
+| kdb.hideSourceExpressions                          | machine  | `boolean` | `true`        |
+| kdb.hideSubscribeRegistrationNotification          | machine  | `boolean` | `false`       |
+| kdb.neverShowQInstallAgain                         | machine  | `boolean` | `false`       |
+| kdb.autoFocusOutputOnEntry                         | machine  | `boolean` | `true`        |
+| [kdb.qHomeDirectoryWorkspace](q-home-directory.md) | resource | `string`  | `""`          |
+| kdb.connectionMap                                  | resource | `object`  | `{}`          |
+| kdb.targetMap                                      | resource | `object`  | `{}`          |
+| kdb.timeoutMap                                     | resource | `object`  | `{}`          |
+| kdb.defaultTimeout                                 | resource | `number`  | `30`          |
+| kdb.linting                                        | resource | `boolean` | `false`       |
+| kdb.refactoring                                    | resource | `string`  | `"Workspace"` |
 
-`kdb.connectionMap`, `kdb.targetMap` and `kdb.timeoutMap` are keyed by
-workspace relative path, so they only cover files inside the workspace. Files
-opened from outside the workspace can still be assigned a connection, an
-execution target and a timeout, but those assignments are kept in memory and
-are lost when VS Code restarts.
+`kdb.connectionMap`, `kdb.targetMap` and `kdb.timeoutMap` are keyed by workspace
+relative path, so they only cover files inside the workspace. Files opened from
+outside the workspace can still be assigned a connection, an execution target
+and a timeout, but those assignments are kept in memory and are lost when VS
+Code restarts.
 
 ## Execution
 
