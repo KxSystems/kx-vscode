@@ -357,13 +357,22 @@ describe("REPL", () => {
 
   describe("python environment", () => {
     const folder = vscode.Uri.file("/ws/py");
+    const win32 = process.platform === "win32";
+    const started = (q: string) =>
+      sinon.match(
+        (command: string) =>
+          command.replace(/[0-9a-f-]{36}/, "ID") ===
+          (win32
+            ? `(source /ws/py/.venv/bin/activate) 2>nul || echo ID! & ${q}`
+            : `{ source /ws/py/.venv/bin/activate; } 2>/dev/null || echo ID!; ${q}`),
+      );
     const venv = <PythonEnvironment>{
       name: ".venv",
       execInfo: {
         run: { executable: "/ws/py/.venv/bin/python" },
         shellActivation: new Map([
           [
-            "bash",
+            win32 ? "cmd" : "bash",
             [{ executable: "source", args: ["/ws/py/.venv/bin/activate"] }],
           ],
         ]),
@@ -397,12 +406,7 @@ describe("REPL", () => {
 
     it("should activate the environment before starting q", async () => {
       await ReplConnectionClass.openInFolder(folder);
-      sinon.assert.calledWith(
-        spawnStub,
-        sinon.match(
-          /^\{ source \/ws\/py\/\.venv\/bin\/activate; \} 2>\/dev\/null \|\| echo [0-9a-f-]+!; \/q\/bin\/q$/,
-        ),
-      );
+      sinon.assert.calledWith(spawnStub, started("/q/bin/q"));
     });
 
     it("should pass a q path the shell would change through the environment", async () => {
@@ -413,7 +417,7 @@ describe("REPL", () => {
       await ReplConnectionClass.openInFolder(folder);
       sinon.assert.calledWithMatch(
         spawnStub,
-        sinon.match(/ \|\| echo [0-9a-f-]+!; "\$KX_REPL_ARG_0"$/),
+        started(win32 ? '"%KX_REPL_ARG_0%"' : '"$KX_REPL_ARG_0"'),
         { env: sinon.match({ KX_REPL_ARG_0: "/Users/Jo $HOME/q/bin/q" }) },
       );
     });
@@ -450,12 +454,7 @@ describe("REPL", () => {
         spawnStub.firstCall.args[1].env.PYKX_EXECUTABLE,
         undefined,
       );
-      sinon.assert.calledWith(
-        spawnStub,
-        sinon.match(
-          /^\{ source \/ws\/py\/\.venv\/bin\/activate; \} 2>\/dev\/null \|\| echo [0-9a-f-]+!; \/q\/bin\/q$/,
-        ),
-      );
+      sinon.assert.calledWith(spawnStub, started("/q/bin/q"));
     });
 
     it("should name the environment in the prompt", async () => {
