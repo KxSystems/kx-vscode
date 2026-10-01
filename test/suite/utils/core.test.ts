@@ -1098,6 +1098,10 @@ describe("core", () => {
       assert.strictEqual(coreUtils.calculateSeconds(7, "Hours"), 25200);
     });
 
+    it("should calculate a fractional number of minutes as a decimal number of seconds", () => {
+      assert.strictEqual(coreUtils.calculateSeconds(0.21, "Minutes"), 12.6);
+    });
+
     it("should deconstruct seconds correctly", () => {
       assert.deepStrictEqual(coreUtils.deconstructSeconds(30), {
         value: 30,
