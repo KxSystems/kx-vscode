@@ -29,6 +29,15 @@ import { ServerType } from "../models/connectionsModels";
 
 const logger = "executionConsole";
 
+// SGR escape codes used to render error output in red in both the
+// connection's terminal and the fallback output channel.
+const ANSI_RED = "\x1b[31m";
+const ANSI_RESET = "\x1b[0m";
+
+function red(text: string): string {
+  return `${ANSI_RED}${text}${ANSI_RESET}`;
+}
+
 // A destination for console text: either a connection's own output console
 // terminal (when one exists for the connLabel) or the shared fallback channel.
 interface ConsoleSink {
@@ -188,15 +197,15 @@ export class ExecutionConsole {
     const date = new Date();
     if (!hideDetails) {
       sink.appendLine(
-        `<<< ERROR -  ${connLabel}  @ ${date.toLocaleTimeString()} >>>`,
+        red(`<<< ERROR -  ${connLabel}  @ ${date.toLocaleTimeString()} >>>`),
       );
     }
     if (isConnected) {
       if (!hideDetails) {
-        sink.appendLine(`ERROR Query executed: ${query}\n`);
-        sink.appendLine(result);
+        sink.appendLine(red(`ERROR Query executed: ${query}\n`));
+        sink.appendLine(red(result));
       } else {
-        sink.appendLine(`Error: ${result}`);
+        sink.appendLine(red(`✖ Error: ${result}`));
       }
       if (!isDatasource) {
         addQueryHistory(
@@ -217,7 +226,7 @@ export class ExecutionConsole {
       notify(`Please connect to a KDB or Insights server`, MessageKind.ERROR, {
         logger,
       });
-      sink.appendLine(`Please connect to a KDB or Insights server`);
+      sink.appendLine(red(`Please connect to a KDB or Insights server`));
       commands.executeCommand("kdb.connections.disconnect");
       addQueryHistory(
         query,
@@ -230,7 +239,9 @@ export class ExecutionConsole {
       );
     }
     if (!hideDetails) {
-      sink.appendLine(`<<< >>>`);
+      sink.appendLine(red(`<<< >>>`));
+    } else {
+      sink.appendLine(``);
     }
   }
 
