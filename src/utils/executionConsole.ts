@@ -205,7 +205,7 @@ export class ExecutionConsole {
         sink.appendLine(red(`ERROR Query executed: ${query}\n`));
         sink.appendLine(red(result));
       } else {
-        sink.appendLine(red(`✖ Error: ${result}`));
+        sink.appendLine(red(`Error: ${result}`));
       }
       if (!isDatasource) {
         addQueryHistory(
