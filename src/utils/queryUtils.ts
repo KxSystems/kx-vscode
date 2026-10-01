@@ -200,7 +200,12 @@ export function getHeaders(
   if (timeout) {
     // the gateway expects a whole number of seconds; a decimal (e.g. "19.8")
     // fails to parse server-side and falls back to a short default timeout.
-    headers["timeout"] = String(Math.round(timeout));
+    // Round first: values under 0.5s round to 0, which the gateway treats
+    // as an immediate timeout, so only send the header if that's non-zero.
+    const roundedTimeout = Math.round(timeout);
+    if (roundedTimeout) {
+      headers["timeout"] = String(roundedTimeout);
+    }
   }
 
   return headers;
