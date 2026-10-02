@@ -3,6 +3,79 @@
 All notable changes to the **kdb VS Code extension** are documented in this
 file.
 
+## v1.21.0
+
+### Enhancements
+
+- [Queries](https://code.kx.com/vscode/guides/data-sources/overview.html)
+  replace data sources. A `.kxquery` file opens in a new query editor that runs
+  qSQL, SQL, getData, preview (where the connection offers it), and UDAs on a
+  kdb Insights Enterprise connection. The **Datasources** view is now
+  **QUERIES** in the left side panel, with **KX: New Query** and **KX: Convert
+  datasources to queries** from the Command Palette.
+  - Opening a `.kdb.json` data source
+    [converts it to a `.kxquery` file](https://code.kx.com/vscode/guides/data-sources/overview.html#migrating-from-data-sources),
+    keeping its connection, target, aggregations, and labels. The original file
+    is left on disk, and time ranges are rewritten to the UTC instants the data
+    source asked for.
+  - qSQL offers the `assembly distributed` execution target on Insights, in the
+    query editor and the
+    [workbook](https://code.kx.com/vscode/guides/workbooks.html) target picker.
+    getData, UDAs, and qSQL choose
+    [`scope`](https://code.kx.com/vscode/guides/data-sources/queries.html#uda-queries)
+    from the same dropdown.
+  - Query parameters are validated against their type, with an example of the
+    expected value. Table and column dropdowns are filled from the connection's
+    meta, [label](https://code.kx.com/vscode/guides/connections/labels.html)
+    keys and values are suggested, and blank optional parameters are left out of
+    the request.
+- The [REPL](https://code.kx.com/vscode/get-started/repl.html) is easier to work
+  with.
+  - Pasting into the REPL never runs code as it lands. A single line goes into
+    the input; several lines are held until `RETURN` runs them or `Ctrl+C`
+    discards them.
+  - With `kdb.hideSourceExpressions` off, the REPL shows each statement it runs
+    at its own prompt, the way a q console transcript reads.
+  - You can choose each open REPL by name in the connection picker, such as
+    `REPL (folderA)`, and the status bar names the REPL a file runs on.
+  - The REPL activates the Python environment selected for its folder in
+    [Python Environments](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-python-envs)
+    and sets `PYKX_EXECUTABLE`, so a `.env` file is no longer needed for
+    [PyKX](https://code.kx.com/vscode/get-started/repl.html#use-pykx-within-repl).
+- Use `Ctrl+D` / `Cmd+D` keyboard shortcuts in a
+  [KX Notebook](https://code.kx.com/vscode/guides/kx-notebooks.html) cell to run
+  the selection, or the current line, and view the result in the cell output.
+- The welcome page now adapts to the machine. When q is already found, it shows
+  where and offers **Start REPL**. On Windows, it explains that
+  [KDB-X runs in WSL](https://code.kx.com/vscode/get-started/kdbx-install.html)
+  and offers **Set QHOME** to use an existing kdb+ installation instead.
+
+### Fixes
+
+- Fixed an issue where switching to a nested context such as `\d .foo.i` made
+  the REPL unresponsive.
+- Fixed an issue where pasted comments were run as file paths, and
+  right-clicking the REPL ran the clipboard.
+- Fixed an issue where function definitions were shown on a single line in the
+  REPL.
+- Fixed an issue where Python errors in the REPL printed the contents of
+  `evaluatePy.q` instead of the error.
+- Fixed errors running the REPL on Windows.
+- Fixed an issue where CSV export quoted every value and triple-quoted strings.
+- Booleans in [results](https://code.kx.com/vscode/guides/views/results.html)
+  are shown as `1b` / `0b` instead of `true` / `false`.
+- Keyed tables, attributes, empty schemas, and single values are rendered
+  correctly in results, and gateway stack traces are shown.
+- Fixed a
+  [scratchpad](https://code.kx.com/vscode/guides/data-sources/scratchpad.html)
+  issue where unknown UDAs showed an uninformative `Error: undefined` message; a
+  meaningful error is now shown instead.
+- Transient Insights websocket errors are no longer reported.
+- The connection picker is sorted.
+- The **Suggest a Feature** link opens the KX forum. For more information, refer
+  to
+  [Help and Feedback](https://code.kx.com/vscode/help-support/help-and-feedback.html).
+
 # v1.20.1
 
 ### Enhancements
