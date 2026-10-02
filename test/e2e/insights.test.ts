@@ -94,6 +94,7 @@ const ASSIGNED: [vscode.Uri, vscode.Uri][] = [
 const FAILING_FILE = file("insights.error.q");
 const RC_DEAD_FILE = file("rc.target.q");
 const SG_DEAD_FILE = file("sg.target.q");
+const LAMBDA_FILE = file("lambda.target.q");
 
 const TWO_STATEMENTS = "notional:px*qty;notional";
 const SELECTABLE = "px*qty";
@@ -149,6 +150,7 @@ describe("Executing on an Insights connection", () => {
     fs.writeFileSync(FAILING_FILE.fsPath, `${FakeInsights.FAILS}\n`);
     fs.writeFileSync(RC_DEAD_FILE.fsPath, `${FakeInsights.KILLS_RC}\n`);
     fs.writeFileSync(SG_DEAD_FILE.fsPath, `${FakeInsights.KILLS_SG}\n`);
+    fs.writeFileSync(LAMBDA_FILE.fsPath, `${FakeInsights.RETURNS_LAMBDA}\n`);
 
     await start();
   });
@@ -160,6 +162,7 @@ describe("Executing on an Insights connection", () => {
     fs.rmSync(FAILING_FILE.fsPath, { force: true });
     fs.rmSync(RC_DEAD_FILE.fsPath, { force: true });
     fs.rmSync(SG_DEAD_FILE.fsPath, { force: true });
+    fs.rmSync(LAMBDA_FILE.fsPath, { force: true });
     await vscode.commands.executeCommand("workbench.action.closeAllEditors");
   });
 
@@ -688,6 +691,23 @@ describe("Executing on an Insights connection", () => {
         tier: TIER,
       });
     });
+
+    it("prints a lambda result with its own line breaks", async () => {
+      await focus(LAMBDA_FILE);
+      await run("kdb.execute.fileQuery");
+
+      await untilConsoleShows("h:x+a;", "the lambda to be printed");
+      const lines = (await terminalText(CONSOLE))
+        .split(/\r?\n/)
+        .map((line) => line.trimEnd());
+      for (const line of FakeInsights.LAMBDA.split("\n")) {
+        assert.ok(lines.includes(line), `${line} is not a line of its own`);
+      }
+      assert.ok(
+        !lines.some((line) => line.includes("{[x] a:1;")),
+        "the lambda was joined onto one line",
+      );
+    });
   });
 
   /**
@@ -761,7 +781,7 @@ describe("Executing on an Insights connection", () => {
         `python cell:\n${python.body.params.query}`,
       );
       assert.ok(
-        python.body.params.query.startsWith("{[returnFormat;code;"),
+        python.body.params.query.startsWith("{[args] res:"),
         `not wrapped:\n${python.body.params.query}`,
       );
     });

@@ -502,6 +502,12 @@
         "when": "resourceFilename =~ /\\.(?:q|quke|sql)$/i"
       },
       {
+        "command": "kdb.execute.selectedQuery",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
+        "when": "notebookType == 'kx-notebook' && notebookEditorFocused && editorTextFocus && notebookCellType == 'code'"
+      },
+      {
         "command": "kdb.execute.fileQuery",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
@@ -1330,7 +1336,7 @@
     "@types/ws": "8.18.1",
     "@vscode/codicons": "0.0.46-24",
     "@vscode/extension-telemetry": "1.4.0",
-    "@vscode/python-extension": "1.0.6",
+    "@vscode/python-environments": "1.4.0",
     "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "3.9.2",
     "axios": "1.19.0",

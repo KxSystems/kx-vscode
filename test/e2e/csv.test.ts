@@ -33,13 +33,11 @@ import { clear, raised } from "./utils/prompt";
 
 const QUERY_FILE = file("csv.q");
 
-// A row whose cells are the two the export has to survive: a list, which is
-// rendered into the cell comma separated, and a string carrying both a comma
-// and a quote of its own.
 const ROW = {
   sym: "AAPL",
   tags: "alpha,beta,gamma",
   note: 'say "hi", twice',
+  pair: '"AUDUSD"',
 };
 
 // Every results file sitting in the workspace, newest last.
@@ -125,7 +123,7 @@ describe("Exporting the results as CSV", () => {
   });
 
   it("writes a header naming every column the view is showing", () => {
-    assert.strictEqual(lines[0], '"index","sym","tags","note"');
+    assert.strictEqual(lines[0], "index,sym,tags,note,pair");
   });
 
   it("quotes a cell holding a list, so its commas do not end the field", () => {
@@ -142,10 +140,17 @@ describe("Exporting the results as CSV", () => {
     );
   });
 
-  it("writes one row, numbered, with every cell quoted", () => {
+  it("writes a q string as its text, without its quotes", () => {
+    assert.ok(
+      lines[1].endsWith(",AUDUSD"),
+      `the q string kept its quotes:\n${lines[1]}`,
+    );
+  });
+
+  it("writes one row, numbered, quoting only the cells that need it", () => {
     assert.strictEqual(
       lines[1],
-      `"1","${ROW.sym}","${ROW.tags}","say ""hi"", twice"`,
+      `1,${ROW.sym},"${ROW.tags}","say ""hi"", twice",AUDUSD`,
     );
     assert.deepStrictEqual(lines.slice(2), []);
   });

@@ -839,6 +839,7 @@ describe("serverCommand", () => {
       selection: {
         isEmpty: false,
         active: { line: 5 },
+        start: { line: 5 },
         end: sinon.stub().returns({ line: 10 }),
       },
       document: {
@@ -1125,6 +1126,53 @@ describe("serverCommand", () => {
         serverCommand.getConextForRerunQuery("\\d .foo\n\\d .bar"),
         ".foo",
       );
+    });
+
+    it("should not take the next line as the context of a bare \\d", function () {
+      assert.equal(serverCommand.getConextForRerunQuery("\\d\n123"), ".");
+      assert.equal(
+        serverCommand.getConextForRerunQuery('system "d\n.bar'),
+        ".",
+      );
+    });
+
+    it("should start in the root context when code comes before the first \\d", function () {
+      assert.equal(serverCommand.getConextForRerunQuery("a:1\n\\d .foo"), ".");
+    });
+
+    it("should start in the first context when only comments come before it", function () {
+      assert.equal(
+        serverCommand.getConextForRerunQuery("/ setup\n/\nblock\n\\\n\\d .foo"),
+        ".foo",
+      );
+    });
+  });
+
+  describe("getQueryContext", function () {
+    function editorOf(text: string) {
+      return <vscode.TextEditor>(<unknown>{
+        document: {
+          getText: () => text,
+          lineAt: (line: number) => ({
+            range: { end: { character: text.split("\n")[line].length } },
+          }),
+        },
+      });
+    }
+
+    afterEach(() => {
+      ext.activeTextEditor = undefined;
+    });
+
+    it("should use the context set above the line", function () {
+      ext.activeTextEditor = editorOf("\\d .foo\n123");
+      assert.equal(serverCommand.getQueryContext(1), ".foo");
+    });
+
+    it("should not take the line as the context of a bare \\d above it", function () {
+      ext.activeTextEditor = editorOf("\\d\n123");
+      assert.equal(serverCommand.getQueryContext(1), ".");
+      assert.equal(serverCommand.getQueryContext(), ".");
     });
   });
 

@@ -19,7 +19,10 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 
 import { setActiveTarget } from "../../../src/classes/activeTarget";
-import { ReplConnection } from "../../../src/classes/replConnection";
+import {
+  QNotFoundError,
+  ReplConnection,
+} from "../../../src/classes/replConnection";
 import * as serverCommand from "../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../src/commands/workspaceCommand";
 import { ext } from "../../../src/extensionVariables";
@@ -36,6 +39,7 @@ describe("workspaceCommand", () => {
   const insightsUri = vscode.Uri.file("tests.q");
   const pythonUri = vscode.Uri.file("test-python.q");
   const replUri = vscode.Uri.file("test-repl.q");
+  const pinnedUri = vscode.Uri.file("test-pinned.q");
   const notebookUri = vscode.Uri.file("test.kxnb");
   const queryUri = vscode.Uri.file("test.kxquery");
 
@@ -110,6 +114,7 @@ describe("workspaceCommand", () => {
                 [relativePath(pythonUri)]: "connection1",
                 [relativePath(insightsUri)]: "connection1",
                 [relativePath(replUri)]: ext.REPL,
+                [relativePath(pinnedUri)]: "REPL (test/folderA)",
                 [relativePath(notebookUri)]: "connection1",
                 [relativePath(queryUri)]: "connection1",
               };
@@ -475,15 +480,27 @@ describe("workspaceCommand", () => {
       assert.strictEqual(result, undefined);
     });
 
-    it("should return REPL", async () => {
-      sinon.stub(widgets, "showInputPicker").value(async () => ext.REPL);
+    it("should return a REPL picked by name", async () => {
+      sinon.stub(ReplConnection, "labels").returns(["test/folderA"]);
+      let offered: readonly string[] = [];
+      sinon
+        .stub(widgets, "showInputPicker")
+        .value(async (items: readonly string[]) => {
+          offered = items;
+          return "REPL (test/folderA)";
+        });
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
-      assert.strictEqual(result, ext.REPL);
+      assert.deepStrictEqual(offered.slice(0, 2), [
+        "(active)",
+        "REPL (test/folderA)",
+      ]);
+      assert.strictEqual(result, "REPL (test/folderA)");
     });
 
     it("should offer the connections in the order the tree lists them", async () => {
+      sinon.stub(ReplConnection, "labels").returns([]);
       sinon.stub(vscode.workspace, "getConfiguration").value(() => ({
         get: (key: string) =>
           key === "servers"
@@ -503,9 +520,8 @@ describe("workspaceCommand", () => {
 
       await workspaceCommand.pickConnection(vscode.Uri.file("test.kdb.q"));
 
-      assert.deepStrictEqual(offered.slice(0, 6), [
+      assert.deepStrictEqual(offered.slice(0, 5), [
         "(active)",
-        ext.REPL,
         "local1",
         "local2",
         "alpha",
@@ -712,6 +728,106 @@ describe("workspaceCommand", () => {
     });
   });
 
+  describe("starting a REPL without q", () => {
+    let notifyStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      notifyStub = sinon.stub(notifications, "notify");
+    });
+
+    it("should leave it to the setup warning when no q was found", async () => {
+      sinon
+        .stub(ReplConnection, "getOrCreateInstance")
+        .rejects(new QNotFoundError("no q was found"));
+      await workspaceCommand.startRepl();
+      sinon.assert.neverCalledWithMatch(
+        notifyStub,
+        sinon.match.any,
+        notifications.MessageKind.ERROR,
+      );
+    });
+
+    it("should report any other failure to start", async () => {
+      sinon
+        .stub(ReplConnection, "openInFolder")
+        .rejects(new Error("spawn failed"));
+      await workspaceCommand.startReplInFolder(vscode.Uri.file("/nowhere"));
+      sinon.assert.calledWithMatch(
+        notifyStub,
+        "spawn failed",
+        notifications.MessageKind.ERROR,
+      );
+    });
+  });
+
+  describe("pinned REPLs", () => {
+    it("should keep a file pinned to a REPL assigned", () => {
+      assert.strictEqual(
+        workspaceCommand.getServerForUri(pinnedUri),
+        "REPL (test/folderA)",
+      );
+    });
+
+    it("should tell a REPL assignment from a connection", () => {
+      assert.strictEqual(workspaceCommand.isRepl(ext.REPL), true);
+      assert.strictEqual(workspaceCommand.isRepl("REPL (test)"), true);
+      assert.strictEqual(workspaceCommand.isRepl("host:5001"), false);
+      assert.strictEqual(workspaceCommand.isRepl("REPLICA"), false);
+      assert.strictEqual(workspaceCommand.isRepl(undefined), false);
+      assert.strictEqual(
+        workspaceCommand.replLabelOf("REPL (test/a)"),
+        "test/a",
+      );
+      assert.strictEqual(workspaceCommand.replLabelOf(ext.REPL), undefined);
+    });
+
+    it("should offer every open REPL", () => {
+      sinon.stub(ReplConnection, "labels").returns(["test", "test/folderB"]);
+      assert.deepStrictEqual(workspaceCommand.replChoices(), [
+        "REPL (test)",
+        "REPL (test/folderB)",
+      ]);
+    });
+
+    it("should offer the REPL a file is pinned to when it is not open", () => {
+      sinon.stub(ReplConnection, "labels").returns(["test"]);
+      assert.deepStrictEqual(
+        workspaceCommand.replChoices("REPL (test/folderA)"),
+        ["REPL (test)", "REPL (test/folderA)"],
+      );
+    });
+
+    it("should offer REPL to a file already assigned it", () => {
+      sinon.stub(ReplConnection, "labels").returns(["test"]);
+      assert.deepStrictEqual(workspaceCommand.replChoices(ext.REPL), [
+        "REPL (test)",
+        ext.REPL,
+      ]);
+    });
+
+    it("should not offer REPL to a file not assigned it", () => {
+      sinon.stub(ReplConnection, "labels").returns([]);
+      assert.deepStrictEqual(workspaceCommand.replChoices(), []);
+    });
+
+    it("should name the REPL a file on the active REPL runs on", () => {
+      sinon.stub(ReplConnection, "activeLabel").get(() => "test/folderB");
+      assert.strictEqual(
+        workspaceCommand.runItemText(ext.REPL),
+        "REPL → test/folderB",
+      );
+      assert.strictEqual(
+        workspaceCommand.runItemText("REPL (test/folderA)"),
+        "REPL (test/folderA)",
+      );
+    });
+
+    it("should say REPL when no REPL is active", () => {
+      sinon.stub(ReplConnection, "activeLabel").get(() => undefined);
+      assert.strictEqual(workspaceCommand.runItemText(ext.REPL), ext.REPL);
+    });
+  });
+
   describe("resolveRunTarget", () => {
     const unassignedUri = vscode.Uri.file("unassigned.q");
     const conn = <any>{ connLabel: "local" };
@@ -734,6 +850,11 @@ describe("workspaceCommand", () => {
     it("should return the REPL for a file assigned to the REPL", async () => {
       const result = await workspaceCommand.resolveRunTarget(replUri);
       assert.deepStrictEqual(result, { kind: "repl" });
+    });
+
+    it("should return the REPL a file is pinned to", async () => {
+      const result = await workspaceCommand.resolveRunTarget(pinnedUri);
+      assert.deepStrictEqual(result, { kind: "repl", label: "test/folderA" });
     });
 
     it("should return the connection a file is assigned to", async () => {

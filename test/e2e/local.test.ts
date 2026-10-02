@@ -56,6 +56,7 @@ const PY_WORKBOOK = file("local.kdb.py");
 const NOTEBOOK = file("local.kxnb");
 const PLAIN_FILE = file("plain.q");
 const ERROR_NOTEBOOK = file("error.kxnb");
+const CONTEXT_FILE = file("context.q");
 
 const ASSIGNED: [vscode.Uri, vscode.Uri][] = [
   [file("main.q"), Q_FILE],
@@ -316,6 +317,68 @@ describe("Executing on a kdb+ connection", () => {
         python.args?.code?.includes(NOTEBOOK_PY),
         `python cell:\n${python.args?.code}`,
       );
+    });
+
+    it("runs the current line of a cell, and shows its result in the cell", async () => {
+      const notebook = await vscode.workspace.openNotebookDocument(NOTEBOOK);
+      await vscode.window.showNotebookDocument(notebook);
+      await vscode.commands.executeCommand("notebook.selectKernel", {
+        id: "kx-notebook-1",
+        extension: "KX.kdb",
+      });
+      await vscode.commands.executeCommand("notebook.clearAllCellsOutputs");
+
+      const cell = notebook.cellAt(0);
+      const editor = await vscode.window.showTextDocument(cell.document);
+      editor.selection = new vscode.Selection(1, 0, 1, 0);
+
+      try {
+        kdb.clear();
+        await vscode.commands.executeCommand("kdb.execute.selectedQuery");
+        await until(() => kdb.queries().length > 0, "the line to run");
+
+        const [q] = kdb.queries();
+        assert.ok(q.args?.code?.includes(NOTEBOOK_Q), `line:\n${q.args?.code}`);
+        assert.ok(
+          !q.args?.code?.includes("nbtrades:"),
+          `the rest of the cell also ran:\n${q.args?.code}`,
+        );
+        await until(() => cell.outputs.length > 0, "the result in the cell");
+        assert.strictEqual(kdb.queries().length, 1, "another cell also ran");
+      } finally {
+        await vscode.commands.executeCommand(
+          "workbench.action.closeAllEditors",
+        );
+      }
+    });
+  });
+
+  describe("in a namespace set by \\d", () => {
+    before(() => {
+      fs.writeFileSync(CONTEXT_FILE.fsPath, "\\d\n123\n\\d .foo\n456\n");
+    });
+
+    after(async () => {
+      await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+      fs.rmSync(CONTEXT_FILE.fsPath, { force: true });
+    });
+
+    async function contextOf(line: string) {
+      await caretAt(CONTEXT_FILE, line);
+      kdb.clear();
+      await vscode.commands.executeCommand("kdb.execute.selectedQuery");
+      await until(() => kdb.queries().length > 0, `${line} to run`);
+      const [query] = kdb.queries();
+      assert.ok(query.args?.code?.includes(line), `line:\n${query.args?.code}`);
+      return query.args?.ctx;
+    }
+
+    it("runs the line after a bare \\d in the root namespace", async () => {
+      assert.strictEqual(await contextOf("123"), ".");
+    });
+
+    it("runs the line after \\d .foo in .foo", async () => {
+      assert.strictEqual(await contextOf("456"), ".foo");
     });
   });
 

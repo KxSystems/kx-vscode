@@ -65,6 +65,10 @@ const ICON_REFRESH = "\ueb37";
 const ICON_SAVE = "\ueb4b";
 const ICON_TRASH = "\uea81";
 
+function fieldKey(param: UDAParam) {
+  return `${param.name}:${param.selectedMultiTypeString ?? ""}`;
+}
+
 @customElement("kdb-query-view")
 export class KdbQueryView extends LitElement {
   static readonly styles = [baseStyles, queryStyles];
@@ -823,7 +827,7 @@ export class KdbQueryView extends LitElement {
               class="${problem ? "invalid" : ""}"
               placeholder="${exampleForType(type)}"
               ${inputDefaults()}
-              ${bind(param.value ?? param.default ?? "", TEXT, param.name)}
+              ${bind(param.value ?? param.default ?? "", TEXT, fieldKey(param))}
               @input="${(event: Event) =>
                 this.setParam(
                   param,
@@ -854,7 +858,7 @@ export class KdbQueryView extends LitElement {
               class="${code ? "code" : ""}"
               rows="${rows}"
               ${inputDefaults()}
-              ${bind(param.value ?? param.default ?? "", TEXT, param.name)}
+              ${bind(param.value ?? param.default ?? "", TEXT, fieldKey(param))}
               @input="${(event: Event) =>
                 this.setParam(
                   param,
@@ -902,7 +906,11 @@ export class KdbQueryView extends LitElement {
               type="datetime-local"
               step="1"
               ${inputDefaults()}
-              ${bind(param.value ?? param.default ?? "", LOCAL, param.name)}
+              ${bind(
+                param.value ?? param.default ?? "",
+                LOCAL,
+                fieldKey(param),
+              )}
               @input="${(event: Event) =>
                 this.setTimestamp(
                   param,
@@ -915,7 +923,11 @@ export class KdbQueryView extends LitElement {
               maxlength="9"
               title="Nanoseconds"
               ${inputDefaults()}
-              ${bind(param.value ?? param.default ?? "", NANOS, param.name)}
+              ${bind(
+                param.value ?? param.default ?? "",
+                NANOS,
+                fieldKey(param),
+              )}
               @input="${(event: Event) =>
                 this.setTimestamp(
                   param,
