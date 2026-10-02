@@ -10,22 +10,21 @@ tags: [jira, kxi, repl, vscode-extension]
 
 # KXI REPL issues - `ee-repl` worklist
 
-| #   | Key                                                     | Type  | Priority      | Epic | Summary                                                                     | Status          |
-| --- | ------------------------------------------------------- | ----- | ------------- | ---- | --------------------------------------------------------------------------- | --------------- |
-| 1   | [KXI-70103](https://kxl.atlassian.net/browse/KXI-70103) | Bug   | High          | yes  | Switching to a nested context makes the REPL unresponsive                   | Fixed           |
-| 2   | [KXI-73199](https://kxl.atlassian.net/browse/KXI-73199) | Bug   | Medium        |      | CSV export quotes all output                                                | Fixed           |
-| 3   | [KXI-70487](https://kxl.atlassian.net/browse/KXI-70487) | Bug   | Low           |      | VS Code Notebooks - Cannot execute queries with Ctrl + D                    | Fixed           |
-| 4   | [KXI-72235](https://kxl.atlassian.net/browse/KXI-72235) | Bug   | High          |      | "Suggest a Feature" links isn't working                                     | Fixed           |
-| 5   | [KXI-70542](https://kxl.atlassian.net/browse/KXI-70542) | Bug   | Medium        | yes  | Any lines following `\d` won't execute correctly                            | Fixed           |
-| 6   | [KXI-73121](https://kxl.atlassian.net/browse/KXI-73121) | Bug   | Medium        | yes  | Pasting comments into the terminal tries to execute them as files           | Fixed           |
-| 7   | [KXI-73120](https://kxl.atlassian.net/browse/KXI-73120) | Bug   | Highest       | yes  | Right clicking the terminal silently executes whatever is in the clipboard  | Fixed           |
-| 8   | [KXI-73909](https://kxl.atlassian.net/browse/KXI-73909) | Bug   | High          |      | Function definitions are shown as a single line in the terminal output      | Fixed           |
-| 9   | [KXI-73281](https://kxl.atlassian.net/browse/KXI-73281) | Bug   | High          | yes  | Only one of the REPL connections appears in the connection dialog           | Fixed           |
-| 10  | [KXI-73661](https://kxl.atlassian.net/browse/KXI-73661) | Story | To be defined | yes  | Show Source Expressions for REPL command                                    | Fixed           |
-| 11  | [KXI-72126](https://kxl.atlassian.net/browse/KXI-72126) | Bug   | High          | yes  | Errors running the REPL in windows                                          | Fixed           |
-| 12  | [KXI-73185](https://kxl.atlassian.net/browse/KXI-73185) | Story | Medium        | yes  | Better use of venvs in the VSCode Extension                                 | Fixed           |
-| 13  | [KXI-73991](https://kxl.atlassian.net/browse/KXI-73991) | Bug   | High          | yes  | Python errors not displayed in REPL but prints the contents of evaluatePy.q | Fixed           |
-| 14  | [KXI-69244](https://kxl.atlassian.net/browse/KXI-69244) | Story | Low           | yes  | Result isn't shown for assignments, or lines ending in `;` with KX REPL     | Not recommended |
+| #   | Key                                                     | Type  | Priority      | Epic | Summary                                                                     | Status |
+| --- | ------------------------------------------------------- | ----- | ------------- | ---- | --------------------------------------------------------------------------- | ------ |
+| 1   | [KXI-70103](https://kxl.atlassian.net/browse/KXI-70103) | Bug   | High          | yes  | Switching to a nested context makes the REPL unresponsive                   | Fixed  |
+| 2   | [KXI-73199](https://kxl.atlassian.net/browse/KXI-73199) | Bug   | Medium        |      | CSV export quotes all output                                                | Fixed  |
+| 3   | [KXI-70487](https://kxl.atlassian.net/browse/KXI-70487) | Bug   | Low           |      | VS Code Notebooks - Cannot execute queries with Ctrl + D                    | Fixed  |
+| 4   | [KXI-72235](https://kxl.atlassian.net/browse/KXI-72235) | Bug   | High          |      | "Suggest a Feature" links isn't working                                     | Fixed  |
+| 5   | [KXI-70542](https://kxl.atlassian.net/browse/KXI-70542) | Bug   | Medium        | yes  | Any lines following `\d` won't execute correctly                            | Fixed  |
+| 6   | [KXI-73121](https://kxl.atlassian.net/browse/KXI-73121) | Bug   | Medium        | yes  | Pasting comments into the terminal tries to execute them as files           | Fixed  |
+| 7   | [KXI-73120](https://kxl.atlassian.net/browse/KXI-73120) | Bug   | Highest       | yes  | Right clicking the terminal silently executes whatever is in the clipboard  | Fixed  |
+| 8   | [KXI-73909](https://kxl.atlassian.net/browse/KXI-73909) | Bug   | High          |      | Function definitions are shown as a single line in the terminal output      | Fixed  |
+| 9   | [KXI-73281](https://kxl.atlassian.net/browse/KXI-73281) | Bug   | High          | yes  | Only one of the REPL connections appears in the connection dialog           | Fixed  |
+| 10  | [KXI-73661](https://kxl.atlassian.net/browse/KXI-73661) | Story | To be defined | yes  | Show Source Expressions for REPL command                                    | Fixed  |
+| 11  | [KXI-72126](https://kxl.atlassian.net/browse/KXI-72126) | Bug   | High          | yes  | Errors running the REPL in windows                                          | Fixed  |
+| 12  | [KXI-73185](https://kxl.atlassian.net/browse/KXI-73185) | Story | Medium        | yes  | Better use of venvs in the VSCode Extension                                 | Fixed  |
+| 13  | [KXI-73991](https://kxl.atlassian.net/browse/KXI-73991) | Bug   | High          | yes  | Python errors not displayed in REPL but prints the contents of evaluatePy.q | Fixed  |
 
 KXI-73121 and KXI-73120 are next to each other because both are the same paste
 path.
@@ -101,6 +100,11 @@ does nothing. A pasted comment must behave like a typed one.
 Fixed with KXI-73120: a pasted line now goes into the input at the cursor, so
 `/test.q` waits at the prompt, and Enter runs it as the comment it is.
 
+Running a comment, typed or pasted, then left the line where it was: input that
+normalizes to nothing never reaches q, so no output or prompt followed, and only
+a second Enter, on an empty line, moved on. Input with nothing to run now starts
+a new prompt below it, as q does.
+
 ### 7. KXI-73120 - Right click executes the clipboard
 
 Right clicking a REPL terminal pastes the clipboard. Once "Do not ask me again"
@@ -166,18 +170,19 @@ With several REPLs open, the connection picker lists a single REPL entry, which
 sends to whichever REPL was last active, and the header does not say which one.
 Expected: one entry per open REPL, and the header names the target.
 
-Fixed: the picker keeps `REPL`, which follows the active REPL as before, and
-adds `REPL (<name>)` for every open REPL, named as its terminal is, plus the
-REPL a file is pinned to when that one is not running. A pinned file runs on its
-REPL whichever is active, and a pinned REPL that is not running is started in
-its folder. The name is the workspace folder name and the path under it, so the
+Fixed: the picker lists `REPL (<name>)` for every open REPL, named as its
+terminal is, plus the REPL a file is pinned to when that one is not running. It
+no longer offers `REPL`, which `(active)` already covers; a file already
+assigned `REPL` keeps following the active REPL. A pinned file runs on its REPL
+whichever is active, and a pinned REPL that is not running is started in its
+folder. The name is the workspace folder name and the path under it, so the
 assignment in `kdb.connectionMap` holds for everyone sharing the settings: where
 the only workspace folder goes by another name, as in a clone under a different
 directory, the path is taken under that folder. Folders that share a name are
-numbered, `src` and `src [2]`. A name with a colon is still a REPL, not a quick
-`host:port` connection. The status bar shows `REPL → <name>` for a file
-following the active REPL, updated as focus moves, and `REPL (<name>)` for a
-pinned one.
+numbered, `src` and `src [2]`, and a REPL whose folder has left the workspace is
+named by its path. A name with a colon is still a REPL, not a quick `host:port`
+connection. The status bar shows `REPL (<name>)` for a pinned file, and
+`REPL → <name>` for one still assigned `REPL`, updated as focus moves.
 
 ### 10. KXI-73661 - Source expressions for the REPL
 
@@ -280,16 +285,17 @@ API (`@vscode/python-environments`, replacing `@vscode/python-extension`):
   ([replPython.ts](../../src/utils/replPython.ts)), so each manager's own
   activation is used. Only a venv and a uv venv on macOS were run; other
   managers are untested. The environment's name is shown before the prompt only
-  when it was activated.
+  when it was activated, and what a failed activation writes to stderr is shown
+  in the REPL before q starts.
 - `PYKX_EXECUTABLE` is set to the environment's interpreter
   (`execInfo.run.executable`) unless it is already set, from the user's
   environment or the workspace's `.env`, so `\l pykx.q` loads PyKX from the
-  selected environment whatever `PATH` holds. It is not set when the path
-  contains whitespace: `pykx.q` runs it through `system` unquoted, which fails
-  (reproduced with a venv under a folder with a space), and quoting only helps
-  under `bash`, since `cmd /c` strips the outer quotes of a line holding more
-  than two. Activation then puts the environment's `python` first on `PATH`, as
-  before.
+  selected environment whatever `PATH` holds, including an environment with
+  nothing to activate. It is not set when the path contains whitespace: `pykx.q`
+  runs it through `system` unquoted, which fails (reproduced with a venv under a
+  folder with a space), and quoting only helps under `bash`, since `cmd /c`
+  strips the outer quotes of a line holding more than two. Activation then puts
+  the environment's `python` first on `PATH`, as before.
 - Native Windows (classic kdb+, `cmd.exe`) activates a venv with `activate.bat`,
   the entry Python Environments gives `cmd`, as the old code did. In a WSL
   window both extensions run in WSL and the REPL behaves as on Linux. Neither
@@ -316,57 +322,3 @@ the REPL failed, not only code that errors. The wrapper now passes
 `` `returnFormat`code`sample_fn`sample_size!(...) ``, and `(123` prints
 `"('unexpected EOF while parsing', ...)"`. The "should call evaluatePy with a
 dictionary of arguments" test in `queryUtils.test.ts` covers it.
-
-### 14. KXI-69244 - Results of assignments in the REPL
-
-Stepping through a function body a line at a time, every line but the last ends
-in `;` and most are assignments, and the q console prints nothing for either.
-The ticket asks the REPL to rewrite each expression so its value is shown, as
-`i.normalizeExpn` in the Insights scratchpad's `edi.q` does, behind a per user
-setting that defaults to on. A comment on the ticket notes that the REPL mimics
-the q console on purpose, as was requested, and that the change would make it
-consistent with Analyst and Insights.
-
-Not recommended:
-
-- **The REPL is a q console.** It runs the user's own q process and writes what
-  it is given to q's standard input, so a line does what it does in `q` in a
-  terminal, which is the reason to use it. In q a trailing `;` is how code says
-  "do not print this", and an assignment printing nothing is the language, not a
-  gap. Showing both overrides what the user wrote.
-- **Printing is not free.** Lines end in `;` because their value is large or not
-  worth seeing: `t:select from trade`, `h:hopen ...`, `r:1000000?100f`. Each
-  would be formatted by q in the user's process and rendered by the terminal, on
-  every line of every file run with the setting at its default.
-- **The rewrite is a q parser.** q has to be handed a different statement for
-  every form: plain, indexed and compound assignment (`a:1`, `a[i]:x`, `a+:1`,
-  `a,:x`), global `::`, several statements on one line (`a:1;b:2`), control
-  words, `k)` and `p)` lines, `\` commands already sent as `system`, multiline
-  lambdas and tables. `i.normalizeExpn` does this with `-4!` in a process the
-  scratchpad owns. The REPL's process is the user's, and the extension loads no
-  q into it (it only appends the markers it reads the prompt from), so the
-  rewrite would either be defined in the user's session or be reimplemented in
-  TypeScript, where every mistake changes what the user's code does.
-- **Errors would show the rewrite.** q reports an error against the code it ran.
-  [evaluateQ.q](../../resources/q/evaluateQ.q) shows the cost: it wraps each
-  statement for the output console, then cuts its own prefix and suffix back out
-  of the stack trace. In the REPL q prints the error itself, so the rewritten
-  code would reach the terminal unless the REPL parsed and edited q's error
-  output.
-- **Typed and run code would disagree.** Typed input goes straight to q. A
-  rewrite of only the code run from a file, a selection or a cell would make the
-  same line print in one and not the other, the inconsistency KXI-73121 removed
-  (a paste behaves as typing does). Rewriting typed input too would stop the
-  REPL being a q console at all. With source expressions shown (KXI-73661) each
-  statement is echoed as sent, so the echo would either show the rewritten form
-  or no longer be what ran.
-- **A default of on changes every existing user.** After an update, files that
-  run quietly in the REPL would print every assignment, and the setting doubles
-  the paths every REPL test has to cover.
-
-Stepping through a function already works without it: run the expression without
-its `;`, or run the name after the assignment (select `a`, Ctrl+Enter). If the
-Analyst and Insights behaviour is wanted, its place is a connection's output
-console, which already rewrites each statement in `evaluateQ.q`, not the REPL.
-The recommendation is to close the ticket as Won't Do and keep the q console
-behaviour.

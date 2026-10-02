@@ -31,6 +31,12 @@ import { webviewReset } from "../utils/webviewPage";
 
 const logger = "setupTools";
 
+const VIEW_SETTINGS = [
+  "kdb.qHomeDirectory",
+  "kdb.qHomeDirectoryWorkspace",
+  "kdb.neverShowQInstallAgain",
+];
+
 let panel: vscode.WebviewPanel | undefined;
 let welcomeFolder: vscode.WorkspaceFolder | undefined;
 let qBinary = "";
@@ -114,7 +120,9 @@ export function showWelcome(folder?: vscode.WorkspaceFolder) {
     const listeners = [
       vscode.window.onDidChangeActiveColorTheme(() => updateView(false)),
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration("kdb")) updateView();
+        if (VIEW_SETTINGS.some((name) => event.affectsConfiguration(name))) {
+          updateView();
+        }
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(() => updateView()),
     ];
@@ -317,10 +325,10 @@ async function setHome(home: string, folder?: vscode.WorkspaceFolder) {
   /* c8 ignore stop */
 }
 
-function findQBinary() {
+export function findQBinary(preferred = welcomeFolder) {
   const folders = vscode.workspace.workspaceFolders ?? [];
-  if (welcomeFolder && folders.includes(welcomeFolder)) {
-    return getEnvironment(welcomeFolder).qBinPath;
+  if (preferred && folders.includes(preferred)) {
+    return getEnvironment(preferred).qBinPath;
   }
   if (folders.length === 0) return getEnvironment().qBinPath;
   const uri = vscode.window.activeTextEditor?.document.uri;

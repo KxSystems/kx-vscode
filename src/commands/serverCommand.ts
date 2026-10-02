@@ -72,6 +72,7 @@ import { writePlotToFile } from "../utils/plotUtils";
 import {
   checkIfIsDatasource,
   addQueryHistory,
+  BLOCK_COMMENT_PATTERN,
   formatScratchpadError,
   resultToBase64,
   needsScratchpad,
@@ -1009,9 +1010,7 @@ export async function executeQuery(
 const CONTEXT_PATTERN = /^(system[\t ]*"d|\\d)[\t ]+([^\s"]+)/gm;
 
 function withoutBlockComments(text: string) {
-  return text
-    .replace(/\r\n?/g, "\n")
-    .replace(/^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm, "");
+  return text.replace(/\r\n?/g, "\n").replace(BLOCK_COMMENT_PATTERN, "");
 }
 
 export function contextAbove(text: string): string {

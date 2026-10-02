@@ -480,14 +480,6 @@ describe("workspaceCommand", () => {
       assert.strictEqual(result, undefined);
     });
 
-    it("should return REPL", async () => {
-      sinon.stub(widgets, "showInputPicker").value(async () => ext.REPL);
-      const result = await workspaceCommand.pickConnection(
-        vscode.Uri.file("test.kdb.q"),
-      );
-      assert.strictEqual(result, ext.REPL);
-    });
-
     it("should return a REPL picked by name", async () => {
       sinon.stub(ReplConnection, "labels").returns(["test/folderA"]);
       let offered: readonly string[] = [];
@@ -500,9 +492,8 @@ describe("workspaceCommand", () => {
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
-      assert.deepStrictEqual(offered.slice(0, 3), [
+      assert.deepStrictEqual(offered.slice(0, 2), [
         "(active)",
-        ext.REPL,
         "REPL (test/folderA)",
       ]);
       assert.strictEqual(result, "REPL (test/folderA)");
@@ -529,9 +520,8 @@ describe("workspaceCommand", () => {
 
       await workspaceCommand.pickConnection(vscode.Uri.file("test.kdb.q"));
 
-      assert.deepStrictEqual(offered.slice(0, 6), [
+      assert.deepStrictEqual(offered.slice(0, 5), [
         "(active)",
-        ext.REPL,
         "local1",
         "local2",
         "alpha",
@@ -791,10 +781,9 @@ describe("workspaceCommand", () => {
       assert.strictEqual(workspaceCommand.replLabelOf(ext.REPL), undefined);
     });
 
-    it("should offer the active REPL and every open one", () => {
+    it("should offer every open REPL", () => {
       sinon.stub(ReplConnection, "labels").returns(["test", "test/folderB"]);
       assert.deepStrictEqual(workspaceCommand.replChoices(), [
-        ext.REPL,
         "REPL (test)",
         "REPL (test/folderB)",
       ]);
@@ -804,8 +793,21 @@ describe("workspaceCommand", () => {
       sinon.stub(ReplConnection, "labels").returns(["test"]);
       assert.deepStrictEqual(
         workspaceCommand.replChoices("REPL (test/folderA)"),
-        [ext.REPL, "REPL (test)", "REPL (test/folderA)"],
+        ["REPL (test)", "REPL (test/folderA)"],
       );
+    });
+
+    it("should offer REPL to a file already assigned it", () => {
+      sinon.stub(ReplConnection, "labels").returns(["test"]);
+      assert.deepStrictEqual(workspaceCommand.replChoices(ext.REPL), [
+        "REPL (test)",
+        ext.REPL,
+      ]);
+    });
+
+    it("should not offer REPL to a file not assigned it", () => {
+      sinon.stub(ReplConnection, "labels").returns([]);
+      assert.deepStrictEqual(workspaceCommand.replChoices(), []);
     });
 
     it("should name the REPL a file on the active REPL runs on", () => {

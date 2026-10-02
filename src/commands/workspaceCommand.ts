@@ -162,10 +162,10 @@ export function replLabelOf(server?: string) {
 
 export function replChoices(server?: string) {
   const choices = ReplConnection.labels().map(replServer);
-  if (server && replLabelOf(server) && !choices.includes(server)) {
+  if (server && isRepl(server) && !choices.includes(server)) {
     choices.push(server);
   }
-  return [ext.REPL, ...choices];
+  return choices;
 }
 
 export function runItemText(text: string) {
@@ -889,19 +889,23 @@ export function reportReplError(error: unknown) {
   notify(errorMessage(error), MessageKind.ERROR, { logger, params: error });
 }
 
-export async function startRepl() {
+async function launchRepl(
+  open: () => Promise<ReplConnection>,
+  telemetry: string,
+) {
   let instance: ReplConnection;
   try {
-    instance = await ReplConnection.getOrCreateInstance();
+    instance = await open();
   } catch (error) {
     reportReplError(error);
     return;
   }
   instance.start();
-  notify("REPL started.", MessageKind.DEBUG, {
-    logger,
-    telemetry: "Repl.Start",
-  });
+  notify("REPL started.", MessageKind.DEBUG, { logger, telemetry });
+}
+
+export function startRepl() {
+  return launchRepl(() => ReplConnection.getOrCreateInstance(), "Repl.Start");
 }
 
 export async function startReplInFolder(uri?: Uri) {
@@ -917,18 +921,10 @@ export async function startReplInFolder(uri?: Uri) {
   } catch {
     // Unable to stat the resource; fall back to using it as the base directory.
   }
-  let instance: ReplConnection;
-  try {
-    instance = await ReplConnection.openInFolder(base);
-  } catch (error) {
-    reportReplError(error);
-    return;
-  }
-  instance.start();
-  notify("REPL started.", MessageKind.DEBUG, {
-    logger,
-    telemetry: "Repl.StartFolder",
-  });
+  return launchRepl(
+    () => ReplConnection.openInFolder(base),
+    "Repl.StartFolder",
+  );
 }
 
 export async function runOnRepl(

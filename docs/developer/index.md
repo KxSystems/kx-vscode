@@ -38,3 +38,5 @@ Architecture and contributor notes for the kdb VS Code extension. See also the
   REPL issues, fixed one at a time on the branch.
 - [PR #796 Review — Resolutions](pr-796-review.md) — every review comment on the
   query view pull request, and what the branch did about it.
+- [PR #799 Review - Resolutions](pr-799-review.md) - every review comment on the
+  REPL, venv and notebook pull request, and what the branch did about it.

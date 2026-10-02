@@ -1135,6 +1135,17 @@ describe("serverCommand", () => {
         ".",
       );
     });
+
+    it("should start in the root context when code comes before the first \\d", function () {
+      assert.equal(serverCommand.getConextForRerunQuery("a:1\n\\d .foo"), ".");
+    });
+
+    it("should start in the first context when only comments come before it", function () {
+      assert.equal(
+        serverCommand.getConextForRerunQuery("/ setup\n/\nblock\n\\\n\\d .foo"),
+        ".foo",
+      );
+    });
   });
 
   describe("getQueryContext", function () {

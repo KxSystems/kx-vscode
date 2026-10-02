@@ -109,7 +109,7 @@ describe("Controller", () => {
 
       it("should run only the selection it was given", async () => {
         const cell = notebookTestUtils.createCell("q");
-        instance["selections"].set(cell, "a:1");
+        instance["selections"].set(cell, { text: "a:1", context: "." });
         await instance.execute(
           [cell],
           notebookTestUtils.createNotebook(),
@@ -124,7 +124,7 @@ describe("Controller", () => {
 
       it("should run whole cells when several are run together", async () => {
         const cell = notebookTestUtils.createCell("q");
-        instance["selections"].set(cell, "a:1");
+        instance["selections"].set(cell, { text: "a:1", context: "." });
         await instance.execute(
           [cell, notebookTestUtils.createCell("q")],
           notebookTestUtils.createNotebook(),
@@ -137,7 +137,7 @@ describe("Controller", () => {
           executeQuery.getCalls().map((call) => call.args[0]),
           ["expressions", "expressions"],
         );
-        assert.strictEqual(instance["selections"].get(cell), "a:1");
+        assert.strictEqual(instance["selections"].get(cell)?.text, "a:1");
       });
 
       it("should mark cells running until they end", async () => {
@@ -150,6 +150,30 @@ describe("Controller", () => {
         assert.ok(instance["running"].has(cell));
         await run;
         assert.ok(!instance["running"].has(cell));
+      });
+    });
+
+    describe("REPL by label", () => {
+      it("should report a REPL it cannot start and run no cell", async () => {
+        sinon
+          .stub(workspaceCommand, "resolveRunTarget")
+          .resolves({ kind: "repl", label: "missing" });
+        sinon
+          .stub(ReplConnection, "forLabel")
+          .rejects(new Error("REPL (missing) cannot be started"));
+        const controller = createController();
+        const createStub = sinon.spy(controller, "createNotebookCellExecution");
+        await instance.execute(
+          [notebookTestUtils.createCell("q")],
+          notebookTestUtils.createNotebook(),
+          controller,
+        );
+        sinon.assert.notCalled(createStub);
+        sinon.assert.calledWithMatch(
+          notifyStub,
+          /cannot be started/,
+          notifications.MessageKind.ERROR,
+        );
       });
     });
 
@@ -479,7 +503,7 @@ describe("Controller", () => {
             it("should run only the selection it was given", async () => {
               executeQueryStub.resolves(result.text);
               const cell = notebookTestUtils.createCell("q");
-              instance["selections"].set(cell, "a:1");
+              instance["selections"].set(cell, { text: "a:1", context: "." });
               await instance.execute(
                 [cell],
                 notebookTestUtils.createNotebook(),
@@ -615,7 +639,7 @@ describe("Controller", () => {
       executeCommandStub = sinon
         .stub(vscode.commands, "executeCommand")
         .callsFake(async () => {
-          source = instance["selections"].get(cell);
+          source = instance["selections"].get(cell)?.text;
         });
       createInstance();
     });
@@ -661,6 +685,41 @@ describe("Controller", () => {
       await instance.executeSelection(
         createEditor({ active: new vscode.Position(0, 0) }),
       );
+      assert.ok(!instance["selections"].has(cell));
+    });
+
+    it("should run a selection once when it is asked twice before it starts", async () => {
+      let second: Promise<void> | undefined;
+      executeCommandStub.callsFake(async () => {
+        second ??= instance.executeSelection(
+          createEditor({ active: new vscode.Position(1, 0) }),
+        );
+        source = instance["selections"].get(cell)?.text;
+      });
+      await instance.executeSelection(
+        createEditor({ active: new vscode.Position(0, 0) }),
+      );
+      await second;
+      sinon.assert.calledOnce(executeCommandStub);
+      assert.strictEqual(source, "a:1");
+      sinon.assert.calledWithMatch(notifyStub, /already running/);
+    });
+
+    it("should keep a selection asked for while the last one is finishing", async () => {
+      const taken: (string | undefined)[] = [];
+      let second: Promise<void> | undefined;
+      executeCommandStub.callsFake(async () => {
+        await new Promise(setImmediate);
+        taken.push(instance["takeSelection"]([cell])?.text);
+        second ??= instance.executeSelection(
+          createEditor({ active: new vscode.Position(1, 0) }),
+        );
+      });
+      await instance.executeSelection(
+        createEditor({ active: new vscode.Position(0, 0) }),
+      );
+      await second;
+      assert.deepStrictEqual(taken, ["a:1", "b:2"]);
       assert.ok(!instance["selections"].has(cell));
     });
 

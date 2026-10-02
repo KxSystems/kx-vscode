@@ -33,10 +33,11 @@ timestamp: 2026-07-10
 | KX: Choose Execution Target   | `q` `py` `sql`        | `ctrl`+`alt`+`t`         | `⌘`+`⌥`+`t`      |
 | KX: Toggle Parameter Cache    | `q`                   | `ctrl`+`shift`+`y`       | `⌘`+`⇧`+`y`      |
 
-**Choose Connection** offers `REPL`, which runs on the REPL last started or
-focused, and each open REPL by name, such as `REPL (folderA)`, which always runs
-on that REPL, starting it in its folder if it is not running. The status bar
-names the REPL a file runs on.
+**Choose Connection** offers `(active)`, which runs on the connection or REPL
+last used, and each open REPL by name, such as `REPL (folderA)`, which always
+runs on that REPL, starting it in its folder if it is not running. A file
+already assigned `REPL` keeps running on the REPL last started or focused. The
+status bar names the REPL a file runs on.
 
 In a KX notebook cell, **Execute Current Selection** runs the selection, or the
 current line when nothing is selected, and shows its result in the cell's

@@ -48,7 +48,6 @@ function items() {
 
   return [
     "(active)",
-    "REPL",
     ...repls,
     ...Object.keys(servers).map((key) => servers[key].serverAlias),
     ...Object.keys(insights).map((key) => insights[key].alias),

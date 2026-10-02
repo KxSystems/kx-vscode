@@ -129,6 +129,8 @@ export interface Result {
   output?: string;
 }
 
+const TRAILING_NEWLINES = /(?<![\r\n])[\r\n]+$/;
+
 export class QNotFoundError extends Error {}
 
 function notEnvironment(target: string) {
@@ -284,6 +286,9 @@ export class ReplConnection {
   }
 
   private terminalLabel() {
+    if (this.workspace && !ReplConnection.inWorkspace(this.workspace)) {
+      return (this.baseUri ?? this.workspace.uri).fsPath;
+    }
     if (this.workspace) {
       const name = ReplConnection.folderLabel(this.workspace);
       if (
@@ -335,7 +340,7 @@ export class ReplConnection {
       : ANSI.EMPTY;
 
     const python = this.venv?.execInfo.run.executable;
-    if (activate && python && !/\s/.test(python) && !this.env.PYKX_EXECUTABLE) {
+    if (python && !/\s/.test(python) && !this.env.PYKX_EXECUTABLE) {
       this.env.PYKX_EXECUTABLE = python;
     }
 
@@ -346,8 +351,8 @@ export class ReplConnection {
     let command = q;
     if (activate) {
       command = this.win32
-        ? `(${activate}) 2>nul || echo ${this.inactive} & ${q}`
-        : `{ ${activate}; } 2>/dev/null || echo ${this.inactive}; ${q}`;
+        ? `(${activate}) || echo ${this.inactive} & ${q}`
+        : `{ ${activate}; } || echo ${this.inactive}; ${q}`;
     }
 
     return spawn(command, {
@@ -432,7 +437,18 @@ export class ReplConnection {
     this.killProcess("SIGKILL");
   }
 
+  private statements(text: string) {
+    return normalizeQuery(text)
+      .split(ANSI.CRLF)
+      .filter((line) => line);
+  }
+
   private runQuery(data: string) {
+    if (this.statements(data).length === 0) {
+      this.sendToTerminal(ANSI.CRLF);
+      if (!this.executing) this.showInput(true);
+      return;
+    }
     // Errors are written to the terminal by handleError before the promise
     // rejects, so there is nothing left to report here.
     this.executeQuery(data, false).catch((error) => {
@@ -588,7 +604,7 @@ export class ReplConnection {
   private paste(text: string) {
     const lines = text
       .replace(/(?![\t\r\n])\p{Cc}/gsu, ANSI.EMPTY)
-      .replace(/(?<![\r\n])[\r\n]+$/, ANSI.EMPTY)
+      .replace(TRAILING_NEWLINES, ANSI.EMPTY)
       .split(/\r\n|[\r\n]/s);
     const pasted = lines.join("\n");
 
@@ -988,13 +1004,11 @@ export class ReplConnection {
       const execution = {
         source,
         cancelled: false,
-        lines: normalizeQuery(text)
-          .split(ANSI.CRLF)
-          .filter((line) => line),
+        lines: this.statements(text),
         output: [],
         echo,
         echoed: 0,
-        display: display?.replace(/(?<![\r\n])[\r\n]+$/, ANSI.EMPTY),
+        display: display?.replace(TRAILING_NEWLINES, ANSI.EMPTY),
         done: [],
         index: 0,
         reject,
@@ -1069,6 +1083,12 @@ export class ReplConnection {
       .filter((repl) => !repl.exited)
       .map((repl) => repl.label)
       .sort((a, b) => a.localeCompare(b));
+  }
+
+  private static inWorkspace(folder: vscode.WorkspaceFolder) {
+    return (vscode.workspace.workspaceFolders ?? []).some(
+      (item) => item.uri.toString() === folder.uri.toString(),
+    );
   }
 
   private static folderLabel(folder: vscode.WorkspaceFolder) {

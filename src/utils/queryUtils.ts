@@ -29,6 +29,8 @@ const logger = "queryUtils";
 
 const QUERY_LIMIT = 250_000;
 
+export const BLOCK_COMMENT_PATTERN = /^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm;
+
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
     query = query + " ";
@@ -119,7 +121,7 @@ function stripCommentsAndSystemCommands(query: string): string {
   return (
     query
       // Remove block comments (closed by a solitary \ or running to end of input)
-      .replace(/^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm, "")
+      .replace(BLOCK_COMMENT_PATTERN, "")
       // Remove terminate comments
       .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments

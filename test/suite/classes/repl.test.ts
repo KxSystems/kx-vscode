@@ -363,8 +363,8 @@ describe("REPL", () => {
         (command: string) =>
           command.replace(/[0-9a-f-]{36}/, "ID") ===
           (win32
-            ? `(source /ws/py/.venv/bin/activate) 2>nul || echo ID! & ${q}`
-            : `{ source /ws/py/.venv/bin/activate; } 2>/dev/null || echo ID!; ${q}`),
+            ? `(source /ws/py/.venv/bin/activate) || echo ID! & ${q}`
+            : `{ source /ws/py/.venv/bin/activate; } || echo ID!; ${q}`),
       );
     const venv = <PythonEnvironment>{
       name: ".venv",
@@ -470,6 +470,17 @@ describe("REPL", () => {
       const instance = await ReplConnectionClass.openInFolder(folder);
       assert.strictEqual(instance["prefix"], "");
       sinon.assert.calledWith(spawnStub, "/q/bin/q");
+    });
+
+    it("should point PyKX at an environment with nothing to activate", async () => {
+      getEnvironmentStub.resolves({
+        ...venv,
+        execInfo: { run: venv.execInfo.run },
+      });
+      await ReplConnectionClass.openInFolder(folder);
+      sinon.assert.calledWithMatch(spawnStub, "/q/bin/q", {
+        env: sinon.match({ PYKX_EXECUTABLE: "/ws/py/.venv/bin/python" }),
+      });
     });
 
     it("should ignore an environment with an error", async () => {
@@ -677,6 +688,48 @@ describe("REPL", () => {
     });
   });
 
+  describe("nothing to run", () => {
+    let sendToTerminalStub: sinon.SinonStub;
+    let showPromptStub: sinon.SinonStub;
+    let executeQuerySpy: sinon.SinonSpy;
+
+    beforeEach(() => {
+      sendToTerminalStub = sinon.stub(instance, <any>"sendToTerminal");
+      showPromptStub = sinon.stub(instance, <any>"showPrompt");
+      executeQuerySpy = sinon.spy(instance, "executeQuery");
+      instance["exited"] = false;
+      instance["executing"] = undefined;
+      instance["block"] = undefined;
+      instance["input"] = [];
+      instance["inputIndex"] = 0;
+      instance["maxInputIndex"] = 1000;
+    });
+
+    it("should start a new prompt after a typed comment", () => {
+      for (const key of "/test.q") instance["handleInput"](key);
+      showPromptStub.resetHistory();
+      instance["handleInput"]("\r");
+      sinon.assert.notCalled(executeQuerySpy);
+      sinon.assert.calledWith(sendToTerminalStub, "\r\n");
+      sinon.assert.calledWith(showPromptStub, true);
+    });
+
+    it("should start a new prompt after held lines that are all comments", () => {
+      instance["block"] = "/ a\n/ b";
+      instance["handleInput"]("\r");
+      sinon.assert.notCalled(executeQuerySpy);
+      sinon.assert.calledWith(sendToTerminalStub, "\r\n");
+      sinon.assert.calledWith(showPromptStub, true);
+    });
+
+    it("should not draw a prompt over a running query", () => {
+      instance["executing"] = <any>{ output: [] };
+      instance["block"] = "/ a";
+      instance["handleInput"]("\r");
+      sinon.assert.notCalled(showPromptStub);
+    });
+  });
+
   describe("Output", () => {
     let sendToTerminalSub: sinon.SinonStub;
 
@@ -712,6 +765,21 @@ describe("REPL", () => {
         sinon.assert.neverCalledWithMatch(
           sendToTerminalSub,
           sinon.match(instance["identity"]),
+        );
+      });
+
+      it("should drop the environment name when activation fails", () => {
+        instance["prefix"] = "(.venv) ";
+        instance["messages"] = undefined;
+        const showPromptStub = sinon.stub(instance, <any>"showPrompt");
+        instance["handleOutput"](
+          Buffer.from(`activate: not found\n${instance["inactive"]}\nKDB-X`),
+        );
+        assert.strictEqual(instance["prefix"], "");
+        sinon.assert.calledOnce(showPromptStub);
+        sinon.assert.calledWith(
+          sendToTerminalSub,
+          "activate: not found\r\nKDB-X",
         );
       });
     });
@@ -847,6 +915,73 @@ describe("REPL", () => {
         repl.ReplConnection.forLabel("other/sub"),
         /no workspace folder named other/,
       );
+    });
+
+    it("should tell apart workspace folders of the same name", async () => {
+      const second = fs.mkdtempSync(path.join(os.tmpdir(), "repl-label-"));
+      folders.push({ name: "ws", uri: vscode.Uri.file(second), index: 1 });
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .callsFake((uri) =>
+          folders.find((item) => item.uri.toString() === uri.toString()),
+        );
+      const started = await repl.ReplConnection.forLabel("ws [2]");
+      try {
+        assert.strictEqual(started.label, "ws [2]");
+        assert.strictEqual(
+          repls().get(vscode.Uri.file(second).toString()),
+          started,
+        );
+        folders.reverse();
+        assert.strictEqual(started.label, "ws");
+        assert.strictEqual(await repl.ReplConnection.forLabel("ws"), started);
+      } finally {
+        started["close"]();
+        fs.rmSync(second, { recursive: true, force: true });
+      }
+    });
+
+    it("should label a REPL by its path once its folder leaves the workspace", async () => {
+      const second = fs.mkdtempSync(path.join(os.tmpdir(), "repl-label-"));
+      folders.push({ name: "ws", uri: vscode.Uri.file(second), index: 1 });
+      const all = [...folders];
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .callsFake((uri) =>
+          all.find((item) => item.uri.toString() === uri.toString()),
+        );
+      const first = await repl.ReplConnection.forLabel("ws");
+      const other = await repl.ReplConnection.forLabel("ws [2]");
+      try {
+        folders.shift();
+        assert.strictEqual(first.label, vscode.Uri.file(root).fsPath);
+        assert.strictEqual(other.label, "ws");
+        const labels = repl.ReplConnection.labels();
+        assert.strictEqual(labels.filter((label) => label === "ws").length, 1);
+        assert.ok(labels.includes(first.label));
+        assert.strictEqual(await repl.ReplConnection.forLabel("ws"), other);
+      } finally {
+        first["close"]();
+        other["close"]();
+        fs.rmSync(second, { recursive: true, force: true });
+      }
+    });
+
+    it("should still reach a REPL by its old label once its folder leaves the workspace", async () => {
+      const [folder] = folders;
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .callsFake((uri) =>
+          uri.toString() === folder.uri.toString() ? folder : undefined,
+        );
+      const started = await repl.ReplConnection.forLabel("ws");
+      try {
+        folders.pop();
+        assert.strictEqual(started.label, folder.uri.fsPath);
+        assert.strictEqual(await repl.ReplConnection.forLabel("ws"), started);
+      } finally {
+        started["close"]();
+      }
     });
 
     it("should refuse a label whose folder does not exist", async () => {

@@ -57,8 +57,10 @@ export class KxNotebookController {
   readonly supportedLanguages = ["q", "python", "sql"];
 
   protected readonly controller: vscode.NotebookController;
-  protected readonly selections = new WeakMap<vscode.NotebookCell, string>();
-  protected readonly contexts = new WeakMap<vscode.NotebookCell, string>();
+  protected readonly selections = new WeakMap<
+    vscode.NotebookCell,
+    { text: string; context: string }
+  >();
   protected readonly running = new Set<vscode.NotebookCell>();
   protected order = 0;
 
@@ -101,7 +103,7 @@ export class KxNotebookController {
       : editor.document.getText(editor.selection);
     if (!text.trim()) return;
 
-    if (this.running.has(cell)) {
+    if (this.running.has(cell) || this.selections.has(cell)) {
       notify(
         `Cell ${cell.index + 1} of ${getBasename(cell.notebook.uri)} is already running.`,
         MessageKind.WARNING,
@@ -110,38 +112,32 @@ export class KxNotebookController {
       return;
     }
 
-    this.selections.set(cell, text);
-    this.contexts.set(
-      cell,
-      contextAbove(
+    const selection = {
+      text,
+      context: contextAbove(
         editor.document.getText(
           new vscode.Range(0, 0, editor.selection.start.line, 0),
         ),
       ),
-    );
+    };
+    this.selections.set(cell, selection);
     try {
       await vscode.commands.executeCommand("notebook.cell.execute", {
         ranges: [{ start: cell.index, end: cell.index + 1 }],
         document: cell.notebook.uri,
       });
     } finally {
-      this.selections.delete(cell);
-      this.contexts.delete(cell);
+      if (this.selections.get(cell) === selection) {
+        this.selections.delete(cell);
+      }
     }
   }
 
   private takeSelection(cells: vscode.NotebookCell[]) {
     if (cells.length !== 1) return undefined;
-    const text = this.selections.get(cells[0]);
+    const selection = this.selections.get(cells[0]);
     this.selections.delete(cells[0]);
-    return text;
-  }
-
-  private takeContext(cells: vscode.NotebookCell[], selection?: string) {
-    if (cells.length !== 1) return undefined;
-    const context = this.contexts.get(cells[0]);
-    this.contexts.delete(cells[0]);
-    return selection === undefined ? undefined : context;
+    return selection;
   }
 
   async executeRepl(
@@ -216,10 +212,15 @@ export class KxNotebookController {
     controller: vscode.NotebookController,
   ): Promise<void> {
     const selection = this.takeSelection(cells);
-    const context = this.takeContext(cells, selection);
     cells.forEach((cell) => this.running.add(cell));
     try {
-      await this.executeCells(cells, notebook, controller, selection, context);
+      await this.executeCells(
+        cells,
+        notebook,
+        controller,
+        selection?.text,
+        selection?.context,
+      );
     } finally {
       cells.forEach((cell) => this.running.delete(cell));
     }
