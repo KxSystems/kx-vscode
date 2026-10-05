@@ -12,6 +12,7 @@
     "local.kxnb": "TESTLOCAL",
     "plain.q": "TESTPLAIN",
     "csv.q": "TESTLOCAL",
+    "context.q": "TESTLOCAL",
     "offer.q": "TESTOFFER",
     "error.kxnb": "TESTLOCAL",
     "pinned.q": "REPL",
@@ -27,6 +28,7 @@
     "target.q": "TESTINSIGHTS",
     "rc.target.q": "TESTINSIGHTS",
     "sg.target.q": "TESTINSIGHTS",
+    "lambda.target.q": "TESTINSIGHTS",
     "populate.kxnb": "TESTINSIGHTS",
     "image.kxnb": "TESTINSIGHTS",
     "timeout.q": "TESTINSIGHTS",
@@ -41,6 +43,7 @@
     "target.q": "e2e-assembly tp",
     "rc.target.q": "e2e-assembly tp",
     "sg.target.q": "e2e-assembly tp",
+    "lambda.target.q": "e2e-assembly tp",
     "timeout.target.q": "e2e-assembly tp"
   },
   "kdb.timeoutMap": {

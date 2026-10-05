@@ -4,7 +4,6 @@ title: "PR #796 Review — Resolutions"
 description:
   "Every review comment on the KX Query View pull request, with what ee-webviews
   changed in answer or why it changed nothing."
-timestamp: 2026-09-11
 tags: [github, review, query-editor, vscode-extension]
 ---
 
@@ -13,16 +12,13 @@ tags: [github, review, query-editor, vscode-extension]
 - **Pull request**:
   [#796 KX Query View](https://github.com/KxSystems/kx-vscode/pull/796)
   (`ee-webviews` into `dev`)
-- **Review**: @cdinsmore-kx, 10–11 September 2026 — nine inline comments, three
-  medium and three low findings, and one report in a review body
 - **Related**: [Query Editor](../user/query-editor.md) (user documentation),
   [KXI Datasource Issues — `ee-webviews` Worklist](kxi-datasource-issues.md)
 
 Fourteen of the sixteen are fixed on the branch, one of them in part, and two
 change nothing, for the reasons given. Findings 10 to 14 are about code that is
 already in `dev` rather than code this pull request adds; each row says so, and
-all but the REPL one (13) are fixed here nonetheless. No reply has been posted
-to the pull request yet.
+all but the REPL one (13) are fixed here nonetheless.
 
 | #   | Comment                                                                                                                                                                                                                                                                                                                                 | Verdict                      | Resolution                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

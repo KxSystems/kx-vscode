@@ -265,7 +265,38 @@ export function convertToCsv(data: any[]): string[] {
   return [header, ...rows];
 }
 
+const Q_ESCAPES: Record<string, string> = {
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  "\\": "\\",
+  '"': '"',
+};
+const UTF8 = new TextDecoder("utf-8", { fatal: true });
+
+function decodeOctal(octal: string) {
+  try {
+    return UTF8.decode(
+      Uint8Array.from(octal.slice(1).split("\\"), (byte) =>
+        Number.parseInt(byte, 8),
+      ),
+    );
+  } catch {
+    return octal;
+  }
+}
+
+function unquote(text: string) {
+  const match = /^"((?:[^"\\]|\\.)*)"$/s.exec(text);
+  if (!match) return text;
+  return match[1].replace(
+    /((?:\\[0-7]{3})+)|\\(.)/gs,
+    (matched, octal: string | undefined, escape: string) =>
+      octal ? decodeOctal(octal) : (Q_ESCAPES[escape] ?? matched),
+  );
+}
+
 function normalize(obj: any) {
-  const o = `${obj}`;
-  return `"${o.replace(/"/gs, '""')}"`;
+  const o = unquote(`${obj}`);
+  return /[",\r\n]/s.test(o) ? `"${o.replace(/"/gs, '""')}"` : o;
 }

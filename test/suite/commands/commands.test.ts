@@ -93,6 +93,7 @@ describe("Commands", () => {
     it("should exist for certain commands", () => {
       const bindings = [
         "kdb.execute.selectedQuery",
+        "kdb.execute.selectedQuery",
         "kdb.execute.fileQuery",
         "kdb.scratchpad.python.run",
         "kdb.scratchpad.python.run.file",

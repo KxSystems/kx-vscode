@@ -492,9 +492,49 @@ describe("ResultsPanelProvider", () => {
         { a: "2", b: "2" },
         { a: "3", b: "3" },
       ];
-      const expectedOutput = ['"a","b"', '"1","1"', '"2","2"', '"3","3"'];
+      const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
       const actualOutput = renderer.convertToCsv(inputQueryResult);
       assert.deepStrictEqual(actualOutput, expectedOutput);
+    });
+
+    it("should write a q string as its text", () => {
+      const actualOutput = renderer.convertToCsv([
+        { sym: '"AUDUSD"', spread: "0.2228538" },
+      ]);
+      assert.deepStrictEqual(actualOutput, ["sym,spread", "AUDUSD,0.2228538"]);
+    });
+
+    it("should decode the escapes of a q string", () => {
+      const actualOutput = renderer.convertToCsv([
+        { note: String.raw`"a\tb\\c\101"` },
+      ]);
+      assert.deepStrictEqual(actualOutput, ["note", "a\tb\\cA"]);
+    });
+
+    it("should decode the UTF-8 bytes of a q string", () => {
+      const actualOutput = renderer.convertToCsv([
+        { note: String.raw`"caf\303\251 \\303"` },
+      ]);
+      assert.deepStrictEqual(actualOutput, ["note", "café \\303"]);
+    });
+
+    it("should quote a field holding a comma, a quote or a line break", () => {
+      const actualOutput = renderer.convertToCsv([
+        {
+          tags: "alpha,beta",
+          note: String.raw`"say \"hi\""`,
+          text: "one\ntwo",
+        },
+      ]);
+      assert.deepStrictEqual(actualOutput, [
+        "tags,note,text",
+        '"alpha,beta","say ""hi""","one\ntwo"',
+      ]);
+    });
+
+    it("should keep a value that only starts with a quote", () => {
+      const actualOutput = renderer.convertToCsv([{ note: '"a" and "b"' }]);
+      assert.deepStrictEqual(actualOutput, ["note", '"""a"" and ""b"""']);
     });
   });
 

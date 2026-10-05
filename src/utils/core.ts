@@ -737,7 +737,9 @@ export function getBasename(uri: Uri): string {
 }
 
 export function isQuick(server: string | undefined) {
-  return server?.includes(":");
+  return (
+    !!server && server.includes(":") && !server.startsWith(`${ext.REPL} (`)
+  );
 }
 
 export function isQuickAlias(alias: string | undefined) {

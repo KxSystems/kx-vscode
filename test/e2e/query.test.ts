@@ -275,6 +275,17 @@ describe("Query editor view", () => {
       label,
     );
 
+  const withoutBlur = () =>
+    view.eval(
+      (root: string) =>
+        __find(root).shadowRoot.addEventListener(
+          "blur",
+          (event: Event) => event.stopImmediatePropagation(),
+          true,
+        ),
+      ROOT,
+    );
+
   const type = (label: string, text: string, tag = "input") =>
     view.eval(
       (root: string, name: string, value: string, of: string) =>
@@ -688,6 +699,7 @@ describe("Query editor view", () => {
   it("clears what a multi-typed parameter held when its type changes", async () => {
     await show();
     await pick("API", MULTITYPE_UDA);
+    await withoutBlur();
     await type("value", "AAPL");
 
     await pick("value type", "Long");

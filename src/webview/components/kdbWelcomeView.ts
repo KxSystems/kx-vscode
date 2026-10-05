@@ -80,7 +80,121 @@ export class KdbWelcomeView extends LitElement {
   @property()
   checked = "true";
 
+  @property()
+  windows = "";
+
+  @property()
+  q = "";
+
   readonly vscode = acquireVsCodeApi();
+
+  private renderInstall() {
+    return html`
+      <p>What you’ll do next:</p>
+      <div class="row">
+        <div class="icon">${renderIcon1(this.dark)}</div>
+        <div class="col">
+          <strong>Log in or create an account</strong>
+          <div>A browser opens → authenticate → accept EULA.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="icon">${renderIcon2(this.dark)}</div>
+        <div class="col">
+          <strong>Retrieve your license key</strong>
+          <div>Copy the key from the KDB-X welcome page.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="icon">${renderIcon3(this.dark)}</div>
+        <div class="col">
+          <strong>Activate in VS Code</strong>
+          <div>Paste the key in VS Code → terminal installs KDB-X runtime.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="icon">${renderIcon4(this.dark)}</div>
+        <div class="col">
+          <strong>Start coding</strong>
+          <div>
+            Installation completes → run command
+            <strong>KX: Start REPL</strong> from the command palette.
+          </div>
+        </div>
+      </div>
+      <div class="row mt-1 middle">
+        <button
+          class="primary nowrap"
+          @click="${() => {
+            this.vscode.postMessage("install");
+          }}">
+          Install &amp; Continue
+        </button>
+        ${this.renderDocumentation()}
+      </div>
+    `;
+  }
+
+  private renderDocumentation() {
+    return html`<a href="https://developer.kx.com/products/kdb-x" class="nowrap"
+      >Developer Center & Documentation
+      <span class="icon-inline">${renderIcon5()}</span></a
+    >`;
+  }
+
+  private renderCommand(message: string, label: string) {
+    return html`<a
+      href="#"
+      class="nowrap"
+      @click="${(event: Event) => {
+        event.preventDefault();
+        this.vscode.postMessage(message);
+      }}"
+      >${label}</a
+    >`;
+  }
+
+  private renderWsl() {
+    return html`
+      <p>
+        KDB-X runs on Linux and macOS. On Windows, open your folder in
+        <a href="https://code.visualstudio.com/docs/remote/wsl"
+          >Windows Subsystem for Linux (WSL)</a
+        >
+        and install KDB-X there.
+      </p>
+    `;
+  }
+
+  private renderQHome() {
+    return html`
+      <p>
+        To use <strong>KX: Start REPL</strong> on Windows itself, point it at a
+        kdb+ installation with the q home directory setting.
+      </p>
+      <div class="row mt-1 middle">
+        <button
+          class="primary nowrap"
+          @click="${() => {
+            this.vscode.postMessage("qhome");
+          }}">
+          Set QHOME
+        </button>
+        ${this.renderDocumentation()}
+      </div>
+    `;
+  }
+
+  private renderFound() {
+    return html`
+      <p>q is ready at <code>${this.q}</code>.</p>
+      <div class="row mt-1 middle">
+        ${this.renderCommand("repl", "Start REPL")}
+        ${this.windows ? "" : this.renderCommand("install", "Install KDB-X")}
+        ${this.renderDocumentation()}
+      </div>
+    `;
+  }
 
   protected render() {
     return html`
@@ -93,53 +207,12 @@ export class KdbWelcomeView extends LitElement {
                 KDB-X is the next generation of kdb+, optimized for modern
                 analytics and AI workflows. Let’s get you ready to code.
               </p>
-              <p>What you’ll do next:</p>
-              <div class="row">
-                <div class="icon">${renderIcon1(this.dark)}</div>
-                <div class="col">
-                  <strong>Log in or create an account</strong>
-                  <div>A browser opens → authenticate → accept EULA.</div>
-                </div>
-              </div>
-              <div class="row">
-                <div class="icon">${renderIcon2(this.dark)}</div>
-                <div class="col">
-                  <strong>Retrieve your license key</strong>
-                  <div>Copy the key from the KDB-X welcome page.</div>
-                </div>
-              </div>
-              <div class="row">
-                <div class="icon">${renderIcon3(this.dark)}</div>
-                <div class="col">
-                  <strong>Activate in VS Code</strong>
-                  <div>
-                    Paste the key in VS Code → terminal installs KDB-X runtime.
-                  </div>
-                </div>
-              </div>
-              <div class="row">
-                <div class="icon">${renderIcon4(this.dark)}</div>
-                <div class="col">
-                  <strong>Start coding</strong>
-                  <div>
-                    Installation completes → run command
-                    <strong>KX: Start REPL</strong> from the command palette.
-                  </div>
-                </div>
-              </div>
-              <div class="row mt-1 middle">
-                <button
-                  class="primary"
-                  @click="${() => {
-                    this.vscode.postMessage("install");
-                  }}">
-                  Install &amp; Continue
-                </button>
-                <a href="https://developer.kx.com/products/kdb-x" class="nowrap"
-                  >Developer Center & Documentation
-                  <span class="icon-inline">${renderIcon5()}</span></a
-                >
-              </div>
+              ${this.windows ? this.renderWsl() : ""}
+              ${this.q
+                ? this.renderFound()
+                : this.windows
+                  ? this.renderQHome()
+                  : this.renderInstall()}
             </div>
             <div class="middle"><img src="${this.image}" /></div>
           </div>
