@@ -957,6 +957,12 @@ export async function executeQuery(
       return res;
     }
   } else if (isNotebook) {
+    if (
+      typeof results === "string" &&
+      results.startsWith(queryConstants.error)
+    ) {
+      throw new Error(results);
+    }
     return results;
   } else {
     /* c8 ignore start */

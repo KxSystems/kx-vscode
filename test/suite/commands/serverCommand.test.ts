@@ -1102,6 +1102,42 @@ describe("serverCommand", () => {
       );
       assert.equal(res, undefined);
     });
+
+    it("should throw for a notebook cell so the run stops, instead of returning the error text as a normal result", async () => {
+      ext.connectedConnectionList.push(localConn);
+      ext.connectedContextStrings.push(localConn.connLabel);
+      sinon
+        .stub(ConnectionManagementService.prototype, "executeQuery")
+        .resolves("Error: {");
+      await assert.rejects(
+        serverCommand.executeQuery(
+          "f:{[x] x+1",
+          localConn.connLabel,
+          "notebook.kxnb",
+          ".",
+          false,
+          false,
+        ),
+        /Error: \{/,
+      );
+    });
+
+    it("should return non-error results for a notebook cell as-is", async () => {
+      ext.connectedConnectionList.push(localConn);
+      ext.connectedContextStrings.push(localConn.connLabel);
+      sinon
+        .stub(ConnectionManagementService.prototype, "executeQuery")
+        .resolves("dummy test");
+      const res = await serverCommand.executeQuery(
+        "1+1",
+        localConn.connLabel,
+        "notebook.kxnb",
+        ".",
+        false,
+        false,
+      );
+      assert.equal(res, "dummy test");
+    });
   });
 
   describe("getConextForRerunQuery", function () {
