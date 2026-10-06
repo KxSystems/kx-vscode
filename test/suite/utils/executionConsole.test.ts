@@ -226,15 +226,18 @@ describe("executionConsole", () => {
     describe("resolveSink", () => {
       const connLabel = "consoleServer";
       let appendLine: sinon.SinonStub;
+      let appendError: sinon.SinonStub;
       let appendResult: sinon.SinonStub;
       let show: sinon.SinonStub;
 
       beforeEach(() => {
         appendLine = sinon.stub();
+        appendError = sinon.stub();
         appendResult = sinon.stub();
         show = sinon.stub();
         ext.connectionConsoles.set(connLabel, <any>{
           appendLine,
+          appendError,
           appendResult,
           terminal: { show },
         });
@@ -266,7 +269,7 @@ describe("executionConsole", () => {
           true,
         );
 
-        sinon.assert.calledWith(appendLine, "Error: error");
+        sinon.assert.calledWith(appendError, "Error: error");
       });
 
       it("should fall back to the shared channel for unknown connections", () => {
