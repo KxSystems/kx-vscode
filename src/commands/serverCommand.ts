@@ -1295,7 +1295,12 @@ export async function writeQueryResultsToConsole(
   const isNonEmptyArray = Array.isArray(result) && result.length > 0;
   const valueToDecode = isNonEmptyArray ? result[0] : result.toString();
   const res = decodeQUTF(valueToDecode);
-  if (!res.startsWith(queryConstants.error)) {
+  const isDatasource = checkIfIsDatasource(type);
+  if (!res.startsWith(queryConstants.error) || isDatasource) {
+    // A datasource error is rendered as plain output rather than through
+    // appendQueryError: runDataSource already tracks its own success/failure
+    // for query history (addDStoQueryHistory), and the reason still has to
+    // reach the console either way (KXI-69283).
     queryConsole.append(
       res,
       query,
@@ -1308,21 +1313,19 @@ export async function writeQueryResultsToConsole(
       isFromConnTree,
     );
   } else {
-    if (!checkIfIsDatasource(type)) {
-      queryConsole.appendQueryError(
-        query,
-        res.substring(queryConstants.error.length),
-        connLabel,
-        executorName,
-        true,
-        isInsights,
-        type,
-        isPython,
-        false,
-        duration,
-        isFromConnTree,
-      );
-    }
+    queryConsole.appendQueryError(
+      query,
+      res.substring(queryConstants.error.length),
+      connLabel,
+      executorName,
+      true,
+      isInsights,
+      type,
+      isPython,
+      false,
+      duration,
+      isFromConnTree,
+    );
   }
 }
 
