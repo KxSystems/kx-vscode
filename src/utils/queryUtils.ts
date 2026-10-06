@@ -512,7 +512,7 @@ export function formatScratchpadError(result: ScratchpadResult): string {
   }
 
   return appendStacktrace(
-    `${queryConstants.error} ${message}`,
+    `${queryConstants.error}${message}`,
     result.stacktrace,
   );
 }
