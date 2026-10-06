@@ -30,6 +30,8 @@ const ANSI = {
   FAINT_OFF: "\x1b[22m",
   BOLD_ON: "\x1b[1m",
   BOLD_OFF: "\x1b[22m",
+  RED_ON: "\x1b[31m",
+  RED_OFF: "\x1b[0m",
 };
 
 const KEY = {
@@ -262,14 +264,24 @@ export class ConnectionConsole {
     this.write(text);
   }
 
+  /** Writes a line in red, for error output. */
+  appendError(text = ""): void {
+    this.write(text, true);
+  }
+
   /** Writes the lines of a result. */
   appendResult(lines: string[]): void {
     this.send(this.normalize(lines.join("\n")) + ANSI.CRLF, true);
   }
 
   /** Writes whole rows, each on a line of its own. */
-  private write(text: string): void {
-    this.send(this.normalize(text) + ANSI.CRLF);
+  private write(text: string, asError = false): void {
+    const line = this.normalize(text);
+    this.send(
+      asError
+        ? ANSI.RED_ON + line + ANSI.RED_OFF + ANSI.CRLF
+        : line + ANSI.CRLF,
+    );
   }
 
   clear(): void {

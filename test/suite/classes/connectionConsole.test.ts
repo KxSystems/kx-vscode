@@ -327,6 +327,12 @@ describe("ConnectionConsole", () => {
     ]);
   });
 
+  it("should write a line in red", async () => {
+    const console = await started();
+    console.appendError("boom");
+    assert.strictEqual(payload(), "\x1b[31mboom\x1b[0m\r\n");
+  });
+
   it("should ask how wide it is once it is sized", async () => {
     open();
     await layout();

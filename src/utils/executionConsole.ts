@@ -29,19 +29,13 @@ import { ServerType } from "../models/connectionsModels";
 
 const logger = "executionConsole";
 
-// SGR escape codes used to render error output in red in both the
-// connection's terminal and the fallback output channel.
-const ANSI_RED = "\x1b[31m";
-const ANSI_RESET = "\x1b[0m";
-
-function red(text: string): string {
-  return `${ANSI_RED}${text}${ANSI_RESET}`;
-}
-
 // A destination for console text: either a connection's own output console
 // terminal (when one exists for the connLabel) or the shared fallback channel.
 interface ConsoleSink {
   appendLine: (value: string) => void;
+  // Error output. The connection's terminal renders this in red; the
+  // fallback output channel has no ANSI support, so it writes plain text.
+  appendError: (value: string) => void;
   // The lines of a result, kept apart from the banner lines around them.
   appendResult: (lines: string[]) => void;
   reveal: () => void;
@@ -77,12 +71,14 @@ export class ExecutionConsole {
     if (console) {
       return {
         appendLine: (value) => console.appendLine(value),
+        appendError: (value) => console.appendError(value),
         appendResult: (lines) => console.appendResult(lines),
         reveal: () => console.terminal.show(true),
       };
     }
     return {
       appendLine: (value) => this._console.appendLine(value),
+      appendError: (value) => this._console.appendLine(value),
       appendResult: (lines) =>
         lines.forEach((line) => this._console.appendLine(line)),
       reveal: () => this._console.show(true),
@@ -172,6 +168,8 @@ export class ExecutionConsole {
     }
     if (!hideDetails) {
       sink.appendLine(`<<<\n`);
+    } else {
+      sink.appendLine(``);
     }
   }
 
@@ -196,16 +194,16 @@ export class ExecutionConsole {
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {
-      sink.appendLine(
-        red(`<<< ERROR -  ${connLabel}  @ ${date.toLocaleTimeString()} >>>`),
+      sink.appendError(
+        `<<< ERROR -  ${connLabel}  @ ${date.toLocaleTimeString()} >>>`,
       );
     }
     if (isConnected) {
       if (!hideDetails) {
-        sink.appendLine(red(`ERROR Query executed: ${query}\n`));
-        sink.appendLine(red(result));
+        sink.appendError(`ERROR Query executed: ${query}\n`);
+        sink.appendError(result);
       } else {
-        sink.appendLine(red(`Error: ${result}`));
+        sink.appendError(`Error: ${result}`);
       }
       if (!isDatasource) {
         addQueryHistory(
@@ -226,7 +224,7 @@ export class ExecutionConsole {
       notify(`Please connect to a KDB or Insights server`, MessageKind.ERROR, {
         logger,
       });
-      sink.appendLine(red(`Please connect to a KDB or Insights server`));
+      sink.appendError(`Please connect to a KDB or Insights server`);
       commands.executeCommand("kdb.connections.disconnect");
       addQueryHistory(
         query,
@@ -239,7 +237,7 @@ export class ExecutionConsole {
       );
     }
     if (!hideDetails) {
-      sink.appendLine(red(`<<< >>>`));
+      sink.appendError(`<<< >>>`);
     } else {
       sink.appendLine(``);
     }
@@ -253,7 +251,7 @@ export class ExecutionConsole {
   public appendStdErr(message: string, connLabel = ""): void {
     const sink = this.resolveSink(connLabel);
     sink.appendLine("❌");
-    sink.appendLine(message);
+    sink.appendError(message);
   }
 
   public appendStdOut(message: string, connLabel = ""): void {
