@@ -955,6 +955,9 @@ export async function executeQuery(
       connVersion,
     );
     if (isNotebook) {
+      if (typeof res === "string" && res.startsWith(queryConstants.error)) {
+        throw new Error(res);
+      }
       return res;
     }
   } else if (isNotebook) {

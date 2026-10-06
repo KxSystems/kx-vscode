@@ -186,7 +186,7 @@ export class LocalConnection {
         if (err) {
           resolve(
             handleQueryResults(
-              `${queryConstants.error} ${err.message}`,
+              `${queryConstants.error}${err.message}`,
               QueryResultType.Error,
             ),
           );
@@ -194,7 +194,7 @@ export class LocalConnection {
           resolve(
             handleQueryResults(
               appendStacktrace(
-                `${queryConstants.error} ${res.errorMsg}`,
+                `${queryConstants.error}${res.errorMsg}`,
                 res.stacktrace,
               ),
               QueryResultType.Error,

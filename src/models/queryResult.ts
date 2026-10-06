@@ -39,7 +39,7 @@ export enum QueryResultType {
 }
 
 export const queryConstants = {
-  error: "Error:",
+  error: "Error: ",
 };
 
 export interface StructuredTextColumns {
