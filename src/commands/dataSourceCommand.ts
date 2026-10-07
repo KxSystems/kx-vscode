@@ -24,7 +24,7 @@ import { ServerType } from "../models/connectionsModels";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
-import { queryConstants } from "../models/queryResult";
+import { withErrorPrefix } from "../models/queryResult";
 import { ScratchpadStacktrace } from "../models/scratchpadResult";
 import { UDARequestBody } from "../models/uda";
 import { ConnectionManagementService } from "../services/connectionManagerService";
@@ -473,7 +473,7 @@ export function parseError(
 export function formatDataSourceError(res: any) {
   const message = res.errorMsg ? res.errorMsg : res.error;
   return typeof message === "string"
-    ? appendStacktrace(`${queryConstants.error}${message}`, res.stacktrace)
+    ? appendStacktrace(withErrorPrefix(message), res.stacktrace)
     : message;
 }
 
