@@ -381,6 +381,22 @@ describe("Executing on a kdb+ connection", () => {
         .join("\n");
 
       assert.ok(output.includes(FAILURE), `the error is not shown:\n${output}`);
+
+      // The failure has to stop the run, not just be shown: give the next
+      // cell a moment it would not need to run if the run kept going, then
+      // confirm it never did.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      assert.strictEqual(
+        kdb.queries().length,
+        1,
+        "a cell after the failing one still ran",
+      );
+      assert.strictEqual(
+        notebook.cellAt(1).outputs.length,
+        0,
+        "the cell after the failing one produced output",
+      );
     });
   });
 

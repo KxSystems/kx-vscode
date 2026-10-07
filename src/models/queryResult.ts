@@ -42,6 +42,23 @@ export const queryConstants = {
   error: "Error: ",
 };
 
+/** Prefixes an error message with the marker consumers key error detection off. */
+export function withErrorPrefix(message: string): string {
+  return `${queryConstants.error}${message}`;
+}
+
+/** Whether a result is an error-prefixed string, as produced by {@link withErrorPrefix}. */
+export function isErrorResult(value: unknown): value is string {
+  return typeof value === "string" && value.startsWith(queryConstants.error);
+}
+
+/** Throws if the result is error-prefixed, so a caller can stop instead of rendering it as a success. */
+export function throwIfErrorResult(value: unknown): void {
+  if (isErrorResult(value)) {
+    throw new Error(value);
+  }
+}
+
 export interface StructuredTextColumns {
   name: string;
   type: string;

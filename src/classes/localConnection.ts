@@ -20,7 +20,7 @@ import { ext } from "../extensionVariables";
 import {
   QueryResult,
   QueryResultType,
-  queryConstants,
+  withErrorPrefix,
 } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
 import { handleQueryResults } from "../utils/execution";
@@ -186,7 +186,7 @@ export class LocalConnection {
         if (err) {
           resolve(
             handleQueryResults(
-              `${queryConstants.error}${err.message}`,
+              withErrorPrefix(err.message),
               QueryResultType.Error,
             ),
           );
@@ -194,7 +194,7 @@ export class LocalConnection {
           resolve(
             handleQueryResults(
               appendStacktrace(
-                `${queryConstants.error}${res.errorMsg}`,
+                withErrorPrefix(`${res.errorMsg}`),
                 res.stacktrace,
               ),
               QueryResultType.Error,

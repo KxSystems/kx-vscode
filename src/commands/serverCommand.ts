@@ -43,7 +43,7 @@ import {
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { QueryHistory } from "../models/queryHistory";
-import { queryConstants } from "../models/queryResult";
+import { queryConstants, throwIfErrorResult } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { ConnectionManagementService } from "../services/connectionManagerService";
@@ -954,18 +954,11 @@ export async function executeQuery(
       connVersion,
     );
     if (isNotebook) {
-      if (typeof res === "string" && res.startsWith(queryConstants.error)) {
-        throw new Error(res);
-      }
+      throwIfErrorResult(res);
       return res;
     }
   } else if (isNotebook) {
-    if (
-      typeof results === "string" &&
-      results.startsWith(queryConstants.error)
-    ) {
-      throw new Error(results);
-    }
+    throwIfErrorResult(results);
     return results;
   } else {
     /* c8 ignore start */
