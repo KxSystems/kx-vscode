@@ -15,8 +15,5 @@
       "name": "E2E Test Selected File",
       "pattern": "kx-vscode.*/test/e2e/.+\\.test\\.ts$"
     }
-  ],
-  "kdb.connectionMap": {
-    ".kx/workbook-1.kdb.q": "vscode-testing-local"
-  }
+  ]
 }
