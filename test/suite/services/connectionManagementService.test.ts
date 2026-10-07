@@ -292,6 +292,21 @@ describe("ConnectionManagementService", () => {
 
       assert.strictEqual(result, undefined);
     });
+
+    it("Should disconnect a connection whose tree node is gone", () => {
+      const disconnect = sinon.stub(localConn, "disconnect");
+      const disconnectBehaviour = sinon.stub(
+        connectionManagerService,
+        "disconnectBehaviour",
+      );
+      retrieveConnectedConnectionStub.returns(localConn);
+      retrieveConnectionStub.returns(undefined);
+
+      connectionManagerService.disconnect(localConn.connLabel);
+
+      sinon.assert.calledOnce(disconnect);
+      sinon.assert.calledOnceWithExactly(disconnectBehaviour, localConn);
+    });
   });
 
   describe("executeQuery", () => {

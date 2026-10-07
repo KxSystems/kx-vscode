@@ -12,11 +12,7 @@
  */
 
 import * as assert from "assert";
-import mock from "mock-fs";
-import * as sinon from "sinon";
-import * as vscode from "vscode";
 
-import { ext } from "../../../src/extensionVariables";
 import * as dataSourceUtils from "../../../src/utils/dataSource";
 
 describe("dataSource", () => {
@@ -52,39 +48,5 @@ describe("dataSource", () => {
       "2021-01-01",
     );
     assert.strictEqual(result2, false);
-  });
-
-  describe("oldFilesExists", () => {
-    let createKdbDataSourcesFolderStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      createKdbDataSourcesFolderStub = sinon.stub(
-        dataSourceUtils,
-        "createKdbDataSourcesFolder",
-      );
-    });
-
-    afterEach(() => {
-      sinon.restore();
-      mock.restore();
-    });
-
-    it("should return false if there are no files in the directory", () => {
-      ext.context = {} as vscode.ExtensionContext;
-      sinon.stub(ext, "context").value({
-        globalStorageUri: {
-          fsPath: "/temp/",
-        },
-      });
-      mock({
-        "path/to/directory": {},
-      });
-
-      createKdbDataSourcesFolderStub.returns("path/to/directory");
-
-      const result = dataSourceUtils.oldFilesExists();
-
-      assert.equal(result, false);
-    });
   });
 });

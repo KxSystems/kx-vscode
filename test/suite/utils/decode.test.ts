@@ -29,13 +29,13 @@ describe("decode", () => {
       assert.strictEqual(result, expectedOutput);
     });
 
-    it("should decode 1b to true and 0b to false", () => {
+    it("should leave 1b and 0b as q prints them", () => {
       const input1 = "1b";
       const input2 = "0b";
       const result1 = decodeUtils.decodeQUTF(input1);
       const result2 = decodeUtils.decodeQUTF(input2);
-      assert.strictEqual(result1, true);
-      assert.strictEqual(result2, false);
+      assert.strictEqual(result1, "1b");
+      assert.strictEqual(result2, "0b");
     });
   });
 

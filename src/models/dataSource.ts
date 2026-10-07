@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { getDataBodyPayload } from "./data";
 import { UDA } from "./uda";
 
 export enum DataSourceTypes {
@@ -28,6 +29,7 @@ export interface DataSourceFiles {
   dataSource: {
     selectedType: DataSourceTypes;
     api: {
+      payload?: Partial<getDataBodyPayload>;
       selectedApi: string;
       table: string;
       startTS: string;
@@ -56,6 +58,8 @@ export interface DataSourceFiles {
     qsql: {
       query: string;
       selectedTarget: string;
+      agg?: string;
+      labels?: { [key: string]: string };
     };
     sql: {
       query: string;

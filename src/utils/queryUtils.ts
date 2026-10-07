@@ -19,11 +19,17 @@ import { MessageKind, notify, Runner } from "./notifications";
 import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
-import { ScratchpadStacktrace } from "../models/scratchpadResult";
+import { queryConstants, StructuredTextResults } from "../models/queryResult";
+import {
+  ScratchpadResult,
+  ScratchpadStacktrace,
+} from "../models/scratchpadResult";
 
 const logger = "queryUtils";
 
 const QUERY_LIMIT = 250_000;
+
+export const BLOCK_COMMENT_PATTERN = /^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm;
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -115,7 +121,7 @@ function stripCommentsAndSystemCommands(query: string): string {
   return (
     query
       // Remove block comments (closed by a solitary \ or running to end of input)
-      .replace(/^\/[\t ]*$[^]*?(?:^\\[\t ]*$|(?![^]))/gm, "")
+      .replace(BLOCK_COMMENT_PATTERN, "")
       // Remove terminate comments
       .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments
@@ -149,11 +155,11 @@ export function normalizeQuery(query: string): string {
         matched.replace(/(?:\r\n|[\r\n])/gs, "\\n"),
       )
       // Remove none end of statement new lines
-      .replace(/(?:\r\n|[\r\n])+(?=[\t ])/gs, "")
+      .replace(/[\r\n]+(?=[\t ])/g, "")
       // Comments and blank lines removed above can leave runs of consecutive
       // newlines; collapse each run to a single CRLF so the q process still
       // sees one statement per line.
-      .replace(/(?:\r\n|[\r\n])+/g, "\r\n")
+      .replace(/[\r\n]+/g, "\r\n")
   );
 }
 
@@ -163,16 +169,15 @@ export function normalizeQSQLQuery(query: string): string {
       // Trim white space
       .trim()
       // Replace end of statements
-      .replace(/(?<!;[\t ]*)(\r\n|[\r\n])+(?![\t\r\n ])/gs, ";$1")
+      .replace(/(?<!;[\t ]*)[\r\n]*?(\r\n|[\r\n])(?![\t\r\n ])/g, ";$1")
   );
 }
 
 export function normalizePyQuery(query: string): string {
-  return (
-    queryLimitCheck(query)
-      // Replace double quotes
-      .replace(/"/gs, '\\"')
-  );
+  return queryLimitCheck(query)
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\r\n|[\r\n]/g, "\\n");
 }
 
 /**
@@ -198,7 +203,14 @@ export function getHeaders(
   }
 
   if (timeout) {
-    headers["timeout"] = String(timeout);
+    // the gateway expects a whole number of seconds; a decimal (e.g. "19.8")
+    // fails to parse server-side and falls back to a short default timeout.
+    // Round first: values under 0.5s round to 0, which the gateway treats
+    // as an immediate timeout, so only send the header if that's non-zero.
+    const roundedTimeout = Math.round(timeout);
+    if (roundedTimeout) {
+      headers["timeout"] = String(roundedTimeout);
+    }
   }
 
   return headers;
@@ -208,14 +220,9 @@ export function getPythonWrapper(
   query: string,
   returnFormat: "serialized" | "text" | "structuredText",
 ): string {
-  const wrapper = queryWrapper(true, false);
-  const args = {
-    returnFormat,
-    code: normalizePyQuery(query),
-    sample_fn: "first",
-    sample_size: 10000,
-  };
-  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`error;res\`errorMsg;res\`data]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
+  const wrapper = queryWrapper(true, false).trim();
+  const code = normalizePyQuery(query);
+  return `{[args] res:${wrapper} args;$[res\`error;res\`errorMsg;res\`data]}[\`returnFormat\`code\`sample_fn\`sample_size!("${returnFormat}";"${code}";"first";10000)]`;
 }
 
 export function getQSQLWrapper(
@@ -232,24 +239,84 @@ export function getSQLWrapper(query: string): string {
   return `s)${query.replace(/(?:\r\n|\n)/g, " ")}`;
 }
 
-export function convertRows(rows: any[]): any {
+// The encoding `convertRowsToConsole` accepts from a caller that has nothing
+// but strings: a row's cells joined with CELL, and a header row marked by a
+// leading HEADER. The header used to be told apart by the delimiter between
+// its own cells, which a one-column table never has, so it lost its rule and
+// read as a list (KXI-73276).
+const HEADER = "#$#;header;#$#";
+const CELL = "#$#;#$#";
+
+// What the console lays a table out from: the cells, the header row where the
+// result has one, and how many of the leading columns are keys — a
+// dictionary's key, or a keyed table's key columns, which q separates from the
+// values with a pipe.
+interface ConsoleTable {
+  cells: string[][];
+  header?: string[];
+  keys: number;
+}
+
+export function convertRows(rows: any[], results?: StructuredTextResults): any {
+  const table = results ? structuredTable(rows, results) : objectTable(rows);
+  const lines = table ? layout(table) : [];
+  return lines.length === 0 ? [] : lines.join("\n") + "\n\n";
+}
+
+function cell(value: any): string {
+  return Array.isArray(value) ? value.join(" ") : String(value ?? "");
+}
+
+// Rows on their own carry no more than their column names, so a dictionary is
+// only recognizable where it arrived as a property/value pair.
+function objectTable(rows: any[]): ConsoleTable | undefined {
   if (rows.length === 0) {
-    return [];
+    return undefined;
   }
-  const keys = Object.keys(rows[0]);
-  const isObj = typeof rows[0] === "object";
-  const isPropVal = isObj ? checkIfIsPropVal(keys) : false;
-  const result = isPropVal ? [] : [keys.join("#$#;header;#$#")];
-  for (const row of rows) {
-    const values = keys.map((key) => {
-      if (Array.isArray(row[key])) {
-        return row[key].join(" ");
-      }
-      return row[key];
-    });
-    result.push(values.join("#$#;#$#"));
+  const names = Object.keys(rows[0]);
+  const isPropVal =
+    typeof rows[0] === "object" ? checkIfIsPropVal(names) : false;
+  return {
+    cells: rows.map((row) => names.map((name) => cell(row[name]))),
+    header: isPropVal ? undefined : names,
+    keys: isPropVal ? 1 : 0,
+  };
+}
+
+// A structured text result knows what the rows extracted from it cannot say:
+// which columns are keys, whether the result is a table at all, and the schema
+// of one that came back empty.
+function structuredTable(
+  rows: any[],
+  results: StructuredTextResults,
+): ConsoleTable | undefined {
+  const columns = Array.isArray(results.columns)
+    ? results.columns
+    : [results.columns];
+  if (columns.length === 0) {
+    return undefined;
   }
-  return convertRowsToConsole(result).join("\n") + "\n\n";
+  const names = columns.map((column) => column.name);
+  // Nothing in the payload says whether a result was a table: a list is the
+  // one column `values` that formatQ.q gives an unnamed result, and a
+  // dictionary the key/values pair, both of which q prints without column
+  // names. An empty result has nothing but its header, so that carries the
+  // types too — the schema is the whole answer there.
+  const isList =
+    !Array.isArray(results.columns) ||
+    (columns.length === 1 && names[0] === "values" && !columns[0].isKey);
+  const isDictionary =
+    columns.length === 2 && !!columns[0].isKey && names.join() === "key,values";
+  return {
+    cells: rows.map((row) => names.map((name) => cell(row[name]))),
+    header:
+      rows.length === 0
+        ? columns.map((column) => `${column.name} [${column.type}]`)
+        : isList || isDictionary
+          ? undefined
+          : names,
+    keys: columns.filter((column) => column.isKey).length,
+  };
 }
 
 // A cell that arrives with newlines in it — a nested list, rendered down the
@@ -269,51 +336,67 @@ function flatten(value: string) {
     .trimEnd();
 }
 
+// The rule under a header carries the key separator through it, the way a
+// keyed table prints in q: `a b| c` over `---| -`.
+function rule(length: number, widths: number[], keys: number): string {
+  const line = "-".repeat(length);
+  const pipe = widths.slice(0, keys).reduce((sum, width) => sum + width, 0) - 2;
+  return keys > 0 && length > pipe + 1
+    ? line.slice(0, pipe) + "| " + line.slice(pipe + 2)
+    : line;
+}
+
+function layout(table: ConsoleTable): string[] {
+  const rows = table.header ? [table.header, ...table.cells] : table.cells;
+  if (rows.length === 0) {
+    return [];
+  }
+  // A result that is a single value — a lambda, a string, an atom — is not a
+  // table, and keeps the newlines it came with instead of being squared off
+  // into one cell (KXI-73276).
+  if (!table.header && rows.length === 1 && rows[0].length === 1) {
+    return rows[0][0].split("\n");
+  }
+  const cells = rows.map((row) => row.map(flatten));
+  const count = cells.reduce((max, row) => Math.max(max, row.length), 0);
+  const widths = Array.from(
+    { length: count },
+    (_unused, index) =>
+      cells.reduce((max, row) => Math.max(max, (row[index] || "").length), 0) +
+      2,
+  );
+  // The pipe separates a key block from what follows it; a dictionary with
+  // nothing to its right, or a line of plain console output, has no key block.
+  const keys = table.keys > 0 && table.keys < count ? table.keys : 0;
+  const lines = cells.map((row) =>
+    row
+      .map((value, index) =>
+        index === keys - 1
+          ? value.padEnd(widths[index] - 2) + "| "
+          : value.padEnd(widths[index]),
+      )
+      .join(""),
+  );
+  if (table.header) {
+    lines.splice(1, 0, rule(lines[0].length, widths, keys));
+  }
+  return lines;
+}
+
 export function convertRowsToConsole(rows: string[]): string[] {
   if (rows.length === 0) {
     return [];
   }
-  const haveHeader = rows[0].includes("#$#;header;#$#");
-  let header;
-  if (haveHeader) {
-    header = rows[0].split("#$#;header;#$#").map(flatten);
-    rows.shift();
-  }
-  const vector = rows.map((row) => row.split("#$#;#$#").map(flatten));
-  if (header) {
-    vector.unshift(header);
-  }
-
-  const columnCounters = vector[0].reduce((counters: number[], _, j) => {
-    const maxLength = vector.reduce(
-      (max, row) => Math.max(max, (row[j] || "").length),
-      0,
-    );
-    counters.push(maxLength + 2);
-    return counters;
-  }, []);
-
-  vector.forEach((row) => {
-    row.forEach((value, j) => {
-      const counter = columnCounters[j];
-      const diff = counter - value.length;
-      if (diff > 0) {
-        if (!haveHeader && j !== columnCounters.length - 1) {
-          row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
-        } else {
-          row[j] = value + " ".repeat(diff);
-        }
-      }
-    });
-  });
-
-  const result = vector.map((row) => row.join(""));
-
-  if (haveHeader) {
-    result.splice(1, 0, "-".repeat(result[0].length));
-  }
-
-  return result;
+  const haveHeader = rows[0].startsWith(HEADER);
+  const header = haveHeader
+    ? rows[0].slice(HEADER.length).split(CELL)
+    : undefined;
+  const cells = (haveHeader ? rows.slice(1) : rows).map((row) =>
+    row.split(CELL),
+  );
+  // Rows that arrive without a header of their own are a dictionary's
+  // key/value pairs, which q prints with a pipe between them.
+  return layout({ cells, header, keys: haveHeader ? 0 : 1 });
 }
 
 export function checkIfIsPropVal(columns: string[]): boolean {
@@ -387,6 +470,51 @@ export function addQueryHistory(
   ext.kdbQueryHistoryList.unshift(newQueryHistory);
 
   ext.queryHistoryProvider.refresh();
+}
+
+function isScratchpadStacktrace(
+  value: unknown[],
+): value is ScratchpadStacktrace {
+  return value.every(
+    (frame: any) => frame && Array.isArray(frame.text) && "name" in frame,
+  );
+}
+
+export function appendStacktrace(
+  message: string,
+  stacktrace?: ScratchpadStacktrace | string[] | string,
+): string {
+  if (!stacktrace || (Array.isArray(stacktrace) && stacktrace.length === 0)) {
+    return message;
+  }
+  if (!Array.isArray(stacktrace)) {
+    return `${message}\n${stacktrace}`;
+  }
+  return (
+    message +
+    "\n" +
+    (isScratchpadStacktrace(stacktrace)
+      ? formatScratchpadStacktrace(stacktrace)
+      : stacktrace.map((line) => `${line}`).join("\n"))
+  );
+}
+
+const UDA_UNKNOWN_API = "Querying database using (UDA) raised - Unknown API:";
+
+export function formatScratchpadError(result: ScratchpadResult): string {
+  let message =
+    result.errorMsg ||
+    (typeof result.error === "string" ? result.error : "Unknown error");
+
+  if (message.includes(UDA_UNKNOWN_API)) {
+    message +=
+      ". A table, label, or scope parameter may be missing or incorrect.";
+  }
+
+  return appendStacktrace(
+    `${queryConstants.error} ${message}`,
+    result.stacktrace,
+  );
 }
 
 export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
@@ -478,6 +606,7 @@ export function resetScratchpadStarted(connLabel: string) {
 }
 
 export const enum RunFlag {
+  Populate = 0b0000000000,
   Run = 0b0000000001,
   Workbook = 0b0000000010,
   Notebook = 0b0000000100,

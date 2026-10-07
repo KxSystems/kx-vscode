@@ -45,7 +45,6 @@ import { ExecutionTypes } from "../models/execution";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { DataSourcesPanel } from "../panels/datasource";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import {
@@ -66,7 +65,6 @@ import {
   updateInsights,
   updateServers,
 } from "../utils/core";
-import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { MessageKind, Runner, notify } from "../utils/notifications";
@@ -74,7 +72,8 @@ import { writePlotToFile } from "../utils/plotUtils";
 import {
   checkIfIsDatasource,
   addQueryHistory,
-  formatScratchpadStacktrace,
+  BLOCK_COMMENT_PATTERN,
+  formatScratchpadError,
   resultToBase64,
   needsScratchpad,
   getSQLWrapper,
@@ -839,14 +838,12 @@ export async function connect(connLabel: string): Promise<void> {
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
-  refreshDataSourcesPanel();
   ext.serverProvider.reload();
 }
 
 export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   const connMngService = new ConnectionManagementService();
   connMngService.setActiveConnection(viewItem);
-  refreshDataSourcesPanel();
   ext.serverProvider.reload();
 }
 
@@ -870,7 +867,6 @@ export async function disconnect(connLabel: string): Promise<void> {
 
   if (ext.connectedConnectionList.length === 0) {
     ExecutionConsole.current?.dispose();
-    DataSourcesPanel.close();
     ext.serverProvider.reload();
   }
 }
@@ -968,14 +964,17 @@ export async function executeQuery(
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
-        notify("GG Plot displayed", MessageKind.DEBUG, {
-          logger,
-          telemetry:
-            "Results.Graphics.Displayed" +
-            (isInsights ? ".ie" : ".kdb") +
-            (isPython ? ".py" : ".q"),
-        });
-        await writePlotToFile(data);
+        await writeQueryResultsToPlot(
+          data,
+          query,
+          connLabel,
+          executorName,
+          isInsights,
+          isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+          isPython,
+          duration,
+          isFromConnTree,
+        );
       } else {
         await writeQueryResultsToView(
           results,
@@ -1007,52 +1006,40 @@ export async function executeQuery(
   }
 }
 
+// matches '\d .foo' or 'system "d .foo"'
+const CONTEXT_PATTERN = /^(system[\t ]*"d|\\d)[\t ]+([^\s"]+)/gm;
+
+function withoutBlockComments(text: string) {
+  return text.replace(/\r\n?/g, "\n").replace(BLOCK_COMMENT_PATTERN, "");
+}
+
+export function contextAbove(text: string): string {
+  const matches = [...withoutBlockComments(text).matchAll(CONTEXT_PATTERN)];
+  return matches.length ? matches[matches.length - 1][2] : ".";
+}
+
+function leadingContext(text: string): string {
+  const code = withoutBlockComments(text);
+  const [match] = code.matchAll(CONTEXT_PATTERN);
+  if (!match) return ".";
+  const above = code.slice(0, match.index).replace(/^[\t ]*\/.*$/gm, "");
+  return above.trim() ? "." : match[2];
+}
+
 export function getQueryContext(lineNum?: number): string {
-  let context = ".";
-  const editor = ext.activeTextEditor;
-  const fullText = typeof lineNum !== "number";
-
-  if (editor) {
-    const document = editor.document;
-    let text;
-
-    if (fullText) {
-      text = editor.document.getText();
-    } else {
-      const line = document.lineAt(lineNum);
-      text = editor.document.getText(
-        new Range(
-          new Position(0, 0),
-          new Position(lineNum, line.range.end.character),
+  const document = ext.activeTextEditor?.document;
+  if (!document) return ".";
+  return typeof lineNum === "number"
+    ? contextAbove(
+        document.getText(
+          new Range(new Position(0, 0), new Position(lineNum, 0)),
         ),
-      );
-    }
-
-    // matches '\d .foo' or 'system "d .foo"'
-    const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
-
-    const matches = [...text.matchAll(pattern)];
-    if (matches.length) {
-      // fullText should use first defined context
-      // a selection should use the last defined context
-      context = fullText ? matches[0][2] : matches[matches.length - 1][2];
-    }
-  }
-
-  return context;
+      )
+    : leadingContext(document.getText());
 }
 
 export function getConextForRerunQuery(query: string): string {
-  let context = ".";
-  // matches '\d .foo' or 'system "d .foo"'
-  const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
-  const matches = [...query.matchAll(pattern)];
-  if (matches.length) {
-    // fullText should use first defined context
-    // a selection should use the last defined context
-    context = query ? matches[0][2] : matches[matches.length - 1][2];
-  }
-  return context;
+  return leadingContext(query);
 }
 
 export async function runQuery(
@@ -1084,7 +1071,7 @@ export async function runQuery(
       query = selection.isEmpty
         ? editor.document.lineAt(selection.active.line).text
         : editor.document.getText(selection);
-      context = getQueryContext(selection.end.line);
+      context = getQueryContext(selection.start.line);
       if (type === ExecutionTypes.PythonQuerySelection) {
         isPython = true;
       }
@@ -1367,6 +1354,40 @@ export async function writeQueryResultsToView(
   }
 }
 
+export async function writeQueryResultsToPlot(
+  data: string,
+  query: string,
+  connLabel: string,
+  executorName: string,
+  isInsights: boolean,
+  type?: string,
+  isPython?: boolean,
+  duration?: string,
+  isFromConnTree?: boolean,
+): Promise<void> {
+  notify("GG Plot displayed", MessageKind.DEBUG, {
+    logger,
+    telemetry:
+      "Results.Graphics.Displayed" +
+      (isInsights ? ".ie" : ".kdb") +
+      (isPython ? ".py" : ".q"),
+  });
+  await writePlotToFile(data);
+  addQueryHistory(
+    query,
+    executorName,
+    connLabel,
+    isInsights ? ServerType.INSIGHTS : ServerType.KDB,
+    true,
+    isPython,
+    type === "WORKBOOK",
+    undefined,
+    undefined,
+    duration,
+    isFromConnTree,
+  );
+}
+
 export async function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
@@ -1380,16 +1401,7 @@ export async function writeScratchpadResult(
   let errorMsg;
 
   if (result.error) {
-    errorMsg = "Error: " + result.errorMsg;
-
-    if (result.stacktrace) {
-      errorMsg =
-        errorMsg +
-        "\n" +
-        (Array.isArray(result.stacktrace)
-          ? formatScratchpadStacktrace(result.stacktrace)
-          : `${result.stacktrace}`);
-    }
+    errorMsg = formatScratchpadError(result);
   }
 
   if (executorName.endsWith(".kxnb")) {
@@ -1399,11 +1411,16 @@ export async function writeScratchpadResult(
   const plot = errorMsg ? undefined : resultToBase64(result);
 
   if (plot) {
-    notify("GG Plot displayed", MessageKind.DEBUG, {
-      logger,
-      telemetry: "Results.Graphics.Displayed.ie" + (isPython ? ".py" : ".q"),
-    });
-    await writePlotToFile(plot);
+    await writeQueryResultsToPlot(
+      plot,
+      query,
+      connLabel,
+      executorName,
+      true,
+      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      isPython,
+      duration,
+    );
     return;
   }
 

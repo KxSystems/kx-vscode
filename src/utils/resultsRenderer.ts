@@ -138,15 +138,19 @@ export function updatedExtractColumnDefs(results: StructuredTextResults) {
   const columnDefs = columnsArray.map((column) => {
     const sanitizedKey = sanitizeString(column.name);
     const cellDataType = kdbToAgGridCellType(column.type);
-    const headerName = column.type
-      ? `${sanitizedKey} [${column.type}]`
-      : sanitizedKey;
+    // An attribute belongs with the type it qualifies: `s#1 2 3 arrives as a
+    // plain longs column carrying `attributes: "s"`, which never reached the
+    // header (KXI-73276).
+    const type = column.attributes
+      ? `${column.type} (${column.attributes})`
+      : column.type;
+    const headerName = column.type ? `${sanitizedKey} [${type}]` : sanitizedKey;
 
     return {
       field: column.name,
       headerName: headerName,
       cellDataType,
-      cellRendererParams: { disabled: cellDataType === "boolean" },
+      isKey: !!column.isKey,
     };
   });
 
@@ -169,8 +173,8 @@ export function sanitizeString(value: any): any {
 
 export function kdbToAgGridCellType(kdbType: string): string {
   const typeMapping: { [key: string]: string } = {
-    boolean: "boolean",
-    booleans: "boolean",
+    boolean: "text",
+    booleans: "text",
     guid: "text",
     byte: "number",
     short: "number",
@@ -239,9 +243,16 @@ export function generateCoumnDefs(results: any, isInsights: boolean): any {
   }
 }
 
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export function formatResult(queryResult: string | number): string {
   return queryResult !== ""
-    ? `<p class="results-txt">${queryResult.toString().replace(/\n/g, "<br/>")}</p>`
+    ? `<p class="results-txt">${escapeHtml(queryResult.toString()).replace(/\n/g, "<br/>")}</p>`
     : "<p>No results to show</p>";
 }
 
@@ -254,7 +265,38 @@ export function convertToCsv(data: any[]): string[] {
   return [header, ...rows];
 }
 
+const Q_ESCAPES: Record<string, string> = {
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  "\\": "\\",
+  '"': '"',
+};
+const UTF8 = new TextDecoder("utf-8", { fatal: true });
+
+function decodeOctal(octal: string) {
+  try {
+    return UTF8.decode(
+      Uint8Array.from(octal.slice(1).split("\\"), (byte) =>
+        Number.parseInt(byte, 8),
+      ),
+    );
+  } catch {
+    return octal;
+  }
+}
+
+function unquote(text: string) {
+  const match = /^"((?:[^"\\]|\\.)*)"$/s.exec(text);
+  if (!match) return text;
+  return match[1].replace(
+    /((?:\\[0-7]{3})+)|\\(.)/gs,
+    (matched, octal: string | undefined, escape: string) =>
+      octal ? decodeOctal(octal) : (Q_ESCAPES[escape] ?? matched),
+  );
+}
+
 function normalize(obj: any) {
-  const o = `${obj}`;
-  return `"${o.replace(/"/gs, '""')}"`;
+  const o = unquote(`${obj}`);
+  return /[",\r\n]/s.test(o) ? `"${o.replace(/"/gs, '""')}"` : o;
 }

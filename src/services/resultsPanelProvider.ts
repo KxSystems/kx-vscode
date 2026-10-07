@@ -27,6 +27,7 @@ import { getNonce } from "../utils/getNonce";
 import { MessageKind, notify } from "../utils/notifications";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 import { getUri } from "../utils/uriUtils";
+import { webviewReset } from "../utils/webviewPage";
 
 const logger = "resultsPanelProvider";
 
@@ -53,7 +54,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   public resolveWebviewView(webviewView: WebviewView) {
-    /* c8 ignore start */
     this._view = webviewView;
 
     webviewView.webview.options = {
@@ -68,7 +68,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage((data) => {
       this.updateWebView(data);
     });
-    /* c8 ignore stop */
   }
 
   public updateResults(
@@ -185,24 +184,16 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   private getWebviewContent(webview: Webview) {
-    /* c8 ignore start */
     const getResource = (resource: string) =>
       getUri(webview, ext.context.extensionUri, resource.split("/"));
 
-    const getTheme = () =>
-      window.activeColorTheme.kind === ColorThemeKind.Light ||
-      window.activeColorTheme.kind === ColorThemeKind.HighContrastLight
-        ? "sl-theme-light"
-        : "sl-theme-dark";
-
     return /* html */ `
       <!DOCTYPE html>
-      <html lang="en" class="${getTheme()}">
+      <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="${getResource("out/light.css")}" />
-        <link rel="stylesheet" href="${getResource("out/style.css")}" />
+        ${webviewReset(getNonce())}
         <script type="module" nonce="${getNonce()}" src="${getResource("out/webview.js")}"></script>
         <title>KDB Results</title>
       </head>
@@ -211,6 +202,5 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       </body>
       </html>
     `;
-    /* c8 ignore stop */
   }
 }

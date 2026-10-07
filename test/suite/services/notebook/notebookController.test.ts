@@ -85,6 +85,10 @@ describe("Controller", () => {
       sinon
         .stub(ReplConnection.prototype, "executeQuery")
         .resolves({ output: "RESULT" });
+      sinon.stub(ReplConnection.prototype, "show");
+      sinon
+        .stub(ReplConnection, "getOrCreateInstance")
+        .resolves(Object.create(ReplConnection.prototype));
       sinon.stub(workspaceCommand, "getServerForUri").returns(undefined);
       sinon.stub(queryUtils, "getPythonWrapper").returns("expression");
       createInstance();
@@ -101,6 +105,75 @@ describe("Controller", () => {
           text: "RESULT",
           mime: "text/plain",
         });
+      });
+
+      it("should run only the selection it was given", async () => {
+        const cell = notebookTestUtils.createCell("q");
+        instance["selections"].set(cell, { text: "a:1", context: "." });
+        await instance.execute(
+          [cell],
+          notebookTestUtils.createNotebook(),
+          createController(),
+        );
+        const executeQuery = <sinon.SinonStub>(
+          ReplConnection.prototype.executeQuery
+        );
+        sinon.assert.calledOnce(executeQuery);
+        assert.strictEqual(executeQuery.firstCall.args[0], "a:1");
+      });
+
+      it("should run whole cells when several are run together", async () => {
+        const cell = notebookTestUtils.createCell("q");
+        instance["selections"].set(cell, { text: "a:1", context: "." });
+        await instance.execute(
+          [cell, notebookTestUtils.createCell("q")],
+          notebookTestUtils.createNotebook(),
+          createController(),
+        );
+        const executeQuery = <sinon.SinonStub>(
+          ReplConnection.prototype.executeQuery
+        );
+        assert.deepStrictEqual(
+          executeQuery.getCalls().map((call) => call.args[0]),
+          ["expressions", "expressions"],
+        );
+        assert.strictEqual(instance["selections"].get(cell)?.text, "a:1");
+      });
+
+      it("should mark cells running until they end", async () => {
+        const cell = notebookTestUtils.createCell("q");
+        const run = instance.execute(
+          [cell],
+          notebookTestUtils.createNotebook(),
+          createController(),
+        );
+        assert.ok(instance["running"].has(cell));
+        await run;
+        assert.ok(!instance["running"].has(cell));
+      });
+    });
+
+    describe("REPL by label", () => {
+      it("should report a REPL it cannot start and run no cell", async () => {
+        sinon
+          .stub(workspaceCommand, "resolveRunTarget")
+          .resolves({ kind: "repl", label: "missing" });
+        sinon
+          .stub(ReplConnection, "forLabel")
+          .rejects(new Error("REPL (missing) cannot be started"));
+        const controller = createController();
+        const createStub = sinon.spy(controller, "createNotebookCellExecution");
+        await instance.execute(
+          [notebookTestUtils.createCell("q")],
+          notebookTestUtils.createNotebook(),
+          controller,
+        );
+        sinon.assert.notCalled(createStub);
+        sinon.assert.calledWithMatch(
+          notifyStub,
+          /cannot be started/,
+          notifications.MessageKind.ERROR,
+        );
       });
     });
 
@@ -245,8 +318,14 @@ describe("Controller", () => {
         });
 
         describe("Connection Exists", () => {
+          let runDataSourceStub: sinon.SinonStub;
+
           beforeEach(() => {
             runOn(sinon.createStubInstance(InsightsConnection));
+
+            runDataSourceStub = sinon
+              .stub(dataSourceCommand, "runDataSource")
+              .resolves(undefined);
 
             createInstance();
           });
@@ -257,7 +336,30 @@ describe("Controller", () => {
               notebookTestUtils.createNotebook(),
               createController(),
             );
+            sinon.assert.calledOnce(runDataSourceStub);
             assert.strictEqual(success, true);
+          });
+
+          it("should fail the cell when the datasource query fails", async () => {
+            const writeOutput = sinon.stub(
+              controlller.KxNotebookController.prototype,
+              "writeOutput",
+            );
+            runDataSourceStub.rejects(
+              new Error("Request failed with status 502: Bad Gateway"),
+            );
+
+            await instance.execute(
+              [notebookTestUtils.createCell("sql")],
+              notebookTestUtils.createNotebook(),
+              createController(),
+            );
+
+            assert.strictEqual(success, false);
+            assert.match(
+              writeOutput.firstCall.args[1].text,
+              /502: Bad Gateway/,
+            );
           });
         });
 
@@ -289,6 +391,73 @@ describe("Controller", () => {
             assert.strictEqual(success, true);
             sinon.assert.calledOnce(populateScratchpadStub);
           });
+        });
+      });
+
+      describe("Output escaping", () => {
+        let writeOutputStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          const conn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
+          sinon
+            .stub(
+              ConnectionManagementService.prototype,
+              "retrieveConnectedConnection",
+            )
+            .returns(conn);
+          runOn(conn);
+          writeOutputStub = sinon.stub(
+            controlller.KxNotebookController.prototype,
+            "writeOutput",
+          );
+          createInstance();
+        });
+
+        const rendered = () => writeOutputStub.lastCall.args[1];
+
+        it("should escape markup in a column name and a cell value", async () => {
+          executeQueryStub.resolves({
+            count: 1,
+            columns: [
+              {
+                name: "x<y",
+                type: "symbols",
+                values: ["<b>a</b> & b"],
+                order: [0],
+              },
+            ],
+          });
+
+          await instance.execute(
+            [notebookTestUtils.createCell("sql")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          assert.strictEqual(rendered().mime, "text/html");
+          assert.ok(
+            rendered().text.includes("<th>x&lt;y [symbols]</th>"),
+            rendered().text,
+          );
+          assert.ok(
+            rendered().text.includes("<td>&lt;b&gt;a&lt;/b&gt; &amp; b</td>"),
+            rendered().text,
+          );
+        });
+
+        it("should escape markup in a text result", async () => {
+          executeQueryStub.resolves("{x<y}\n     ^");
+
+          await instance.execute(
+            [notebookTestUtils.createCell("q")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          assert.strictEqual(
+            rendered().text,
+            `<p class="results-txt">{x&lt;y}<br/>     ^</p>`,
+          );
         });
       });
 
@@ -331,6 +500,20 @@ describe("Controller", () => {
           });
 
           describe("q cell", () => {
+            it("should run only the selection it was given", async () => {
+              executeQueryStub.resolves(result.text);
+              const cell = notebookTestUtils.createCell("q");
+              instance["selections"].set(cell, { text: "a:1", context: "." });
+              await instance.execute(
+                [cell],
+                notebookTestUtils.createNotebook(),
+                createController(),
+              );
+              sinon.assert.calledOnce(executeQueryStub);
+              assert.strictEqual(executeQueryStub.firstCall.args[0], "a:1");
+              assert.ok(!instance["selections"].has(cell));
+            });
+
             it("should display table results", async () => {
               executeQueryStub.resolves(result.table);
               await instance.execute(
@@ -424,6 +607,133 @@ describe("Controller", () => {
     });
   });
 
+  describe("Selection", () => {
+    const lines = ["a:1", "b:2", "   "];
+
+    let executeCommandStub: sinon.SinonStub;
+    let cell: vscode.NotebookCell;
+    let source: string | undefined;
+
+    function createEditor(selection: Partial<vscode.Selection>) {
+      return <vscode.TextEditor>(<unknown>{
+        document: cell.document,
+        selection: { isEmpty: true, start: { line: 0 }, ...selection },
+      });
+    }
+
+    beforeEach(() => {
+      source = undefined;
+      const document = <vscode.TextDocument>(<unknown>{
+        uri: vscode.Uri.parse("vscode-notebook-cell:/test.kxnb#c2"),
+        lineAt: (line: number) => ({ text: lines[line] }),
+        getText: (range?: vscode.Range) =>
+          range ? "a:1\nb:2" : lines.join("\n"),
+      });
+      const notebook = <vscode.NotebookDocument>(<unknown>{
+        notebookType: "kx-notebook",
+        uri: vscode.Uri.file("test.kxnb"),
+        getCells: () => [cell],
+      });
+      cell = <vscode.NotebookCell>(<unknown>{ index: 2, document, notebook });
+      sinon.stub(vscode.workspace, "notebookDocuments").get(() => [notebook]);
+      executeCommandStub = sinon
+        .stub(vscode.commands, "executeCommand")
+        .callsFake(async () => {
+          source = instance["selections"].get(cell)?.text;
+        });
+      createInstance();
+    });
+
+    it("should run the current line of the cell", async () => {
+      await instance.executeSelection(
+        createEditor({ active: new vscode.Position(1, 0) }),
+      );
+      sinon.assert.calledOnceWithExactly(
+        executeCommandStub,
+        "notebook.cell.execute",
+        {
+          ranges: [{ start: 2, end: 3 }],
+          document: cell.notebook.uri,
+        },
+      );
+      assert.strictEqual(source, "b:2");
+    });
+
+    it("should run the selection of the cell", async () => {
+      await instance.executeSelection(createEditor({ isEmpty: false }));
+      assert.strictEqual(source, "a:1\nb:2");
+    });
+
+    it("should not run a blank line", async () => {
+      await instance.executeSelection(
+        createEditor({ active: new vscode.Position(2, 0) }),
+      );
+      sinon.assert.notCalled(executeCommandStub);
+    });
+
+    it("should not run an editor outside a KX notebook", async () => {
+      const editor = <vscode.TextEditor>(<unknown>{
+        document: { uri: vscode.Uri.file("test.q") },
+      });
+      assert.strictEqual(instance.findCell(editor), undefined);
+      await instance.executeSelection(editor);
+      sinon.assert.notCalled(executeCommandStub);
+    });
+
+    it("should run the whole cell again once the selection has run", async () => {
+      executeCommandStub.resolves();
+      await instance.executeSelection(
+        createEditor({ active: new vscode.Position(0, 0) }),
+      );
+      assert.ok(!instance["selections"].has(cell));
+    });
+
+    it("should run a selection once when it is asked twice before it starts", async () => {
+      let second: Promise<void> | undefined;
+      executeCommandStub.callsFake(async () => {
+        second ??= instance.executeSelection(
+          createEditor({ active: new vscode.Position(1, 0) }),
+        );
+        source = instance["selections"].get(cell)?.text;
+      });
+      await instance.executeSelection(
+        createEditor({ active: new vscode.Position(0, 0) }),
+      );
+      await second;
+      sinon.assert.calledOnce(executeCommandStub);
+      assert.strictEqual(source, "a:1");
+      sinon.assert.calledWithMatch(notifyStub, /already running/);
+    });
+
+    it("should keep a selection asked for while the last one is finishing", async () => {
+      const taken: (string | undefined)[] = [];
+      let second: Promise<void> | undefined;
+      executeCommandStub.callsFake(async () => {
+        await new Promise(setImmediate);
+        taken.push(instance["takeSelection"]([cell])?.text);
+        second ??= instance.executeSelection(
+          createEditor({ active: new vscode.Position(1, 0) }),
+        );
+      });
+      await instance.executeSelection(
+        createEditor({ active: new vscode.Position(0, 0) }),
+      );
+      await second;
+      assert.deepStrictEqual(taken, ["a:1", "b:2"]);
+      assert.ok(!instance["selections"].has(cell));
+    });
+
+    it("should say so instead of running a cell that is already running", async () => {
+      instance["running"].add(cell);
+      await instance.executeSelection(
+        createEditor({ active: new vscode.Position(0, 0) }),
+      );
+      sinon.assert.notCalled(executeCommandStub);
+      sinon.assert.calledWithMatch(notifyStub, /already running/);
+      assert.ok(!instance["selections"].has(cell));
+    });
+  });
+
   describe("Websocket images", () => {
     const image = "data:image/png;base64,iVBORw0KGgo=";
 
@@ -478,6 +788,7 @@ describe("Controller", () => {
       cell.kind = vscode.NotebookCellKind.Code;
       cell.index = 0;
       cell.outputs = [];
+      cell.notebook.cellAt = () => cell;
 
       applyEditStub = sinon
         .stub(vscode.workspace, "applyEdit")

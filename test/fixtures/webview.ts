@@ -17,6 +17,12 @@
 global.window = <any>{
   addEventListener() {},
   removeEventListener() {},
+  setTimeout(callback: () => void, delay: number) {
+    return setTimeout(callback, delay);
+  },
+  clearTimeout(handle: number) {
+    clearTimeout(handle);
+  },
 };
 
 const vsCodeApi = <any>{
@@ -30,9 +36,13 @@ global.acquireVsCodeApi = function () {
 };
 
 export class LitElement {
+  static shadowRootOptions = {};
   connectedCallback() {}
   disconnectedCallback() {}
   requestUpdate() {}
+  dispatchEvent(_event: any) {
+    return true;
+  }
 }
 export function html(strings: any, ...values: unknown[]) {
   return { strings, values };
@@ -45,13 +55,29 @@ export function state() {}
 export function property() {}
 export function query() {}
 export function repeat(items: Iterable<any>, keyFn: any, template: any) {
+  const rendered = [];
+  let index = 0;
   for (const item of items) {
-    keyFn(item);
+    keyFn(item, index);
     if (template) {
-      template(item);
+      rendered.push(template(item, index));
     }
+    index++;
   }
+  return rendered;
 }
-export function live(param: any) {
-  return param;
+export const noChange = Symbol("noChange");
+export class Directive {
+  constructor(_part: any) {}
+}
+export function directive(cls: any) {
+  return (...args: any[]) => {
+    const element = {
+      value: "",
+      addEventListener() {},
+      setAttribute() {},
+    };
+    const instance = new cls({ element });
+    return instance.render(...args);
+  };
 }

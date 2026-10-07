@@ -49,6 +49,8 @@ export interface StructuredTextColumns {
   order:
     | number[] /* ascending indexes if the column is sorted */
     | string /* error message if sorting is not possible */;
+  isKey?: boolean /* a key column of a dictionary or a keyed table */;
+  attributes?: string /* the q attribute the column carries: s, u, p or g */;
 }
 
 export interface StructuredTextResults {

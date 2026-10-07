@@ -58,223 +58,89 @@ describe("dataSourceCommand", () => {
       sinon.assert.match(result, "API");
     });
 
-    it("should return selectedType if it is QSQL", () => {
+    it("should return selectedType if it is UDA", () => {
       const result2 = dataSourceCommand.getSelectedType(
-        createMockDatasource({ selectedType: DataSourceTypes.QSQL }),
+        createMockDatasource({ selectedType: DataSourceTypes.UDA }),
       );
-      sinon.assert.match(result2, "QSQL");
-    });
-
-    it("should return selectedType if it is SQL", () => {
-      const result3 = dataSourceCommand.getSelectedType(
-        createMockDatasource({ selectedType: DataSourceTypes.SQL }),
-      );
-      sinon.assert.match(result3, "SQL");
+      sinon.assert.match(result2, "UDA");
     });
   });
 
   describe("getQuery", () => {
-    it("should return the correct query for API data sources", () => {
+    it("should return the table for getData", () => {
       const ds = createMockDatasource();
+      ds.dataSource.api.payload = { table: "mock_table" } as any;
       const query = dataSourceCommand.getQuery(ds, "API");
-      assert.strictEqual(query, `GetData - table: ${ds.dataSource.api.table}`);
+      assert.strictEqual(query, "GetData - table: mock_table");
     });
 
-    it("should return the correct query for QSQL data sources", () => {
-      const ds = createMockDatasource();
-      const query = dataSourceCommand.getQuery(ds, "QSQL");
-      assert.strictEqual(query, ds.dataSource.qsql.query);
-    });
-
-    it("should return the correct query for SQL data sources", () => {
-      const ds = createMockDatasource();
-      const query = dataSourceCommand.getQuery(ds, "SQL");
-      assert.strictEqual(query, ds.dataSource.sql.query);
+    it("should return the UDA name for a UDA", () => {
+      const ds = createMockDatasource({ selectedType: DataSourceTypes.UDA });
+      ds.dataSource.uda = { name: "test.uda", description: "", params: [] };
+      const query = dataSourceCommand.getQuery(ds, "UDA");
+      assert.strictEqual(query, "Executed UDA: test.uda");
     });
   });
 
   describe("getApiBody", () => {
-    it("should return the correct API body for an old data source with all fields", () => {
-      const apiBody = dataSourceCommand.getApiBody(
-        createMockDatasource({
-          api: {
-            selectedApi: "getData",
-            startTS: "2022-01-01T00:00:00Z",
-            endTS: "2022-01-02T00:00:00Z",
-            fill: "none",
-            temporality: "1h",
-            filter: ["col1=val1,col2=val2", "col3=val3"],
-            groupBy: ["col1", "col2"],
-            agg: ["sum(col3)", "avg(col4)"],
-            sortCols: ["col1 ASC", "col2 DESC"],
-            slice: ["10", "20"],
-            labels: ["label1", "label2"],
-            table: "myTable",
-          },
-        }),
+    it("should return the payload the query editor built", () => {
+      const payload = { table: "trades", startTS: "a", endTS: "b" };
+      const dataSource = <DataSourceFiles>{
+        dataSource: { selectedType: DataSourceTypes.API, api: { payload } },
+      };
+      assert.deepStrictEqual(
+        dataSourceCommand.getApiBody(dataSource, insightsConn),
+        payload,
       );
-
-      assert.deepStrictEqual(apiBody, {
-        table: "myTable",
-        startTS: "2022-01-01T00:00:00.000000000",
-        endTS: "2022-01-02T00:00:00.000000000",
-      });
     });
 
-    it("should return the correct API body for a new data source with some fields", () => {
-      const apiBody = dataSourceCommand.getApiBody(
-        createMockDatasource({
-          api: {
-            selectedApi: "getData",
-            startTS: "2022-01-01T00:00:00Z",
-            endTS: "2022-01-02T00:00:00Z",
-            fill: "zero",
-            rowCountLimit: "20",
-            isRowLimitLast: true,
-            temporality: "snapshot",
-            filter: ["col1=val1,col2=val2", "col3=val3"],
-            groupBy: ["col1", "col2"],
-            agg: ["sum(col3)", "avg(col4)"],
-            sortCols: ["col1 ASC", "col2 DESC"],
-            slice: ["10", "20"],
-            labels: ["label1", "label2"],
-            table: "myTable",
-            optional: {
-              filled: true,
-              temporal: true,
-              rowLimit: true,
-              filters: [],
-              sorts: [],
-              groups: [],
-              aggs: [],
-              labels: [],
-            },
-          },
-        }),
+    it("should return an empty body when there is no payload", () => {
+      const dataSource = <DataSourceFiles>{
+        dataSource: { selectedType: DataSourceTypes.API, api: {} },
+      };
+      assert.deepStrictEqual(
+        dataSourceCommand.getApiBody(dataSource, insightsConn),
+        {},
       );
-
-      assert.deepStrictEqual(apiBody, {
-        table: "myTable",
-        startTS: "2022-01-01T00:00:00.000000000",
-        endTS: "2022-01-02T00:00:00.000000000",
-        fill: "zero",
-        limit: -20,
-        labels: {},
-        temporality: "snapshot",
-      });
     });
 
-    it("should return the correct API body for a new data source with slice", () => {
-      const apiBody = dataSourceCommand.getApiBody(
-        createMockDatasource({
+    it("should resolve the target the scope holds into a dictionary", () => {
+      const scoped = new InsightsConnection("conn", insightsNode);
+      (<any>scoped).meta = {
+        payload: { dap: [{ assembly: "assembly-qe", instance: "rdb" }] },
+      };
+      const dataSource = <DataSourceFiles>{
+        dataSource: {
+          selectedType: DataSourceTypes.API,
           api: {
-            selectedApi: "getData",
-            startTS: "2022-01-01T00:00:00Z",
-            endTS: "2022-01-02T00:00:00Z",
-            fill: "zero",
-            rowCountLimit: "20",
-            isRowLimitLast: false,
-            temporality: "slice",
-            filter: [],
-            groupBy: [],
-            agg: [],
-            sortCols: [],
-            slice: [],
-            labels: [],
-            table: "myTable",
-            optional: {
-              rowLimit: true,
-              filled: false,
-              temporal: true,
-              filters: [],
-              sorts: [],
-              groups: [],
-              aggs: [],
-              labels: [],
+            payload: {
+              table: "trades",
+              startTS: "a",
+              endTS: "b",
+              scope: "assembly rdb",
             },
           },
-        }),
-      );
-      assert.strictEqual(apiBody.temporality, "slice");
-    });
-
-    it("should return the correct API body for a new data source with all fields", () => {
-      const apiBody = dataSourceCommand.getApiBody(
-        createMockDatasource({
-          api: {
-            selectedApi: "getData",
-            startTS: "2022-01-01T00:00:00Z",
-            endTS: "2022-01-02T00:00:00Z",
-            fill: "zero",
-            temporality: "snapshot",
-            rowCountLimit: "20",
-            isRowLimitLast: false,
-            filter: [],
-            groupBy: [],
-            agg: [],
-            sortCols: [],
-            slice: [],
-            labels: [],
-            table: "myTable",
-            optional: {
-              rowLimit: false,
-              filled: true,
-              temporal: true,
-              filters: [
-                { active: true, column: "bid", operator: ">", values: "100" },
-              ],
-              sorts: [{ active: true, column: "sym" }],
-              groups: [{ active: true, column: "bid" }],
-              aggs: [
-                { active: true, column: "ask", operator: "sum", key: "sumC" },
-              ],
-              labels: [{ active: true, key: "key", value: "value" }],
-            },
-          },
-        }),
-      );
-
-      assert.deepStrictEqual(apiBody, {
-        table: "myTable",
-        startTS: "2022-01-01T00:00:00.000000000",
-        endTS: "2022-01-02T00:00:00.000000000",
-        fill: "zero",
-        temporality: "snapshot",
-        labels: {
-          key: "value",
         },
-        sortCols: ["sym"],
-        groupBy: ["bid"],
-        agg: [["sumC", "sum", "ask"]],
-        filter: [[">", "bid", 100]],
-      });
+      };
+
+      assert.deepStrictEqual(
+        dataSourceCommand.getApiBody(dataSource, scoped).scope,
+        { affinity: "soft", assembly: "assembly-qe", tier: "rdb" },
+      );
     });
 
-    it("should return the correct API body for a data source with only required fields", () => {
-      const apiBody = dataSourceCommand.getApiBody(
-        createMockDatasource({
-          api: {
-            selectedApi: "getData",
-            startTS: "2022-01-01T00:00:00Z",
-            endTS: "2022-01-02T00:00:00Z",
-            fill: "",
-            temporality: "",
-            filter: [],
-            groupBy: [],
-            agg: [],
-            sortCols: [],
-            slice: [],
-            labels: [],
-            table: "myTable",
-          },
-        }),
-      );
+    it("should drop a scope that was never given a target", () => {
+      const dataSource = <DataSourceFiles>{
+        dataSource: {
+          selectedType: DataSourceTypes.API,
+          api: { payload: { table: "trades", scope: "" } },
+        },
+      };
 
-      assert.deepStrictEqual(apiBody, {
-        table: "myTable",
-        startTS: "2022-01-01T00:00:00.000000000",
-        endTS: "2022-01-02T00:00:00.000000000",
-      });
+      assert.deepStrictEqual(
+        dataSourceCommand.getApiBody(dataSource, insightsConn),
+        { table: "trades" },
+      );
     });
   });
 
@@ -297,6 +163,16 @@ describe("dataSourceCommand", () => {
       sinon.restore();
     });
 
+    const bounded = () => {
+      const ds = createMockDatasource();
+      ds.dataSource.api.payload = {
+        table: "myTable",
+        startTS: "2024-01-02T00:00:00.000000000",
+        endTS: "2024-01-01T00:00:00.000000000",
+      };
+      return ds;
+    };
+
     it("should show an error message if the time parameters are incorrect", async () => {
       checkIfTimeParamIsCorrectStub.returns(false);
 
@@ -305,10 +181,7 @@ describe("dataSourceCommand", () => {
         "showErrorMessage",
       );
 
-      await dataSourceCommand.runApiDataSource(
-        createMockDatasource(),
-        insightsConn,
-      );
+      await dataSourceCommand.runApiDataSource(bounded(), insightsConn);
 
       sinon.assert.calledOnce(showErrorMessageStub);
       sinon.assert.calledWith(
@@ -317,6 +190,19 @@ describe("dataSourceCommand", () => {
       );
       sinon.assert.notCalled(getApiBodyStub);
       sinon.assert.notCalled(getDataInsightsStub);
+    });
+
+    it("should run without a time range at all", async () => {
+      checkIfTimeParamIsCorrectStub.returns(false);
+      getApiBodyStub.returns({ table: "myTable" });
+      getDataInsightsStub.resolves({ results: {} });
+
+      await dataSourceCommand.runApiDataSource(
+        createMockDatasource(),
+        insightsConn,
+      );
+
+      sinon.assert.calledOnce(getDataInsightsStub);
     });
 
     it("should call the API and handle the results if the time parameters are correct", async () => {
@@ -330,54 +216,6 @@ describe("dataSourceCommand", () => {
       );
 
       sinon.assert.calledOnce(getDataInsightsStub);
-    });
-  });
-
-  describe("runQsqlDataSource", () => {
-    let getDataInsightsStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
-    });
-
-    afterEach(() => {
-      sinon.restore();
-    });
-
-    it("should call the API and handle the results", async () => {
-      getDataInsightsStub.resolves(getDataIntResponse);
-
-      const results = await dataSourceCommand.runQsqlDataSource(
-        createMockDatasource(),
-        insightsConn,
-      );
-
-      sinon.assert.calledOnce(getDataInsightsStub);
-      assert.deepStrictEqual(results, getDataIntResponse.results);
-    });
-  });
-
-  describe("runSqlDataSource", () => {
-    let getDataInsightsStub: sinon.SinonStub;
-
-    beforeEach(() => {
-      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
-    });
-
-    afterEach(() => {
-      sinon.restore();
-    });
-
-    it("should call the API and handle the results", async () => {
-      getDataInsightsStub.resolves(getDataIntResponse);
-
-      const results = await dataSourceCommand.runSqlDataSource(
-        createMockDatasource(),
-        insightsConn,
-      );
-
-      sinon.assert.calledOnce(getDataInsightsStub);
-      assert.deepStrictEqual(results, getDataIntResponse.results);
     });
   });
 
@@ -407,6 +245,82 @@ describe("dataSourceCommand", () => {
 
       sinon.assert.calledOnce(getDataInsightsStub);
       assert.deepStrictEqual(results, getDataIntResponse.results);
+    });
+
+    it("warns when the gateway will override a chosen parameter type", async () => {
+      isUDAAvailableStub.resolves(true);
+      getDataInsightsStub.resolves(getDataIntResponse);
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+      const warning = sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves();
+
+      const source = createMockDatasource();
+      source.dataSource.selectedType = DataSourceTypes.UDA;
+      source.dataSource.uda = {
+        name: ".uda.identity",
+        description: "",
+        params: [
+          {
+            name: "x",
+            description: "",
+            isReq: true,
+            type: [-11, -7],
+            selectedMultiTypeString: "Long",
+            isVisible: true,
+            value: 44,
+          },
+        ],
+      };
+
+      await dataSourceCommand.runUDADataSource(source, insightsConn);
+
+      sinon.assert.calledOnce(warning);
+      assert.match(
+        warning.getCall(0).args[0],
+        /^The service gateway will read x as the first type/,
+      );
+    });
+
+    it("stays quiet when the chosen type is the one the gateway would use", async () => {
+      isUDAAvailableStub.resolves(true);
+      getDataInsightsStub.resolves(getDataIntResponse);
+      sinon.stub(ext.constants, "reverseDataTypes").value(
+        new Map([
+          ["Symbol", -11],
+          ["Long", -7],
+        ]),
+      );
+      const warning = sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves();
+
+      const source = createMockDatasource();
+      source.dataSource.selectedType = DataSourceTypes.UDA;
+      source.dataSource.uda = {
+        name: ".uda.identity",
+        description: "",
+        params: [
+          {
+            name: "x",
+            description: "",
+            isReq: true,
+            type: [-11, -7],
+            selectedMultiTypeString: "Symbol",
+            isVisible: true,
+            value: "AAPL",
+          },
+        ],
+      };
+
+      await dataSourceCommand.runUDADataSource(source, insightsConn);
+
+      sinon.assert.notCalled(warning);
     });
 
     it("should call the API and handle the error results", async () => {
@@ -528,6 +442,11 @@ describe("dataSourceCommand", () => {
       selectedType: DataSourceTypes.QSQL,
       api: {
         selectedApi: "getData",
+        payload: {
+          table: "dummyTbl",
+          startTS: "2023-09-10T09:30",
+          endTS: "2023-09-19T12:30",
+        },
         table: "dummyTbl",
         startTS: "2023-09-10T09:30",
         endTS: "2023-09-19T12:30",
@@ -637,12 +556,153 @@ describe("dataSourceCommand", () => {
         .withArgs("No Insights active connection found");
     });
 
+    it("should append the stack trace to the results panel message", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.resolves({
+        error: "Executing code using (Q) raised - type: Mismatched types",
+        stacktrace: "  [0] {1+x}\n        ^\n",
+      });
+
+      ext.isResultsTabVisible = true;
+      await dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "test-file.kxquery",
+      );
+
+      sinon.assert.calledWith(
+        writeQueryResultsToViewStub,
+        "Executing code using (Q) raised - type: Mismatched types\n  [0] {1+x}\n        ^\n",
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should refuse the same file twice and let another one through", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      let release: (value: unknown) => void = () => undefined;
+      getDataInsightsStub.returns(
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+      );
+      ext.isResultsTabVisible = true;
+
+      const first = dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "one.kxquery",
+      );
+      const blocked = await dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "one.kxquery",
+      );
+      const other = dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "two.kxquery",
+      );
+
+      release({ error: "" });
+      await Promise.all([first, other]);
+
+      assert.strictEqual(blocked, undefined);
+      sinon.assert.calledTwice(getDataInsightsStub);
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should report and record a query that threw instead of returning", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.rejects(new Error("socket hang up"));
+      const showErrorMessage = sinon
+        .stub(vscode.window, "showErrorMessage")
+        .resolves(<any>undefined);
+      ext.kdbQueryHistoryList.length = 0;
+
+      ext.isResultsTabVisible = true;
+      await dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "test-file.kxquery",
+      );
+
+      sinon.assert.calledOnce(showErrorMessage);
+      assert.match(showErrorMessage.firstCall.args[0], /socket hang up/);
+      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+      assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
+      assert.strictEqual(ext.isDatasourceExecution, false);
+
+      ext.kdbQueryHistoryList.length = 0;
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should let a notebook render a query that threw", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.rejects(new Error("socket hang up"));
+
+      await assert.rejects(
+        () =>
+          dataSourceCommand.runDataSource(
+            mockDataSourceFile,
+            insightsConn.connLabel,
+            "test-file.kxnb",
+          ),
+        /socket hang up/,
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should append the stack trace to the console message", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.resolves({
+        error: "Executing code using (Q) raised - type: Mismatched types",
+        stacktrace: "  [0] {1+x}\n        ^\n",
+      });
+
+      ext.isResultsTabVisible = false;
+      await dataSourceCommand.runDataSource(
+        mockDataSourceFile,
+        insightsConn.connLabel,
+        "test-file.kxquery",
+      );
+
+      sinon.assert.calledWith(
+        writeQueryResultsToConsoleStub,
+        "Executing code using (Q) raised - type: Mismatched types\n  [0] {1+x}\n        ^\n",
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
     it("should return error for visible results panel", async () => {
       ext.connectedConnectionList.push(insightsConn);
       retrieveConnStub.resolves(insightsConn);
       insightsConn.meta = getMetaResponse;
       getMetaStub.resolves(getMetaResponse);
-      sinon.stub(dataSourceCommand, "runQsqlDataSource").resolves(dummyError);
+      sinon.stub(dataSourceCommand, "runUDADataSource").resolves(dummyError);
 
       ext.isResultsTabVisible = true;
       await dataSourceCommand.runDataSource(
@@ -661,7 +721,7 @@ describe("dataSourceCommand", () => {
       retrieveConnStub.resolves(insightsConn);
       insightsConn.meta = getMetaResponse;
       getMetaStub.resolves(getMetaResponse);
-      sinon.stub(dataSourceCommand, "runQsqlDataSource").resolves(dummyError);
+      sinon.stub(dataSourceCommand, "runUDADataSource").resolves(dummyError);
 
       ext.isResultsTabVisible = false;
       await dataSourceCommand.runDataSource(
@@ -671,24 +731,6 @@ describe("dataSourceCommand", () => {
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
-
-      ext.connectedConnectionList.length = 0;
-    });
-
-    it("should return QSQL results", async () => {
-      ext.connectedConnectionList.push(insightsConn);
-      retrieveConnStub.resolves(insightsConn);
-      insightsConn.meta = getMetaResponse;
-      getMetaStub.resolves(getMetaResponse);
-      getDataInsightsStub.resolves({ results: getDataResponse, error: "" });
-      ext.isResultsTabVisible = true;
-      await dataSourceCommand.runDataSource(
-        mockDataSourceFile,
-        insightsConn.connLabel,
-        "test-file.kdb.json",
-      );
-      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
-      sinon.assert.calledOnce(writeQueryResultsToViewStub);
 
       ext.connectedConnectionList.length = 0;
     });
@@ -698,25 +740,6 @@ describe("dataSourceCommand", () => {
       retrieveConnStub.resolves(insightsConn);
       insightsConn.meta = getMetaResponse;
       mockDataSourceFile.dataSource.selectedType = DataSourceTypes.API;
-      getMetaStub.resolves(getMetaResponse);
-      getDataInsightsStub.resolves({ results: getDataResponse, error: "" });
-      ext.isResultsTabVisible = false;
-      await dataSourceCommand.runDataSource(
-        mockDataSourceFile,
-        insightsConn.connLabel,
-        "test-file.kdb.json",
-      );
-      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
-      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
-
-      ext.connectedConnectionList.length = 0;
-    });
-
-    it("should return SQL results", async () => {
-      ext.connectedConnectionList.push(insightsConn);
-      retrieveConnStub.resolves(insightsConn);
-      insightsConn.meta = getMetaResponse;
-      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.SQL;
       getMetaStub.resolves(getMetaResponse);
       getDataInsightsStub.resolves({ results: getDataResponse, error: "" });
       ext.isResultsTabVisible = false;
@@ -750,20 +773,6 @@ describe("dataSourceCommand", () => {
       ext.connectedConnectionList.length = 0;
     });
 
-    it("should return error message QSQL", async () => {
-      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
-      getMetaStub.resolves(getMetaResponse);
-      getDataInsightsStub.resolves({ results: getDataResponse, error: "" });
-      isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource(
-        mockDataSourceFile,
-        insightsConn.connLabel,
-        "test-file.kdb.json",
-      );
-      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
-      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
-    });
-
     it("should return error message API", async () => {
       mockDataSourceFile.dataSource.selectedType = DataSourceTypes.API;
       getMetaStub.resolves(getMetaResponse);
@@ -778,50 +787,8 @@ describe("dataSourceCommand", () => {
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
     });
 
-    it("should return error message SQL", async () => {
-      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.SQL;
-      getMetaStub.resolves(getMetaResponse);
-      getDataInsightsStub.resolves({ results: getDataResponse, error: "" });
-      isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource(
-        mockDataSourceFile,
-        insightsConn.connLabel,
-        "test-file.kdb.json",
-      );
-      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
-      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
-    });
-
-    it("should return error message QSQL", async () => {
-      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
-      getMetaStub.resolves(getMetaResponse);
-      getDataInsightsStub.resolves(undefined);
-      isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource(
-        mockDataSourceFile,
-        insightsConn.connLabel,
-        "test-file.kdb.json",
-      );
-      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
-      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
-    });
-
     it("should return error message API", async () => {
       mockDataSourceFile.dataSource.selectedType = DataSourceTypes.API;
-      getMetaStub.resolves(getMetaResponse);
-      getDataInsightsStub.resolves(undefined);
-      isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource(
-        mockDataSourceFile,
-        insightsConn.connLabel,
-        "test-file.kdb.json",
-      );
-      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
-      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
-    });
-
-    it("should return error message SQL", async () => {
-      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.SQL;
       getMetaStub.resolves(getMetaResponse);
       getDataInsightsStub.resolves(undefined);
       isVisibleStub.returns(false);
@@ -920,6 +887,50 @@ describe("dataSourceCommand", () => {
 
       assert.ok(kdbOutputLogStub.calledOnce);
       assert.deepEqual(result, { error });
+    });
+
+    it("should keep the stack trace beside the error", () => {
+      const result = dataSourceCommand.parseError("test error", "  [0] {1+x}");
+
+      assert.deepEqual(result, {
+        error: "test error",
+        stacktrace: "  [0] {1+x}",
+      });
+    });
+  });
+
+  describe("formatDataSourceError", () => {
+    it("should prefer the error message over the error", () => {
+      const result = dataSourceCommand.formatDataSourceError({
+        error: true,
+        errorMsg: "type",
+      });
+
+      assert.strictEqual(result, "type");
+    });
+
+    it("should append the stack trace under the message", () => {
+      const result = dataSourceCommand.formatDataSourceError({
+        error: "type",
+        stacktrace: "  [0] {1+x}\n        ^\n",
+      });
+
+      assert.strictEqual(result, "type\n  [0] {1+x}\n        ^\n");
+    });
+
+    it("should leave the message alone without a stack trace", () => {
+      const result = dataSourceCommand.formatDataSourceError({
+        error: "type",
+      });
+
+      assert.strictEqual(result, "type");
+    });
+
+    it("should pass a buffer error through untouched", () => {
+      const error = { buffer: new ArrayBuffer(1) };
+      const result = dataSourceCommand.formatDataSourceError({ error });
+
+      assert.strictEqual(result, error);
     });
   });
 });

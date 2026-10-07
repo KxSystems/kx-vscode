@@ -48,6 +48,17 @@ SonarQube results can be viewed at https://sonarqube.dl.kx.com/dashboard?branch=
 
 Pressing F5 with a file in the extension open will launch a VSCode instance running the extension built from source, with the debugger open in the original VSCode instance.
 
+On VS Code 1.139, whose bundled JavaScript debugger (js-debug 1.117) cannot
+attach on Node 24.20
+([vscode-js-debug#2416](https://github.com/microsoft/vscode-js-debug/issues/2416)),
+F5 leaves the new instance stopped on its first line and reports "Extension
+host did not start in 10 seconds". Run Without Debugging (Ctrl+F5) still works.
+To debug, install
+[JavaScript Debugger (Nightly)](https://marketplace.visualstudio.com/items?itemName=ms-vscode.js-debug-nightly)
+and disable the built-in one (search the extensions for
+`@builtin @id:ms-vscode.js-debug`), then reload the window. Revert both once VS
+Code ships js-debug 1.140 or later.
+
 Extension [Unit Tests](https://github.com/KxSystems/kx-vscode/tree/dev/test/suite) can be debugged by selecting `Extension Tests` target from run and debug tab.
 
 Testing will stop at any breakpoint set in test or source file.
@@ -115,6 +126,14 @@ exposes no API for another extension's tree items, and the window loads the
 bundled extension, so a test cannot reach the providers either. Tree contents
 are covered in `test/suite` instead; what a tree item's command does when it is
 run is still driven from here, with the item the tree would hand it.
+
+A webview's content is out of reach for the same reason — it runs in an iframe,
+and postMessage is the only way in. So a panel of the test's own takes its
+place: `webview.ts` mounts the component from the bundle the real page loads
+(`out/query.js` for the query editor, `out/webview.js` for the rest) and drives
+it from a script running inside the page, which reports what it found back over
+that channel. The component, its shadow DOM and the controls it is built from
+are all real; only the panel hosting them belongs to the test.
 
 The workspace also turns off everything the workbench would otherwise put in
 front of a test: `files.simpleDialog.enable` replaces the system file dialog

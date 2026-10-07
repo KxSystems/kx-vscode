@@ -115,15 +115,16 @@ export function registerImageTarget(
  * Writes outputs to a cell that is no longer executing, which has to go through
  * the document rather than the finished execution. There is no edit for outputs
  * alone, so the cell is rewritten with its content, metadata and execution
- * summary preserved.
- * @param cell The cell to write to
+ * summary preserved, and the target moves on to the cell written in its place.
+ * @param target The target whose cell to write to
  * @param outputs The outputs the cell ends up with
  * @returns Whether the edit was applied
  */
 async function writeToCell(
-  cell: NotebookCell,
+  target: ext.CellExecutionTarget,
   outputs: NotebookCellOutput[],
 ): Promise<boolean> {
+  const { cell } = target;
   const replacement = new NotebookCellData(
     cell.kind,
     cell.document.getText(),
@@ -145,13 +146,19 @@ async function writeToCell(
       ),
   );
 
+  const index = cell.index;
   const edit = new WorkspaceEdit();
   edit.set(cell.notebook.uri, [
-    NotebookEdit.replaceCells(new NotebookRange(cell.index, cell.index + 1), [
+    NotebookEdit.replaceCells(new NotebookRange(index, index + 1), [
       replacement,
     ]),
   ]);
-  return workspace.applyEdit(edit);
+  if (!(await workspace.applyEdit(edit))) {
+    return false;
+  }
+  target.cell = cell.notebook.cellAt(index);
+  target.index = index;
+  return true;
 }
 
 /**
@@ -191,7 +198,7 @@ export async function renderImage(
       }
       if (Date.now() - target.endedAt < LATE_OUTPUT_MS) {
         await target.applied;
-        if (await writeToCell(target.cell, [...target.outputs, output])) {
+        if (await writeToCell(target, [...target.outputs, output])) {
           target.outputs.push(output);
           return;
         }

@@ -508,6 +508,72 @@ describe("Executing on the REPL", () => {
       );
     });
 
+    it("keeps a pasted comment at the prompt instead of loading it", async () => {
+      const from = mark();
+      type(`\x1b[200~/${path.basename(Q_FILE.fsPath)}\r\x1b[201~`);
+      type("\r");
+      type('"AFTER_PASTED_COMMENT"');
+      type("\r");
+
+      await until(
+        () => since(from).includes("AFTER_PASTED_COMMENT"),
+        `the next statement did not run:\n${since(from)}`,
+      );
+      assert.ok(
+        !/system"l/.test(since(from)),
+        `the pasted comment was loaded:\n${since(from)}`,
+      );
+    });
+
+    it("shows a multi-line paste and holds it until Enter", async () => {
+      const from = mark();
+      type('\x1b[200~"PASTED_FIRST"\r"PASTED_SECOND"\x1b[201~');
+      await untilShows('"PASTED_SECOND"');
+      type(KEY.CTRL_C);
+      type('"AFTER_DISCARDED_PASTE"');
+      type("\r");
+
+      await until(
+        () => since(from).includes("AFTER_DISCARDED_PASTE"),
+        `the next statement did not run:\n${since(from)}`,
+      );
+      assert.ok(
+        !since(from).includes("PASTED_FIRST"),
+        `the paste ran before Enter:\n${since(from)}`,
+      );
+
+      type('\x1b[200~"PASTED_THIRD"\r"PASTED_FOURTH"\x1b[201~');
+      type("\r");
+      await until(
+        () => since(from).includes("PASTED_FOURTH"),
+        `the paste did not run on Enter:\n${since(from)}`,
+      );
+      assert.ok(since(from).includes("PASTED_THIRD"), since(from));
+    });
+
+    it("shows each statement it runs when source expressions are shown", async () => {
+      const conf = vscode.workspace.getConfiguration("kdb");
+      await conf.update(
+        "hideSourceExpressions",
+        false,
+        vscode.ConfigurationTarget.Global,
+      );
+      try {
+        type(KEY.CTRL_L);
+        await untilShows("sym:`AAPL", false);
+        await focus(Q_FILE);
+        await vscode.commands.executeCommand("kdb.execute.fileQuery");
+        await untilShows("q) sym:`AAPL");
+        await untilShows("q) qty:120");
+      } finally {
+        await conf.update(
+          "hideSourceExpressions",
+          undefined,
+          vscode.ConfigurationTarget.Global,
+        );
+      }
+    });
+
     it("interrupts a running statement with Ctrl+C", async () => {
       const from = mark();
       type(`"${SLEEPS}"`);
@@ -597,6 +663,44 @@ describe("Executing on the REPL", () => {
         "",
         `the workspace REPL received it:\n${since(fromWorkspace)}`,
       );
+    });
+
+    it("runs a file pinned to a REPL on that REPL, starting it, not on the active one", async () => {
+      const FOLDER_A = path.join(WORKSPACE, "folderA");
+      const conf = vscode.workspace.getConfiguration("kdb");
+      const map = conf.get<Record<string, string>>("connectionMap", {});
+      await conf.update("connectionMap", {
+        ...map,
+        "folderA/a.q": "REPL (workspace/folderA)",
+      });
+
+      try {
+        await vscode.commands.executeCommand(
+          "kdb.repl.openFolder",
+          vscode.Uri.file(FOLDER_B),
+        );
+        await focus(FOLDER_A_FILE);
+
+        const fromA = mark(FOLDER_A);
+        const fromB = mark(FOLDER_B);
+        await vscode.commands.executeCommand("kdb.execute.fileQuery");
+
+        await until(
+          () => since(fromA, FOLDER_A).includes(FOLDER_A_QUERY),
+          `the pinned REPL did not receive the query:\n${since(fromA, FOLDER_A)}`,
+        );
+        assert.strictEqual(
+          since(fromB, FOLDER_B),
+          "",
+          `the active REPL received it:\n${since(fromB, FOLDER_B)}`,
+        );
+        assert.ok(
+          terminal("KX REPL (workspace/folderA)"),
+          "the pinned REPL has no terminal",
+        );
+      } finally {
+        await conf.update("connectionMap", map);
+      }
     });
   });
 });

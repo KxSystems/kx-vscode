@@ -15,6 +15,7 @@ import axios from "axios";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
+import { getEnvironment } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { getIconPath } from "../utils/iconsUtils";
 import {
@@ -26,10 +27,19 @@ import {
 import { errorMessage } from "../utils/shared";
 import { writeLocalFile } from "../utils/storage";
 import { getUri } from "../utils/uriUtils";
+import { webviewReset } from "../utils/webviewPage";
 
 const logger = "setupTools";
 
+const VIEW_SETTINGS = [
+  "kdb.qHomeDirectory",
+  "kdb.qHomeDirectoryWorkspace",
+  "kdb.neverShowQInstallAgain",
+];
+
 let panel: vscode.WebviewPanel | undefined;
+let welcomeFolder: vscode.WorkspaceFolder | undefined;
+let qBinary = "";
 
 export async function showSetupError(workspace?: vscode.WorkspaceFolder) {
   /* c8 ignore start */
@@ -61,17 +71,19 @@ export async function showSetupError(workspace?: vscode.WorkspaceFolder) {
     "Install KDB-X",
     "Dismiss",
   );
-  if (res === "Install KDB-X") showWelcome();
+  if (res === "Install KDB-X") showWelcome(workspace);
   /* c8 ignore stop */
 }
 
-export function showWelcome() {
+export function showWelcome(folder?: vscode.WorkspaceFolder) {
   /* c8 ignore start */
   notify("Welcome displayed.", MessageKind.DEBUG, {
     logger,
     telemetry: "Welcome.Displayed",
   });
+  welcomeFolder = folder;
   if (panel) {
+    updateView();
     panel.reveal();
   } else {
     panel = vscode.window.createWebviewPanel(
@@ -87,7 +99,14 @@ export function showWelcome() {
     panel.iconPath = <any>getIconPath("kx_logo.png");
     panel.webview.onDidReceiveMessage((msg) => {
       if (msg === "install") installKdbX();
-      else if (msg === true || msg === false) {
+      else if (msg === "repl") {
+        vscode.commands.executeCommand("kdb.repl.start");
+      } else if (msg === "qhome") {
+        vscode.commands.executeCommand(
+          "workbench.action.openSettings",
+          "kdb.qHomeDirectory",
+        );
+      } else if (msg === true || msg === false) {
         vscode.workspace
           .getConfiguration()
           .update(
@@ -98,11 +117,17 @@ export function showWelcome() {
       }
     });
     updateView();
-    const listener = vscode.window.onDidChangeActiveColorTheme(() =>
-      updateView(),
-    );
+    const listeners = [
+      vscode.window.onDidChangeActiveColorTheme(() => updateView(false)),
+      vscode.workspace.onDidChangeConfiguration((event) => {
+        if (VIEW_SETTINGS.some((name) => event.affectsConfiguration(name))) {
+          updateView();
+        }
+      }),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => updateView()),
+    ];
     panel.onDidDispose(() => {
-      listener.dispose();
+      listeners.forEach((listener) => listener.dispose());
       panel = undefined;
     });
     ext.context.subscriptions.push(panel);
@@ -115,26 +140,23 @@ function getWebviewContent(webview: vscode.Webview) {
   const getResource = (resource: string) =>
     getUri(webview, ext.context.extensionUri, resource.split("/"));
 
-  const getTheme = () =>
-    vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ||
-    vscode.window.activeColorTheme.kind ===
-      vscode.ColorThemeKind.HighContrastLight
-      ? "sl-theme-light"
-      : "sl-theme-dark";
+  const isDark = () =>
+    vscode.window.activeColorTheme.kind !== vscode.ColorThemeKind.Light &&
+    vscode.window.activeColorTheme.kind !==
+      vscode.ColorThemeKind.HighContrastLight;
 
   return /* html */ `
     <!DOCTYPE html>
-    <html lang="en" class="${getTheme()}">
+    <html lang="en">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <link rel="stylesheet" href="${getResource("out/light.css")}" />
-      <link rel="stylesheet" href="${getResource("out/style.css")}" />
+      ${webviewReset(getNonce())}
       <script type="module" nonce="${getNonce()}" src="${getResource("out/webview.js")}"></script>
       <title>Welcome to KDB-X</title>
     </head>
     <body>
-      <kdb-welcome-view image="${getResource("resources/images/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
+      <kdb-welcome-view image="${getResource("resources/images/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${isDark() ? "dark" : ""}" windows="${process.platform === "win32" ? "true" : ""}" q="${getQBinary()}"></kdb-welcome-view>
     </body>
     </html>
   `;
@@ -303,6 +325,26 @@ async function setHome(home: string, folder?: vscode.WorkspaceFolder) {
   /* c8 ignore stop */
 }
 
+export function findQBinary(preferred = welcomeFolder) {
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  if (preferred && folders.includes(preferred)) {
+    return getEnvironment(preferred).qBinPath;
+  }
+  if (folders.length === 0) return getEnvironment().qBinPath;
+  const uri = vscode.window.activeTextEditor?.document.uri;
+  const active = uri && vscode.workspace.getWorkspaceFolder(uri);
+  for (const folder of [active, ...folders.filter((f) => f !== active)]) {
+    if (!folder) continue;
+    const { qBinPath } = getEnvironment(folder);
+    if (qBinPath) return qBinPath;
+  }
+  return "";
+}
+
+function getQBinary() {
+  return qBinary.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+
 function getShowWelcome() {
   /* c8 ignore start */
   return !vscode.workspace
@@ -311,8 +353,9 @@ function getShowWelcome() {
   /* c8 ignore stop */
 }
 
-function updateView() {
+function updateView(refresh = true) {
   /* c8 ignore start */
+  if (refresh) qBinary = findQBinary();
   if (panel) panel.webview.html = getWebviewContent(panel.webview);
   /* c8 ignore stop */
 }

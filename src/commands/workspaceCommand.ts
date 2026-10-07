@@ -23,6 +23,7 @@ import {
   QuickPickItemKind,
   Range,
   StatusBarAlignment,
+  TabInputCustom,
   TabInputNotebook,
   TextDocument,
   TextEditor,
@@ -41,9 +42,10 @@ import {
 import { getActiveTarget } from "../classes/activeTarget";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
-import { ReplConnection } from "../classes/replConnection";
+import { QNotFoundError, ReplConnection } from "../classes/replConnection";
 import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
+import { DISTRIBUTED, DISTRIBUTED_SINCE } from "../models/query";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
@@ -51,12 +53,12 @@ import {
   calculateSeconds,
   formatSeconds,
   getBasename,
+  isBaseVersionGreaterOrEqual,
   isQuick,
   isQuickAlias,
   offerConnectAction,
 } from "../utils/core";
-import { importOldDsFiles } from "../utils/dataSource";
-import { MessageKind, notify, Runner } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import {
   RunFlag,
   getPythonWrapper,
@@ -104,15 +106,16 @@ export function getActiveFileUri(context?: unknown): Uri | undefined {
   if (tab instanceof TabInputNotebook) {
     return tab.uri;
   }
+  if (tab instanceof TabInputCustom && isQuery(tab.uri)) {
+    return tab.uri;
+  }
 
   return ext.activeTextEditor?.document.uri;
 }
 
 function activeEditorChanged(editor?: TextEditor | undefined) {
-  /* c8 ignore start */
   setRealActiveTextEditor(editor);
   updateStatusBarItems();
-  /* c8 ignore stop */
 }
 
 /**
@@ -126,7 +129,10 @@ export async function updateStatusBarItems() {
 
   if (uri) {
     const server = getServerForUri(uri);
-    if (server || isConnectableFile(uri)) {
+    if (isQuery(uri)) {
+      setRunScratchpadItemText(uri, server || "(none)");
+      runItem.show();
+    } else if (server || isConnectableFile(uri)) {
       setRunScratchpadItemText(uri, server || "(active)");
       runItem.show();
     } else {
@@ -140,18 +146,46 @@ export async function updateStatusBarItems() {
   }
 }
 
+const REPL_LABEL = new RegExp(`^${ext.REPL} \\((.+)\\)$`, "s");
+
+export function replServer(label: string) {
+  return `${ext.REPL} (${label})`;
+}
+
+export function isRepl(server?: string): boolean {
+  return server === ext.REPL || (!!server && REPL_LABEL.test(server));
+}
+
+export function replLabelOf(server?: string) {
+  return server ? REPL_LABEL.exec(server)?.[1] : undefined;
+}
+
+export function replChoices(server?: string) {
+  const choices = ReplConnection.labels().map(replServer);
+  if (server && isRepl(server) && !choices.includes(server)) {
+    choices.push(server);
+  }
+  return choices;
+}
+
+export function runItemText(text: string) {
+  const active = ReplConnection.activeLabel;
+  return text === ext.REPL && active ? `${ext.REPL} → ${active}` : text;
+}
+
 function setRunScratchpadItemText(uri: Uri, text: string) {
-  /* c8 ignore start */
-  ext.runScratchpadItem.text = `$(cloud) ${text}`;
+  ext.runScratchpadItem.text = `$(cloud) ${runItemText(text)}`;
   ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
-  /* c8 ignore stop */
 }
 
 export async function setTimeoutItem(uri: Uri) {
   const server = getServerForUri(uri);
   const timeoutItem = ext.pickTimeoutItem;
 
-  if (server) {
+  if (isQuery(uri)) {
+    setTimeouttemText(uri, getTimeoutForUri(uri));
+    timeoutItem.show();
+  } else if (server) {
     const conn = await getConnectionForServer(server);
 
     if (conn instanceof InsightsNode) {
@@ -191,7 +225,9 @@ export function getInsightsServers() {
     {},
   );
 
-  return Object.keys(servers).map((key) => servers[key].alias);
+  return Object.values(servers)
+    .map(({ alias }) => alias)
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function getServers() {
@@ -202,7 +238,9 @@ function getServers() {
   );
 
   return [
-    ...Object.keys(servers).map((key) => servers[key].serverAlias),
+    ...Object.values(servers)
+      .map(({ serverAlias }) => serverAlias)
+      .sort((a, b) => a.localeCompare(b)),
     ...getInsightsServers(),
   ];
 }
@@ -218,7 +256,7 @@ function getQuickServers(uri: Uri) {
     ...sessionConnectionMap.values(),
   ];
   targets.forEach((target) => {
-    if (target.includes(":") && !quickServers.includes(target)) {
+    if (isQuick(target) && !quickServers.includes(target)) {
       quickServers.push(target);
     }
   });
@@ -332,7 +370,7 @@ export function getServerForUri(uri: Uri) {
   const servers = getServers();
 
   return isQuick(server) ||
-    (server && (server === ext.REPL || servers.includes(server)))
+    (server && (isRepl(server) || servers.includes(server)))
     ? server
     : undefined;
 }
@@ -473,22 +511,34 @@ export function getConnectionForUri(uri: Uri) {
 
 export async function pickConnection(uri: Uri) {
   /* c8 ignore start */
+  const insightsOnly = isQuery(uri);
   const server = getServerForUri(uri);
-  const items = [
-    "(active)",
-    ext.REPL,
-    ...getServers(),
-    ...getQuickServers(uri),
-  ];
+  const items = insightsOnly
+    ? getInsightsServers()
+    : [
+        "(active)",
+        ...replChoices(server),
+        ...getServers(),
+        ...getQuickServers(uri),
+      ];
 
   let picked = await showInputPicker(items, {
-    title: `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
+    title: insightsOnly
+      ? `Choose an Insights connection for ${getBasename(uri)}`
+      : `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
     placeHolder: server,
   });
 
   if (picked === undefined) return undefined;
 
-  if (isQuick(picked)) {
+  if (insightsOnly) {
+    if (!items.includes(picked)) {
+      notify(`Connection "${picked}" is not found.`, MessageKind.ERROR, {
+        logger,
+      });
+      return undefined;
+    }
+  } else if (isQuick(picked)) {
     const [host, port, user, pass] = picked.split(":");
     if (host && port && /^\d+$/s.test(port)) {
       if (user) {
@@ -506,14 +556,14 @@ export async function pickConnection(uri: Uri) {
   } else if (picked === "(active)") {
     picked = undefined;
     await setTargetForUri(uri, undefined);
-  } else if (picked === ext.REPL) {
-    // The REPL has no execution targets, drop any stale assignment.
-    await setTargetForUri(uri, undefined);
   } else if (!items.includes(picked)) {
     notify(`Connection "${picked}" is not found.`, MessageKind.ERROR, {
       logger,
     });
     return undefined;
+  } else if (isRepl(picked)) {
+    // The REPL has no execution targets, drop any stale assignment.
+    await setTargetForUri(uri, undefined);
   }
 
   if (picked || isConnectableFile(uri)) {
@@ -534,7 +584,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   /* c8 ignore start */
   let server = getServerForUri(uri);
   if (!server) server = await pickConnection(uri);
-  if (!server || server === ext.REPL) return;
+  if (!server || isRepl(server)) return;
 
   const conn = await findConnection(uri);
   const isInsights = conn instanceof InsightsConnection;
@@ -554,7 +604,12 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
     daps.unshift(createMetaDapFromTarget(target));
   }
 
-  const tierItems = buildTierOptionsWithSeparators(daps);
+  const tierItems = buildTierOptionsWithSeparators(
+    daps,
+    isInsights &&
+      !!conn.insightsVersion &&
+      isBaseVersionGreaterOrEqual(conn.insightsVersion, DISTRIBUTED_SINCE),
+  );
   const defaultOption = isInsights ? "scratchpad" : "default";
 
   const items: QuickPickItem[] = [{ label: defaultOption }];
@@ -641,7 +696,7 @@ export async function pickTimeout(uri: Uri) {
 
 function createTierKey(dap: MetaDap): string {
   const cleanedAssembly = cleanAssemblyName(dap.assembly);
-  return `${cleanedAssembly} ${dap.instance}`;
+  return dap.instance ? `${cleanedAssembly} ${dap.instance}` : cleanedAssembly;
 }
 
 function targetExists(target: string, daps: MetaDap[]): boolean {
@@ -710,7 +765,10 @@ function createMetaDapFromTarget(target: string): MetaDap {
 // }
 
 // Options separated by Assembly
-function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+function buildTierOptionsWithSeparators(
+  daps: MetaDap[],
+  distributed: boolean,
+): QuickPickItem[] {
   const assemblyMap = new Map<string, Map<string, MetaDap[]>>();
 
   daps.forEach((dap) => {
@@ -718,7 +776,7 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
       assemblyMap.set(dap.assembly, new Map<string, MetaDap[]>());
     }
 
-    const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+    const tierKey = createTierKey(dap);
     const tierMap = assemblyMap.get(dap.assembly)!;
     const cleanedDap = { ...dap };
 
@@ -742,6 +800,14 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
       kind: QuickPickItemKind.Separator,
       label: `${assembly}`,
     });
+
+    // The assembly on its own: the RC fans the query out over every tier.
+    if (distributed) {
+      items.push({
+        label: cleanAssemblyName(assembly),
+        description: DISTRIBUTED,
+      });
+    }
 
     const tierMap = assemblyMap.get(assembly)!;
     const sortedTierKeys = Array.from(tierMap.keys()).sort((a, b) =>
@@ -788,18 +854,16 @@ function isPython(uri: Uri | undefined) {
 }
 
 function isWorkbook(uri: Uri | undefined) {
-  /* c8 ignore start */
   return (
     uri &&
     (uri.path.endsWith(".kdb.q") ||
       uri.path.endsWith(".kdb.py") ||
       uri.path.endsWith(".kdb.sql"))
   );
-  /* c8 ignore stop */
 }
 
-function isDataSource(uri: Uri | undefined) {
-  return uri && uri.path.endsWith(".kdb.json");
+function isQuery(uri: Uri | undefined) {
+  return !!uri && uri.path.endsWith(".kxquery");
 }
 
 // A file that can be run against a connection (q/quke/Python/SQL, including
@@ -820,13 +884,28 @@ function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
-export async function startRepl() {
-  const instance = await ReplConnection.getOrCreateInstance();
+export function reportReplError(error: unknown) {
+  if (error instanceof QNotFoundError) return;
+  notify(errorMessage(error), MessageKind.ERROR, { logger, params: error });
+}
+
+async function launchRepl(
+  open: () => Promise<ReplConnection>,
+  telemetry: string,
+) {
+  let instance: ReplConnection;
+  try {
+    instance = await open();
+  } catch (error) {
+    reportReplError(error);
+    return;
+  }
   instance.start();
-  notify("REPL started.", MessageKind.DEBUG, {
-    logger,
-    telemetry: "Repl.Start",
-  });
+  notify("REPL started.", MessageKind.DEBUG, { logger, telemetry });
+}
+
+export function startRepl() {
+  return launchRepl(() => ReplConnection.getOrCreateInstance(), "Repl.Start");
 }
 
 export async function startReplInFolder(uri?: Uri) {
@@ -842,15 +921,17 @@ export async function startReplInFolder(uri?: Uri) {
   } catch {
     // Unable to stat the resource; fall back to using it as the base directory.
   }
-  const instance = await ReplConnection.openInFolder(base);
-  instance.start();
-  notify("REPL started.", MessageKind.DEBUG, {
-    logger,
-    telemetry: "Repl.StartFolder",
-  });
+  return launchRepl(
+    () => ReplConnection.openInFolder(base),
+    "Repl.StartFolder",
+  );
 }
 
-export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
+export async function runOnRepl(
+  editor: TextEditor,
+  type?: ExecutionTypes,
+  label?: string,
+) {
   const uri = editor.document.uri;
   const basename = getBasename(uri);
 
@@ -883,7 +964,9 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 
   try {
-    const repl = await ReplConnection.getOrCreateInstance(uri);
+    const repl = label
+      ? await ReplConnection.forLabel(label)
+      : await ReplConnection.getOrCreateInstance(uri);
     repl.show();
     await repl.executeQuery(
       isPython(uri)
@@ -891,17 +974,16 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
         : isSql(uri)
           ? getSQLWrapper(text)
           : text,
+      undefined,
+      isPython(uri) ? text : undefined,
     );
   } catch (error) {
-    notify(errorMessage(error), MessageKind.ERROR, {
-      logger,
-      params: error,
-    });
+    reportReplError(error);
   }
 }
 
 export type RunTarget =
-  | { kind: "repl" }
+  | { kind: "repl"; label?: string }
   | { kind: "connection"; conn: InsightsConnection | LocalConnection };
 
 /**
@@ -918,8 +1000,9 @@ export async function resolveRunTarget(
 ): Promise<RunTarget | undefined> {
   const server = getServerForUri(uri);
 
-  if (server === ext.REPL) {
-    return { kind: "repl" };
+  if (isRepl(server)) {
+    const label = replLabelOf(server);
+    return label ? { kind: "repl", label } : { kind: "repl" };
   }
 
   if (server !== undefined) {
@@ -949,7 +1032,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       return;
     }
     if (runTarget.kind === "repl") {
-      await runOnRepl(ext.activeTextEditor, type);
+      await runOnRepl(ext.activeTextEditor, type, runTarget.label);
       notifyExecution(
         RunFlag.Run |
           RunFlag.Repl |
@@ -1052,8 +1135,8 @@ export async function resetScratchpadFromEditor(): Promise<void> {
 }
 
 function update(uri: Uri) {
-  if (isDataSource(uri)) {
-    ext.dataSourceTreeProvider.reload();
+  if (isQuery(uri)) {
+    ext.queryTreeProvider.reload();
   } else if (isWorkbook(uri)) {
     ext.scratchpadTreeProvider.reload();
   }
@@ -1112,7 +1195,7 @@ export function connectWorkspaceCommands() {
     arguments: [],
   };
 
-  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py,sql}");
+  const watcher = workspace.createFileSystemWatcher("**/*.{kxquery,q,py,sql}");
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
@@ -1120,7 +1203,7 @@ export function connectWorkspaceCommands() {
     /* c8 ignore start */
     for (const uri of event.files) {
       if (isKxFolder(uri)) {
-        ext.dataSourceTreeProvider.reload();
+        ext.queryTreeProvider.reload();
         ext.scratchpadTreeProvider.reload();
         break;
       }
@@ -1146,42 +1229,15 @@ export function connectWorkspaceCommands() {
   });
 
   workspace.onDidChangeWorkspaceFolders(() => {
-    /* c8 ignore start */
-    ext.dataSourceTreeProvider.reload();
+    ext.queryTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
-    /* c8 ignore stop */
   });
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   window.onDidChangeActiveNotebookEditor(() => updateStatusBarItems());
+  window.tabGroups.onDidChangeTabs(() => updateStatusBarItems());
+  window.tabGroups.onDidChangeTabGroups(() => updateStatusBarItems());
+  ReplConnection.onDidChangeActive(() => updateStatusBarItems());
   activeEditorChanged(window.activeTextEditor);
-}
-
-export async function importOldDSFiles() {
-  /* c8 ignore start */
-  if (ext.oldDSformatExists) {
-    const folders = workspace.workspaceFolders;
-    if (!folders) {
-      notify("No workspace folder found.", MessageKind.ERROR, { logger });
-      return;
-    }
-    const runner = Runner.create(async (_, token) => {
-      token.onCancellationRequested(() => {
-        notify("User cancelled the old DS files import.", MessageKind.DEBUG, {
-          logger,
-        });
-        return false;
-      });
-
-      await importOldDsFiles();
-    });
-    runner.title = "Importing old DS files.";
-    return await runner.execute();
-  } else {
-    notify("No old Datasource files found on your VSCODE.", MessageKind.INFO, {
-      logger,
-    });
-  }
-  /* c8 ignore stop */
 }
 
 export async function findConnection(uri: Uri) {

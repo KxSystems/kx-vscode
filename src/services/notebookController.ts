@@ -23,9 +23,10 @@ import {
   populateScratchpad,
   runDataSource,
 } from "../commands/dataSourceCommand";
-import { executeQuery } from "../commands/serverCommand";
+import { contextAbove, executeQuery } from "../commands/serverCommand";
 import {
   getTimeoutForUri,
+  reportReplError,
   resolveRunTarget,
 } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
@@ -41,7 +42,11 @@ import {
   notifyExecution,
   RunFlag,
 } from "../utils/queryUtils";
-import { convertToGrid, formatResult } from "../utils/resultsRenderer";
+import {
+  convertToGrid,
+  escapeHtml,
+  formatResult,
+} from "../utils/resultsRenderer";
 
 const logger = "notebookController";
 
@@ -52,6 +57,11 @@ export class KxNotebookController {
   readonly supportedLanguages = ["q", "python", "sql"];
 
   protected readonly controller: vscode.NotebookController;
+  protected readonly selections = new WeakMap<
+    vscode.NotebookCell,
+    { text: string; context: string }
+  >();
+  protected readonly running = new Set<vscode.NotebookCell>();
   protected order = 0;
 
   constructor() {
@@ -69,12 +79,83 @@ export class KxNotebookController {
     this.controller.dispose();
   }
 
+  findCell(editor?: vscode.TextEditor) {
+    if (editor?.document.uri.scheme !== "vscode-notebook-cell")
+      return undefined;
+    for (const notebook of vscode.workspace.notebookDocuments) {
+      if (notebook.notebookType !== this.notebookType) continue;
+      const cell = notebook
+        .getCells()
+        .find((cell) => cell.document === editor.document);
+      if (cell) return cell;
+    }
+    return undefined;
+  }
+
+  async executeSelection(
+    editor = vscode.window.activeTextEditor,
+    cell = this.findCell(editor),
+  ) {
+    if (!editor || !cell) return;
+
+    const text = editor.selection.isEmpty
+      ? editor.document.lineAt(editor.selection.active.line).text
+      : editor.document.getText(editor.selection);
+    if (!text.trim()) return;
+
+    if (this.running.has(cell) || this.selections.has(cell)) {
+      notify(
+        `Cell ${cell.index + 1} of ${getBasename(cell.notebook.uri)} is already running.`,
+        MessageKind.WARNING,
+        { logger },
+      );
+      return;
+    }
+
+    const selection = {
+      text,
+      context: contextAbove(
+        editor.document.getText(
+          new vscode.Range(0, 0, editor.selection.start.line, 0),
+        ),
+      ),
+    };
+    this.selections.set(cell, selection);
+    try {
+      await vscode.commands.executeCommand("notebook.cell.execute", {
+        ranges: [{ start: cell.index, end: cell.index + 1 }],
+        document: cell.notebook.uri,
+      });
+    } finally {
+      if (this.selections.get(cell) === selection) {
+        this.selections.delete(cell);
+      }
+    }
+  }
+
+  private takeSelection(cells: vscode.NotebookCell[]) {
+    if (cells.length !== 1) return undefined;
+    const selection = this.selections.get(cells[0]);
+    this.selections.delete(cells[0]);
+    return selection;
+  }
+
   async executeRepl(
     cells: vscode.NotebookCell[],
     notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
+    label?: string,
+    selection?: string,
   ) {
-    const repl = await ReplConnection.getOrCreateInstance(notebook.uri);
+    let repl: ReplConnection;
+    try {
+      repl = label
+        ? await ReplConnection.forLabel(label)
+        : await ReplConnection.getOrCreateInstance(notebook.uri);
+    } catch (error) {
+      reportReplError(error);
+      return;
+    }
 
     for (const cell of cells) {
       const execution = controller.createNotebookCellExecution(cell);
@@ -90,7 +171,7 @@ export class KxNotebookController {
 
       try {
         const kind = getCellKind(cell);
-        const text = cell.document.getText();
+        const text = selection ?? cell.document.getText();
         if (!text.trim()) {
           // Nothing to run. Checked before wrapping, because the SQL and
           // Python wrappers turn an empty cell into a statement the REPL
@@ -105,6 +186,8 @@ export class KxNotebookController {
             : kind === CellKind.SQL
               ? getSQLWrapper(text)
               : text,
+          undefined,
+          kind === CellKind.PYTHON ? text : undefined,
         );
         this.writeOutput(execution, {
           text: result.output || "",
@@ -118,6 +201,7 @@ export class KxNotebookController {
       } finally {
         cancellation.dispose();
         execution.end(success, Date.now());
+        this.running.delete(cell);
       }
     }
   }
@@ -127,6 +211,28 @@ export class KxNotebookController {
     notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
   ): Promise<void> {
+    const selection = this.takeSelection(cells);
+    cells.forEach((cell) => this.running.add(cell));
+    try {
+      await this.executeCells(
+        cells,
+        notebook,
+        controller,
+        selection?.text,
+        selection?.context,
+      );
+    } finally {
+      cells.forEach((cell) => this.running.delete(cell));
+    }
+  }
+
+  private async executeCells(
+    cells: vscode.NotebookCell[],
+    notebook: vscode.NotebookDocument,
+    controller: vscode.NotebookController,
+    selection?: string,
+    context?: string,
+  ) {
     // Same precedence as a q/Python/SQL file: an explicit assignment first,
     // then the active target, then the REPL.
     const runTarget = await resolveRunTarget(notebook.uri);
@@ -134,7 +240,13 @@ export class KxNotebookController {
       return;
     }
     if (runTarget.kind === "repl") {
-      return this.executeRepl(cells, notebook, controller);
+      return this.executeRepl(
+        cells,
+        notebook,
+        controller,
+        runTarget.label,
+        selection,
+      );
     }
 
     const conn = runTarget.conn;
@@ -155,8 +267,9 @@ export class KxNotebookController {
 
       try {
         const kind = getCellKind(cell);
+        const text = selection ?? cell.document.getText();
 
-        if (!cell.document.getText().trim()) {
+        if (!text.trim()) {
           this.writeOutput(
             execution,
             { text: "", mime: "text/plain" },
@@ -178,9 +291,11 @@ export class KxNotebookController {
           execution,
           cell,
           kind,
+          text,
           requestID,
           target,
           variable,
+          context,
         );
 
         let results = await Promise.race([
@@ -233,7 +348,7 @@ export class KxNotebookController {
         this.writeOutput(
           execution,
           {
-            text: `<p>Execution stopped.</p><p>${error instanceof Error ? error.message : error}</p>`,
+            text: `<p>Execution stopped.</p><p>${escapeHtml(`${error instanceof Error ? error.message : error}`)}</p>`,
             mime: "text/html",
           },
           cellTarget,
@@ -243,6 +358,7 @@ export class KxNotebookController {
         cellTarget.endedAt = Date.now();
         cancellationDisposable?.dispose();
         execution.end(success, Date.now());
+        this.running.delete(cell);
       }
     }
   }
@@ -289,9 +405,11 @@ export class KxNotebookController {
     execution: vscode.NotebookCellExecution,
     cell: vscode.NotebookCell,
     kind: CellKind,
+    text: string,
     requestID?: string,
     target?: string,
     variable?: string,
+    context = ".",
   ): Promise<any> {
     const uri = cell.notebook.uri;
     const executorName = getBasename(uri);
@@ -306,7 +424,7 @@ export class KxNotebookController {
       (kind === CellKind.SQL && conn instanceof InsightsConnection)
     ) {
       const params = getPartialDatasourceFile(
-        cell.document.getText(),
+        text,
         target,
         kind === CellKind.SQL,
         kind === CellKind.PYTHON,
@@ -330,12 +448,10 @@ export class KxNotebookController {
           );
     } else {
       return executeQuery(
-        kind === CellKind.SQL
-          ? getSQLWrapper(cell.document.getText())
-          : cell.document.getText(),
+        kind === CellKind.SQL ? getSQLWrapper(text) : text,
         conn.connLabel,
         executorName,
-        ".",
+        kind === CellKind.Q ? context : ".",
         kind === CellKind.PYTHON,
         false,
         false,
@@ -369,61 +485,52 @@ interface Rendered {
   mime: string;
 }
 
+function renderTable(table: any): string {
+  const defs: any[] = table.columnDefs;
+  const fields: string[] = defs.map((def) =>
+    "field" in def ? def.field || "" : "",
+  );
+
+  const rows: string[] = ["<table>", "<thead>", "<tr>"];
+
+  for (const def of defs) {
+    rows.push(`<th>${escapeHtml(`${def.headerName}`)}</th>`);
+  }
+  rows.push("</tr>", "</thead>", "<tbody>");
+
+  for (const row of table.rowData || []) {
+    rows.push("<tr>");
+    for (const field of fields) {
+      rows.push(`<td>${field ? escapeHtml(`${row[field]}`) : "n/a"}</td>`);
+    }
+    rows.push("</tr>");
+  }
+  rows.push("</tbody>", "</table>");
+
+  return rows.join("\n");
+}
+
 function render(
   results: any,
   isPython: boolean,
   isInsights: boolean,
   connVersion?: string,
 ): Rendered {
-  let text = "No results.";
-  let mime = "text/plain";
-
   const plot = resultToBase64(results);
-
   if (plot) {
-    text = `<img src="${plot}"/>`;
-    mime = "text/html";
-  } else {
-    if (typeof results === "string" || typeof results === "number") {
-      text = formatResult(results);
-      mime = "text/html";
-    } else if (results) {
-      const rows: string[] = [];
-      const table = convertToGrid(results, isInsights, connVersion, isPython);
-      if (table.columnDefs) {
-        rows.push("<table>");
+    return { text: `<img src="${plot}"/>`, mime: "text/html" };
+  }
 
-        rows.push("<thead>");
-        rows.push("<tr>");
-        const fields: string[] = [];
-        for (const def of table.columnDefs) {
-          rows.push(`<th>${def.headerName}</th>`);
-          if ("field" in def) {
-            fields.push(def.field || "");
-          } else {
-            fields.push("");
-          }
-        }
-        rows.push("</tr>");
-        rows.push("</thead>");
+  if (typeof results === "string" || typeof results === "number") {
+    return { text: formatResult(results), mime: "text/html" };
+  }
 
-        rows.push("<tbody>");
-        if (table.rowData) {
-          for (const row of table.rowData) {
-            rows.push("<tr>");
-            for (const field of fields) {
-              rows.push(`<td>${field ? row[field] : "n/a"}</td>`);
-            }
-            rows.push("</tr>");
-          }
-        }
-        rows.push("</tbody>");
-
-        rows.push("</table>");
-        text = rows.join("\n");
-        mime = "text/html";
-      }
+  if (results) {
+    const table = convertToGrid(results, isInsights, connVersion, isPython);
+    if (table.columnDefs) {
+      return { text: renderTable(table), mime: "text/html" };
     }
   }
-  return { text, mime };
+
+  return { text: "No results.", mime: "text/plain" };
 }

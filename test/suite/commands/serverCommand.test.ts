@@ -41,11 +41,11 @@ import {
 } from "../../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../../src/utils/core";
-import * as dataSourceUtils from "../../../src/utils/dataSource";
 import { ExecutionConsole } from "../../../src/utils/executionConsole";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
 import * as plotUtils from "../../../src/utils/plotUtils";
+import * as queryUtils from "../../../src/utils/queryUtils";
 import * as kdbValidators from "../../../src/validators/kdbValidator";
 import { createMockDatasource } from "../../fixtures/config/datasource";
 
@@ -791,6 +791,7 @@ describe("serverCommand", () => {
     it("should write an encoded png to a plot", async () => {
       const png = "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAYAAAALpr0T";
       const writePlotToFileStub = sinon.stub(plotUtils, "writePlotToFile");
+      const addQueryHistoryStub = sinon.stub(queryUtils, "addQueryHistory");
       sinon.stub(notifications, "notify");
       scratchpadResult.data = png;
       isVisibleStub.returns(false);
@@ -812,6 +813,12 @@ describe("serverCommand", () => {
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
+      sinon.assert.calledOnceWithMatch(
+        addQueryHistoryStub,
+        "dummy query",
+        "testFile.kdb.q",
+        "connLabel",
+      );
     });
   });
 
@@ -832,6 +839,7 @@ describe("serverCommand", () => {
       selection: {
         isEmpty: false,
         active: { line: 5 },
+        start: { line: 5 },
         end: sinon.stub().returns({ line: 10 }),
       },
       document: {
@@ -1119,6 +1127,53 @@ describe("serverCommand", () => {
         ".foo",
       );
     });
+
+    it("should not take the next line as the context of a bare \\d", function () {
+      assert.equal(serverCommand.getConextForRerunQuery("\\d\n123"), ".");
+      assert.equal(
+        serverCommand.getConextForRerunQuery('system "d\n.bar'),
+        ".",
+      );
+    });
+
+    it("should start in the root context when code comes before the first \\d", function () {
+      assert.equal(serverCommand.getConextForRerunQuery("a:1\n\\d .foo"), ".");
+    });
+
+    it("should start in the first context when only comments come before it", function () {
+      assert.equal(
+        serverCommand.getConextForRerunQuery("/ setup\n/\nblock\n\\\n\\d .foo"),
+        ".foo",
+      );
+    });
+  });
+
+  describe("getQueryContext", function () {
+    function editorOf(text: string) {
+      return <vscode.TextEditor>(<unknown>{
+        document: {
+          getText: () => text,
+          lineAt: (line: number) => ({
+            range: { end: { character: text.split("\n")[line].length } },
+          }),
+        },
+      });
+    }
+
+    afterEach(() => {
+      ext.activeTextEditor = undefined;
+    });
+
+    it("should use the context set above the line", function () {
+      ext.activeTextEditor = editorOf("\\d .foo\n123");
+      assert.equal(serverCommand.getQueryContext(1), ".foo");
+    });
+
+    it("should not take the line as the context of a bare \\d above it", function () {
+      ext.activeTextEditor = editorOf("\\d\n123");
+      assert.equal(serverCommand.getQueryContext(1), ".");
+      assert.equal(serverCommand.getQueryContext(), ".");
+    });
   });
 
   describe("rerunQuery", function () {
@@ -1172,18 +1227,12 @@ describe("serverCommand", () => {
   });
 
   describe("activeConnection", () => {
-    let setActiveConnectionStub,
-      refreshDataSourcesPanelStub,
-      reloadStub: sinon.SinonStub;
+    let setActiveConnectionStub, reloadStub: sinon.SinonStub;
 
     beforeEach(() => {
       setActiveConnectionStub = sinon.stub(
         ConnectionManagementService.prototype,
         "setActiveConnection",
-      );
-      refreshDataSourcesPanelStub = sinon.stub(
-        dataSourceUtils,
-        "refreshDataSourcesPanel",
       );
       reloadStub = sinon.stub(ext.serverProvider, "reload");
     });
@@ -1191,11 +1240,10 @@ describe("serverCommand", () => {
       sinon.restore();
     });
 
-    it("should set active connection and refresh panel", () => {
+    it("should set active connection and reload the tree", () => {
       serverCommand.activeConnection(kdbNode);
 
       assert.ok(setActiveConnectionStub.calledWith(kdbNode));
-      assert.ok(refreshDataSourcesPanelStub.calledOnce);
       assert.ok(reloadStub.calledOnce);
     });
   });

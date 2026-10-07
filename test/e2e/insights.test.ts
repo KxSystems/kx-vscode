@@ -88,9 +88,13 @@ const ASSIGNED: [vscode.Uri, vscode.Uri][] = [
   [file("main.sql"), RECENT_SQL_FILE],
 ];
 
-// Written rather than copied: it exists to carry the marker the stand-in fails
-// on.
+// Written rather than copied: they exist to carry the markers the stand-in
+// fails on. The two target-assigned ones route through the datasource path, so
+// their queries reach the service gateway rather than the scratchpad.
 const FAILING_FILE = file("insights.error.q");
+const RC_DEAD_FILE = file("rc.target.q");
+const SG_DEAD_FILE = file("sg.target.q");
+const LAMBDA_FILE = file("lambda.target.q");
 
 const TWO_STATEMENTS = "notional:px*qty;notional";
 const SELECTABLE = "px*qty";
@@ -144,6 +148,9 @@ describe("Executing on an Insights connection", () => {
       fs.copyFileSync(source.fsPath, assigned.fsPath);
     }
     fs.writeFileSync(FAILING_FILE.fsPath, `${FakeInsights.FAILS}\n`);
+    fs.writeFileSync(RC_DEAD_FILE.fsPath, `${FakeInsights.KILLS_RC}\n`);
+    fs.writeFileSync(SG_DEAD_FILE.fsPath, `${FakeInsights.KILLS_SG}\n`);
+    fs.writeFileSync(LAMBDA_FILE.fsPath, `${FakeInsights.RETURNS_LAMBDA}\n`);
 
     await start();
   });
@@ -153,6 +160,9 @@ describe("Executing on an Insights connection", () => {
       fs.rmSync(assigned.fsPath, { force: true });
     }
     fs.rmSync(FAILING_FILE.fsPath, { force: true });
+    fs.rmSync(RC_DEAD_FILE.fsPath, { force: true });
+    fs.rmSync(SG_DEAD_FILE.fsPath, { force: true });
+    fs.rmSync(LAMBDA_FILE.fsPath, { force: true });
     await vscode.commands.executeCommand("workbench.action.closeAllEditors");
   });
 
@@ -681,6 +691,23 @@ describe("Executing on an Insights connection", () => {
         tier: TIER,
       });
     });
+
+    it("prints a lambda result with its own line breaks", async () => {
+      await focus(LAMBDA_FILE);
+      await run("kdb.execute.fileQuery");
+
+      await untilConsoleShows("h:x+a;", "the lambda to be printed");
+      const lines = (await terminalText(CONSOLE))
+        .split(/\r?\n/)
+        .map((line) => line.trimEnd());
+      for (const line of FakeInsights.LAMBDA.split("\n")) {
+        assert.ok(lines.includes(line), `${line} is not a line of its own`);
+      }
+      assert.ok(
+        !lines.some((line) => line.includes("{[x] a:1;")),
+        "the lambda was joined onto one line",
+      );
+    });
   });
 
   /**
@@ -754,7 +781,7 @@ describe("Executing on an Insights connection", () => {
         `python cell:\n${python.body.params.query}`,
       );
       assert.ok(
-        python.body.params.query.startsWith("{[returnFormat;code;"),
+        python.body.params.query.startsWith("{[args] res:"),
         `not wrapped:\n${python.body.params.query}`,
       );
     });
@@ -803,6 +830,37 @@ describe("Executing on an Insights connection", () => {
       await run("kdb.execute.fileQuery");
 
       await untilConsoleShows(FAILURE, "the error to be shown in the console");
+    });
+  });
+
+  /**
+   * KXI-69283: a coordinator or a service gateway that goes away mid-query
+   * answers with something that is not the JSON error a gateway sends — a
+   * plain-text 500 or an HTML 502 — and the datasource path used to read a
+   * header out of those, throw a TypeError, and log it where nobody looks. The
+   * query has to show a reason and land in the history either way.
+   */
+  describe("when the database process dies mid-query", () => {
+    it("reports the reason the coordinator gave", async () => {
+      await focus(RC_DEAD_FILE);
+      await run("kdb.execute.fileQuery");
+
+      await untilConsoleShows(
+        FakeInsights.RC_DIED,
+        "the coordinator's reason to be shown in the console",
+      );
+    });
+
+    it("reports the status the gateway gave", async () => {
+      await focus(SG_DEAD_FILE);
+      await run("kdb.execute.fileQuery");
+
+      // The 502 body is openresty's HTML page, which carries no reason worth
+      // showing, so the status line stands in for it.
+      await untilConsoleShows(
+        "502",
+        "the gateway's status to be shown in the console",
+      );
     });
   });
 
