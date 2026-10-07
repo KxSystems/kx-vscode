@@ -19,7 +19,7 @@ import { MessageKind, notify, Runner } from "./notifications";
 import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
-import { queryConstants, StructuredTextResults } from "../models/queryResult";
+import { StructuredTextResults, withErrorPrefix } from "../models/queryResult";
 import {
   ScratchpadResult,
   ScratchpadStacktrace,
@@ -511,10 +511,7 @@ export function formatScratchpadError(result: ScratchpadResult): string {
       ". A table, label, or scope parameter may be missing or incorrect.";
   }
 
-  return appendStacktrace(
-    `${queryConstants.error} ${message}`,
-    result.stacktrace,
-  );
+  return appendStacktrace(withErrorPrefix(message), result.stacktrace);
 }
 
 export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {

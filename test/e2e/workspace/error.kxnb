@@ -5,6 +5,12 @@
       "languageId": "q",
       "value": "FAIL_QUERY",
       "outputs": []
+    },
+    {
+      "kind": 2,
+      "languageId": "q",
+      "value": "1+1",
+      "outputs": []
     }
   ]
 }
