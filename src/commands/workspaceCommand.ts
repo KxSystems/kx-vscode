@@ -525,7 +525,7 @@ export async function pickConnection(uri: Uri) {
   let picked = await showInputPicker(items, {
     title: insightsOnly
       ? `Choose an Insights connection for ${getBasename(uri)}`
-      : `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
+      : `Choose a connection, or enter a quick connection string (host:port:user:password) for ${getBasename(uri)}`,
     placeHolder: server,
   });
 

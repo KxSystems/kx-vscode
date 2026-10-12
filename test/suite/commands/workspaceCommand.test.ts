@@ -528,6 +528,32 @@ describe("workspaceCommand", () => {
         "zeta",
       ]);
     });
+
+    for (const [kind, file] of [
+      ["q workbooks", "myFile.kdb.q"],
+      ["py workbooks", "myFile.kdb.py"],
+      ["notebooks", "myFile.kxnb"],
+    ]) {
+      it(`should describe the quick connection format for ${kind}`, async () => {
+        sinon.stub(ReplConnection, "labels").returns([]);
+        let title: string | undefined;
+        sinon
+          .stub(widgets, "showInputPicker")
+          .value(
+            async (_: readonly string[], options: vscode.QuickPickOptions) => {
+              title = options.title;
+              return undefined;
+            },
+          );
+
+        await workspaceCommand.pickConnection(vscode.Uri.file(file));
+
+        assert.strictEqual(
+          title,
+          `Choose a connection, or enter a quick connection string (host:port:user:password) for ${file}`,
+        );
+      });
+    }
   });
 
   describe("getActiveFileUri", () => {
