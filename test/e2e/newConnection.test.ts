@@ -86,14 +86,14 @@ describe("New connection view", () => {
 
   it("keeps what was typed in a field once the focus has moved on", async () => {
     await type(MY_Q, {
-      "Server Name": "test server",
+      "Connection Name": "test server",
       "Define connection address": "127.0.0.1",
       "Set port number": "5001",
     });
 
     // Typing into the next field takes the focus off the one before it, which
     // is when the binding repaints a field from the model.
-    assert.strictEqual(await shown(MY_Q, "Server Name"), "test server");
+    assert.strictEqual(await shown(MY_Q, "Connection Name"), "test server");
     assert.strictEqual(
       await shown(MY_Q, "Define connection address"),
       "127.0.0.1",
@@ -103,7 +103,7 @@ describe("New connection view", () => {
 
   it("adds a kdb connection from the My q tab", async () => {
     await type(MY_Q, {
-      "Server Name": "test server",
+      "Connection Name": "test server",
       "Define connection address": "127.0.0.1",
       "Set port number": "5001",
     });
@@ -129,7 +129,7 @@ describe("New connection view", () => {
 
   it("derives auth from the credentials and TLS from the checkbox", async () => {
     await type(MY_Q, {
-      "Server Name": "secured",
+      "Connection Name": "secured",
       "Define connection address": "127.0.0.1",
       "Set port number": "5001",
     });
@@ -154,7 +154,7 @@ describe("New connection view", () => {
   it("adds an Insights connection from the Insights tab", async () => {
     await click(`${ROOT} >>> .tabs button:nth-child(2)`);
     await type(INSIGHTS, {
-      "Server Name": "insights",
+      "Connection Name": "insights",
       "Define connection address": "https://insights.example.com",
     });
 
@@ -206,7 +206,7 @@ describe("New connection view", () => {
 
     await view.eval((path: string) => __choose(path, "dev"), LABELS);
 
-    await type(MY_Q, { "Server Name": "labelled" });
+    await type(MY_Q, { "Connection Name": "labelled" });
     const [message] = await submit(MY_Q);
 
     assert.deepStrictEqual(message.labels, ["dev"]);
@@ -253,14 +253,14 @@ describe("New connection view", () => {
 
     assert.deepStrictEqual(
       await shownIn([
-        "Server Name",
+        "Connection Name",
         "Define connection address",
         "Set port number",
       ]),
       {
         heading: "Edit My q Connection",
         button: "Update Connection",
-        "Server Name": "existing",
+        "Connection Name": "existing",
         "Define connection address": "10.0.0.1",
         "Set port number": "5010",
       },
@@ -324,11 +324,11 @@ describe("New connection view", () => {
     });
 
     assert.deepStrictEqual(
-      await shownIn(["Server Name", "Define connection address"]),
+      await shownIn(["Connection Name", "Define connection address"]),
       {
         heading: "Edit Insights Connection",
         button: "Update Connection",
-        "Server Name": "existing insights",
+        "Connection Name": "existing insights",
         "Define connection address": "https://insights.example.com",
       },
     );
