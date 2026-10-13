@@ -61,6 +61,7 @@ import {
   getInsights,
   getKeyForServerName,
   getServers,
+  isQuickAlias,
   offerReconnectionAfterEdit,
   updateInsights,
   updateServers,
@@ -799,6 +800,12 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
           : viewItem.details.alias,
       );
       await connMngService.removeConnection(viewItem);
+      if (
+        viewItem instanceof KdbNode &&
+        isQuickAlias(viewItem.details.serverAlias)
+      ) {
+        await removeQuickConnection(viewItem.details.serverAlias);
+      }
     }
   });
 }
@@ -1461,9 +1468,41 @@ function isValidExportedConnections(data: any): data is ExportedConnections {
 }
 
 const quickConnections: ServerDetails[] = [];
+const removedQuickServers = new Set<string>();
 
 function getQuickLabel(conn: ServerDetails) {
   return `${conn.serverAlias} [${conn.serverName}:${conn.serverPort}]`;
+}
+
+function getQuickServer(conn: ServerDetails) {
+  return conn.username
+    ? `${conn.serverName}:${conn.serverPort}:${conn.username}`
+    : `${conn.serverName}:${conn.serverPort}`;
+}
+
+function nextQuickAlias() {
+  const aliases = new Set(quickConnections.map((conn) => conn.serverAlias));
+  let n = 1;
+  while (aliases.has(`(Connection ${n})`)) n++;
+  return `(Connection ${n})`;
+}
+
+export function isRemovedQuickServer(server: string) {
+  return removedQuickServers.has(server);
+}
+
+export function restoreQuickServer(server: string) {
+  removedQuickServers.delete(server);
+}
+
+export async function removeQuickConnection(serverAlias: string) {
+  const conn = quickConnections.find(
+    (conn) => conn.serverAlias === serverAlias,
+  );
+  if (!conn) return;
+  removedQuickServers.add(getQuickServer(conn));
+  if (conn.auth) await ext.secretSettings.deleteAuthData(serverAlias);
+  await removeQuickDetail(conn);
 }
 
 function getQuickDetail(host: string, port: string, user: string) {
@@ -1512,9 +1551,10 @@ export async function setQuickPassword(
 export async function ensureQuickConnection(server: string) {
   const [host, port, user] = server.split(":");
 
+  restoreQuickServer(server);
   let connection = getQuickDetail(host, port, user);
   if (!connection) {
-    const serverAlias = "(Connection " + (quickConnections.length + 1) + ")";
+    const serverAlias = nextQuickAlias();
     if (user) {
       let auth = await ext.secretSettings.getAuthData(server);
       if (!auth) {

@@ -1064,7 +1064,7 @@
         },
         {
           "command": "kdb.connections.remove.kdb",
-          "when": "view == kdb-servers && viewItem in kdb.rootNodes && viewItem not in kdb.kdbQuickNodes",
+          "when": "view == kdb-servers && viewItem in kdb.rootNodes",
           "group": "connection@5"
         },
         {

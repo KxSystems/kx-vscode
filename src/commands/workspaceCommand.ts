@@ -35,7 +35,9 @@ import {
 import { ext } from "../extensionVariables";
 import {
   ensureQuickConnection,
+  isRemovedQuickServer,
   resetScratchpad,
+  restoreQuickServer,
   runQuery,
   setQuickPassword,
 } from "./serverCommand";
@@ -250,7 +252,6 @@ const quickServers: string[] = [];
 function getQuickServers(uri: Uri) {
   const conf = workspace.getConfiguration("kdb", uri);
   const connections = conf.get<{ [key: string]: string }>("connectionMap", {});
-  const size = quickServers.length;
   const targets = [
     ...Object.values(connections),
     ...sessionConnectionMap.values(),
@@ -260,7 +261,7 @@ function getQuickServers(uri: Uri) {
       quickServers.push(target);
     }
   });
-  return size !== quickServers.length ? quickServers.sort() : quickServers;
+  return quickServers.filter((target) => !isRemovedQuickServer(target)).sort();
 }
 
 export async function getConnectionForServer(
@@ -547,6 +548,7 @@ export async function pickConnection(uri: Uri) {
       } else {
         picked = `${host}:${port}`;
       }
+      restoreQuickServer(picked);
     } else {
       notify(`Connection string (${picked}) is not valid.`, MessageKind.ERROR, {
         logger,
