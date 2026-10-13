@@ -35,9 +35,8 @@ import {
 import { ext } from "../extensionVariables";
 import {
   ensureQuickConnection,
-  isRemovedQuickServer,
+  getQuickServers,
   resetScratchpad,
-  restoreQuickServer,
   runQuery,
   setQuickPassword,
 } from "./serverCommand";
@@ -245,23 +244,6 @@ function getServers() {
       .sort((a, b) => a.localeCompare(b)),
     ...getInsightsServers(),
   ];
-}
-
-const quickServers: string[] = [];
-
-function getQuickServers(uri: Uri) {
-  const conf = workspace.getConfiguration("kdb", uri);
-  const connections = conf.get<{ [key: string]: string }>("connectionMap", {});
-  const targets = [
-    ...Object.values(connections),
-    ...sessionConnectionMap.values(),
-  ];
-  targets.forEach((target) => {
-    if (isQuick(target) && !quickServers.includes(target)) {
-      quickServers.push(target);
-    }
-  });
-  return quickServers.filter((target) => !isRemovedQuickServer(target)).sort();
 }
 
 export async function getConnectionForServer(
@@ -520,7 +502,7 @@ export async function pickConnection(uri: Uri) {
         "(active)",
         ...replChoices(server),
         ...getServers(),
-        ...getQuickServers(uri),
+        ...getQuickServers().sort(),
       ];
 
   let picked = await showInputPicker(items, {
@@ -548,7 +530,6 @@ export async function pickConnection(uri: Uri) {
       } else {
         picked = `${host}:${port}`;
       }
-      restoreQuickServer(picked);
     } else {
       notify(`Connection string (${picked}) is not valid.`, MessageKind.ERROR, {
         logger,

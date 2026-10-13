@@ -1468,7 +1468,6 @@ function isValidExportedConnections(data: any): data is ExportedConnections {
 }
 
 const quickConnections: ServerDetails[] = [];
-const removedQuickServers = new Set<string>();
 
 function getQuickLabel(conn: ServerDetails) {
   return `${conn.serverAlias} [${conn.serverName}:${conn.serverPort}]`;
@@ -1487,12 +1486,8 @@ function nextQuickAlias() {
   return `(Connection ${n})`;
 }
 
-export function isRemovedQuickServer(server: string) {
-  return removedQuickServers.has(server);
-}
-
-export function restoreQuickServer(server: string) {
-  removedQuickServers.delete(server);
+export function getQuickServers() {
+  return quickConnections.map((conn) => getQuickServer(conn));
 }
 
 export async function removeQuickConnection(serverAlias: string) {
@@ -1500,8 +1495,10 @@ export async function removeQuickConnection(serverAlias: string) {
     (conn) => conn.serverAlias === serverAlias,
   );
   if (!conn) return;
-  removedQuickServers.add(getQuickServer(conn));
-  if (conn.auth) await ext.secretSettings.deleteAuthData(serverAlias);
+  if (conn.auth) {
+    await ext.secretSettings.deleteAuthData(serverAlias);
+    await ext.secretSettings.deleteAuthData(getQuickServer(conn));
+  }
   await removeQuickDetail(conn);
 }
 
@@ -1551,7 +1548,6 @@ export async function setQuickPassword(
 export async function ensureQuickConnection(server: string) {
   const [host, port, user] = server.split(":");
 
-  restoreQuickServer(server);
   let connection = getQuickDetail(host, port, user);
   if (!connection) {
     const serverAlias = nextQuickAlias();

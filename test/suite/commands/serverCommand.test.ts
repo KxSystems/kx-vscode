@@ -1687,7 +1687,9 @@ describe("serverCommand", () => {
     let setAuthDataLabel: any;
     let setAuthDataAuth: any;
     let deleteAuthDataLabel: any;
+    let deletedAuthData: string[];
     beforeEach(() => {
+      deletedAuthData = [];
       secretSettings = ext.secretSettings;
       ext.secretSettings = <any>{
         getAuthData() {
@@ -1699,6 +1701,7 @@ describe("serverCommand", () => {
         },
         deleteAuthData(label: any) {
           deleteAuthDataLabel = label;
+          deletedAuthData.push(label);
         },
       };
     });
@@ -1719,17 +1722,18 @@ describe("serverCommand", () => {
       assert.strictEqual(setAuthDataLabel, label);
       assert.strictEqual(setAuthDataAuth, "test:1234");
     });
-    it("should remove quick connection and hide it from the picker", async () => {
+    it("should remove quick connection and drop it from the picker list", async () => {
       const label =
         await serverCommand.ensureQuickConnection("remove:1234:test");
       await serverCommand.removeQuickConnection(label);
-      assert.strictEqual(deleteAuthDataLabel, label);
-      assert.ok(serverCommand.isRemovedQuickServer("remove:1234:test"));
+      assert.strictEqual(deleteAuthDataLabel, "remove:1234:test");
+      assert.deepStrictEqual(deletedAuthData, [label, "remove:1234:test"]);
+      assert.ok(!serverCommand.getQuickServers().includes("remove:1234:test"));
       assert.strictEqual(
         await serverCommand.ensureQuickConnection("remove:1234:test"),
         label,
       );
-      assert.ok(!serverCommand.isRemovedQuickServer("remove:1234:test"));
+      assert.ok(serverCommand.getQuickServers().includes("remove:1234:test"));
     });
     it("should reuse the lowest free quick connection alias", async () => {
       const first = await serverCommand.ensureQuickConnection("reuse:1");
