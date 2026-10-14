@@ -1,0 +1,11 @@
+{
+  "name": "kx-vscode-manual-test",
+  "private": true,
+  "description": "Agent-driven manual testing of the kdb VS Code extension (Playwright over the real VS Code window)",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@vscode/test-electron": "3.1.0",
+    "playwright-core": "1.63.0"
+  }
+}
+
