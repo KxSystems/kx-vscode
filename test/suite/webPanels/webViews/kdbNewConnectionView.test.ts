@@ -263,16 +263,17 @@ describe("KdbNewConnectionView", () => {
     it("should render connection address for KDB", () => {
       const result = view.renderConnAddDesc(ServerType.KDB);
       assert.strictEqual(
-        result.strings[0].includes(
-          "Set the IP of your kdb+ database connection.",
-        ),
+        result.strings[0].includes("The IP or URL of your kdb+ process"),
         true,
       );
     });
 
     it("should render connection address for Insights", () => {
       const result = view.renderConnAddDesc(ServerType.INSIGHTS);
-      assert.strictEqual(result.strings[0].includes("your Insights"), true);
+      assert.strictEqual(
+        result.strings[0].includes("The URL for your Insights instance"),
+        true,
+      );
     });
   });
 

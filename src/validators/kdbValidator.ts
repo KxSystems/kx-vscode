@@ -22,16 +22,16 @@ export function validateServerAlias(
   // server alias is not required, but should be validated if entered
   if (input !== undefined) {
     if (input === "") {
-      return "Server Name is required";
+      return "Connection Name is required";
     }
     if (isAliasInUse(input)) {
-      return "Server Name is already in use. Please use a different name.";
+      return "Connection Name is already in use. Please use a different name.";
     }
     if (input[0] === " ") {
       return "Input value cannot start with a space.";
     }
     if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
-      return `Server Name must be between 1 and ${MAX_STR_LEN} characters in length.`;
+      return `Connection Name must be between 1 and ${MAX_STR_LEN} characters in length.`;
     }
     if (!validateUtils.isAlphanumericWithHypens(input)) {
       return "Input value must contain only alphanumeric characters and hypens";

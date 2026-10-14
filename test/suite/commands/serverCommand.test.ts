@@ -310,7 +310,7 @@ describe("serverCommand", () => {
       windowMock
         .expects("showErrorMessage")
         .once()
-        .withArgs("Server Name is required");
+        .withArgs("Connection Name is required");
     });
 
     it("should add authentication to the connection", async () => {

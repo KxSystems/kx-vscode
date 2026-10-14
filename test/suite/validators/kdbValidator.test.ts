@@ -33,7 +33,7 @@ describe("kdbValidator", () => {
     const result = kdbValidators.validateServerAlias("teste");
     assert.strictEqual(
       result,
-      "Server Name is already in use. Please use a different name.",
+      "Connection Name is already in use. Please use a different name.",
     );
     sinon.restore();
     ext.kdbConnectionAliasList.pop();
@@ -54,7 +54,7 @@ describe("kdbValidator", () => {
     );
     assert.strictEqual(
       result,
-      `Server Name must be between 1 and ${kdbValidators.MAX_STR_LEN} characters in length.`,
+      `Connection Name must be between 1 and ${kdbValidators.MAX_STR_LEN} characters in length.`,
       "Input was outside the size limits.",
     );
   });

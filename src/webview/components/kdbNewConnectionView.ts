@@ -171,13 +171,13 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderServerNameDesc() {
-    return html`<span>Name the server.</span>`;
+    return html`<span>A name to uniquely identify this connection.</span>`;
   }
 
   renderServerNameField(serverType: ServerType) {
     return serverType === ServerType.KDB
       ? html`<label class="field"
-          ><span class="label">Server Name</span
+          ><span class="label">Connection Name</span
           ><input
             class="text-field larger"
             required
@@ -191,7 +191,7 @@ export class KdbNewConnectionView extends LitElement {
               )}"
         /></label>`
       : html`<label class="field"
-          ><span class="label">Server Name</span
+          ><span class="label">Connection Name</span
           ><input
             class="text-field larger"
             required
@@ -248,9 +248,9 @@ export class KdbNewConnectionView extends LitElement {
 
   renderConnAddDesc(serverType: ServerType) {
     return serverType === ServerType.KDB
-      ? html`Set the IP of your kdb+ database connection.`
-      : html`Set the IP of your kdb+ database connection, your Insights
-        connection must be deployed for kdb VS Code to access.`;
+      ? html`The IP or URL of your kdb+ process`
+      : html`The URL for your Insights instance. This instance must be deployed
+        for the extension to access it.`;
   }
 
   renderConnAddress(serverType: ServerType) {
