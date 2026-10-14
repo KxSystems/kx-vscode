@@ -348,7 +348,10 @@ export class KxNotebookController {
         this.writeOutput(
           execution,
           {
-            text: `<p>Execution stopped.</p><p>${escapeHtml(`${error instanceof Error ? error.message : error}`)}</p>`,
+            // A <pre>, not formatResult: the notebook sanitizer drops style and
+            // class, so only a <pre> keeps the stacktrace indentation and the
+            // carets aligned.
+            text: `<p>Execution stopped.</p><pre>${escapeHtml(`${error instanceof Error ? error.message : error}`)}</pre>`,
             mime: "text/html",
           },
           cellTarget,
