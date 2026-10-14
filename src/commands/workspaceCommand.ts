@@ -502,7 +502,7 @@ export async function pickConnection(uri: Uri) {
         "(active)",
         ...replChoices(server),
         ...getServers(),
-        ...getQuickServers().sort(),
+        ...getQuickServers().sort((a, b) => a.localeCompare(b)),
       ];
 
   let picked = await showInputPicker(items, {
