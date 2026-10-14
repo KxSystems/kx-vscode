@@ -1229,7 +1229,11 @@ export async function findConnection(uri: Uri) {
   let server = getServerForUri(uri) ?? "";
 
   if (server) {
-    if (isQuick(server)) server = await ensureQuickConnection(server);
+    if (isQuick(server)) {
+      const alias = await ensureQuickConnection(server);
+      if (alias === undefined) return undefined;
+      server = alias;
+    }
     const node = await getConnectionForServer(server);
     if (node) {
       const connMngService = new ConnectionManagementService();

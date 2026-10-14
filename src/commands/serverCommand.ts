@@ -1545,7 +1545,9 @@ export async function setQuickPassword(
   );
 }
 
-export async function ensureQuickConnection(server: string) {
+export async function ensureQuickConnection(
+  server: string,
+): Promise<string | undefined> {
   const [host, port, user] = server.split(":");
 
   let connection = getQuickDetail(host, port, user);
@@ -1558,7 +1560,8 @@ export async function ensureQuickConnection(server: string) {
           password: true,
           prompt: `Enter password for ${server}`,
         });
-        auth = `${user}:${password ?? ""}`;
+        if (password === undefined) return undefined;
+        auth = `${user}:${password}`;
         await ext.secretSettings.storeAuthData(server, auth);
       }
       await ext.secretSettings.storeAuthData(serverAlias, auth);
