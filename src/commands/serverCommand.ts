@@ -1538,7 +1538,7 @@ export async function setQuickPassword(
   pass: string,
 ) {
   const conn = getQuickDetail(host, port, user);
-  if (conn) await removeQuickDetail(conn);
+  if (conn) await removeQuickConnection(conn.serverAlias);
   await ext.secretSettings.storeAuthData(
     `${host}:${port}:${user}`,
     `${user}:${pass}`,

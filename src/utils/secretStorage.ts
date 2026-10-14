@@ -27,7 +27,7 @@ export default class AuthSettings {
   }
 
   async storeAuthData(tokenKey: string, tokenValue: string): Promise<void> {
-    this.secretStorage.store(tokenKey, tokenValue);
+    await this.secretStorage.store(tokenKey, tokenValue);
   }
 
   async getAuthData(tokenKey: string): Promise<string | undefined> {
@@ -36,6 +36,6 @@ export default class AuthSettings {
   }
 
   async deleteAuthData(tokenKey: string): Promise<void> {
-    this.secretStorage.delete(tokenKey);
+    await this.secretStorage.delete(tokenKey);
   }
 }

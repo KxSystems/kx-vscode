@@ -1815,6 +1815,16 @@ describe("serverCommand", () => {
         stub.restore();
       }
     });
+    it("should delete the old passwords when the password is replaced", async () => {
+      const label =
+        await serverCommand.ensureQuickConnection("setpw:1234:test");
+      deletedAuthData.length = 0;
+      await serverCommand.setQuickPassword("setpw", "1234", "test", "new");
+      assert.deepStrictEqual(deletedAuthData, [label, "setpw:1234:test"]);
+      assert.strictEqual(setAuthDataLabel, "setpw:1234:test");
+      assert.strictEqual(setAuthDataAuth, "test:new");
+      assert.ok(!serverCommand.getQuickServers().includes("setpw:1234:test"));
+    });
     it("should not prompt when a password is already stored", async () => {
       const stub = sinon.stub(vscode.window, "showInputBox").resolves("x");
       try {
