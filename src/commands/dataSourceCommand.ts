@@ -196,7 +196,13 @@ export async function runDataSource(
 
         if (isNotebook) {
           if (!success) {
-            throw new Error(res);
+            // formatDataSourceError only prefixes a string message; a buffer
+            // error would otherwise reach the cell as [object Object].
+            throw new Error(
+              typeof res === "string"
+                ? res
+                : withErrorPrefix("Datasource call failed."),
+            );
           }
           return res;
         }

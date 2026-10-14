@@ -697,6 +697,32 @@ describe("dataSourceCommand", () => {
       ext.connectedConnectionList.length = 0;
     });
 
+    it("should give a notebook a readable error for a buffer error", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.resolves({
+        error: { buffer: new ArrayBuffer(1) },
+      });
+
+      await assert.rejects(
+        () =>
+          dataSourceCommand.runDataSource(
+            mockDataSourceFile,
+            insightsConn.connLabel,
+            "test-file.kxnb",
+          ),
+        (error: Error) => {
+          assert.strictEqual(error.message, "Error: Datasource call failed.");
+          return true;
+        },
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
     it("should let a notebook stop on a graceful query error instead of rendering it as a result", async () => {
       ext.connectedConnectionList.push(insightsConn);
       retrieveConnStub.resolves(insightsConn);
