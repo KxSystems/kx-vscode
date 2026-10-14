@@ -492,6 +492,20 @@ describe("Controller", () => {
             rendered().text,
           );
         });
+
+        it("should keep a single-line thrown error in a wrapping paragraph", async () => {
+          executeQueryStub.rejects(new Error("Error: <long> message"));
+
+          await instance.execute(
+            [notebookTestUtils.createCell("q")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          const { text } = rendered();
+          assert.ok(text.includes("<p>Error: &lt;long&gt; message</p>"), text);
+          assert.ok(!text.includes("<pre>"), text);
+        });
       });
 
       describe("Local Connection", () => {

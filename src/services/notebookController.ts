@@ -345,13 +345,17 @@ export class KxNotebookController {
           logger,
           params: error,
         });
+        const message = escapeHtml(
+          `${error instanceof Error ? error.message : error}`,
+        );
         this.writeOutput(
           execution,
           {
-            // A <pre>, not formatResult: the notebook sanitizer drops style and
-            // class, so only a <pre> keeps the stacktrace indentation and the
-            // carets aligned.
-            text: `<p>Execution stopped.</p><pre>${escapeHtml(`${error instanceof Error ? error.message : error}`)}</pre>`,
+            // A multi-line message (a stacktrace) goes in a <pre>: the notebook
+            // sanitizer drops style and class, so only a <pre> keeps its
+            // indentation and the carets aligned. A single line stays in a <p>
+            // so a long message still wraps.
+            text: `<p>Execution stopped.</p>${message.includes("\n") ? `<pre>${message}</pre>` : `<p>${message}</p>`}`,
             mime: "text/html",
           },
           cellTarget,
