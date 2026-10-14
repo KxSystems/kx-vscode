@@ -139,7 +139,8 @@ export namespace ext {
   }
 
   export const urlLinks = {
-    survey: "https://t.maze.co/333268148",
+    survey:
+      "https://app.userevidence.com/surveys/19ef1ece-d53d-4dc8-8852-78509615b629/share",
     suggestFeature: "https://forum.kx.com/c/ideas-feature-requests",
     reportBug: "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
   };
