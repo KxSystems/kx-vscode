@@ -576,7 +576,7 @@ describe("dataSourceCommand", () => {
 
       sinon.assert.calledWith(
         writeQueryResultsToViewStub,
-        "Executing code using (Q) raised - type: Mismatched types\n  [0] {1+x}\n        ^\n",
+        "Error: Executing code using (Q) raised - type: Mismatched types\n  [0] {1+x}\n        ^\n",
       );
 
       ext.connectedConnectionList.length = 0;
@@ -691,7 +691,56 @@ describe("dataSourceCommand", () => {
 
       sinon.assert.calledWith(
         writeQueryResultsToConsoleStub,
-        "Executing code using (Q) raised - type: Mismatched types\n  [0] {1+x}\n        ^\n",
+        "Error: Executing code using (Q) raised - type: Mismatched types\n  [0] {1+x}\n        ^\n",
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should give a notebook a readable error for a buffer error", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.resolves({
+        error: { buffer: new ArrayBuffer(1) },
+      });
+
+      await assert.rejects(
+        () =>
+          dataSourceCommand.runDataSource(
+            mockDataSourceFile,
+            insightsConn.connLabel,
+            "test-file.kxnb",
+          ),
+        (error: Error) => {
+          assert.strictEqual(error.message, "Error: Datasource call failed.");
+          return true;
+        },
+      );
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should let a notebook stop on a graceful query error instead of rendering it as a result", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = getMetaResponse;
+      getMetaStub.resolves(getMetaResponse);
+      mockDataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
+      getDataInsightsStub.resolves({
+        error: "Executing code using (Q) raised - type: Mismatched types",
+      });
+
+      await assert.rejects(
+        () =>
+          dataSourceCommand.runDataSource(
+            mockDataSourceFile,
+            insightsConn.connLabel,
+            "test-file.kxnb",
+          ),
+        /Error: Executing code using \(Q\) raised - type: Mismatched types/,
       );
 
       ext.connectedConnectionList.length = 0;
@@ -906,7 +955,7 @@ describe("dataSourceCommand", () => {
         errorMsg: "type",
       });
 
-      assert.strictEqual(result, "type");
+      assert.strictEqual(result, "Error: type");
     });
 
     it("should append the stack trace under the message", () => {
@@ -915,7 +964,7 @@ describe("dataSourceCommand", () => {
         stacktrace: "  [0] {1+x}\n        ^\n",
       });
 
-      assert.strictEqual(result, "type\n  [0] {1+x}\n        ^\n");
+      assert.strictEqual(result, "Error: type\n  [0] {1+x}\n        ^\n");
     });
 
     it("should leave the message alone without a stack trace", () => {
@@ -923,7 +972,7 @@ describe("dataSourceCommand", () => {
         error: "type",
       });
 
-      assert.strictEqual(result, "type");
+      assert.strictEqual(result, "Error: type");
     });
 
     it("should pass a buffer error through untouched", () => {

@@ -24,6 +24,7 @@ import { ServerType } from "../models/connectionsModels";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
+import { withErrorPrefix } from "../models/queryResult";
 import { ScratchpadStacktrace } from "../models/scratchpadResult";
 import { UDARequestBody } from "../models/uda";
 import { ConnectionManagementService } from "../services/connectionManagerService";
@@ -194,6 +195,15 @@ export async function runDataSource(
         }
 
         if (isNotebook) {
+          if (!success) {
+            // formatDataSourceError only prefixes a string message; a buffer
+            // error would otherwise reach the cell as [object Object].
+            throw new Error(
+              typeof res === "string"
+                ? res
+                : withErrorPrefix("Datasource call failed."),
+            );
+          }
           return res;
         }
 
@@ -469,7 +479,7 @@ export function parseError(
 export function formatDataSourceError(res: any) {
   const message = res.errorMsg ? res.errorMsg : res.error;
   return typeof message === "string"
-    ? appendStacktrace(message, res.stacktrace)
+    ? appendStacktrace(withErrorPrefix(message), res.stacktrace)
     : message;
 }
 

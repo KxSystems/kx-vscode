@@ -444,6 +444,30 @@ describe("Executing on a kdb+ connection", () => {
         .join("\n");
 
       assert.ok(output.includes(FAILURE), `the error is not shown:\n${output}`);
+
+      // The failure has to stop the run, not just be shown. notebook.execute
+      // only resolves once the execute handler has returned, so by now any
+      // later cell the run went on to would already have been sent and ended.
+      await until(
+        () => notebook.cellAt(0).executionSummary?.success === false,
+        "the failing cell to be marked failed",
+      );
+      assert.strictEqual(
+        kdb.queries().length,
+        1,
+        "a cell after the failing one still ran",
+      );
+      assert.strictEqual(
+        notebook.cellAt(1).outputs.length,
+        0,
+        "the cell after the failing one produced output",
+      );
+      assert.strictEqual(
+        // Queued but never started: VS Code leaves an empty summary.
+        notebook.cellAt(1).executionSummary?.executionOrder,
+        undefined,
+        "the cell after the failing one was executed",
+      );
     });
   });
 

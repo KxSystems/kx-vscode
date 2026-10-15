@@ -459,6 +459,53 @@ describe("Controller", () => {
             `<p class="results-txt">{x&lt;y}<br/>     ^</p>`,
           );
         });
+
+        it("should keep the lines of a thrown multi-line error", async () => {
+          const message = "Error: 'type\n  [0]  1+`a\n        ^";
+          executeQueryStub.rejects(new Error(message));
+
+          await instance.execute(
+            [notebookTestUtils.createCell("q")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          const { text, mime } = rendered();
+          assert.strictEqual(mime, "text/html");
+          // A <pre> is the one block the notebook sanitizer lets keep the
+          // indentation, so the carets stay under what they point at.
+          assert.ok(text.includes(`<pre>${message}</pre>`), text);
+          assert.ok(!text.includes("<br"), text);
+        });
+
+        it("should escape markup in a thrown error", async () => {
+          executeQueryStub.rejects(new Error("Error: {x<y}\n     ^"));
+
+          await instance.execute(
+            [notebookTestUtils.createCell("q")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          assert.ok(
+            rendered().text.includes("<pre>Error: {x&lt;y}\n     ^</pre>"),
+            rendered().text,
+          );
+        });
+
+        it("should keep a single-line thrown error in a wrapping paragraph", async () => {
+          executeQueryStub.rejects(new Error("Error: <long> message"));
+
+          await instance.execute(
+            [notebookTestUtils.createCell("q")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          const { text } = rendered();
+          assert.ok(text.includes("<p>Error: &lt;long&gt; message</p>"), text);
+          assert.ok(!text.includes("<pre>"), text);
+        });
       });
 
       describe("Local Connection", () => {
