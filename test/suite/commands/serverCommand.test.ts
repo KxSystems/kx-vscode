@@ -1393,6 +1393,77 @@ describe("serverCommand", () => {
       assert.ok(refreshStub.calledOnce);
     });
 
+    describe("quick connections", () => {
+      let secretSettings: any;
+      let deleted: string[];
+
+      beforeEach(() => {
+        deleted = [];
+        secretSettings = ext.secretSettings;
+        ext.secretSettings = <any>{
+          getAuthData: () => "test:secret",
+          storeAuthData() {},
+          deleteAuthData(key: string) {
+            deleted.push(key);
+          },
+        };
+        getServersStub.returns({});
+        indexOfStub.returns(-1);
+        notifyStub.resolves("Proceed");
+      });
+
+      afterEach(() => {
+        ext.secretSettings = secretSettings;
+      });
+
+      async function quickNode(server: string) {
+        const alias = await serverCommand.ensureQuickConnection(server);
+        const [host, port, user] = server.split(":");
+        return new KdbNode(
+          [alias!],
+          alias!,
+          {
+            serverAlias: alias!,
+            serverName: host,
+            serverPort: port,
+            username: user,
+            auth: !!user,
+            tls: false,
+          },
+          vscode.TreeItemCollapsibleState.None,
+        );
+      }
+
+      it("should delete the stored passwords when a quick connection is removed", async () => {
+        const node = await quickNode("rmcmd:1234:test");
+        await serverCommand.removeConnection(node);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.deepStrictEqual(deleted, [
+          node.details.serverAlias,
+          "rmcmd:1234:test",
+        ]);
+        assert.ok(!serverCommand.getQuickServers().includes("rmcmd:1234:test"));
+      });
+
+      it("should not touch passwords when a quick connection without a user is removed", async () => {
+        const node = await quickNode("rmcmd:1235");
+        await serverCommand.removeConnection(node);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.deepStrictEqual(deleted, []);
+        assert.ok(!serverCommand.getQuickServers().includes("rmcmd:1235"));
+      });
+
+      it("should keep the stored passwords when removal is cancelled", async () => {
+        const node = await quickNode("rmcmd:1236:test");
+        notifyStub.resolves("Cancel");
+        await serverCommand.removeConnection(node);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        assert.deepStrictEqual(deleted, []);
+        assert.ok(serverCommand.getQuickServers().includes("rmcmd:1236:test"));
+        await serverCommand.removeQuickConnection(node.details.serverAlias);
+      });
+    });
+
     it("should remove connection, but disconnect it before when user clicks Proceed", async () => {
       notifyStub.resolves("Proceed");
 
@@ -1760,7 +1831,10 @@ describe("serverCommand", () => {
     let secretSettings: any;
     let setAuthDataLabel: any;
     let setAuthDataAuth: any;
+    let deleteAuthDataLabel: any;
+    let deletedAuthData: string[];
     beforeEach(() => {
+      deletedAuthData = [];
       secretSettings = ext.secretSettings;
       ext.secretSettings = <any>{
         getAuthData() {
@@ -1769,6 +1843,10 @@ describe("serverCommand", () => {
         storeAuthData(label: any, auth: any) {
           setAuthDataLabel = label;
           setAuthDataAuth = auth;
+        },
+        deleteAuthData(label: any) {
+          deleteAuthDataLabel = label;
+          deletedAuthData.push(label);
         },
       };
     });
@@ -1788,6 +1866,94 @@ describe("serverCommand", () => {
         await serverCommand.ensureQuickConnection("local:1234:test");
       assert.strictEqual(setAuthDataLabel, label);
       assert.strictEqual(setAuthDataAuth, "test:1234");
+    });
+    it("should prompt for the password when none is stored and store what is entered", async () => {
+      const stored: Record<string, string> = {};
+      ext.secretSettings = <any>{
+        getAuthData: (key: string) => stored[key],
+        storeAuthData(key: string, auth: string) {
+          stored[key] = auth;
+        },
+        deleteAuthData() {},
+      };
+      const stub = sinon.stub(vscode.window, "showInputBox").resolves("secret");
+      try {
+        const label =
+          await serverCommand.ensureQuickConnection("prompt:1234:test");
+        assert.ok(stub.calledOnce);
+        assert.strictEqual(stub.firstCall.args[0]?.password, true);
+        assert.ok(stub.firstCall.args[0]?.prompt?.includes("prompt:1234:test"));
+        assert.strictEqual(stored["prompt:1234:test"], "test:secret");
+        assert.strictEqual(stored[label!], "test:secret");
+      } finally {
+        stub.restore();
+      }
+    });
+    it("should delete the old passwords when the password is replaced", async () => {
+      const label =
+        await serverCommand.ensureQuickConnection("setpw:1234:test");
+      deletedAuthData.length = 0;
+      await serverCommand.setQuickPassword("setpw", "1234", "test", "new");
+      assert.deepStrictEqual(deletedAuthData, [label, "setpw:1234:test"]);
+      assert.strictEqual(setAuthDataLabel, "setpw:1234:test");
+      assert.strictEqual(setAuthDataAuth, "test:new");
+      assert.ok(!serverCommand.getQuickServers().includes("setpw:1234:test"));
+    });
+    it("should not prompt when a password is already stored", async () => {
+      const stub = sinon.stub(vscode.window, "showInputBox").resolves("x");
+      try {
+        await serverCommand.ensureQuickConnection("stored:1234:test");
+        assert.ok(stub.notCalled);
+      } finally {
+        stub.restore();
+      }
+    });
+    it("should not store a password or connect when the prompt is cancelled", async () => {
+      ext.secretSettings = <any>{
+        getAuthData: () => undefined,
+        storeAuthData(label: any, auth: any) {
+          setAuthDataLabel = label;
+          setAuthDataAuth = auth;
+        },
+        deleteAuthData() {},
+      };
+      const stub = sinon
+        .stub(vscode.window, "showInputBox")
+        .resolves(undefined);
+      try {
+        const label =
+          await serverCommand.ensureQuickConnection("cancel:1234:test");
+        assert.strictEqual(label, undefined);
+        assert.strictEqual(setAuthDataLabel, undefined);
+        assert.ok(
+          !serverCommand.getQuickServers().includes("cancel:1234:test"),
+        );
+      } finally {
+        stub.restore();
+      }
+    });
+    it("should remove quick connection and drop it from the picker list", async () => {
+      const label =
+        await serverCommand.ensureQuickConnection("remove:1234:test");
+      await serverCommand.removeQuickConnection(label!);
+      assert.strictEqual(deleteAuthDataLabel, "remove:1234:test");
+      assert.deepStrictEqual(deletedAuthData, [label, "remove:1234:test"]);
+      assert.ok(!serverCommand.getQuickServers().includes("remove:1234:test"));
+      assert.strictEqual(
+        await serverCommand.ensureQuickConnection("remove:1234:test"),
+        label,
+      );
+      assert.ok(serverCommand.getQuickServers().includes("remove:1234:test"));
+    });
+    it("should reuse the lowest free quick connection alias", async () => {
+      const first = await serverCommand.ensureQuickConnection("reuse:1");
+      const second = await serverCommand.ensureQuickConnection("reuse:2");
+      await serverCommand.removeQuickConnection(first!);
+      assert.strictEqual(
+        await serverCommand.ensureQuickConnection("reuse:3"),
+        first,
+      );
+      assert.notStrictEqual(first, second);
     });
   });
 });

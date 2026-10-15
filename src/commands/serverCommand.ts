@@ -61,6 +61,7 @@ import {
   getInsights,
   getKeyForServerName,
   getServers,
+  isQuickAlias,
   offerReconnectionAfterEdit,
   updateInsights,
   updateServers,
@@ -799,6 +800,12 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
           : viewItem.details.alias,
       );
       await connMngService.removeConnection(viewItem);
+      if (
+        viewItem instanceof KdbNode &&
+        isQuickAlias(viewItem.details.serverAlias)
+      ) {
+        await removeQuickConnection(viewItem.details.serverAlias);
+      }
     }
   });
 }
@@ -1471,6 +1478,35 @@ function getQuickLabel(conn: ServerDetails) {
   return `${conn.serverAlias} [${conn.serverName}:${conn.serverPort}]`;
 }
 
+function getQuickServer(conn: ServerDetails) {
+  return conn.username
+    ? `${conn.serverName}:${conn.serverPort}:${conn.username}`
+    : `${conn.serverName}:${conn.serverPort}`;
+}
+
+function nextQuickAlias() {
+  const aliases = new Set(quickConnections.map((conn) => conn.serverAlias));
+  let n = 1;
+  while (aliases.has(`(Connection ${n})`)) n++;
+  return `(Connection ${n})`;
+}
+
+export function getQuickServers() {
+  return quickConnections.map((conn) => getQuickServer(conn));
+}
+
+export async function removeQuickConnection(serverAlias: string) {
+  const conn = quickConnections.find(
+    (conn) => conn.serverAlias === serverAlias,
+  );
+  if (!conn) return;
+  if (conn.auth) {
+    await ext.secretSettings.deleteAuthData(serverAlias);
+    await ext.secretSettings.deleteAuthData(getQuickServer(conn));
+  }
+  await removeQuickDetail(conn);
+}
+
 function getQuickDetail(host: string, port: string, user: string) {
   return quickConnections.find(
     (conn) =>
@@ -1507,19 +1543,21 @@ export async function setQuickPassword(
   pass: string,
 ) {
   const conn = getQuickDetail(host, port, user);
-  if (conn) await removeQuickDetail(conn);
+  if (conn) await removeQuickConnection(conn.serverAlias);
   await ext.secretSettings.storeAuthData(
     `${host}:${port}:${user}`,
     `${user}:${pass}`,
   );
 }
 
-export async function ensureQuickConnection(server: string) {
+export async function ensureQuickConnection(
+  server: string,
+): Promise<string | undefined> {
   const [host, port, user] = server.split(":");
 
   let connection = getQuickDetail(host, port, user);
   if (!connection) {
-    const serverAlias = "(Connection " + (quickConnections.length + 1) + ")";
+    const serverAlias = nextQuickAlias();
     if (user) {
       let auth = await ext.secretSettings.getAuthData(server);
       if (!auth) {
@@ -1527,7 +1565,8 @@ export async function ensureQuickConnection(server: string) {
           password: true,
           prompt: `Enter password for ${server}`,
         });
-        auth = `${user}:${password ?? ""}`;
+        if (password === undefined) return undefined;
+        auth = `${user}:${password}`;
         await ext.secretSettings.storeAuthData(server, auth);
       }
       await ext.secretSettings.storeAuthData(serverAlias, auth);

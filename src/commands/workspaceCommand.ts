@@ -35,6 +35,7 @@ import {
 import { ext } from "../extensionVariables";
 import {
   ensureQuickConnection,
+  getQuickServers,
   resetScratchpad,
   runQuery,
   setQuickPassword,
@@ -243,24 +244,6 @@ function getServers() {
       .sort((a, b) => a.localeCompare(b)),
     ...getInsightsServers(),
   ];
-}
-
-const quickServers: string[] = [];
-
-function getQuickServers(uri: Uri) {
-  const conf = workspace.getConfiguration("kdb", uri);
-  const connections = conf.get<{ [key: string]: string }>("connectionMap", {});
-  const size = quickServers.length;
-  const targets = [
-    ...Object.values(connections),
-    ...sessionConnectionMap.values(),
-  ];
-  targets.forEach((target) => {
-    if (isQuick(target) && !quickServers.includes(target)) {
-      quickServers.push(target);
-    }
-  });
-  return size !== quickServers.length ? quickServers.sort() : quickServers;
 }
 
 export async function getConnectionForServer(
@@ -519,7 +502,7 @@ export async function pickConnection(uri: Uri) {
         "(active)",
         ...replChoices(server),
         ...getServers(),
-        ...getQuickServers(uri),
+        ...getQuickServers().sort((a, b) => a.localeCompare(b)),
       ];
 
   let picked = await showInputPicker(items, {
@@ -1246,7 +1229,11 @@ export async function findConnection(uri: Uri) {
   let server = getServerForUri(uri) ?? "";
 
   if (server) {
-    if (isQuick(server)) server = await ensureQuickConnection(server);
+    if (isQuick(server)) {
+      const alias = await ensureQuickConnection(server);
+      if (alias === undefined) return undefined;
+      server = alias;
+    }
     const node = await getConnectionForServer(server);
     if (node) {
       const connMngService = new ConnectionManagementService();
