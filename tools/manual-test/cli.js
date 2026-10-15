@@ -7,7 +7,7 @@ const USAGE = `usage: node cli.js <command> [args]
   start [--ext dir] [--workspace dir] [--vscode ver] [--keep] [--settings '{json}']
   stop | status
   snapshot                         compact state of the whole window
-  palette "<text>" [pick-number]   run a command-palette item
+  palette "<exact title>"          run a command-palette item (exact title only)
   key <Key> [<Key>...]             e.g. Control+S Escape
   type "<text>"                    type into the focused control
   click "<text | css | role=...>"  click in the workbench
@@ -22,12 +22,18 @@ const USAGE = `usage: node cli.js <command> [args]
   shot [name] [--sel css]          screenshot -> prints the png path
   log [lines]                      tail of the extension's kdb.log
   eval "<js>" | eval --file f.js   Playwright escape hatch: win, app, ctx, sleep
-Any command accepts --json '{...}' to pass raw arguments.`;
+Any command accepts --json '{...}' to pass raw arguments.
+Commands that print a snapshot also take --settle <ms> (default 700; raise it
+for slow UI) and --no-snap. Only the flags above are flags: other text starting
+with "--" is passed as text, and "--" ends flag parsing.`;
+
+const BOOL_FLAGS = new Set(["keep", "right", "dbl", "no-enter", "no-snap"]);
+const VALUE_FLAGS = new Set(["ext", "workspace", "vscode", "settings", "timeout", "wv", "sel", "json", "file", "settle"]);
 
 const argsFor = (cmd, r, o) => {
   const n = (v) => (v === undefined ? undefined : /^\d+$/.test(v) ? Number(v) : v);
   switch (cmd) {
-    case "palette": return { text: r[0], pick: r[1] && Number(r[1]) };
+    case "palette": return { text: r[0] };
     case "key": return { keys: r };
     case "type": case "qi.type": case "qi.pick": case "editor.type": case "editor.set": return { text: r[0] };
     case "click": return { sel: r[0], button: o.right ? "right" : undefined, dbl: !!o.dbl };
@@ -84,12 +90,17 @@ async function start(argv) {
 (async () => {
   const [cmd, ...rest] = process.argv.slice(2);
   if (!cmd || cmd === "help") return console.log(USAGE);
+  // Only known flags are flags: anything else (e.g. "--- comment") is text, and
+  // everything after a bare `--` is text too.
   const raw = [], o = {};
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
-    if (a.startsWith("--") && !(cmd === "start" && false)) {
-      const k = a.slice(2), nx = rest[i + 1];
-      if (nx === undefined || nx.startsWith("--")) o[k] = true; else (o[k] = nx), i++;
+    if (a === "--") { raw.push(...rest.slice(i + 1)); break; }
+    const k = a.startsWith("--") ? a.slice(2) : undefined;
+    if (BOOL_FLAGS.has(k)) o[k] = true;
+    else if (VALUE_FLAGS.has(k)) {
+      if (rest[i + 1] === undefined) throw new Error(`--${k} needs a value`);
+      o[k] = rest[++i];
     } else raw.push(a);
   }
   if (cmd === "start") {
@@ -102,6 +113,8 @@ async function start(argv) {
     return console.log(st && isAlive(st.pid) ? `running pid=${st.pid} workspace=${st.workspace} extension=${st.extension}` : "not running");
   }
   const args = o.json ? JSON.parse(o.json) : argsFor(cmd, raw, o);
+  if (o.settle) args.settle = Number(o.settle);
+  if (o["no-snap"]) args.snap = false;
   const r = await rpc(cmd, args);
   if (r.error) { console.error("ERR " + r.error); process.exit(1); }
   console.log(r.result);

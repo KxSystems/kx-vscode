@@ -66,8 +66,11 @@ screen. Omitting the index means the visible one.
   confirm a connection by running a query and reading the result, not the tree.
 - Query results land in the **Terminal** panel (`term.read`) or the **KDB Results**
   view, depending on `setResultsDestination`. Check both.
-- `palette` runs the first exact-title match, else the first result. If several
-  match it lists them: re-run with a pick number or a longer title.
+- `palette` runs a command only on an exact title match, including its prefix
+  (`KX: New Connection`, not `New Connection`). Otherwise it runs nothing and
+  lists the closest matches: re-run with one of those titles. Commands that
+  need an editor or connection (e.g. `KX: Execute Entire File`) are missing from
+  the palette until a q file has focus.
 - Palette results include other extensions' commands; the isolated profile has
   only this extension, so the `KX:` prefix is a reliable filter.
 - Settings live in `.work/ud/User/settings.json` (pass `--settings '{"kdb.x":1}'`
@@ -75,6 +78,22 @@ screen. Omitting the index means the visible one.
   scriptable. Native OS dialogs cannot be driven.
 - `start` always wipes the profile; `--keep` keeps it. `--workspace dir` uses your
   own folder instead of the fixture copy in `.work/workspace`.
+- **The tool drives VS Code internals** (the `fake.html` webview frames, class
+  names like `.quick-input-widget` and `.notification-list-item`), and `start`
+  downloads `stable` by default, so a VS Code update can break it with no change
+  in this repo. If snapshots come back empty or webviews are not found, suspect
+  that first: check the version (`eval "return ctx.exe"` - the path names it),
+  retry with `start --vscode <older version>`, and tell the user the tool needs
+  updating rather than reporting it as an extension bug. Last known good: VS
+  Code **1.142.0** (verified 2026-10-14); update this line when you confirm a
+  newer one works.
+- Commands that print a snapshot wait 700 ms first. For slow UI (connection
+  dialogs, activation) pass `--settle 3000`, or use `wait`; `--no-snap` skips the
+  snapshot. Only the documented flags are flags: text like `"--- note"` is typed
+  as is, and `--` ends flag parsing.
+- The daemon's token is in `.work/state.json` (owner-only on macOS/Linux) and
+  `eval` runs arbitrary code in the Node process, so treat `.work/` as sensitive
+  and never expose the daemon beyond 127.0.0.1.
 - Testing a packaged build: unzip the `.vsix` and pass `--ext <folder/extension>`.
 
 ## How to test well

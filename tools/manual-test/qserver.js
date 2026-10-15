@@ -6,6 +6,7 @@
 //   node qserver.js stop [--port 5000]      (no --port: stop all)
 //   node qserver.js list
 const { spawn, execFileSync } = require("child_process");
+const crypto = require("crypto");
 const net = require("net");
 const {
   fs,
@@ -23,6 +24,8 @@ const dir = () => ensure(p("q"));
 const stateFile = (port) => path.join(dir(), `q-${port}.json`);
 
 function findQ(explicit) {
+  if (explicit && !fs.existsSync(explicit))
+    throw new Error(`q not found at ${explicit}`);
   const cands = [explicit, process.env.QBIN];
   const exe = process.platform === "win32" ? "q.exe" : "q";
   const home = os.homedir();
@@ -62,7 +65,9 @@ async function start(a) {
   const password =
     a.password || "pw" + Math.random().toString(36).slice(2, 10);
   const users = path.join(dir(), `users-${port}.txt`);
-  fs.writeFileSync(users, `${user}:${password}\n`);
+  // q's -U file takes user:md5(password): keep the plain password off disk.
+  const md5 = crypto.createHash("md5").update(password).digest("hex");
+  fs.writeFileSync(users, `${user}:${md5}\n`, { mode: 0o600 });
   const q = findQ(a.q);
   const keeper = spawn(
     process.execPath,
@@ -77,6 +82,9 @@ async function start(a) {
       return { port, user, password, q, pid: st && st.pid, host: "127.0.0.1" };
     }
   }
+  // Never leave the credentials behind when q failed to come up.
+  fs.rmSync(users, { force: true });
+  fs.rmSync(stateFile(port), { force: true });
   throw new Error("q did not start listening within 10s (licence problem?)");
 }
 
@@ -91,6 +99,13 @@ function keeper(port, q, users) {
     stateFile(port),
     JSON.stringify({ port, keeper: process.pid, pid: child.pid, users }),
   );
+  // A bad q path emits "error" (not "exit"); without a handler the keeper
+  // would crash and leave its state and users files behind.
+  child.on("error", () => {
+    fs.rmSync(stateFile(port), { force: true });
+    fs.rmSync(users, { force: true });
+    process.exit(1);
+  });
   child.on("exit", () => {
     fs.rmSync(stateFile(port), { force: true });
     process.exit(0);
@@ -99,16 +114,20 @@ function keeper(port, q, users) {
   setInterval(() => {}, 1 << 30);
 }
 
-function stop(a) {
+async function stop(a) {
   const files = fs.readdirSync(dir()).filter((f) => /^q-\d+\.json$/.test(f));
   const out = [];
   for (const f of files) {
     const st = readJson(path.join(dir(), f));
     if (!st || (a.port && Number(a.port) !== st.port)) continue;
-    for (const pid of [st.pid, st.keeper])
-      try {
-        process.kill(pid);
-      } catch {}
+    // The keeper deletes the state file when q exits, so a state file whose
+    // keeper is gone or whose port is not listening is stale and its pids may
+    // have been reused by unrelated processes: clean up, but never kill.
+    if (isAlive(st.keeper) && (await probe(st.port)))
+      for (const pid of [st.pid, st.keeper])
+        try {
+          process.kill(pid);
+        } catch {}
     fs.rmSync(path.join(dir(), f), { force: true });
     fs.rmSync(st.users, { force: true });
     out.push(st.port);

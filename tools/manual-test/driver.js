@@ -61,7 +61,7 @@ async function main() {
     fs.cpSync(path.join(TOOL, "fixtures"), ws, { recursive: true });
   }
 
-  const env = { ...process.env, ELECTRON_RUN_AS_NODE: "" };
+  const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
   if (process.env.MT_LD_LIBRARY_PATH)
     env.LD_LIBRARY_PATH = process.env.MT_LD_LIBRARY_PATH;
@@ -136,6 +136,7 @@ async function main() {
     });
   });
   server.listen(0, "127.0.0.1", () => {
+    // Holds the RPC token, and `eval` runs arbitrary code: owner-only (POSIX).
     fs.writeFileSync(
       p("state.json"),
       JSON.stringify({
@@ -146,6 +147,7 @@ async function main() {
         extension: ext,
         vscode: exe,
       }),
+      { mode: 0o600 },
     );
   });
 }

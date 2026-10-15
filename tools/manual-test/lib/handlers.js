@@ -5,7 +5,7 @@ const { fs, path, sleep } = require("./common");
 /** Compact state of the VS Code workbench chrome. */
 function pageSnapshot() {
   const vis = (e) => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
-  const t = (e) => (e ? e.innerText.replace(/Â /g, " ").replace(/\s+/g, " ").trim() : "");
+  const t = (e) => (e ? e.innerText.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim() : "");
   const out = {};
   out.tabs = [...document.querySelectorAll(".tabs-container .tab")].map((e) => ({
     label: (e.getAttribute("aria-label") || t(e)).slice(0, 80),
@@ -183,7 +183,7 @@ function makeHandlers(ctx) {
     const n = await rows.count();
     for (let i = n - 1; i >= 0; i--) {
       if (await rows.nth(i).isVisible()) {
-        const t = (await rows.nth(i).innerText()).replace(/Â /g, " ").replace(/\s+$/gm, "").trimEnd();
+        const t = (await rows.nth(i).innerText()).replace(/\u00a0/g, " ").replace(/\s+$/gm, "").trimEnd();
         return t.split("\n").slice(-(lines || 40)).join("\n");
       }
     }
@@ -197,7 +197,7 @@ function makeHandlers(ctx) {
       return e ? e.innerText : null;
     });
     if (t === null) throw new Error("no visible text editor");
-    return t.replace(/Â /g, " ");
+    return t.replace(/\u00a0/g, " ");
   }
 
   async function pollFor(read, regex, timeout, what) {
@@ -219,23 +219,55 @@ function makeHandlers(ctx) {
   const H = {
     snapshot: async () => snapshot(),
 
-    palette: act(async ({ text, pick }) => {
+    palette: act(async ({ text }) => {
+      // Focus inside a webview iframe swallows F1: take focus back first.
+      await win.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+      const open = () =>
+        win.waitForFunction(() => { const w = document.querySelector(".quick-input-widget"); return !!w && w.getClientRects().length > 0; }, null, { timeout: 2000 }).then(() => true, () => false);
       await win.keyboard.press("F1");
-      await sleep(250);
-      await win.keyboard.press("Control+A");
-      await win.keyboard.type(">" + text);
-      await sleep(600);
-      const rows = await win.locator(".quick-input-list .monaco-list-row").allInnerTexts();
-      if (!rows.length) {
-        await win.keyboard.press("Escape");
-        throw new Error(`no palette command matches ${JSON.stringify(text)}`);
+      if (!(await open())) {
+        // Still swallowed (a webview keeps focus): click an inert spot of the
+        // workbench chrome (the empty middle of the activity bar), then retry.
+        await win.locator(".part.activitybar").click({ position: { x: 5, y: 420 }, timeout: 3000 }).catch(() => {});
+        await win.keyboard.press("F1");
+        if (!(await open())) throw new Error("the command palette did not open (focus is probably in a webview: click a workbench tab first)");
       }
-      const labels = rows.map((r) => r.split("\n")[0].trim());
-      let idx = pick !== undefined ? pick - 1 : labels.findIndex((l) => l.toLowerCase() === text.toLowerCase());
-      if (idx < 0) idx = 0;
+      await win.keyboard.press("ControlOrMeta+A");
+      await win.keyboard.type(">" + text);
+      // Wait for the filtered list to stop changing before choosing from it.
+      // Only rows of the visible widget (a closed one keeps stale rows in the
+      // DOM), and only each row's name: its text also holds badges such as
+      // "similar commands" and the keybinding.
+      const readRows = () =>
+        win.evaluate(() => {
+          const w = document.querySelector(".quick-input-widget");
+          if (!w || !w.getClientRects().length) return [];
+          return [...w.querySelectorAll(".quick-input-list .monaco-list-row")].map(
+            (r) => (r.querySelector(".label-name") || r).textContent.replace(/\s+/g, " ").trim(),
+          );
+        });
+      let rows = await readRows();
+      for (let i = 0, prev = ""; i < 10 && JSON.stringify(rows) !== prev; i++) {
+        prev = JSON.stringify(rows);
+        await sleep(300);
+        rows = await readRows();
+      }
+      const bail = async (msg) => {
+        await win.keyboard.press("Escape");
+        throw new Error(msg);
+      };
+      const labels = rows.filter((l) => l !== "No matching commands");
+      if (!labels.length) await bail(`no palette command matches ${JSON.stringify(text)}`);
+      // Exact title only. Never guess: running the wrong command has side effects.
+      const idx = labels.findIndex((l) => l.toLowerCase() === text.toLowerCase());
+      if (idx < 0)
+        await bail(
+          `no palette command has exactly the title ${JSON.stringify(text)}; closest matches (use the full title, e.g. "KX: ..."):\n` +
+            labels.slice(0, 8).map((l) => `  ${l}`).join("\n"),
+        );
       for (let i = 0; i < idx; i++) await win.keyboard.press("ArrowDown");
       await win.keyboard.press("Enter");
-      return `ran palette item ${idx + 1}: ${labels[idx]}` + (labels.length > 1 ? `  (other matches: ${labels.filter((_, i) => i !== idx).slice(0, 4).join("; ")})` : "");
+      return `ran palette item: ${labels[idx]}`;
     }),
 
     key: act(async ({ keys }) => {
@@ -249,7 +281,7 @@ function makeHandlers(ctx) {
 
     // quick input (palette, pickers, input boxes)
     "qi.type": act(async ({ text }) => {
-      await win.keyboard.press("Control+A");
+      await win.keyboard.press("ControlOrMeta+A");
       await win.keyboard.type(text);
     }),
     "qi.pick": act(async ({ text }) => {
@@ -298,7 +330,7 @@ function makeHandlers(ctx) {
     "editor.read": async () => editorText(),
     "editor.set": act(async ({ text }) => {
       await win.locator(".monaco-editor .view-lines").first().click({ timeout: 8000 });
-      await win.keyboard.press("Control+A");
+      await win.keyboard.press("ControlOrMeta+A");
       await win.keyboard.insertText(text);
     }),
     "editor.type": act(async ({ text }) => {
@@ -306,7 +338,7 @@ function makeHandlers(ctx) {
       await win.keyboard.type(text);
     }),
     "file.open": act(async ({ name }) => {
-      await win.keyboard.press("Control+P");
+      await win.keyboard.press("ControlOrMeta+P");
       await sleep(300);
       await win.keyboard.type(name);
       await sleep(600);
@@ -340,7 +372,7 @@ function makeHandlers(ctx) {
       if (fs.existsSync(logs)) walk(logs);
       if (!found.length) return `no ${file || "kdb.log"} found under ${logs}`;
       found.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
-      return fs.readFileSync(found[0], "utf8").split("\n").slice(-(lines || 40)).join("\n");
+      return fs.readFileSync(found[0], "utf8").split(/\r?\n/).slice(-(lines || 40)).join("\n");
     },
 
     eval: async ({ js }) => {
@@ -353,7 +385,3 @@ function makeHandlers(ctx) {
 }
 
 module.exports = { makeHandlers };
-
-
-
-
