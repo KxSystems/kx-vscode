@@ -31,7 +31,7 @@ const ANSI = {
   BOLD_ON: "\x1b[1m",
   BOLD_OFF: "\x1b[22m",
   RED_ON: "\x1b[31m",
-  RED_OFF: "\x1b[0m",
+  RED_OFF: "\x1b[39m",
 };
 
 const KEY = {
@@ -266,7 +266,18 @@ export class ConnectionConsole {
 
   /** Writes a line in red, for error output. */
   appendError(text = ""): void {
-    this.write(text, true);
+    this.appendParts([{ text, error: true }]);
+  }
+
+  /** Writes one line made of parts, each plain or red. */
+  appendParts(parts: { text: string; error?: boolean }[]): void {
+    const line = parts
+      .map(({ text, error }) => {
+        const value = this.normalize(text);
+        return error ? ANSI.RED_ON + value + ANSI.RED_OFF : value;
+      })
+      .join("");
+    this.send(line + ANSI.CRLF);
   }
 
   /** Writes the lines of a result. */
@@ -275,13 +286,8 @@ export class ConnectionConsole {
   }
 
   /** Writes whole rows, each on a line of its own. */
-  private write(text: string, asError = false): void {
-    const line = this.normalize(text);
-    this.send(
-      asError
-        ? ANSI.RED_ON + line + ANSI.RED_OFF + ANSI.CRLF
-        : line + ANSI.CRLF,
-    );
+  private write(text: string): void {
+    this.send(this.normalize(text) + ANSI.CRLF);
   }
 
   clear(): void {

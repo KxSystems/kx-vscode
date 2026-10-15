@@ -1286,10 +1286,10 @@ export async function writeQueryResultsToConsole(
   const res = decodeQUTF(valueToDecode);
   const isDatasource = checkIfIsDatasource(type);
   if (!res.startsWith(queryConstants.error) || isDatasource) {
-    // A datasource error is rendered as plain output rather than through
-    // appendQueryError: runDataSource already tracks its own success/failure
-    // for query history (addDStoQueryHistory), and the reason still has to
-    // reach the console either way (KXI-69283).
+    // A datasource error goes through append rather than appendQueryError:
+    // runDataSource already tracks its own success/failure for query history
+    // (addDStoQueryHistory), and the reason still has to reach the console
+    // either way (KXI-69283). It is still written as an error, in red.
     queryConsole.append(
       res,
       query,
@@ -1300,6 +1300,7 @@ export async function writeQueryResultsToConsole(
       isPython,
       duration,
       isFromConnTree,
+      res.startsWith(queryConstants.error),
     );
   } else {
     queryConsole.appendQueryError(

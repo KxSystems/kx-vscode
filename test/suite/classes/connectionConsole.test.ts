@@ -330,7 +330,13 @@ describe("ConnectionConsole", () => {
   it("should write a line in red", async () => {
     const console = await started();
     console.appendError("boom");
-    assert.strictEqual(payload(), "\x1b[31mboom\x1b[0m\r\n");
+    assert.strictEqual(payload(), "\x1b[31mboom\x1b[39m\r\n");
+  });
+
+  it("should write a line of plain and red parts", async () => {
+    const console = await started();
+    console.appendParts([{ text: "ERROR: ", error: true }, { text: "q" }]);
+    assert.strictEqual(payload(), "\x1b[31mERROR: \x1b[39mq\r\n");
   });
 
   it("should ask how wide it is once it is sized", async () => {

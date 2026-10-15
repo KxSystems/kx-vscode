@@ -36,6 +36,8 @@ interface ConsoleSink {
   // Error output. The connection's terminal renders this in red; the
   // fallback output channel has no ANSI support, so it writes plain text.
   appendError: (value: string) => void;
+  // One line of plain and red parts, so an echoed query can sit in an error.
+  appendParts: (parts: { text: string; error?: boolean }[]) => void;
   // The lines of a result, kept apart from the banner lines around them.
   appendResult: (lines: string[]) => void;
   reveal: () => void;
@@ -72,6 +74,7 @@ export class ExecutionConsole {
       return {
         appendLine: (value) => console.appendLine(value),
         appendError: (value) => console.appendError(value),
+        appendParts: (parts) => console.appendParts(parts),
         appendResult: (lines) => console.appendResult(lines),
         reveal: () => console.terminal.show(true),
       };
@@ -79,6 +82,8 @@ export class ExecutionConsole {
     return {
       appendLine: (value) => this._console.appendLine(value),
       appendError: (value) => this._console.appendLine(value),
+      appendParts: (parts) =>
+        this._console.appendLine(parts.map((part) => part.text).join("")),
       appendResult: (lines) =>
         lines.forEach((line) => this._console.appendLine(line)),
       reveal: () => this._console.show(true),
@@ -90,6 +95,32 @@ export class ExecutionConsole {
       sink.appendLine(query);
       sink.appendLine("");
     }
+  }
+
+  // Writes an error reason in red, then the source excerpt q appends to it
+  // ("[0] til 10`" and its caret) as plain text so the reason stands out.
+  private appendErrorReason(sink: ConsoleSink, result: string): void {
+    const excerpt = result.search(/^[ \t]*\[\d+\]/m);
+    const reason = excerpt < 0 ? result : result.slice(0, excerpt);
+    const source = excerpt < 0 ? "" : result.slice(excerpt).replace(/\n+$/, "");
+    sink.appendParts([{ text: reason.replace(/\n+$/, ""), error: true }]);
+    if (source) {
+      sink.appendLine(source);
+    }
+  }
+
+  // Closes a query block: the footer (when details are shown) and a blank line
+  // so the next block's header does not print right under it.
+  private endBlock(
+    sink: ConsoleSink,
+    hideDetails: boolean,
+    footer: string,
+    write: (value: string) => void,
+  ): void {
+    if (!hideDetails) {
+      write(footer);
+    }
+    sink.appendLine("");
   }
 
   public checkOutput(
@@ -123,6 +154,7 @@ export class ExecutionConsole {
     isPhython?: boolean,
     duration?: string,
     isFromConnTree?: boolean,
+    isError?: boolean,
   ): void {
     const hideDetails = getHideDetailedConsoleQueryOutputSetting();
     const sink = this.resolveSink(connLabel);
@@ -155,10 +187,17 @@ export class ExecutionConsole {
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {
-      sink.appendLine(`>>> ${connLabel}  @ ${date.toLocaleTimeString()} <<<`);
+      const banner = `>>> ${connLabel}  @ ${date.toLocaleTimeString()} <<<`;
+      // An error block is red around the plain query: banner, reason, footer.
+      (isError ? sink.appendError : sink.appendLine)(banner);
       this.appendQuery(sink, query);
     }
-    if (Array.isArray(output) && type === undefined) {
+    if (isError) {
+      this.appendErrorReason(
+        sink,
+        Array.isArray(output) ? output.join("\n") : output,
+      );
+    } else if (Array.isArray(output) && type === undefined) {
       sink.appendResult([output[0], ...output]);
     } else if (dataSourceRes.length > 0) {
       sink.appendResult(dataSourceRes);
@@ -166,11 +205,12 @@ export class ExecutionConsole {
       output = Array.isArray(output) ? output.join("\n") : output;
       sink.appendResult(output.split("\n"));
     }
-    if (!hideDetails) {
-      sink.appendLine(`<<<\n`);
-    } else {
-      sink.appendLine(``);
-    }
+    this.endBlock(
+      sink,
+      hideDetails,
+      "<<<",
+      isError ? sink.appendError : sink.appendLine,
+    );
   }
 
   public appendQueryError(
@@ -200,10 +240,15 @@ export class ExecutionConsole {
     }
     if (isConnected) {
       if (!hideDetails) {
-        sink.appendError(`ERROR Query executed: ${query}\n`);
-        sink.appendError(result);
+        // The echoed query and the source excerpt q appends to the reason
+        // ("[0] til 10`" and its caret) are plain so the red reason stands out.
+        sink.appendParts([
+          { text: "ERROR Query executed: ", error: true },
+          { text: `${query}\n` },
+        ]);
+        this.appendErrorReason(sink, result);
       } else {
-        sink.appendError(`Error: ${result}`);
+        this.appendErrorReason(sink, `Error: ${result}`);
       }
       if (!isDatasource) {
         addQueryHistory(
@@ -236,11 +281,7 @@ export class ExecutionConsole {
         type === "WORKBOOK",
       );
     }
-    if (!hideDetails) {
-      sink.appendError(`<<< >>>`);
-    } else {
-      sink.appendLine(``);
-    }
+    this.endBlock(sink, hideDetails, "<<< >>>", sink.appendError);
   }
 
   // this to debug in case debug of extension doesn't work
