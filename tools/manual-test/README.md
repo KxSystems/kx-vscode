@@ -20,7 +20,9 @@ The tool is TypeScript run directly by Node (type stripping), so it needs
 Node **22.18 or newer**. Type-check it with `npx tsc -p tools/manual-test`.
 
 You need a q licence and a q binary (found via `--q`, `QBIN`, `~/.kx/bin/q`,
-`QHOME`, or PATH). VS Code is downloaded into `.work/` on first start.
+`QHOME`, or PATH). VS Code is downloaded into `.work/` on first start, at the
+version pinned by `VSCODE_VERSION` in `driver.ts` (currently **1.142.0**), not
+`stable`.
 
 ## The loop
 
@@ -82,14 +84,15 @@ screen. Omitting the index means the visible one.
 - `start` always wipes the profile; `--keep` keeps it. `--workspace dir` uses your
   own folder instead of the fixture copy in `.work/workspace`.
 - **The tool drives VS Code internals** (the `fake.html` webview frames, class
-  names like `.quick-input-widget` and `.notification-list-item`), and `start`
-  downloads `stable` by default, so a VS Code update can break it with no change
-  in this repo. If snapshots come back empty or webviews are not found, suspect
-  that first: check the version (`eval "return ctx.exe"` - the path names it),
-  retry with `start --vscode <older version>`, and tell the user the tool needs
-  updating rather than reporting it as an extension bug. Last known good: VS
-  Code **1.142.0** (verified 2026-10-14); update this line when you confirm a
-  newer one works.
+  names like `.quick-input-widget` and `.notification-list-item`), which VS Code
+  may change without notice, so `start` uses a **pinned** VS Code version
+  (`VSCODE_VERSION` in `driver.ts`, currently **1.142.0**, verified 2026-10-14),
+  never `stable`. Do not change the pin casually. To try a newer VS Code, use
+  `start --vscode <version>`; once the snapshots, webview and quick-input
+  commands all work on it, bump `VSCODE_VERSION` and the version/date here in
+  the same change. If snapshots come back empty or webviews are not found on the
+  pinned version, check `eval "return ctx.exe"` (the path names the version) and
+  report that the tool needs updating rather than reporting an extension bug.
 - Commands that print a snapshot wait 700 ms first. For slow UI (connection
   dialogs, activation) pass `--settle 3000`, or use `wait`; `--no-snap` skips the
   snapshot. Only the documented flags are flags: text like `"--- note"` is typed

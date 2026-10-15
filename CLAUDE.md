@@ -25,11 +25,17 @@ F5 launches the Extension Development Host (needs a prior `build` or `watch`).
 
 ### Manual testing (agent-driven)
 
-To test the extension like a human tester — a real VS Code window, real
-authenticated q, observe and adapt — read
-[tools/manual-test/README.md](tools/manual-test/README.md) and drive it with
-`node tools/manual-test/cli.ts`. Use it when asked to test a feature or the
-release by hand; it is not part of `npm test`.
+An agent can test the extension like a human tester: it drives a real VS Code
+window (via Playwright) against real authenticated q, one command at a time,
+reading what is on screen and adapting. Read
+[tools/manual-test/README.md](tools/manual-test/README.md) first; it covers
+setup, the commands and the pinned VS Code version.
+
+It is slow and token-expensive, so use it only when asked, or for what
+`test:e2e` (below) can't cover: real q, real webview rendering and interaction,
+exploratory or release walkthroughs. Otherwise prefer `test:e2e`. On native
+Windows, where e2e doesn't run, tell the user `test:e2e` would be faster under
+WSL.
 
 ### Tests
 

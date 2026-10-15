@@ -30,6 +30,11 @@ import {
 } from "./lib/common.ts";
 import { makeHandlers } from "./lib/handlers.ts";
 
+// The tool drives VS Code internals (webview frames, workbench class names), so
+// the default is a pinned release, not "stable", which can change under it. Bump
+// it deliberately after re-verifying the tool, and update tools/manual-test/README.md.
+const VSCODE_VERSION = "1.142.0";
+
 const SETTINGS = {
   "workbench.startupEditor": "none",
   "workbench.tips.enabled": false,
@@ -57,7 +62,7 @@ async function main() {
 
   const exe = await downloadAndUnzipVSCode({
     cachePath: ensure(p(".vscode-test")),
-    version: a.vscode || "stable",
+    version: a.vscode || VSCODE_VERSION,
   });
 
   const ud = p("ud");
