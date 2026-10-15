@@ -97,15 +97,32 @@ export class ExecutionConsole {
     }
   }
 
-  // Writes an error reason in red, then the source excerpt q appends to it
-  // ("[0] til 10`" and its caret) as plain text so the reason stands out.
+  // Writes an error reason in red, with the source excerpt in plain text so the
+  // reason stands out. The excerpt is either the q one ("[0] til 10`" and its
+  // caret, through the end) or the Python one (the code line and caret that
+  // follow a `File "...", line N` line).
   private appendErrorReason(sink: ConsoleSink, result: string): void {
-    const excerpt = result.search(/^[ \t]*\[\d+\]/m);
-    const reason = excerpt < 0 ? result : result.slice(0, excerpt);
-    const source = excerpt < 0 ? "" : result.slice(excerpt).replace(/\n+$/, "");
-    sink.appendParts([{ text: reason.replace(/\n+$/, ""), error: true }]);
-    if (source) {
-      sink.appendLine(source);
+    const lines = result.replace(/\n+$/, "").split("\n");
+    const plain = lines.map(() => false);
+    const q = lines.findIndex((line) => /^[ \t]*\[\d+\]/.test(line));
+    if (q >= 0) {
+      plain.fill(true, q);
+    } else {
+      for (let i = 0; i < lines.length; i++) {
+        if (!/^\s*File ".*", line \d+/.test(lines[i])) continue;
+        const caret = lines.findIndex(
+          (line, j) => j > i && /^\s*[\^~]+\s*$/.test(line),
+        );
+        if (caret > i + 1) plain.fill(true, i + 1, caret + 1);
+      }
+    }
+    for (let start = 0; start < lines.length; ) {
+      let end = start;
+      while (end < lines.length && plain[end] === plain[start]) end++;
+      const text = lines.slice(start, end).join("\n");
+      if (plain[start]) sink.appendLine(text);
+      else sink.appendParts([{ text, error: true }]);
+      start = end;
     }
   }
 

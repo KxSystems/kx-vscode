@@ -601,6 +601,31 @@ describe("executionConsole", () => {
           ]);
         });
 
+        it("should keep the code line and caret of a Python error plain", () => {
+          queryConsole.appendQueryError(
+            "{[x;y] (x+y}[1] each til 10",
+            'boom\n  File "<unknown>", line 1\n    {[x;y] (x+y}[1] each til 10\n               ^\nSyntaxError: boom',
+            connLabel,
+            "fileName",
+            true,
+          );
+
+          assert.deepStrictEqual(writes, [
+            [
+              "parts",
+              [
+                {
+                  text: 'Error: boom\n  File "<unknown>", line 1',
+                  error: true,
+                },
+              ],
+            ],
+            ["line", "    {[x;y] (x+y}[1] each til 10\n               ^"],
+            ["parts", [{ text: "SyntaxError: boom", error: true }]],
+            ["line", ""],
+          ]);
+        });
+
         it("should write a datasource error reason in red and end with a blank line", () => {
           queryConsole.append(
             "Error: boom",
