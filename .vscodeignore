@@ -30,3 +30,4 @@ out-test/
 .prettierignore
 .README
 scripts/
+tools/

@@ -23,6 +23,14 @@ npm run package        # vsce package → .vsix
 
 F5 launches the Extension Development Host (needs a prior `build` or `watch`).
 
+### Manual testing (agent-driven)
+
+To test the extension like a human tester — a real VS Code window, real
+authenticated q, observe and adapt — read
+[tools/manual-test/README.md](tools/manual-test/README.md) and drive it with
+`node tools/manual-test/cli.ts`. Use it when asked to test a feature or the
+release by hand; it is not part of `npm test`.
+
 ### Tests
 
 **Mocha**, with **Sinon** for stubs and **proxyquire**/**mock-fs** for module
