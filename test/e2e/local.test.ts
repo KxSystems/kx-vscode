@@ -471,6 +471,39 @@ describe("Executing on a kdb+ connection", () => {
     });
   });
 
+  describe("when the globals poll does not answer with a table", () => {
+    after(() => {
+      kdb.globals = undefined;
+    });
+
+    // The poll follows every query, and its answer arrives on node-q's socket
+    // callback: a throw there escapes as an uncaught exception and can drop a
+    // response sharing its chunk, leaving later queries on the connection
+    // waiting for answers that were handed to someone else.
+    for (const [shape, globals] of [
+      ["a dictionary", { a: 1, b: 2 }],
+      ["a string", "wrapped"],
+    ] as const) {
+      it(`keeps running queries when it answers with ${shape}`, async () => {
+        kdb.globals = globals;
+        await focus(Q_WORKBOOK);
+
+        for (const attempt of ["first", "second"]) {
+          const code = await run("kdb.execute.fileQuery");
+          await until(
+            () => kdb.requests.some((r) => r.fn === ".vscode.listMem"),
+            `the globals poll after the ${attempt} run`,
+          );
+
+          assert.ok(
+            code.includes(TWO_STATEMENTS),
+            `the ${attempt} run did not reach the connection:\n${code}`,
+          );
+        }
+      });
+    }
+  });
+
   describe("the connection console", () => {
     it("shows what the process sent back", async () => {
       await focus(Q_FILE);

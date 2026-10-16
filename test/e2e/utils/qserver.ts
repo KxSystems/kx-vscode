@@ -84,6 +84,11 @@ export class FakeQ {
   serverObjects: MemoryItem[] = [];
   views: string[] = [];
 
+  // What the globals poll answers with in place of the memory listing. A
+  // process with its own .z.pg, or a gateway that wraps every result, can
+  // answer with something that is not a table at all.
+  globals?: unknown;
+
   // What a query answers with. A suite that renders the result rather than
   // asserting on the request replaces it with something worth rendering — the
   // structured text a real process answers a results view query with.
@@ -212,7 +217,7 @@ export class FakeQ {
         // the memory listing goes over the wire as a literal and not as a
         // value.
         case ".vscode.listMem":
-          return this.serverObjects;
+          return this.globals ?? this.serverObjects;
         case ".vscode.getViews":
           return this.views;
         default:
