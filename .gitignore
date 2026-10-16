@@ -40,3 +40,6 @@ test/e2e/workspace/insights.*
 test/e2e/workspace/target.q
 test/e2e/workspace/old.*
 test/e2e/workspace/older.q
+
+# Agent-driven manual testing runtime state (VS Code download, profile, screenshots)
+tools/manual-test/.work/
