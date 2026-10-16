@@ -77,7 +77,7 @@ export function convertToGrid(
     )
   ) {
     rowData = rowData.map((row: any, index: any) => ({
-      index: index + 1,
+      index,
       ...row,
     }));
     columnDefs.unshift({
