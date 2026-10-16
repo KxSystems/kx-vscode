@@ -30,6 +30,8 @@ const ANSI = {
   FAINT_OFF: "\x1b[22m",
   BOLD_ON: "\x1b[1m",
   BOLD_OFF: "\x1b[22m",
+  RED_ON: "\x1b[31m",
+  RED_OFF: "\x1b[39m",
 };
 
 const KEY = {
@@ -260,6 +262,22 @@ export class ConnectionConsole {
 
   appendLine(text = ""): void {
     this.write(text);
+  }
+
+  /** Writes a line in red, for error output. */
+  appendError(text = ""): void {
+    this.appendParts([{ text, error: true }]);
+  }
+
+  /** Writes one line made of parts, each plain or red. */
+  appendParts(parts: { text: string; error?: boolean }[]): void {
+    const line = parts
+      .map(({ text, error }) => {
+        const value = this.normalize(text);
+        return error ? ANSI.RED_ON + value + ANSI.RED_OFF : value;
+      })
+      .join("");
+    this.send(line + ANSI.CRLF);
   }
 
   /** Writes the lines of a result. */

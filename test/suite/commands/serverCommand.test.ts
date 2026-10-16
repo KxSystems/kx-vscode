@@ -1956,4 +1956,190 @@ describe("serverCommand", () => {
       assert.notStrictEqual(first, second);
     });
   });
+
+  describe("console error colouring", () => {
+    // Every connection type gets a console keyed by its label on connect, so
+    // these cover the q, Insights and quick connection labels the same way.
+    const connections = [
+      { name: "q", connLabel: "server1", isInsights: false },
+      { name: "Insights", connLabel: "insightsserveralias", isInsights: true },
+      {
+        name: "quick connection",
+        connLabel: "quick [localhost:5001]",
+        isInsights: false,
+      },
+    ];
+    const executors = [
+      { name: "workbook", executorName: "test.kdb.q", type: "WORKBOOK" },
+      { name: "scratchpad", executorName: "scratchpad", type: "SCRATCHPAD" },
+    ];
+    const datasourceTypes = ["QSQL", "SQL", "API", "UDA"];
+
+    let writes: [string, string | string[]][];
+
+    const stubSettings = (hide: boolean) =>
+      sinon.stub(vscode.workspace, "getConfiguration").returns(<any>{
+        get: (key: string, fallback: boolean) =>
+          key === "hideSourceExpressions" ? hide : fallback,
+        update: sinon.stub(),
+      });
+
+    const header = /^<<< ERROR - {2}.* {2}@ .* >>>$/;
+    const resultHeader = /^>>> .* {2}@ .* <<<$/;
+
+    beforeEach(() => {
+      writes = [];
+      ext.isResultsTabVisible = false;
+      ext.queryHistoryProvider ??= <any>{ refresh: sinon.stub() };
+      for (const { connLabel } of connections) {
+        ext.connectionConsoles.set(connLabel, <any>{
+          appendLine: (value: string) => writes.push(["line", value]),
+          appendError: (value: string) => writes.push(["error", value]),
+          appendParts: (parts: any[]) => writes.push(["parts", parts]),
+          appendResult: (lines: string[]) => writes.push(["result", lines]),
+          terminal: { show: sinon.stub() },
+        });
+      }
+    });
+
+    afterEach(() => {
+      for (const { connLabel } of connections) {
+        ext.connectionConsoles.delete(connLabel);
+      }
+      sinon.restore();
+    });
+
+    for (const hide of [false, true]) {
+      describe(`with hideSourceExpressions ${hide}`, () => {
+        beforeEach(() => stubSettings(hide));
+
+        for (const conn of connections) {
+          for (const executor of executors) {
+            it(`should keep the query plain and the error red for a ${conn.name} ${executor.name}`, async () => {
+              await serverCommand.writeQueryResultsToConsole(
+                "Error: type",
+                "1+`a",
+                conn.connLabel,
+                executor.executorName,
+                conn.isInsights,
+                executor.type,
+              );
+
+              if (hide) {
+                assert.deepStrictEqual(writes, [
+                  ["parts", [{ text: "Error: type", error: true }]],
+                  ["line", ""],
+                ]);
+              } else {
+                assert.strictEqual(writes[0][0], "error");
+                assert.match(<string>writes[0][1], header);
+                assert.deepStrictEqual(writes.slice(1), [
+                  [
+                    "parts",
+                    [
+                      { text: "ERROR Query executed: ", error: true },
+                      { text: "1+`a\n" },
+                    ],
+                  ],
+                  ["parts", [{ text: "type", error: true }]],
+                  ["error", "<<< >>>"],
+                  ["line", ""],
+                ]);
+              }
+            });
+          }
+
+          for (const type of datasourceTypes) {
+            it(`should keep the query plain and the error red for a ${conn.name} ${type} datasource`, async () => {
+              await serverCommand.writeQueryResultsToConsole(
+                "Error: boom",
+                "select from t",
+                conn.connLabel,
+                "test.kxquery",
+                conn.isInsights,
+                type,
+              );
+
+              if (hide) {
+                assert.deepStrictEqual(writes, [
+                  ["parts", [{ text: "Error: boom", error: true }]],
+                  ["line", ""],
+                ]);
+              } else {
+                assert.strictEqual(writes[0][0], "error");
+                assert.match(<string>writes[0][1], resultHeader);
+                assert.deepStrictEqual(writes.slice(1), [
+                  ["line", "select from t"],
+                  ["line", ""],
+                  ["parts", [{ text: "Error: boom", error: true }]],
+                  ["error", "<<<"],
+                  ["line", ""],
+                ]);
+              }
+            });
+          }
+        }
+
+        it("should keep the query plain and the error red for an Insights scratchpad error", async () => {
+          await serverCommand.writeScratchpadResult(
+            { data: null, error: true, errorMsg: "type", sessionID: "1" },
+            "1+`a",
+            "insightsserveralias",
+            "test.kdb.q",
+            false,
+            true,
+            "2",
+            "0",
+          );
+
+          if (hide) {
+            assert.deepStrictEqual(writes, [
+              ["parts", [{ text: "Error: type", error: true }]],
+              ["line", ""],
+            ]);
+          } else {
+            assert.match(<string>writes[0][1], header);
+            assert.deepStrictEqual(writes.slice(1), [
+              [
+                "parts",
+                [
+                  { text: "ERROR Query executed: ", error: true },
+                  { text: "1+`a\n" },
+                ],
+              ],
+              ["parts", [{ text: "type", error: true }]],
+              ["error", "<<< >>>"],
+              ["line", ""],
+            ]);
+          }
+        });
+
+        it("should send a notebook error to the cell, not the console", async () => {
+          const conn = new LocalConnection("localhost:5001", "server1", []);
+          ext.connectedConnectionList.push(conn);
+          ext.connectedContextStrings.push(conn.connLabel);
+          sinon
+            .stub(ConnectionManagementService.prototype, "executeQuery")
+            .resolves("Error: type");
+          try {
+            await assert.rejects(
+              serverCommand.executeQuery(
+                "1+`a",
+                conn.connLabel,
+                "notebook.kxnb",
+                ".",
+                false,
+                false,
+              ),
+              /Error: type/,
+            );
+            assert.deepStrictEqual(writes, []);
+          } finally {
+            ext.connectedConnectionList.length = 0;
+            ext.connectedContextStrings.length = 0;
+          }
+        });
+      });
+    }
+  });
 });

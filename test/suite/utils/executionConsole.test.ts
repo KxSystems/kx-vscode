@@ -20,6 +20,7 @@ import { ServerType } from "../../../src/models/connectionsModels";
 import { InsightsNode, KdbNode } from "../../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../../src/services/queryHistoryProvider";
 import * as executionConsoleUtils from "../../../src/utils/executionConsole";
+import * as notifications from "../../../src/utils/notifications";
 
 describe("executionConsole", () => {
   ext.queryHistoryProvider = new QueryHistoryProvider();
@@ -226,15 +227,21 @@ describe("executionConsole", () => {
     describe("resolveSink", () => {
       const connLabel = "consoleServer";
       let appendLine: sinon.SinonStub;
+      let appendError: sinon.SinonStub;
+      let appendParts: sinon.SinonStub;
       let appendResult: sinon.SinonStub;
       let show: sinon.SinonStub;
 
       beforeEach(() => {
         appendLine = sinon.stub();
+        appendError = sinon.stub();
+        appendParts = sinon.stub();
         appendResult = sinon.stub();
         show = sinon.stub();
         ext.connectionConsoles.set(connLabel, <any>{
           appendLine,
+          appendError,
+          appendParts,
           appendResult,
           terminal: { show },
         });
@@ -266,7 +273,9 @@ describe("executionConsole", () => {
           true,
         );
 
-        sinon.assert.calledWith(appendLine, "Error: error");
+        sinon.assert.calledWith(appendParts, [
+          { text: "Error: error", error: true },
+        ]);
       });
 
       it("should fall back to the shared channel for unknown connections", () => {
@@ -277,6 +286,365 @@ describe("executionConsole", () => {
         sinon.assert.notCalled(appendLine);
         assert.ok(consoleSpy.calledWith("test"));
         consoleSpy.restore();
+      });
+    });
+
+    describe("connection console blocks", () => {
+      const connLabel = "blockServer";
+      let writes: [string, string | string[]][];
+
+      // The writes after the header, query echo and its blank line, which
+      // only appear with source expressions shown.
+      const body = () => (writes.length > 3 ? writes.slice(3) : writes);
+
+      const stubSettings = (hide: boolean) => {
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+        getConfigurationStub.returns({
+          get: (key: string, fallback: boolean) =>
+            key === "hideSourceExpressions" ? hide : fallback,
+          update: sinon.stub(),
+        });
+      };
+
+      beforeEach(() => {
+        writes = [];
+        ext.connectionConsoles.set(connLabel, <any>{
+          appendLine: (value: string) => writes.push(["line", value]),
+          appendError: (value: string) => writes.push(["error", value]),
+          appendParts: (parts: any[]) => writes.push(["parts", parts]),
+          appendResult: (lines: string[]) => writes.push(["result", lines]),
+          terminal: { show: sinon.stub() },
+        });
+      });
+
+      afterEach(() => {
+        ext.connectionConsoles.delete(connLabel);
+        getConfigurationStub.restore();
+      });
+
+      describe("with source expressions shown", () => {
+        beforeEach(() => stubSettings(false));
+
+        it("should end a result with its footer and a blank line", () => {
+          queryConsole.append("2", "1+1", "fileName", connLabel);
+
+          assert.strictEqual(writes[0][0], "line");
+          assert.match(<string>writes[0][1], /^>>> blockServer {2}@ .* <<<$/);
+          assert.deepStrictEqual(writes.slice(1), [
+            ["line", "1+1"],
+            ["line", ""],
+            ["result", ["2"]],
+            ["line", "<<<"],
+            ["line", ""],
+          ]);
+        });
+
+        it("should write the error block in red around a plain query echo and end it with a blank line", () => {
+          queryConsole.appendQueryError(
+            "1+`a",
+            "type",
+            connLabel,
+            "fileName",
+            true,
+          );
+
+          assert.strictEqual(writes[0][0], "error");
+          assert.match(
+            <string>writes[0][1],
+            /^<<< ERROR - {2}blockServer {2}@ .* >>>$/,
+          );
+          assert.deepStrictEqual(writes.slice(1), [
+            [
+              "parts",
+              [
+                { text: "ERROR Query executed: ", error: true },
+                { text: "1+`a\n" },
+              ],
+            ],
+            ["parts", [{ text: "type", error: true }]],
+            ["error", "<<< >>>"],
+            ["line", ""],
+          ]);
+        });
+
+        it("should keep the source excerpt of an error plain", () => {
+          queryConsole.appendQueryError(
+            "til 10`",
+            "Executing code using (Q) raised - boom\n[0] til 10`\n        ^",
+            connLabel,
+            "fileName",
+            true,
+          );
+
+          assert.deepStrictEqual(writes.slice(1, 4), [
+            [
+              "parts",
+              [
+                { text: "ERROR Query executed: ", error: true },
+                { text: "til 10`\n" },
+              ],
+            ],
+            [
+              "parts",
+              [{ text: "Executing code using (Q) raised - boom", error: true }],
+            ],
+            ["line", "[0] til 10`\n        ^"],
+          ]);
+        });
+
+        it("should keep an indented source excerpt plain", () => {
+          queryConsole.appendQueryError(
+            "foo[]`",
+            "Cannot write to handle 10000. OS reports: Bad file descriptor\n  [1]  foo[]`\n       ^",
+            connLabel,
+            "fileName",
+            true,
+          );
+
+          assert.deepStrictEqual(writes.slice(2, 4), [
+            [
+              "parts",
+              [
+                {
+                  text: "Cannot write to handle 10000. OS reports: Bad file descriptor",
+                  error: true,
+                },
+              ],
+            ],
+            ["line", "  [1]  foo[]`\n       ^"],
+          ]);
+        });
+
+        it("should write a datasource error reason in red inside a result block", () => {
+          queryConsole.append(
+            "Error: boom",
+            "select from t",
+            "fileName",
+            connLabel,
+            true,
+            "QSQL",
+            false,
+            undefined,
+            undefined,
+            true,
+          );
+
+          assert.strictEqual(writes[0][0], "error");
+          assert.match(<string>writes[0][1], /^>>> blockServer {2}@ .* <<<$/);
+          assert.deepStrictEqual(body(), [
+            ["parts", [{ text: "Error: boom", error: true }]],
+            ["error", "<<<"],
+            ["line", ""],
+          ]);
+        });
+
+        it("should keep the stack trace of a UDA error plain", () => {
+          queryConsole.append(
+            "Error: Unexpected error (type) encountered executing .nsansUda.evalAPI\n  [0]  1+1`\n         ^\n",
+            "Executed UDA: .nsansUda.evalAPI",
+            "fileName",
+            connLabel,
+            true,
+            "UDA",
+            false,
+            undefined,
+            undefined,
+            true,
+          );
+
+          assert.deepStrictEqual(body(), [
+            [
+              "parts",
+              [
+                {
+                  text: "Error: Unexpected error (type) encountered executing .nsansUda.evalAPI",
+                  error: true,
+                },
+              ],
+            ],
+            ["line", "  [0]  1+1`\n         ^"],
+            ["error", "<<<"],
+            ["line", ""],
+          ]);
+        });
+
+        it("should keep a datasource result out of the error path", () => {
+          queryConsole.append(
+            "col1",
+            "select from t",
+            "fileName",
+            connLabel,
+            true,
+            "QSQL",
+            false,
+            undefined,
+            undefined,
+            false,
+          );
+
+          assert.deepStrictEqual(body(), [
+            ["result", ["col1"]],
+            ["line", "<<<"],
+            ["line", ""],
+          ]);
+        });
+      });
+
+      describe("without a connection", () => {
+        let notifyStub: sinon.SinonStub;
+        let executeCommandStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          notifyStub = sinon.stub(notifications, "notify");
+          executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
+        });
+
+        afterEach(() => {
+          notifyStub.restore();
+          executeCommandStub.restore();
+        });
+
+        const runDisconnected = () =>
+          queryConsole.appendQueryError(
+            "1+1",
+            "",
+            connLabel,
+            "fileName",
+            false,
+          );
+
+        it("should write the connect prompt in red inside the error block when shown", () => {
+          stubSettings(false);
+          runDisconnected();
+
+          assert.strictEqual(writes[0][0], "error");
+          assert.match(
+            <string>writes[0][1],
+            /^<<< ERROR - {2}blockServer {2}@ .* >>>$/,
+          );
+          assert.deepStrictEqual(writes.slice(1), [
+            ["error", "Please connect to a KDB or Insights server"],
+            ["error", "<<< >>>"],
+            ["line", ""],
+          ]);
+          sinon.assert.calledOnce(notifyStub);
+          sinon.assert.calledWith(
+            executeCommandStub,
+            "kdb.connections.disconnect",
+          );
+        });
+
+        it("should write only the connect prompt in red when hidden", () => {
+          stubSettings(true);
+          runDisconnected();
+
+          assert.deepStrictEqual(writes, [
+            ["error", "Please connect to a KDB or Insights server"],
+            ["line", ""],
+          ]);
+          sinon.assert.calledOnce(notifyStub);
+          sinon.assert.calledWith(
+            executeCommandStub,
+            "kdb.connections.disconnect",
+          );
+        });
+      });
+
+      describe("with source expressions hidden", () => {
+        beforeEach(() => stubSettings(true));
+
+        it("should end a result with a blank line and no footer", () => {
+          queryConsole.append("2", "1+1", "fileName", connLabel);
+
+          assert.deepStrictEqual(writes, [
+            ["result", ["2"]],
+            ["line", ""],
+          ]);
+        });
+
+        it("should write only the error reason in red and end with a blank line", () => {
+          queryConsole.appendQueryError(
+            "1+`a",
+            "type",
+            connLabel,
+            "fileName",
+            true,
+          );
+
+          assert.deepStrictEqual(writes, [
+            ["parts", [{ text: "Error: type", error: true }]],
+            ["line", ""],
+          ]);
+        });
+
+        it("should keep the source excerpt plain when the details are hidden", () => {
+          queryConsole.appendQueryError(
+            "foo[]`",
+            "Cannot write to handle 10000. OS reports: Bad file descriptor\n  [1]  foo[]`\n       ^",
+            connLabel,
+            "fileName",
+            true,
+          );
+
+          assert.deepStrictEqual(writes, [
+            [
+              "parts",
+              [
+                {
+                  text: "Error: Cannot write to handle 10000. OS reports: Bad file descriptor",
+                  error: true,
+                },
+              ],
+            ],
+            ["line", "  [1]  foo[]`\n       ^"],
+            ["line", ""],
+          ]);
+        });
+
+        it("should keep the code line and caret of a Python error plain", () => {
+          queryConsole.appendQueryError(
+            "{[x;y] (x+y}[1] each til 10",
+            'boom\n  File "<unknown>", line 1\n    {[x;y] (x+y}[1] each til 10\n               ^\nSyntaxError: boom',
+            connLabel,
+            "fileName",
+            true,
+          );
+
+          assert.deepStrictEqual(writes, [
+            [
+              "parts",
+              [
+                {
+                  text: 'Error: boom\n  File "<unknown>", line 1',
+                  error: true,
+                },
+              ],
+            ],
+            ["line", "    {[x;y] (x+y}[1] each til 10\n               ^"],
+            ["parts", [{ text: "SyntaxError: boom", error: true }]],
+            ["line", ""],
+          ]);
+        });
+
+        it("should write a datasource error reason in red and end with a blank line", () => {
+          queryConsole.append(
+            "Error: boom",
+            "select from t",
+            "fileName",
+            connLabel,
+            true,
+            "QSQL",
+            false,
+            undefined,
+            undefined,
+            true,
+          );
+
+          assert.deepStrictEqual(writes, [
+            ["parts", [{ text: "Error: boom", error: true }]],
+            ["line", ""],
+          ]);
+        });
       });
     });
 
@@ -302,7 +670,8 @@ describe("executionConsole", () => {
 
         assert.ok(appendLineSpy.calledWith("row1"));
         assert.ok(appendLineSpy.calledWith("row2"));
-        assert.ok(appendLineSpy.calledWith("<<<\n"));
+        assert.ok(appendLineSpy.calledWith("<<<"));
+        assert.strictEqual(appendLineSpy.lastCall.args[0], "");
       });
 
       it("should append converted rows for a datasource output", () => {
@@ -339,6 +708,7 @@ describe("executionConsole", () => {
         assert.ok(appendLineSpy.calledWith("ERROR Query executed: a:1\n"));
         assert.ok(appendLineSpy.calledWith("error"));
         assert.ok(appendLineSpy.calledWith("<<< >>>"));
+        assert.strictEqual(appendLineSpy.lastCall.args[0], "");
       });
     });
 

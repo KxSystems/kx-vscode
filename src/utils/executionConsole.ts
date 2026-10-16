@@ -33,6 +33,11 @@ const logger = "executionConsole";
 // terminal (when one exists for the connLabel) or the shared fallback channel.
 interface ConsoleSink {
   appendLine: (value: string) => void;
+  // Error output. The connection's terminal renders this in red; the
+  // fallback output channel has no ANSI support, so it writes plain text.
+  appendError: (value: string) => void;
+  // One line of plain and red parts, so an echoed query can sit in an error.
+  appendParts: (parts: { text: string; error?: boolean }[]) => void;
   // The lines of a result, kept apart from the banner lines around them.
   appendResult: (lines: string[]) => void;
   reveal: () => void;
@@ -68,12 +73,17 @@ export class ExecutionConsole {
     if (console) {
       return {
         appendLine: (value) => console.appendLine(value),
+        appendError: (value) => console.appendError(value),
+        appendParts: (parts) => console.appendParts(parts),
         appendResult: (lines) => console.appendResult(lines),
         reveal: () => console.terminal.show(true),
       };
     }
     return {
       appendLine: (value) => this._console.appendLine(value),
+      appendError: (value) => this._console.appendLine(value),
+      appendParts: (parts) =>
+        this._console.appendLine(parts.map((part) => part.text).join("")),
       appendResult: (lines) =>
         lines.forEach((line) => this._console.appendLine(line)),
       reveal: () => this._console.show(true),
@@ -85,6 +95,49 @@ export class ExecutionConsole {
       sink.appendLine(query);
       sink.appendLine("");
     }
+  }
+
+  // Writes an error reason in red, with the source excerpt in plain text so the
+  // reason stands out. The excerpt is either the q one ("[0] til 10`" and its
+  // caret, through the end) or the Python one (the code line and caret that
+  // follow a `File "...", line N` line).
+  private appendErrorReason(sink: ConsoleSink, result: string): void {
+    const lines = result.replace(/\n+$/, "").split("\n");
+    const plain = lines.map(() => false);
+    const q = lines.findIndex((line) => /^[ \t]*\[\d+\]/.test(line));
+    if (q >= 0) {
+      plain.fill(true, q);
+    } else {
+      for (let i = 0; i < lines.length; i++) {
+        if (!/^\s*File ".*", line \d+/.test(lines[i])) continue;
+        const caret = lines.findIndex(
+          (line, j) => j > i && /^\s*[\^~]+\s*$/.test(line),
+        );
+        if (caret > i + 1) plain.fill(true, i + 1, caret + 1);
+      }
+    }
+    for (let start = 0; start < lines.length; ) {
+      let end = start;
+      while (end < lines.length && plain[end] === plain[start]) end++;
+      const text = lines.slice(start, end).join("\n");
+      if (plain[start]) sink.appendLine(text);
+      else sink.appendParts([{ text, error: true }]);
+      start = end;
+    }
+  }
+
+  // Closes a query block: the footer (when details are shown) and a blank line
+  // so the next block's header does not print right under it.
+  private endBlock(
+    sink: ConsoleSink,
+    hideDetails: boolean,
+    footer: string,
+    write: (value: string) => void,
+  ): void {
+    if (!hideDetails) {
+      write(footer);
+    }
+    sink.appendLine("");
   }
 
   public checkOutput(
@@ -118,6 +171,7 @@ export class ExecutionConsole {
     isPhython?: boolean,
     duration?: string,
     isFromConnTree?: boolean,
+    isError?: boolean,
   ): void {
     const hideDetails = getHideDetailedConsoleQueryOutputSetting();
     const sink = this.resolveSink(connLabel);
@@ -150,10 +204,17 @@ export class ExecutionConsole {
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {
-      sink.appendLine(`>>> ${connLabel}  @ ${date.toLocaleTimeString()} <<<`);
+      const banner = `>>> ${connLabel}  @ ${date.toLocaleTimeString()} <<<`;
+      // An error block is red around the plain query: banner, reason, footer.
+      (isError ? sink.appendError : sink.appendLine)(banner);
       this.appendQuery(sink, query);
     }
-    if (Array.isArray(output) && type === undefined) {
+    if (isError) {
+      this.appendErrorReason(
+        sink,
+        Array.isArray(output) ? output.join("\n") : output,
+      );
+    } else if (Array.isArray(output) && type === undefined) {
       sink.appendResult([output[0], ...output]);
     } else if (dataSourceRes.length > 0) {
       sink.appendResult(dataSourceRes);
@@ -161,9 +222,12 @@ export class ExecutionConsole {
       output = Array.isArray(output) ? output.join("\n") : output;
       sink.appendResult(output.split("\n"));
     }
-    if (!hideDetails) {
-      sink.appendLine(`<<<\n`);
-    }
+    this.endBlock(
+      sink,
+      hideDetails,
+      "<<<",
+      isError ? sink.appendError : sink.appendLine,
+    );
   }
 
   public appendQueryError(
@@ -187,16 +251,21 @@ export class ExecutionConsole {
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {
-      sink.appendLine(
+      sink.appendError(
         `<<< ERROR -  ${connLabel}  @ ${date.toLocaleTimeString()} >>>`,
       );
     }
     if (isConnected) {
       if (!hideDetails) {
-        sink.appendLine(`ERROR Query executed: ${query}\n`);
-        sink.appendLine(result);
+        // The echoed query and the source excerpt q appends to the reason
+        // ("[0] til 10`" and its caret) are plain so the red reason stands out.
+        sink.appendParts([
+          { text: "ERROR Query executed: ", error: true },
+          { text: `${query}\n` },
+        ]);
+        this.appendErrorReason(sink, result);
       } else {
-        sink.appendLine(`Error: ${result}`);
+        this.appendErrorReason(sink, `Error: ${result}`);
       }
       if (!isDatasource) {
         addQueryHistory(
@@ -217,7 +286,7 @@ export class ExecutionConsole {
       notify(`Please connect to a KDB or Insights server`, MessageKind.ERROR, {
         logger,
       });
-      sink.appendLine(`Please connect to a KDB or Insights server`);
+      sink.appendError(`Please connect to a KDB or Insights server`);
       commands.executeCommand("kdb.connections.disconnect");
       addQueryHistory(
         query,
@@ -229,9 +298,7 @@ export class ExecutionConsole {
         type === "WORKBOOK",
       );
     }
-    if (!hideDetails) {
-      sink.appendLine(`<<< >>>`);
-    }
+    this.endBlock(sink, hideDetails, "<<< >>>", sink.appendError);
   }
 
   // this to debug in case debug of extension doesn't work
@@ -242,7 +309,7 @@ export class ExecutionConsole {
   public appendStdErr(message: string, connLabel = ""): void {
     const sink = this.resolveSink(connLabel);
     sink.appendLine("❌");
-    sink.appendLine(message);
+    sink.appendError(message);
   }
 
   public appendStdOut(message: string, connLabel = ""): void {
