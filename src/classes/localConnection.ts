@@ -24,6 +24,7 @@ import {
 } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
 import { handleQueryResults } from "../utils/execution";
+import { kdbOutputLog } from "../utils/loggers";
 import { MessageKind, notify } from "../utils/notifications";
 import { appendStacktrace, queryWrapper } from "../utils/queryUtils";
 
@@ -283,23 +284,32 @@ export class LocalConnection {
     });
   }
 
-  private updateGlobals(
-    globals: {
-      id: number;
-      pid: number;
-      name: string;
-      fname: string;
-      typeNum: number;
-      namespace: string;
-      context: string;
-      isNs: number;
-    }[],
-  ): void {
+  private updateGlobals(globals: unknown): void {
     ext.functions.length = 0;
     ext.tables.length = 0;
     ext.variables.length = 0;
 
-    globals.forEach(({ fname, typeNum, name, namespace, isNs }) => {
+    if (!Array.isArray(globals)) {
+      kdbOutputLog(
+        `[${logger}] Global variable query returned ${typeof globals}, expected a table; completions will be empty.`,
+        "WARNING",
+        true,
+      );
+      return;
+    }
+
+    (
+      globals as {
+        id: number;
+        pid: number;
+        name: string;
+        fname: string;
+        typeNum: number;
+        namespace: string;
+        context: string;
+        isNs: number;
+      }[]
+    ).forEach(({ fname, typeNum, name, namespace, isNs }) => {
       if (!isNs && namespace !== ".vscode") {
         const fullName = namespace === ".q" ? name : fname;
 
