@@ -445,6 +445,33 @@ describe("Controller", () => {
           );
         });
 
+        it("should number table rows from 0 in the index column", async () => {
+          executeQueryStub.resolves({
+            count: 2,
+            columns: [
+              {
+                name: "x",
+                type: "symbols",
+                values: ["a", "b"],
+                order: [0],
+              },
+            ],
+          });
+
+          await instance.execute(
+            [notebookTestUtils.createCell("sql")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          const rows = [...rendered().text.matchAll(/<tr>\s*<td>(\d+)<\/td>/g)];
+          assert.deepStrictEqual(
+            rows.map((m: RegExpMatchArray) => m[1]),
+            ["0", "1"],
+            rendered().text,
+          );
+        });
+
         it("should escape markup in a text result", async () => {
           executeQueryStub.resolves("{x<y}\n     ^");
 
