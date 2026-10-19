@@ -24,6 +24,7 @@ import {
 } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
 import { handleQueryResults } from "../utils/execution";
+import { kdbOutputLog } from "../utils/loggers";
 import { MessageKind, notify } from "../utils/notifications";
 import { appendStacktrace, queryWrapper } from "../utils/queryUtils";
 
@@ -190,6 +191,17 @@ export class LocalConnection {
               QueryResultType.Error,
             ),
           );
+        } else if (!isQueryResponse(res)) {
+          // A custom .z.pg, or a gateway that wraps every result, can answer
+          // with something other than the dictionary the wrapper builds.
+          resolve(
+            handleQueryResults(
+              withErrorPrefix(
+                "The process returned a response the extension could not read. A custom .z.pg handler or a gateway may be changing query results.",
+              ),
+              QueryResultType.Error,
+            ),
+          );
         } else if (res.error) {
           resolve(
             handleQueryResults(
@@ -252,15 +264,18 @@ export class LocalConnection {
 
     const result = await this.executeQueryRaw(code, [null]);
 
-    if (result !== undefined) {
-      const result2: ServerObject[] = (0, eval)(result);
-      const result3: ServerObject[] = result2.filter((item) => {
-        return ext.qNamespaceFilters.indexOf(item.name) === -1;
-      });
-      return result3;
-    } else {
+    if (!Array.isArray(result)) {
+      kdbOutputLog(
+        `[${logger}] Server object query returned ${typeof result}, expected a table; no objects will be listed.`,
+        "WARNING",
+        true,
+      );
       return new Array<ServerObject>();
     }
+
+    return (result as ServerObject[]).filter(
+      (item) => ext.qNamespaceFilters.indexOf(item.name) === -1,
+    );
   }
 
   private updateGlobal() {
@@ -351,4 +366,12 @@ export class LocalConnection {
     }
     return this.options;
   }
+}
+
+// What the query wrappers (evaluateQ.q/formatQ.q, evaluatePy.q) answer with: a
+// dictionary carrying data, error and errorMsg.
+function isQueryResponse(res: unknown): res is QueryResult {
+  return (
+    typeof res === "object" && res !== null && ("data" in res || "error" in res)
+  );
 }

@@ -15,6 +15,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 
 import { LocalConnection } from "../../../src/classes/localConnection";
+import * as loggers from "../../../src/utils/loggers";
 
 describe("LocalConnection", () => {
   let localConn: LocalConnection;
@@ -136,6 +137,27 @@ describe("LocalConnection", () => {
         "Error: undefinedFn\n  [1]  b:undefinedFn[2];\n         ^\n",
       );
     });
+
+    // A custom .z.pg, or a gateway that wraps every result, answers with
+    // whatever it likes instead of the wrapper's data/error dictionary.
+    for (const [shape, response] of [
+      ["a string", "wrapped"],
+      ["a dictionary without data", { a: 1, b: 2 }],
+      ["nothing", null],
+    ] as const) {
+      it(`should resolve with an 'Error:'-prefixed message when the process answers with ${shape}`, async () => {
+        localConn["connection"] = <any>{
+          k: sinon.stub().callsArgWith(2, null, response),
+        };
+
+        const result = await localConn.executeQuery("til 10");
+
+        assert.ok(
+          typeof result === "string" && result.startsWith("Error: "),
+          `not an error result: ${JSON.stringify(result)}`,
+        );
+      });
+    }
   });
 
   describe("loadServerObjects", () => {
@@ -170,6 +192,47 @@ describe("LocalConnection", () => {
         [".e2e", "trade"],
         "an internal namespace was listed",
       );
+    });
+
+    describe("when the process does not answer with a table", () => {
+      let log: sinon.SinonStub;
+
+      beforeEach(() => {
+        localConn["connection"] = <any>{};
+        localConn.useAPI = true;
+        log = sinon.stub(loggers, "kdbOutputLog");
+      });
+
+      afterEach(() => {
+        log.restore();
+        delete (globalThis as any).evaluatedByListing;
+      });
+
+      it("should list nothing and log a warning", async () => {
+        sinon.stub(localConn, "executeQueryRaw").resolves("wrapped");
+
+        const result = await localConn.loadServerObjects();
+
+        assert.deepStrictEqual(result, []);
+        assert.ok(
+          log.calledWithMatch(sinon.match("expected a table"), "WARNING"),
+          "no warning was logged",
+        );
+      });
+
+      it("should not run what the process sends back", async () => {
+        sinon
+          .stub(localConn, "executeQueryRaw")
+          .resolves("globalThis.evaluatedByListing = true; []");
+
+        await localConn.loadServerObjects();
+
+        assert.strictEqual(
+          (globalThis as any).evaluatedByListing,
+          undefined,
+          "the response was evaluated as code",
+        );
+      });
     });
   });
 });
