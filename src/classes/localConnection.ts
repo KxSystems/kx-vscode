@@ -369,9 +369,19 @@ export class LocalConnection {
 }
 
 // What the query wrappers (evaluateQ.q/formatQ.q, evaluatePy.q) answer with: a
-// dictionary carrying data, error and errorMsg.
+// dictionary carrying data, error and errorMsg. A failure has a message; a
+// success has text, a byte list (a PNG) or nothing as its data. A gateway's own
+// envelope can reuse those key names, so the values are checked too.
 function isQueryResponse(res: unknown): res is QueryResult {
+  if (typeof res !== "object" || res === null) {
+    return false;
+  }
+  const { data, error, errorMsg } = res as Record<string, unknown>;
+  if (error === true) {
+    return typeof errorMsg === "string";
+  }
   return (
-    typeof res === "object" && res !== null && ("data" in res || "error" in res)
+    error === false &&
+    (data === null || typeof data === "string" || Array.isArray(data))
   );
 }

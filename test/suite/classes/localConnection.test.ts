@@ -144,6 +144,8 @@ describe("LocalConnection", () => {
       ["a string", "wrapped"],
       ["a dictionary without data", { a: 1, b: 2 }],
       ["nothing", null],
+      ["an envelope whose data is not text", { data: { a: 1 }, code: 200 }],
+      ["an error flag without a message", { error: true, msg: "timeout" }],
     ] as const) {
       it(`should resolve with an 'Error:'-prefixed message when the process answers with ${shape}`, async () => {
         localConn["connection"] = <any>{
@@ -153,8 +155,10 @@ describe("LocalConnection", () => {
         const result = await localConn.executeQuery("til 10");
 
         assert.ok(
-          typeof result === "string" && result.startsWith("Error: "),
-          `not an error result: ${JSON.stringify(result)}`,
+          typeof result === "string" &&
+            result.startsWith("Error: ") &&
+            result.includes("could not read"),
+          `not the unreadable-response error: ${JSON.stringify(result)}`,
         );
       });
     }
