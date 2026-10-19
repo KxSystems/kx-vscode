@@ -146,6 +146,10 @@ describe("LocalConnection", () => {
       ["nothing", null],
       ["an envelope whose data is not text", { data: { a: 1 }, code: 200 }],
       ["an error flag without a message", { error: true, msg: "timeout" }],
+      // Envelopes that reuse the wrapper's key names get past the shape check,
+      // but their data is not the structured text asked for.
+      ["an envelope whose data is not JSON", { data: "OK", error: false }],
+      ["an envelope with no data", { data: null, error: false }],
     ] as const) {
       it(`should resolve with an 'Error:'-prefixed message when the process answers with ${shape}`, async () => {
         localConn["connection"] = <any>{

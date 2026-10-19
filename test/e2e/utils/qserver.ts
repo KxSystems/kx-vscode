@@ -89,6 +89,10 @@ export class FakeQ {
   // structured text a real process answers a results view query with.
   data: unknown = "OK";
 
+  // What a query answers with in place of the wrapper's dictionary: the
+  // envelope a gateway that wraps every result sends back instead.
+  envelope?: unknown;
+
   // Any query carrying this comes back as a q error instead of a result.
   static readonly FAILS = "FAIL_QUERY";
 
@@ -218,6 +222,10 @@ export class FakeQ {
         default:
           return [];
       }
+    }
+
+    if (this.envelope !== undefined) {
+      return this.envelope;
     }
 
     if (args.code.includes(FakeQ.FAILS)) {

@@ -194,14 +194,7 @@ export class LocalConnection {
         } else if (!isQueryResponse(res)) {
           // A custom .z.pg, or a gateway that wraps every result, can answer
           // with something other than the dictionary the wrapper builds.
-          resolve(
-            handleQueryResults(
-              withErrorPrefix(
-                "The process returned a response the extension could not read. A custom .z.pg handler or a gateway may be changing query results.",
-              ),
-              QueryResultType.Error,
-            ),
-          );
+          resolve(unreadableResponse());
         } else if (res.error) {
           resolve(
             handleQueryResults(
@@ -220,7 +213,13 @@ export class LocalConnection {
           if (stringify || Array.isArray(result)) {
             resolve(result);
           } else {
-            resolve(JSON.parse(result));
+            try {
+              resolve(JSON.parse(result));
+            } catch {
+              // An envelope that reuses the wrapper's key names passes
+              // isQueryResponse with data that is not structured text.
+              resolve(unreadableResponse());
+            }
           }
         }
         this.updateGlobal();
@@ -383,5 +382,14 @@ function isQueryResponse(res: unknown): res is QueryResult {
   return (
     error === false &&
     (data === null || typeof data === "string" || Array.isArray(data))
+  );
+}
+
+function unreadableResponse() {
+  return handleQueryResults(
+    withErrorPrefix(
+      "The process returned a response the extension could not read. A custom .z.pg handler or a gateway may be changing query results.",
+    ),
+    QueryResultType.Error,
   );
 }
