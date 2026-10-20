@@ -1006,6 +1006,22 @@ export async function resolveRunTarget(
   return { kind: "repl" };
 }
 
+// Whether resolveRunTarget sends this file to the REPL, worked out without
+// looking up the connection assigned to it.
+export function runsOnRepl(uri: Uri): boolean {
+  const server = getServerForUri(uri);
+  if (server !== undefined) {
+    return isRepl(server);
+  }
+  const active = getActiveTarget();
+  return !(
+    active?.kind === "connection" &&
+    new ConnectionManagementService().retrieveConnectedConnection(
+      active.connLabel,
+    )
+  );
+}
+
 export async function runActiveEditor(type?: ExecutionTypes) {
   /* c8 ignore start */
   if (ext.activeTextEditor) {

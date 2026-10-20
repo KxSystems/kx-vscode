@@ -35,6 +35,14 @@ export interface KxNotebookOutputItem {
   mime: string;
 }
 
+export type RowLimitFrom = "first" | "last";
+
+// How many table rows a notebook cell output shows, and from which end.
+export interface RowLimit {
+  limit: number;
+  from: RowLimitFrom;
+}
+
 export const enum CellKind {
   MARKDOWN,
   Q,

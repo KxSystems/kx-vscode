@@ -17,6 +17,7 @@ import { join } from "path";
 import { commands } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { RowLimit } from "../models/notebook";
 import {
   QueryResult,
   QueryResultType,
@@ -157,6 +158,7 @@ export class LocalConnection {
     context?: string,
     stringify?: boolean,
     isPython?: boolean,
+    rowLimit?: RowLimit,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.connection) {
@@ -164,6 +166,14 @@ export class LocalConnection {
       }
 
       const wrapper = queryWrapper(!!isPython, this.useAPI);
+
+      // Only notebooks send rowLimit. formatQ.q and evaluatePy.q pick these
+      // rows before their TABULAR_LIMIT cut, so the last rows are the last of
+      // the whole result. A vscode.q loaded on a secure process before this
+      // key existed ignores it.
+      const limitArgs = rowLimit && {
+        rowLimit: { size: rowLimit.limit, from: rowLimit.from },
+      };
 
       // Different objects are needed because of the difference between snake_case and camelCase
       // for sampleFn/sampleSize and sample_fn/sample_size
@@ -173,6 +183,7 @@ export class LocalConnection {
             returnFormat: stringify ? "text" : "structuredText",
             sample_fn: "first",
             sample_size: 10000,
+            ...limitArgs,
           }
         : {
             ctx: context ?? ".",
@@ -180,6 +191,7 @@ export class LocalConnection {
             returnFormat: stringify ? "text" : "structuredText",
             sampleFn: null,
             sampleSize: null,
+            ...limitArgs,
           };
 
       this.connection.k(wrapper, args, (err: Error, res: QueryResult) => {

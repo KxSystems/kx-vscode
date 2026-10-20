@@ -42,6 +42,7 @@ import {
 } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
+import { RowLimit } from "../models/notebook";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants, throwIfErrorResult } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
@@ -889,6 +890,7 @@ export async function executeQuery(
   token?: CancellationToken,
   timeout?: number,
   requestID?: string,
+  rowLimit?: RowLimit,
 ): Promise<any> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
@@ -941,6 +943,7 @@ export async function executeQuery(
     isPython,
     timeout,
     requestID,
+    rowLimit,
   );
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();

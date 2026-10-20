@@ -11,6 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { EventEmitter } from "vscode";
+
 import { ext } from "../extensionVariables";
 
 /**
@@ -24,6 +26,10 @@ export type ActiveTarget =
   | { kind: "connection"; connLabel: string };
 
 let activeTarget: ActiveTarget | undefined;
+
+const activeTargetChangedEmitter = new EventEmitter<void>();
+
+export const onDidChangeActiveTarget = activeTargetChangedEmitter.event;
 
 /**
  * The current active target, or undefined when none has been active yet (or a
@@ -41,4 +47,5 @@ export function getActiveTarget(): ActiveTarget | undefined {
 
 export function setActiveTarget(target: ActiveTarget | undefined): void {
   activeTarget = target;
+  activeTargetChangedEmitter.fire();
 }

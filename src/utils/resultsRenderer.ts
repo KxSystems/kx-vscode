@@ -21,6 +21,8 @@ export function convertToGrid(
   isInsights: boolean,
   connVersion?: string,
   isPython?: boolean,
+  // A notebook cell output is not what the results panel exports
+  updateResultsPanelCSV = true,
 ): any {
   let rowData = [];
   let columnDefs = [];
@@ -88,7 +90,7 @@ export function convertToGrid(
     });
   }
 
-  if (rowData.length > 0) {
+  if (updateResultsPanelCSV && rowData.length > 0) {
     ext.resultPanelCSV = convertToCsv(rowData).join("\n");
   }
 

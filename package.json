@@ -159,6 +159,27 @@
           "default": false,
           "description": "Hide the extension survey dialog box",
           "scope": "machine"
+        },
+        "kdb.notebookRowLimit": {
+          "type": "integer",
+          "default": 100,
+          "minimum": 1,
+          "description": "Maximum number of table rows shown in a KX notebook cell output",
+          "scope": "machine-overridable"
+        },
+        "kdb.notebookRowLimitFrom": {
+          "type": "string",
+          "enum": [
+            "first",
+            "last"
+          ],
+          "enumDescriptions": [
+            "Show the first rows of the table",
+            "Show the last rows of the table"
+          ],
+          "default": "first",
+          "description": "Whether a KX notebook cell output shows the first or the last rows of a table",
+          "scope": "machine-overridable"
         }
       }
     },
@@ -255,6 +276,102 @@
         "category": "KX",
         "command": "kdb.file.inputVariable",
         "title": "Input Variable Name"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "Custom Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.10",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "10 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.100",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "100 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.1000",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "1,000 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.10000",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "10,000 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.100000",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "100,000 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.1000000",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "1,000,000 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.10000000",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "10,000,000 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.100000000",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "100,000,000 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimit.1000000000",
+        "title": "Set Notebook Row Limit (not used by the REPL)",
+        "shortTitle": "1,000,000,000 Rows",
+        "icon": "$(list-flat)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimitFrom.first",
+        "title": "Show First or Last Rows (not used by the REPL)",
+        "shortTitle": "First",
+        "icon": "$(arrow-up)",
+        "enablement": "!kdb.notebookOnRepl"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.notebook.rowLimitFrom.last",
+        "title": "Show First or Last Rows (not used by the REPL)",
+        "shortTitle": "Last",
+        "icon": "$(arrow-down)",
+        "enablement": "!kdb.notebookOnRepl"
       },
       {
         "command": "kdb.file.populateScratchpad",
@@ -940,6 +1057,54 @@
         {
           "command": "kdb.query.convert",
           "when": "true"
+        },
+        {
+          "command": "kdb.notebook.rowLimit",
+          "when": "notebookType == kx-notebook"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.10",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.100",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.1000",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.10000",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.100000",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.1000000",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.10000000",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.100000000",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.1000000000",
+          "when": "false"
+        },
+        {
+          "command": "kdb.notebook.rowLimitFrom.first",
+          "when": "notebookType == kx-notebook"
+        },
+        {
+          "command": "kdb.notebook.rowLimitFrom.last",
+          "when": "false"
         }
       ],
       "webview/context": [
@@ -1219,6 +1384,66 @@
           "command": "kdb.file.pickConnection",
           "when": "resourceExtname == .kxnb",
           "group": "navigation/execute@-1"
+        },
+        {
+          "command": "kdb.notebook.rowLimitFrom.first",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimitFrom != last",
+          "group": "navigation/execute@11"
+        },
+        {
+          "command": "kdb.notebook.rowLimitFrom.last",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimitFrom == last",
+          "group": "navigation/execute@11"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.10",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 10",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.100",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 100",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.1000",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 1000",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.10000",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 10000",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.100000",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 100000",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.1000000",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 1000000",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.10000000",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 10000000",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.100000000",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 100000000",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit.1000000000",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit == 1000000000",
+          "group": "navigation/execute@12"
+        },
+        {
+          "command": "kdb.notebook.rowLimit",
+          "when": "resourceExtname == .kxnb && config.kdb.notebookRowLimit != 10 && config.kdb.notebookRowLimit != 100 && config.kdb.notebookRowLimit != 1000 && config.kdb.notebookRowLimit != 10000 && config.kdb.notebookRowLimit != 100000 && config.kdb.notebookRowLimit != 1000000 && config.kdb.notebookRowLimit != 10000000 && config.kdb.notebookRowLimit != 100000000 && config.kdb.notebookRowLimit != 1000000000",
+          "group": "navigation/execute@12"
         }
       ],
       "explorer/context": [

@@ -48,7 +48,7 @@
     ' "This view is not supported for splayed tables"];
     generateColumns[originalType; isAtom; isKey] ./: flip (value; key) @\: flip data
     }[generateColumns];
-    toStructuredText:{[generateTableColumns; generateColumns; sample; data; sampleFn]
+    toStructuredText:{[generateTableColumns; generateColumns; sample; data; sampleFn; rowLimit]
     DEFAULT_TABULAR_LIMIT: 600000;
     TABULAR_LIMIT: DEFAULT_TABULAR_LIMIT^"J"$getenv `TABULAR_LIMIT;
     isNumber: {abs[type[x]] within abs[5 9h]};
@@ -59,12 +59,17 @@
     isTable: .Q.qt data;
     isDict: 99h ~ type data;
     truncateSize: $[isTable;ceiling itemLimit%count cols data;isDict;ceiling itemLimit%2;itemLimit];
-    if[not isEmpty data;if[(sum count each data) > truncateSize;data: sample["first";truncateSize;data];warnings,: enlist "Results truncated to TABULAR_LIMIT. Console view is faster for large data."];];
+    total: count data;
+    rowFrom: $[(99h ~ type rowLimit) and "last" ~ rowLimit`from; "last"; "first"];
+    if[(99h ~ type rowLimit) and not 10h ~ abs type data;
+    rowSize: "j"$rowLimit`size;
+    if[rowSize < count data; data: sample[rowFrom; rowSize; data]]];
+    if[not isEmpty data;if[(sum count each data) > truncateSize;data: sample[rowFrom;truncateSize;data];warnings,: enlist "Results truncated to TABULAR_LIMIT. Console view is faster for large data."];];
     typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
     isAtom: {not type[x] within 0 99h};
     isAtom: isAtom data;
     originalType: typeOf data;
-    quantity: count data;
+    quantity: $[99h ~ type rowLimit; total; count data];
     data: sampleFn data;
     if[(type data) ~ 10h; data: enlist data];
     columns: $[
@@ -84,6 +89,6 @@
     if [args[`returnFormat] ~ "text";
         result[`data]: toString result `data];
     if [args[`returnFormat] ~ "structuredText";
-        result[`data]: toStructuredText[result`data; args[`sampleFn]]];
+        result[`data]: toStructuredText[result`data; args[`sampleFn]; $[`rowLimit in key args; args`rowLimit; ::]]];
     result
     }

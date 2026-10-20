@@ -26,6 +26,7 @@ import {
   Server,
 } from "../models/connectionsModels";
 import { MetaInfoType } from "../models/meta";
+import { RowLimit } from "../models/notebook";
 import { retrieveConnLabelsNames } from "../utils/connLabel";
 import {
   isBaseVersionGreaterOrEqual,
@@ -357,6 +358,7 @@ export class ConnectionManagementService {
     isPython?: boolean,
     timeout?: number,
     requestID?: string,
+    rowLimit?: RowLimit,
   ): Promise<any> {
     let selectedConn;
     if (connLabel) {
@@ -377,6 +379,7 @@ export class ConnectionManagementService {
         context,
         stringify,
         isPython,
+        rowLimit,
       );
     } else {
       return await selectedConn.getScratchpadQuery(
@@ -386,6 +389,7 @@ export class ConnectionManagementService {
         !stringify,
         timeout,
         requestID,
+        rowLimit,
       );
     }
   }

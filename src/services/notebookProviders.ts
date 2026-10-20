@@ -14,12 +14,15 @@
 import * as vscode from "vscode";
 
 import { InsightsNode } from "./kdbTreeProvider";
+import { onDidChangeActiveTarget } from "../classes/activeTarget";
 import {
   getConnectionForServer,
   getServerForUri,
   onDidChangeSessionMaps,
+  runsOnRepl,
 } from "../commands/workspaceCommand";
-import { CellKind } from "../models/notebook";
+import { ext } from "../extensionVariables";
+import { CellKind, RowLimit, RowLimitFrom } from "../models/notebook";
 
 export class KxNotebookTargetActionProvider
   implements vscode.NotebookCellStatusBarItemProvider
@@ -146,4 +149,132 @@ export function getCellKind(cell: vscode.NotebookCell) {
     default:
       return CellKind.MARKDOWN;
   }
+}
+
+// Must match the kdb.notebook.rowLimit.<n> commands and menus in package.json.
+export const ROW_LIMIT_PRESETS = [
+  10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
+];
+
+const ROW_LIMIT_DEFAULT = 100;
+
+export function getRowLimit(): RowLimit {
+  const config = vscode.workspace.getConfiguration("kdb");
+  const limit = config.get<number>("notebookRowLimit", ROW_LIMIT_DEFAULT);
+  return {
+    limit: Number.isInteger(limit) && limit > 0 ? limit : ROW_LIMIT_DEFAULT,
+    from:
+      config.get<string>("notebookRowLimitFrom") === "last" ? "last" : "first",
+  };
+}
+
+// Writes where the setting is already defined, so a workspace value is not
+// left shadowing the change.
+async function updateRowLimitSetting(key: string, value: unknown) {
+  const config = vscode.workspace.getConfiguration("kdb");
+  const inspected = config.inspect(key);
+  await config.update(
+    key,
+    value,
+    inspected?.workspaceValue !== undefined
+      ? vscode.ConfigurationTarget.Workspace
+      : vscode.ConfigurationTarget.Global,
+  );
+}
+
+export function parseRowLimit(value: string): number | undefined {
+  const trimmed = value.trim().replace(/,/g, "");
+  if (!/^\d+$/.test(trimmed)) return undefined;
+  const limit = Number(trimmed);
+  return Number.isSafeInteger(limit) && limit > 0 ? limit : undefined;
+}
+
+export async function pickRowLimitFrom() {
+  const current = getRowLimit().from;
+  const options: { label: string; detail: string; from: RowLimitFrom }[] = [
+    {
+      label: "$(arrow-up) First",
+      detail: "Show the first rows",
+      from: "first",
+    },
+    { label: "$(arrow-down) Last", detail: "Show the last rows", from: "last" },
+  ];
+  const items = options.map((item) => ({
+    ...item,
+    description: item.from === current ? "current" : undefined,
+  }));
+  const picked = await vscode.window.showQuickPick(items, {
+    title: "Notebook Rows",
+    placeHolder: "Show the first or the last rows of a table",
+  });
+  if (picked && picked.from !== current) {
+    await updateRowLimitSetting("notebookRowLimitFrom", picked.from);
+  }
+}
+
+export async function pickRowLimit() {
+  const current = getRowLimit().limit;
+  const custom = !ROW_LIMIT_PRESETS.includes(current);
+  const items: (vscode.QuickPickItem & { limit?: number })[] = [
+    ...ROW_LIMIT_PRESETS.map((limit) => ({
+      label: `${limit.toLocaleString("en-US")} Rows`,
+      description: limit === current ? "current" : undefined,
+      limit,
+    })),
+    { label: "", kind: vscode.QuickPickItemKind.Separator },
+    {
+      label: "$(edit) Custom...",
+      description: custom
+        ? `current: ${current.toLocaleString("en-US")}`
+        : undefined,
+    },
+  ];
+  const picked = await vscode.window.showQuickPick(items, {
+    title: "Notebook Row Limit",
+    placeHolder: "Maximum number of table rows shown in a cell output",
+  });
+  if (!picked) return;
+  const limit = picked.limit ?? (await inputRowLimit(current));
+  if (limit !== undefined && limit !== current) {
+    await updateRowLimitSetting("notebookRowLimit", limit);
+  }
+}
+
+async function inputRowLimit(current: number) {
+  const value = await vscode.window.showInputBox({
+    title: "Notebook Row Limit",
+    prompt: "Maximum number of table rows shown in a cell output",
+    value: `${current}`,
+    validateInput: (value) =>
+      parseRowLimit(value) === undefined
+        ? "Enter a positive whole number."
+        : undefined,
+  });
+  return value === undefined ? undefined : parseRowLimit(value);
+}
+
+// The REPL shows q's console output, which q already cuts to the console
+// height, so the row limit buttons are disabled while the active notebook runs
+// on it. Run targets change with the connection assigned to the notebook, the
+// active target, and connections connecting or disconnecting.
+export function trackNotebookOnRepl(): vscode.Disposable {
+  const update = () => {
+    const notebook = vscode.window.activeNotebookEditor?.notebook;
+    vscode.commands.executeCommand(
+      "setContext",
+      "kdb.notebookOnRepl",
+      notebook?.notebookType === "kx-notebook" && runsOnRepl(notebook.uri),
+    );
+  };
+  update();
+  return vscode.Disposable.from(
+    vscode.window.onDidChangeActiveNotebookEditor(update),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kdb.connectionMap")) update();
+    }),
+    onDidChangeSessionMaps(update),
+    onDidChangeActiveTarget(update),
+    vscode.window.onDidCloseTerminal(update),
+    ext.serverProvider.onDidChangeTreeData(update),
+  );
 }
