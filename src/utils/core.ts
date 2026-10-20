@@ -298,20 +298,28 @@ export async function getWorkspaceFolder(
 
 const reportedInvalid = new Set<string>();
 
+function isValidEntry(entry: unknown, field: string): boolean {
+  return (
+    !!entry &&
+    typeof entry === "object" &&
+    typeof (entry as any)[field] === "string"
+  );
+}
+
 /**
  * Keep only the entries of a user setting that are objects with a string
- * `field`, reporting the rest instead of letting them break the caller.
+ * `field`, reporting the rest instead of letting them break the caller. Each
+ * problem is reported once while it persists; fixing it re-arms the report.
  */
 function validConnections<T>(
   setting: string,
   value: unknown,
   field: string,
 ): { [name: string]: T } {
-  if (value === undefined || value === null) {
-    return {};
-  }
+  const current = new Set<string>();
   const report = (problem: string) => {
     const key = `${setting}:${problem}`;
+    current.add(key);
     if (!reportedInvalid.has(key)) {
       reportedInvalid.add(key);
       notify(
@@ -321,36 +329,81 @@ function validConnections<T>(
       );
     }
   };
-  if (typeof value !== "object" || Array.isArray(value)) {
-    report("expected an object");
-    return {};
-  }
   const result: { [name: string]: T } = {};
-  for (const [name, entry] of Object.entries(value)) {
-    if (
-      !entry ||
-      typeof entry !== "object" ||
-      typeof (entry as any)[field] !== "string"
-    ) {
-      report(`entry "${name}" is missing a string "${field}"`);
-      continue;
+  if (value === undefined || value === null) {
+    // nothing to report
+  } else if (typeof value !== "object" || Array.isArray(value)) {
+    report("expected an object");
+  } else {
+    for (const [name, entry] of Object.entries(value)) {
+      if (isValidEntry(entry, field)) {
+        result[name] = entry as T;
+      } else {
+        report(`entry "${name}" is missing a string "${field}"`);
+      }
     }
-    result[name] = entry as T;
+  }
+  for (const key of reportedInvalid) {
+    if (key.startsWith(`${setting}:`) && !current.has(key)) {
+      reportedInvalid.delete(key);
+    }
   }
   return result;
+}
+
+/**
+ * Write a connection setting back without losing the entries the getters hid
+ * as invalid: those stay in settings.json for the user to fix.
+ */
+async function updateConnections<T>(
+  setting: string,
+  field: string,
+  connections: { [name: string]: T },
+): Promise<void> {
+  const configuration = workspace.getConfiguration();
+  const raw = configuration.get<unknown>(setting);
+  const kept: { [name: string]: unknown } = {};
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    for (const [name, entry] of Object.entries(raw)) {
+      if (!isValidEntry(entry, field) && !(name in connections)) {
+        kept[name] = entry;
+      }
+    }
+  }
+  await configuration.update(
+    setting,
+    { ...kept, ...connections },
+    ConfigurationTarget.Global,
+  );
+}
+
+async function resetConnections(setting: string): Promise<void> {
+  await workspace
+    .getConfiguration()
+    .update(setting, {}, ConfigurationTarget.Global);
+}
+
+function sortByField<T>(
+  list: { [name: string]: T },
+  field: string,
+): { [name: string]: T } {
+  return Object.fromEntries(
+    Object.entries(list).sort(([, a], [, b]) =>
+      (a as any)[field].localeCompare((b as any)[field]),
+    ),
+  );
 }
 
 export function getServers(): Server {
   const raw = workspace.getConfiguration().get<unknown>("kdb.servers");
 
   if (!raw) {
-    updateServers({});
+    resetConnections("kdb.servers");
   }
 
-  return Object.fromEntries(
-    Object.entries(
-      validConnections<ServerDetails>("kdb.servers", raw, "serverAlias"),
-    ).sort(([, a], [, b]) => a.serverAlias.localeCompare(b.serverAlias)),
+  return sortByField(
+    validConnections<ServerDetails>("kdb.servers", raw, "serverAlias"),
+    "serverAlias",
   );
 }
 
@@ -388,51 +441,55 @@ export function setOutputWordWrapper(): void {
 
 export function getInsights(): Insights {
   const configuration = workspace.getConfiguration();
+  const raw = configuration.get<unknown>("kdb.insightsEnterpriseConnections");
   const insights = validConnections<InsightDetails>(
     "kdb.insightsEnterpriseConnections",
-    configuration.get<unknown>("kdb.insightsEnterpriseConnections"),
+    raw,
     "alias",
   );
-  const sorted = (list: Insights): Insights =>
-    Object.fromEntries(
-      Object.entries(list).sort(([, a], [, b]) =>
-        a.alias.localeCompare(b.alias),
-      ),
-    );
 
   if (Object.keys(insights).length > 0) {
-    return sorted(insights);
+    return sortByField(insights, "alias");
   }
+  if (raw && Object.keys(raw).length > 0) {
+    // only invalid entries: leave them, and the legacy setting, untouched
+    return {};
+  }
+  const legacy = configuration.get<unknown>("kdb.insights");
   const insightsList = validConnections<InsightDetails>(
     "kdb.insights",
-    configuration.get<unknown>("kdb.insights"),
+    legacy,
     "alias",
   );
   if (Object.keys(insightsList).length > 0) {
     updateInsights(insightsList);
-    configuration.update("kdb.insights", undefined, ConfigurationTarget.Global);
-    return sorted(insightsList);
+    if (
+      Object.keys(insightsList).length === Object.keys(legacy as object).length
+    ) {
+      configuration.update(
+        "kdb.insights",
+        undefined,
+        ConfigurationTarget.Global,
+      );
+    }
+    return sortByField(insightsList, "alias");
   }
-  if (!configuration.get("kdb.insightsEnterpriseConnections")) {
-    updateInsights({});
+  if (!raw) {
+    resetConnections("kdb.insightsEnterpriseConnections");
   }
   return {};
 }
 
 export async function updateServers(servers: Server): Promise<void> {
-  await workspace
-    .getConfiguration()
-    .update("kdb.servers", servers, ConfigurationTarget.Global);
+  await updateConnections("kdb.servers", "serverAlias", servers);
 }
 
 export async function updateInsights(insights: Insights): Promise<void> {
-  await workspace
-    .getConfiguration()
-    .update(
-      "kdb.insightsEnterpriseConnections",
-      insights,
-      ConfigurationTarget.Global,
-    );
+  await updateConnections(
+    "kdb.insightsEnterpriseConnections",
+    "alias",
+    insights,
+  );
 }
 
 export function getServerName(server: ServerDetails): string {
