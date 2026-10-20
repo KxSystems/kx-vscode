@@ -44,9 +44,11 @@ In a KX notebook cell, **Execute Current Selection** runs the selection, or the
 current line when nothing is selected, and shows its result in the cell's
 output. `ctrl`+`enter` runs the whole cell, as in any VS Code notebook.
 
-A notebook table output shows at most `kdb.notebookRowLimit` rows, the first or
-last as `kdb.notebookRowLimitFrom` says, with a line giving the full row count
-when rows are left out. The notebook toolbar sets both; the REPL ignores them.
+A notebook table output shows at most `kdb.notebookRowLimit` rows (up to
+1,000,000), the first or last as `kdb.notebookRowLimitFrom` says, with a line
+giving the full row count when rows are left out. The settings are the defaults:
+the notebook toolbar sets both for the open notebook only, saved in its `.kxnb`
+file. The REPL ignores them.
 
 ### REPL
 

@@ -89,6 +89,7 @@ import {
   inputVariable,
   KxNotebookTargetActionProvider,
   trackNotebookOnRepl,
+  trackNotebookRowLimit,
   pickRowLimit,
   pickRowLimitFrom,
   ROW_LIMIT_PRESETS,
@@ -305,6 +306,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // the active execution target for unassigned files.
   context.subscriptions.push(initActiveTargetTracking());
   context.subscriptions.push(trackNotebookOnRepl());
+  context.subscriptions.push(trackNotebookRowLimit());
 
   // Make the KDB Results view discoverable from a connection console: the
   // console prints an "Open KDB Results View" hint, which this provider turns

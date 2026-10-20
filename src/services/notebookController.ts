@@ -251,7 +251,7 @@ export class KxNotebookController {
 
     const conn = runTarget.conn;
     const { isInsights, connVersion } = this.getInsightProps(conn);
-    const rowLimit = getRowLimit();
+    const rowLimit = getRowLimit(notebook);
 
     for (const cell of cells) {
       const execution = controller.createNotebookCellExecution(cell);

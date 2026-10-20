@@ -38,6 +38,23 @@ describe("Serializer", () => {
     assert.strictEqual(deserialized.cells.length, 0);
   });
 
+  it("should keep the row limit of a notebook", async () => {
+    const data = new vscode.NotebookData([]);
+    data.metadata = { rowLimit: 10, rowLimitFrom: "last" };
+    const serialized = await instance.serializeNotebook(
+      data,
+      <vscode.CancellationToken>{},
+    );
+    const deserialized = await instance.deserializeNotebook(
+      serialized,
+      <vscode.CancellationToken>{},
+    );
+    assert.deepStrictEqual(deserialized.metadata, {
+      rowLimit: 10,
+      rowLimitFrom: "last",
+    });
+  });
+
   it("should serialize and deserialize notebook", async () => {
     const data: vscode.NotebookData = {
       cells: [

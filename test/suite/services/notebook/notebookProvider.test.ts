@@ -248,47 +248,103 @@ describe("Providers", () => {
       });
     });
 
-    it("should accept only positive whole numbers", () => {
+    it("should cap the row limit at 1,000,000", () => {
+      settings.notebookRowLimit = 5000000;
+      assert.strictEqual(providers.getRowLimit().limit, 1000000);
+    });
+
+    it("should accept only whole numbers from 1 to 1,000,000", () => {
       assert.strictEqual(providers.parseRowLimit(" 1,000 "), 1000);
-      for (const invalid of ["0", "-1", "1.5", "1e3", "abc", ""]) {
+      assert.strictEqual(providers.parseRowLimit("1,000,000"), 1000000);
+      for (const invalid of ["0", "-1", "1.5", "1e3", "abc", "", "1,000,001"]) {
         assert.strictEqual(providers.parseRowLimit(invalid), undefined);
       }
     });
 
-    it("should write Last when chosen", async () => {
-      pick((item) => item.from === "last");
-      await providers.pickRowLimitFrom();
-      sinon.assert.calledOnceWithExactly(
-        updateStub,
-        "notebookRowLimitFrom",
-        "last",
-        vscode.ConfigurationTarget.Global,
-      );
-    });
+    describe("per notebook", () => {
+      let updateMetadataStub: sinon.SinonStub;
+      let notebook: any;
 
-    it("should write a preset when chosen", async () => {
-      pick((item) => item.limit === 10);
-      await providers.pickRowLimit();
-      sinon.assert.notCalled(inputBoxStub);
-      sinon.assert.calledOnceWithExactly(
-        updateStub,
-        "notebookRowLimit",
-        10,
-        vscode.ConfigurationTarget.Global,
-      );
-    });
+      beforeEach(() => {
+        notebook = {
+          notebookType: "kx-notebook",
+          uri: vscode.Uri.file("a.kxnb"),
+          metadata: {},
+        };
+        sinon
+          .stub(vscode.window, "activeNotebookEditor")
+          .get(() => ({ notebook }));
+        updateMetadataStub = sinon.spy(
+          vscode.NotebookEdit,
+          "updateNotebookMetadata",
+        ) as unknown as sinon.SinonStub;
+        applyEditStub = sinon
+          .stub(vscode.workspace, "applyEdit")
+          .resolves(true);
+      });
 
-    it("should write a custom value to the workspace when it has one", async () => {
-      workspaceValues.notebookRowLimit = 100;
-      pick((item) => item.label === "$(edit) Custom...");
-      inputBoxStub.resolves("2,500");
-      await providers.pickRowLimit();
-      sinon.assert.calledOnceWithExactly(
-        updateStub,
-        "notebookRowLimit",
-        2500,
-        vscode.ConfigurationTarget.Workspace,
-      );
+      const metadataWritten = () =>
+        updateMetadataStub.getCalls().map((call) => call.args[0]);
+
+      it("should prefer the notebook's own limit over the settings", () => {
+        settings.notebookRowLimit = 500;
+        settings.notebookRowLimitFrom = "last";
+        assert.deepStrictEqual(providers.getRowLimit(notebook), {
+          limit: 500,
+          from: "last",
+        });
+        notebook.metadata = { rowLimit: 10, rowLimitFrom: "first" };
+        assert.deepStrictEqual(providers.getRowLimit(notebook), {
+          limit: 10,
+          from: "first",
+        });
+      });
+
+      it("should write Last to the notebook when chosen", async () => {
+        pick((item) => item.from === "last");
+        await providers.pickRowLimitFrom();
+        sinon.assert.notCalled(updateStub);
+        assert.deepStrictEqual(metadataWritten(), [{ rowLimitFrom: "last" }]);
+      });
+
+      it("should write a preset to the notebook when chosen", async () => {
+        notebook.metadata = { rowLimitFrom: "last" };
+        pick((item) => item.limit === 10);
+        await providers.pickRowLimit();
+        sinon.assert.notCalled(inputBoxStub);
+        sinon.assert.notCalled(updateStub);
+        assert.deepStrictEqual(metadataWritten(), [
+          { rowLimitFrom: "last", rowLimit: 10 },
+        ]);
+      });
+
+      it("should write a custom value to the notebook", async () => {
+        pick((item) => item.label === "$(edit) Custom...");
+        inputBoxStub.resolves("2,500");
+        await providers.pickRowLimit();
+        assert.deepStrictEqual(metadataWritten(), [{ rowLimit: 2500 }]);
+      });
+
+      it("should set the context keys for the active notebook", () => {
+        const executeCommandStub = sinon.stub(
+          vscode.commands,
+          "executeCommand",
+        );
+        notebook.metadata = { rowLimit: 10, rowLimitFrom: "last" };
+        providers.trackNotebookRowLimit().dispose();
+        sinon.assert.calledWith(
+          executeCommandStub,
+          "setContext",
+          "kdb.notebookRowLimitValue",
+          10,
+        );
+        sinon.assert.calledWith(
+          executeCommandStub,
+          "setContext",
+          "kdb.notebookRowLimitFromValue",
+          "last",
+        );
+      });
     });
   });
 

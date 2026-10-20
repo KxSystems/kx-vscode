@@ -152,45 +152,68 @@ export function getCellKind(cell: vscode.NotebookCell) {
 }
 
 // Must match the kdb.notebook.rowLimit.<n> commands and menus in package.json.
-export const ROW_LIMIT_PRESETS = [
-  10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
-];
+export const ROW_LIMIT_PRESETS = [10, 100, 1000, 10000, 100000, 1000000];
+
+const ROW_LIMIT_MAX = 1000000;
 
 const ROW_LIMIT_DEFAULT = 100;
 
-export function getRowLimit(): RowLimit {
+// A notebook keeps its own row limit in its metadata; the settings are the
+// defaults for notebooks that have none.
+export function getRowLimit(notebook?: vscode.NotebookDocument): RowLimit {
   const config = vscode.workspace.getConfiguration("kdb");
-  const limit = config.get<number>("notebookRowLimit", ROW_LIMIT_DEFAULT);
+  const saved = notebook?.metadata?.rowLimit;
+  const limit = isValidRowLimit(saved)
+    ? saved
+    : config.get<number>("notebookRowLimit", ROW_LIMIT_DEFAULT);
+  const from = notebook?.metadata?.rowLimitFrom
+    ? notebook.metadata.rowLimitFrom
+    : config.get<string>("notebookRowLimitFrom");
   return {
-    limit: Number.isInteger(limit) && limit > 0 ? limit : ROW_LIMIT_DEFAULT,
-    from:
-      config.get<string>("notebookRowLimitFrom") === "last" ? "last" : "first",
+    limit:
+      Number.isInteger(limit) && limit > 0
+        ? Math.min(limit, ROW_LIMIT_MAX)
+        : ROW_LIMIT_DEFAULT,
+    from: from === "last" ? "last" : "first",
   };
 }
 
-// Writes where the setting is already defined, so a workspace value is not
-// left shadowing the change.
-async function updateRowLimitSetting(key: string, value: unknown) {
-  const config = vscode.workspace.getConfiguration("kdb");
-  const inspected = config.inspect(key);
-  await config.update(
-    key,
-    value,
-    inspected?.workspaceValue !== undefined
-      ? vscode.ConfigurationTarget.Workspace
-      : vscode.ConfigurationTarget.Global,
-  );
+function isValidRowLimit(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+async function updateRowLimitMetadata(
+  notebook: vscode.NotebookDocument,
+  metadata: { rowLimit?: number; rowLimitFrom?: RowLimitFrom },
+) {
+  const edit = new vscode.WorkspaceEdit();
+  edit.set(notebook.uri, [
+    vscode.NotebookEdit.updateNotebookMetadata({
+      ...notebook.metadata,
+      ...metadata,
+    }),
+  ]);
+  await vscode.workspace.applyEdit(edit);
+}
+
+function activeKxNotebook() {
+  const notebook = vscode.window.activeNotebookEditor?.notebook;
+  return notebook?.notebookType === "kx-notebook" ? notebook : undefined;
 }
 
 export function parseRowLimit(value: string): number | undefined {
   const trimmed = value.trim().replace(/,/g, "");
   if (!/^\d+$/.test(trimmed)) return undefined;
   const limit = Number(trimmed);
-  return Number.isSafeInteger(limit) && limit > 0 ? limit : undefined;
+  return Number.isSafeInteger(limit) && limit > 0 && limit <= ROW_LIMIT_MAX
+    ? limit
+    : undefined;
 }
 
 export async function pickRowLimitFrom() {
-  const current = getRowLimit().from;
+  const notebook = activeKxNotebook();
+  if (!notebook) return;
+  const current = getRowLimit(notebook).from;
   const options: { label: string; detail: string; from: RowLimitFrom }[] = [
     {
       label: "$(arrow-up) First",
@@ -208,12 +231,14 @@ export async function pickRowLimitFrom() {
     placeHolder: "Show the first or the last rows of a table",
   });
   if (picked && picked.from !== current) {
-    await updateRowLimitSetting("notebookRowLimitFrom", picked.from);
+    await updateRowLimitMetadata(notebook, { rowLimitFrom: picked.from });
   }
 }
 
 export async function pickRowLimit() {
-  const current = getRowLimit().limit;
+  const notebook = activeKxNotebook();
+  if (!notebook) return;
+  const current = getRowLimit(notebook).limit;
   const custom = !ROW_LIMIT_PRESETS.includes(current);
   const items: (vscode.QuickPickItem & { limit?: number })[] = [
     ...ROW_LIMIT_PRESETS.map((limit) => ({
@@ -236,7 +261,7 @@ export async function pickRowLimit() {
   if (!picked) return;
   const limit = picked.limit ?? (await inputRowLimit(current));
   if (limit !== undefined && limit !== current) {
-    await updateRowLimitSetting("notebookRowLimit", limit);
+    await updateRowLimitMetadata(notebook, { rowLimit: limit });
   }
 }
 
@@ -247,7 +272,7 @@ async function inputRowLimit(current: number) {
     value: `${current}`,
     validateInput: (value) =>
       parseRowLimit(value) === undefined
-        ? "Enter a positive whole number."
+        ? `Enter a whole number from 1 to ${ROW_LIMIT_MAX.toLocaleString("en-US")}.`
         : undefined,
   });
   return value === undefined ? undefined : parseRowLimit(value);
@@ -276,5 +301,36 @@ export function trackNotebookOnRepl(): vscode.Disposable {
     onDidChangeActiveTarget(update),
     vscode.window.onDidCloseTerminal(update),
     ext.serverProvider.onDidChangeTreeData(update),
+  );
+}
+
+// The toolbar marks the current value through context keys, since a `when`
+// clause cannot read the metadata of the active notebook.
+export function trackNotebookRowLimit(): vscode.Disposable {
+  const update = () => {
+    const notebook = activeKxNotebook();
+    const { limit, from } = notebook
+      ? getRowLimit(notebook)
+      : { limit: undefined, from: undefined };
+    vscode.commands.executeCommand(
+      "setContext",
+      "kdb.notebookRowLimitValue",
+      limit,
+    );
+    vscode.commands.executeCommand(
+      "setContext",
+      "kdb.notebookRowLimitFromValue",
+      from,
+    );
+  };
+  update();
+  return vscode.Disposable.from(
+    vscode.window.onDidChangeActiveNotebookEditor(update),
+    vscode.workspace.onDidChangeNotebookDocument((event) => {
+      if (event.notebook === activeKxNotebook() && event.metadata) update();
+    }),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kdb.notebookRowLimit")) update();
+    }),
   );
 }

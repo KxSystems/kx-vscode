@@ -15,6 +15,8 @@ import * as vscode from "vscode";
 
 export interface KxNotebook {
   cells: KxNotebookCell[];
+  rowLimit?: number;
+  rowLimitFrom?: RowLimitFrom;
 }
 
 export interface KxNotebookCell {
