@@ -296,20 +296,62 @@ export async function getWorkspaceFolder(
   return undefined;
 }
 
-export function getServers(): Server {
-  const servers = workspace.getConfiguration().get<Server>("kdb.servers");
+const reportedInvalid = new Set<string>();
 
-  if (!servers) {
+/**
+ * Keep only the entries of a user setting that are objects with a string
+ * `field`, reporting the rest instead of letting them break the caller.
+ */
+function validConnections<T>(
+  setting: string,
+  value: unknown,
+  field: string,
+): { [name: string]: T } {
+  if (value === undefined || value === null) {
+    return {};
+  }
+  const report = (problem: string) => {
+    const key = `${setting}:${problem}`;
+    if (!reportedInvalid.has(key)) {
+      reportedInvalid.add(key);
+      notify(
+        `Invalid "${setting}" in settings.json: ${problem}. Fix the setting and reload the window.`,
+        MessageKind.ERROR,
+        { logger, params: problem },
+      );
+    }
+  };
+  if (typeof value !== "object" || Array.isArray(value)) {
+    report("expected an object");
+    return {};
+  }
+  const result: { [name: string]: T } = {};
+  for (const [name, entry] of Object.entries(value)) {
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      typeof (entry as any)[field] !== "string"
+    ) {
+      report(`entry "${name}" is missing a string "${field}"`);
+      continue;
+    }
+    result[name] = entry as T;
+  }
+  return result;
+}
+
+export function getServers(): Server {
+  const raw = workspace.getConfiguration().get<unknown>("kdb.servers");
+
+  if (!raw) {
     updateServers({});
   }
 
-  return servers
-    ? Object.fromEntries(
-        Object.entries(servers).sort(([, a], [, b]) =>
-          a.serverAlias.localeCompare(b.serverAlias),
-        ),
-      )
-    : {};
+  return Object.fromEntries(
+    Object.entries(
+      validConnections<ServerDetails>("kdb.servers", raw, "serverAlias"),
+    ).sort(([, a], [, b]) => a.serverAlias.localeCompare(b.serverAlias)),
+  );
 }
 
 export function getAutoFocusOutputOnEntrySetting(): boolean {
@@ -346,34 +388,35 @@ export function setOutputWordWrapper(): void {
 
 export function getInsights(): Insights {
   const configuration = workspace.getConfiguration();
-  const insights = configuration.get<Insights>(
+  const insights = validConnections<InsightDetails>(
     "kdb.insightsEnterpriseConnections",
+    configuration.get<unknown>("kdb.insightsEnterpriseConnections"),
+    "alias",
   );
-
-  if (insights && Object.keys(insights).length > 0) {
-    return Object.fromEntries(
-      Object.entries(insights).sort(([, a], [, b]) =>
+  const sorted = (list: Insights): Insights =>
+    Object.fromEntries(
+      Object.entries(list).sort(([, a], [, b]) =>
         a.alias.localeCompare(b.alias),
       ),
     );
-  } else {
-    const insightsList = configuration.get<Insights>("kdb.insights");
-    if (insightsList && Object.keys(insightsList).length > 0) {
-      updateInsights(insightsList);
-      configuration.update(
-        "kdb.insights",
-        undefined,
-        ConfigurationTarget.Global,
-      );
-      return Object.fromEntries(
-        Object.entries(insightsList).sort(([, a], [, b]) =>
-          a.alias.localeCompare(b.alias),
-        ),
-      );
-    }
-    updateInsights({});
-    return {};
+
+  if (Object.keys(insights).length > 0) {
+    return sorted(insights);
   }
+  const insightsList = validConnections<InsightDetails>(
+    "kdb.insights",
+    configuration.get<unknown>("kdb.insights"),
+    "alias",
+  );
+  if (Object.keys(insightsList).length > 0) {
+    updateInsights(insightsList);
+    configuration.update("kdb.insights", undefined, ConfigurationTarget.Global);
+    return sorted(insightsList);
+  }
+  if (!configuration.get("kdb.insightsEnterpriseConnections")) {
+    updateInsights({});
+  }
+  return {};
 }
 
 export async function updateServers(servers: Server): Promise<void> {
