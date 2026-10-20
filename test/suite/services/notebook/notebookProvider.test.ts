@@ -278,9 +278,7 @@ describe("Providers", () => {
           vscode.NotebookEdit,
           "updateNotebookMetadata",
         ) as unknown as sinon.SinonStub;
-        applyEditStub = sinon
-          .stub(vscode.workspace, "applyEdit")
-          .resolves(true);
+        sinon.stub(vscode.workspace, "applyEdit").resolves(true);
       });
 
       const metadataWritten = () =>
