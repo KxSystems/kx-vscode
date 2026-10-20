@@ -5,20 +5,21 @@ description:
   Command palette entries, keybindings, settings, execution matrix and telemetry
   events for the kdb VS Code extension.
 tags: [kdb, vscode, reference, keybindings, settings, telemetry]
-timestamp: 2026-07-10
+timestamp: 2026-10-20
 ---
 
 ## Command Palette
 
-| Command                | Command                            | Command                             |
-| :--------------------- | :--------------------------------- | :---------------------------------- |
-| KX: Welcome to KDB-X   | KX: New Connection                 | KX: Focus on Connections view       |
-| KX: Install KDB-X      | KX: New Notebook                   | KX: Focus on Queries view           |
-| KX: Start REPL         | KX: New Workbook (q)               | KX: Focus on Workbooks view         |
-| KX: Import Connections | KX: New Workbook (Python)          | KX: Focus on Query History view     |
-| KX: Export Connections | KX: New Workbook (SQL)             | KX: Focus on Help and Feedback view |
-|                        | KX: New Query                      | KX: Focus on KDB Results view       |
-|                        | KX: Convert datasources to queries |                                     |
+| Command                                           | Command                                            | Command                             |
+| :------------------------------------------------ | :------------------------------------------------- | :---------------------------------- |
+| KX: Welcome to KDB-X                              | KX: New Connection                                 | KX: Focus on Connections view       |
+| KX: Install KDB-X                                 | KX: New Notebook                                   | KX: Focus on Queries view           |
+| KX: Start REPL                                    | KX: New Workbook (q)                               | KX: Focus on Workbooks view         |
+| KX: Import Connections                            | KX: New Workbook (Python)                          | KX: Focus on Query History view     |
+| KX: Export Connections                            | KX: New Workbook (SQL)                             | KX: Focus on Help and Feedback view |
+|                                                   | KX: New Query                                      | KX: Focus on KDB Results view       |
+|                                                   | KX: Convert datasources to queries                 |                                     |
+| KX: Set Notebook Row Limit (not used by the REPL) | KX: Show First or Last Rows (not used by the REPL) |                                     |
 
 ## Keybindings
 
@@ -42,6 +43,10 @@ status bar names the REPL a file runs on.
 In a KX notebook cell, **Execute Current Selection** runs the selection, or the
 current line when nothing is selected, and shows its result in the cell's
 output. `ctrl`+`enter` runs the whole cell, as in any VS Code notebook.
+
+A notebook table output shows at most `kdb.notebookRowLimit` rows, the first or
+last as `kdb.notebookRowLimitFrom` says, with a line giving the full row count
+when rows are left out. The notebook toolbar sets both; the REPL ignores them.
 
 ### REPL
 
@@ -80,25 +85,27 @@ to them. Whether a right click pastes is VS Code's
 
 ## Settings
 
-| Setting                                            | Scope    | Type      | Default       |
-| :------------------------------------------------- | :------- | :-------- | :------------ |
-| [kdb.qHomeDirectory](q-home-directory.md)          | machine  | `string`  | `""`          |
-| kdb.servers                                        | machine  | `object`  | `{}`          |
-| kdb.insightsEnterpriseConnections                  | machine  | `object`  | `{}`          |
-| kdb.connectionLabels                               | machine  | `array`   | `[]`          |
-| kdb.labelsConnectionMap                            | machine  | `array`   | `[]`          |
-| kdb.hideSurvey                                     | machine  | `boolean` | `false`       |
-| kdb.hideSourceExpressions                          | machine  | `boolean` | `true`        |
-| kdb.hideSubscribeRegistrationNotification          | machine  | `boolean` | `false`       |
-| kdb.neverShowQInstallAgain                         | machine  | `boolean` | `false`       |
-| kdb.autoFocusOutputOnEntry                         | machine  | `boolean` | `true`        |
-| [kdb.qHomeDirectoryWorkspace](q-home-directory.md) | resource | `string`  | `""`          |
-| kdb.connectionMap                                  | resource | `object`  | `{}`          |
-| kdb.targetMap                                      | resource | `object`  | `{}`          |
-| kdb.timeoutMap                                     | resource | `object`  | `{}`          |
-| kdb.defaultTimeout                                 | resource | `number`  | `30`          |
-| kdb.linting                                        | resource | `boolean` | `false`       |
-| kdb.refactoring                                    | resource | `string`  | `"Workspace"` |
+| Setting                                            | Scope               | Type      | Default       |
+| :------------------------------------------------- | :------------------ | :-------- | :------------ |
+| [kdb.qHomeDirectory](q-home-directory.md)          | machine             | `string`  | `""`          |
+| kdb.servers                                        | machine             | `object`  | `{}`          |
+| kdb.insightsEnterpriseConnections                  | machine             | `object`  | `{}`          |
+| kdb.connectionLabels                               | machine             | `array`   | `[]`          |
+| kdb.labelsConnectionMap                            | machine             | `array`   | `[]`          |
+| kdb.hideSurvey                                     | machine             | `boolean` | `false`       |
+| kdb.hideSourceExpressions                          | machine             | `boolean` | `true`        |
+| kdb.hideSubscribeRegistrationNotification          | machine             | `boolean` | `false`       |
+| kdb.neverShowQInstallAgain                         | machine             | `boolean` | `false`       |
+| kdb.autoFocusOutputOnEntry                         | machine             | `boolean` | `true`        |
+| kdb.notebookRowLimit                               | machine-overridable | `number`  | `100`         |
+| kdb.notebookRowLimitFrom                           | machine-overridable | `string`  | `"first"`     |
+| [kdb.qHomeDirectoryWorkspace](q-home-directory.md) | resource            | `string`  | `""`          |
+| kdb.connectionMap                                  | resource            | `object`  | `{}`          |
+| kdb.targetMap                                      | resource            | `object`  | `{}`          |
+| kdb.timeoutMap                                     | resource            | `object`  | `{}`          |
+| kdb.defaultTimeout                                 | resource            | `number`  | `30`          |
+| kdb.linting                                        | resource            | `boolean` | `false`       |
+| kdb.refactoring                                    | resource            | `string`  | `"Workspace"` |
 
 `kdb.connectionMap`, `kdb.targetMap` and `kdb.timeoutMap` are keyed by workspace
 relative path, so they only cover files inside the workspace. Files opened from

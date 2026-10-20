@@ -538,11 +538,24 @@ function renderTable(table: any, rowLimit: RowLimit, total?: number): string {
 
   if (shown.length < count) {
     rows.push(
-      `<p>Showing ${from} ${shown.length.toLocaleString()} of ${count.toLocaleString()} rows.</p>`,
+      `<p>Showing ${from} ${shown.length.toLocaleString("en-US")} of ${count.toLocaleString("en-US")} rows.</p>`,
     );
   }
 
   return rows.join("\n");
+}
+
+// Column types formatQ.q (chars) and evaluatePy.q (str, CharVector) give a
+// string result
+const TEXT_TYPES = new Set(["chars", "str", "CharVector"]);
+
+function isTextResult(results: any): boolean {
+  const columns = results.columns;
+  return (
+    Array.isArray(columns) &&
+    columns.length === 1 &&
+    TEXT_TYPES.has(columns[0]?.type)
+  );
 }
 
 function render(
@@ -562,7 +575,11 @@ function render(
   }
 
   if (results) {
-    const total = typeof results.count === "number" ? results.count : undefined;
+    // A string is one value, but q and Python count its characters
+    const total =
+      typeof results.count === "number" && !isTextResult(results)
+        ? results.count
+        : undefined;
     const table = convertToGrid(
       results,
       isInsights,

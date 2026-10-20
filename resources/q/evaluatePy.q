@@ -130,7 +130,7 @@
     }";
     .pykx.pyexec"_kx_execution_context=_kx_execution_context()";
 
-    .pykx.pyexec "def pystruct_to_structured_text(data, length, sample_fn='first'):
+    .pykx.pyexec "def pystruct_to_structured_text(data, length, sample_fn='first', size=None):
     # Importing libraries needed for code execution inside the function
     import json
     import numpy as np
@@ -174,7 +174,9 @@
     else:
         truncateSize = limit
 
-    if(length > truncateSize):
+    # size is the length after the row limit sample, so a result already cut
+    # to the limit is not cut again; length stays the count of the whole result
+    if((length if size is None else size) > truncateSize):
         # Cut from the same end as the sample, so 'last' keeps the last rows
         data = pystruct_sample(data, 'last' if sample_fn == 'last' else 'first', truncateSize)
         warnings.append(kx.CharVector('Results truncated to TABULAR_LIMIT. Console view is faster for large data.'))
@@ -372,9 +374,16 @@
     if not (row_limit and isinstance(data, (str, kx.CharVector))) and (sample_size < length or (sample_fn == 'random')):
         data = pystruct_sample(data, str(sample_fn), int(sample_size))
 
+    size = None
+    if row_limit:
+        try:
+            size = len(data)
+        except:
+            size = 1
+
     try:
         return{
-            'data': pystruct_to_structured_text(data, length, str(sample_fn)),
+            'data': pystruct_to_structured_text(data, length, str(sample_fn), size),
             'error': False,
             'errorMsg':str(None).encode('UTF-8')
         }

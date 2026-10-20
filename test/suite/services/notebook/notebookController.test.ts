@@ -793,8 +793,48 @@ describe("Controller", () => {
         assert.strictEqual(footer(rendered()), undefined);
       });
 
+      for (const type of ["chars", "str", "CharVector"]) {
+        it(`should show no footer for a ${type} string result`, async () => {
+          getRowLimitStub.returns({ limit: 10, from: "last" });
+          executeQueryStub.resolves({
+            count: 11,
+            columns: [
+              {
+                name: "values",
+                type,
+                values: ['"hello world"'],
+                order: [0],
+              },
+            ],
+          });
+
+          await run();
+
+          assert.strictEqual(footer(rendered()), undefined);
+          assert.match(rendered(), /<td>0<\/td>/);
+        });
+      }
+
+      it("should format the footer counts in en-US", async () => {
+        getRowLimitStub.returns({ limit: 10, from: "first" });
+        sinon.stub(Number.prototype, "toLocaleString").callsFake(function (
+          this: number,
+          locale?: string | string[],
+        ) {
+          return Intl.NumberFormat(locale ?? "de-DE").format(this);
+        });
+        executeQueryStub.resolves(table(range(0, 10), 25000));
+
+        await run();
+
+        assert.strictEqual(
+          footer(rendered()),
+          "<p>Showing first 10 of 25,000 rows.</p>",
+        );
+      });
+
       it("should lay out only the limit of a result a process did not cut", async () => {
-        sinon.stub(ext, "resultPanelCSV").value("panel,csv");
+        ext.resultPanelCSV = "panel,csv";
         executeQueryStub.resolves(table(range(0, 1000000)));
 
         await run();

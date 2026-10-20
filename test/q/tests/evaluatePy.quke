@@ -704,6 +704,13 @@ feature python toStructuredText rowLimit
                 "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"0\",\"1\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
             .struct.TABULAR_LIMIT: 600000;
             result
+        expect no TABULAR_LIMIT cut or warning when the rowLimit is already below it
+            .struct.TABULAR_LIMIT: 10;
+            result: .qu.compare[
+                .test.evaluatePyRows["list(range(20))"; `size`from!(5f; "last")]`data;
+                "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"15\",\"16\",\"17\",\"18\",\"19\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"];
+            .struct.TABULAR_LIMIT: 600000;
+            result
         expect no rowLimit to leave the result unchanged
             .qu.compare[
                 (0i (.test.src; `returnFormat`code`sample_fn`sample_size!("structuredText"; "['apple', 'banana', 'cherry', 'date']"; "first"; 10000)))`data;
