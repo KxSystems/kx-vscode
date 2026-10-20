@@ -322,7 +322,12 @@
 
         elif sample_fn == 'last':
             if isinstance(data, pd.DataFrame):
-                return data.iloc[-sample_size:]
+                # Only notebooks sample the last rows. A default 0..n-1 index is
+                # kept as one, so the rows are not shown with an extra key column
+                tail = data.iloc[-sample_size:]
+                if pd.Index(np.arange(0, len(data))).equals(data.index):
+                    return tail.reset_index(drop=True)
+                return tail
             else:
                 x = slice(- sample_size, None)
 
@@ -354,6 +359,8 @@
         return data";
 
     .pykx.pyexec "def pystruct_format_structured_text(data, sample_fn, sample_size, row_limit=False):
+    import pykx as kx
+
     # If length is not possible (e.g. functions) then assign length to 1
     try:
         length = len(data)
@@ -362,7 +369,7 @@
 
     # Sampling can be a destructive operation, so only do it when necessary
     # e.g. When sampling a named tuple, the type of the result will be a regular tuple
-    if not (row_limit and isinstance(data, (str, bytes))) and (sample_size < length or (sample_fn == 'random')):
+    if not (row_limit and isinstance(data, (str, kx.CharVector))) and (sample_size < length or (sample_fn == 'random')):
         data = pystruct_sample(data, str(sample_fn), int(sample_size))
 
     try:

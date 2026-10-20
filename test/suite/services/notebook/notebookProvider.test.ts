@@ -16,7 +16,9 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 
 import * as notebookTestUtils from "./notebookTest.utils.test";
+import { setActiveTarget } from "../../../../src/classes/activeTarget";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
+import { ext } from "../../../../src/extensionVariables";
 import {
   InsightsNode,
   KdbNode,
@@ -203,6 +205,131 @@ describe("Providers", () => {
         const res = await instance.provideCellStatusBarItems(cell, token);
         assert.strictEqual(res.length, 1);
       });
+    });
+  });
+
+  describe("row limit", () => {
+    let settings: Record<string, unknown>;
+    let workspaceValues: Record<string, unknown>;
+    let updateStub: sinon.SinonStub;
+    let quickPickStub: sinon.SinonStub;
+    let inputBoxStub: sinon.SinonStub;
+
+    const pick = (match: (item: any) => boolean) =>
+      quickPickStub.callsFake(async (items: any[]) => items.find(match));
+
+    beforeEach(() => {
+      settings = {};
+      workspaceValues = {};
+      updateStub = sinon.stub().resolves();
+      sinon.stub(vscode.workspace, "getConfiguration").value(() => ({
+        get: (key: string, defaultValue?: unknown) =>
+          key in settings ? settings[key] : defaultValue,
+        inspect: (key: string) => ({
+          key,
+          workspaceValue: workspaceValues[key],
+        }),
+        update: updateStub,
+      }));
+      quickPickStub = sinon.stub(vscode.window, "showQuickPick");
+      inputBoxStub = sinon.stub(vscode.window, "showInputBox");
+    });
+
+    it("should default to the first 100 rows, also for invalid settings", () => {
+      assert.deepStrictEqual(providers.getRowLimit(), {
+        limit: 100,
+        from: "first",
+      });
+      settings.notebookRowLimit = -5;
+      settings.notebookRowLimitFrom = "middle";
+      assert.deepStrictEqual(providers.getRowLimit(), {
+        limit: 100,
+        from: "first",
+      });
+    });
+
+    it("should accept only positive whole numbers", () => {
+      assert.strictEqual(providers.parseRowLimit(" 1,000 "), 1000);
+      for (const invalid of ["0", "-1", "1.5", "1e3", "abc", ""]) {
+        assert.strictEqual(providers.parseRowLimit(invalid), undefined);
+      }
+    });
+
+    it("should write Last when chosen", async () => {
+      pick((item) => item.from === "last");
+      await providers.pickRowLimitFrom();
+      sinon.assert.calledOnceWithExactly(
+        updateStub,
+        "notebookRowLimitFrom",
+        "last",
+        vscode.ConfigurationTarget.Global,
+      );
+    });
+
+    it("should write a preset when chosen", async () => {
+      pick((item) => item.limit === 10);
+      await providers.pickRowLimit();
+      sinon.assert.notCalled(inputBoxStub);
+      sinon.assert.calledOnceWithExactly(
+        updateStub,
+        "notebookRowLimit",
+        10,
+        vscode.ConfigurationTarget.Global,
+      );
+    });
+
+    it("should write a custom value to the workspace when it has one", async () => {
+      workspaceValues.notebookRowLimit = 100;
+      pick((item) => item.label === "$(edit) Custom...");
+      inputBoxStub.resolves("2,500");
+      await providers.pickRowLimit();
+      sinon.assert.calledOnceWithExactly(
+        updateStub,
+        "notebookRowLimit",
+        2500,
+        vscode.ConfigurationTarget.Workspace,
+      );
+    });
+  });
+
+  describe("trackNotebookOnRepl", () => {
+    let executeCommandStub: sinon.SinonStub;
+    let runsOnReplStub: sinon.SinonStub;
+    let tracker: vscode.Disposable;
+    let serverProvider: any;
+
+    const onRepl = () =>
+      executeCommandStub
+        .getCalls()
+        .filter((call) => call.args[1] === "kdb.notebookOnRepl")
+        .at(-1)?.args[2];
+
+    beforeEach(() => {
+      serverProvider = ext.serverProvider;
+      ext.serverProvider = <any>{
+        onDidChangeTreeData: () => ({ dispose() {} }),
+      };
+      executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
+      runsOnReplStub = sinon.stub(workspaceCommand, "runsOnRepl");
+      sinon.stub(vscode.window, "activeNotebookEditor").get(() => ({
+        notebook: { notebookType: "kx-notebook", uri: vscode.Uri.file("a") },
+      }));
+    });
+
+    afterEach(() => {
+      tracker?.dispose();
+      ext.serverProvider = serverProvider;
+      setActiveTarget(undefined);
+    });
+
+    it("should follow whether the notebook runs on the REPL", () => {
+      runsOnReplStub.returns(true);
+      tracker = providers.trackNotebookOnRepl();
+      assert.strictEqual(onRepl(), true);
+
+      runsOnReplStub.returns(false);
+      setActiveTarget({ kind: "repl" });
+      assert.strictEqual(onRepl(), false);
     });
   });
 });

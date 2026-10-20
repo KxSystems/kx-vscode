@@ -920,6 +920,49 @@ describe("workspaceCommand", () => {
     });
   });
 
+  describe("runsOnRepl", () => {
+    const unassignedUri = vscode.Uri.file("unassigned.q");
+    let retrieveConnectedConnectionStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      retrieveConnectedConnectionStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "retrieveConnectedConnection",
+      );
+      setActiveTarget(undefined);
+    });
+
+    afterEach(() => {
+      setActiveTarget(undefined);
+      ext.connectionConsoles.clear();
+    });
+
+    it("should be true for a file assigned to the REPL", () => {
+      assert.strictEqual(workspaceCommand.runsOnRepl(replUri), true);
+    });
+
+    it("should be false for a file assigned to a connection", () => {
+      retrieveConnectedConnectionStub.returns(undefined);
+      assert.strictEqual(workspaceCommand.runsOnRepl(kdbUri), false);
+      assert.strictEqual(workspaceCommand.runsOnRepl(notebookUri), false);
+      sinon.assert.notCalled(retrieveConnectedConnectionStub);
+    });
+
+    it("should be true for an unassigned file unless a connected connection is the active target", () => {
+      assert.strictEqual(workspaceCommand.runsOnRepl(unassignedUri), true);
+      setActiveTarget({ kind: "repl" });
+      assert.strictEqual(workspaceCommand.runsOnRepl(unassignedUri), true);
+    });
+
+    it("should be false for an unassigned file when a connected connection is the active target", () => {
+      ext.connectionConsoles.set("local", <any>{});
+      setActiveTarget({ kind: "connection", connLabel: "local" });
+      retrieveConnectedConnectionStub.returns(<any>{ connLabel: "local" });
+      assert.strictEqual(workspaceCommand.runsOnRepl(unassignedUri), false);
+      sinon.assert.calledWith(retrieveConnectedConnectionStub, "local");
+    });
+  });
+
   describe("resetScratchpadFromEditor", () => {
     let getServerForUriStub,
       pickConnectionStub,

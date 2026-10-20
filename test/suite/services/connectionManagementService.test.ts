@@ -363,6 +363,54 @@ describe("ConnectionManagementService", () => {
 
       assert.strictEqual(result, "test query");
     });
+
+    it("Should forward the row limit to a local connection", async () => {
+      ext.activeConnection = localConn;
+      const rowLimit = { limit: 10, from: "last" as const };
+      await connectionManagerService.executeQuery(
+        command,
+        undefined,
+        context,
+        false,
+        true,
+        30,
+        "req-1",
+        rowLimit,
+      );
+
+      sinon.assert.calledOnce(executeQueryStub);
+      assert.deepStrictEqual(executeQueryStub.firstCall.args.slice(1), [
+        context,
+        false,
+        true,
+        rowLimit,
+      ]);
+    });
+
+    it("Should forward the row limit to an Insights connection", async () => {
+      ext.activeConnection = insightsConn;
+      const rowLimit = { limit: 1000, from: "first" as const };
+      await connectionManagerService.executeQuery(
+        command,
+        undefined,
+        context,
+        false,
+        false,
+        30,
+        "req-1",
+        rowLimit,
+      );
+
+      sinon.assert.calledOnce(getScratchpadQueryStub);
+      assert.deepStrictEqual(getScratchpadQueryStub.firstCall.args.slice(1), [
+        context,
+        false,
+        true,
+        30,
+        "req-1",
+        rowLimit,
+      ]);
+    });
   });
 
   describe("behaviour methods", () => {

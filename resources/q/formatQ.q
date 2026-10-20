@@ -64,7 +64,7 @@
     if[(99h ~ type rowLimit) and not 10h ~ abs type data;
     rowSize: "j"$rowLimit`size;
     if[rowSize < count data; data: sample[rowFrom; rowSize; data]]];
-    if[not isEmpty data;if[(sum count each data) > truncateSize;data: sample[rowFrom;truncateSize;data];warnings,: enlist "Results truncated to TABULAR_LIMIT. Console view is faster for large data."];];
+    if[not isEmpty data;if[(sum count each data) > truncateSize;data: sample[$[10h ~ abs type data; "first"; rowFrom];truncateSize;data];warnings,: enlist "Results truncated to TABULAR_LIMIT. Console view is faster for large data."];];
     typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
     isAtom: {not type[x] within 0 99h};
     isAtom: isAtom data;

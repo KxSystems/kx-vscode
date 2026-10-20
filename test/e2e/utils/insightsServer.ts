@@ -94,6 +94,12 @@ export class FakeInsights {
 
   static readonly SHOWS_IMAGE_LATE = "showImageLate";
 
+  // What a scratchpad query asking for structured text answers with, given the
+  // body it was sent, so a suite can stand in for an instance that honours the
+  // sampleFn and sampleSize it was asked for. Unset, every such query answers
+  // with the same three rows.
+  structured?: (body: any) => unknown;
+
   imageDelay = 850;
   imageBytes = 533000;
   runs = 0;
@@ -289,7 +295,9 @@ export class FakeInsights {
       return send(200, {
         data:
           body.returnFormat === "structuredText"
-            ? JSON.stringify(structuredText())
+            ? JSON.stringify(
+                this.structured ? this.structured(body) : structuredText(),
+              )
             : RESULT,
       });
     }
