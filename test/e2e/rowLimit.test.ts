@@ -223,7 +223,8 @@ describe("Limiting the rows a notebook shows", () => {
     });
 
     it("lays out only the default rows of a large result a process did not cut", async () => {
-      await reset();
+      // The limit is the notebook's own now, so the earlier tests' stays.
+      await chooseLimit("100 Rows");
       kdb.data = structuredText(rows(200_000));
       try {
         for (const output of await run(NOTEBOOK)) {
