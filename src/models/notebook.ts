@@ -15,6 +15,8 @@ import * as vscode from "vscode";
 
 export interface KxNotebook {
   cells: KxNotebookCell[];
+  rowLimit?: number;
+  rowLimitFrom?: RowLimitFrom;
 }
 
 export interface KxNotebookCell {
@@ -33,6 +35,14 @@ export interface KxNotebookOutput {
 export interface KxNotebookOutputItem {
   data: string;
   mime: string;
+}
+
+export type RowLimitFrom = "first" | "last";
+
+// How many table rows a notebook cell output shows, and from which end.
+export interface RowLimit {
+  limit: number;
+  from: RowLimitFrom;
 }
 
 export const enum CellKind {

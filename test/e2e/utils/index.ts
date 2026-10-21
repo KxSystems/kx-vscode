@@ -223,3 +223,41 @@ export async function waitForLanguageServer(uri: vscode.Uri) {
   }
   assert.fail("the language server did not answer");
 }
+
+/**
+ * Runs every cell of a notebook on the KX kernel, and waits for each to show
+ * what came back. The outputs are cleared first, so what is waited for is this
+ * run's and not a previous one's.
+ */
+export async function executeNotebook(notebook: vscode.NotebookDocument) {
+  await vscode.window.showNotebookDocument(notebook);
+  await vscode.commands.executeCommand("notebook.selectKernel", {
+    id: "kx-notebook-1",
+    extension: "KX.kdb",
+  });
+  await vscode.commands.executeCommand("notebook.clearAllCellsOutputs");
+  await until(
+    () => notebook.getCells().every((cell) => cell.outputs.length === 0),
+    "the previous outputs to be cleared",
+  );
+  await vscode.commands.executeCommand("notebook.execute");
+  await until(
+    () => notebook.getCells().every((cell) => cell.outputs.length > 0),
+    `every cell of ${path.basename(notebook.uri.path)} to show its result`,
+  );
+  return outputs(notebook);
+}
+
+/**
+ * Closes a notebook without saving what running it changed, so a fixture is
+ * left as committed and closing the window raises no save prompt.
+ */
+export async function discardNotebook(notebook: vscode.NotebookDocument) {
+  if (notebook.isClosed) {
+    return;
+  }
+  await vscode.window.showNotebookDocument(notebook);
+  await vscode.commands.executeCommand(
+    "workbench.action.revertAndCloseActiveEditor",
+  );
+}

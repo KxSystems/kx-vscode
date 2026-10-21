@@ -729,6 +729,35 @@ describe("ResultsPanelProvider", () => {
       assert.equal(viewStub.show.called, false);
       assert.equal(updateWebViewStub.called, false);
     });
+
+    describe("results panel CSV", () => {
+      const results = {
+        data: {
+          rows: [
+            { prop1: "value1", prop2: "value2" },
+            { prop1: "value3", prop2: "value4" },
+          ],
+          meta: { prop1: "type1", prop2: "type2" },
+        },
+      };
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should leave ext.resultPanelCSV when updateResultsPanelCSV is false", () => {
+        sinon.stub(ext, "resultPanelCSV").value("previous");
+        const output = renderer.convertToGrid(
+          results,
+          true,
+          undefined,
+          false,
+          false,
+        );
+        assert.strictEqual(ext.resultPanelCSV, "previous");
+        assert.strictEqual(output.rowData.length, 2);
+      });
+    });
   });
 
   describe("exportToCsv", () => {

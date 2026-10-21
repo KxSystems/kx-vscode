@@ -95,7 +95,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   async exportToCsv() {
-    if (ext.resultPanelCSV === "") {
+    if (!ext.resultPanelCSV) {
       notify("No results to export", MessageKind.ERROR, { logger });
       return;
     }

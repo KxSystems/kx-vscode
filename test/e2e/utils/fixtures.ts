@@ -321,8 +321,12 @@ export const ROWS = [
 ];
 
 // The shape a 1.12+ instance returns when asked for structuredText, which is
-// what the results view renders from.
-export function structuredText(rows: Record<string, unknown>[] = ROWS) {
+// what the results view renders from. `count` is the row count of the whole
+// result, which is more than the rows carried when the process sampled them.
+export function structuredText(
+  rows: Record<string, unknown>[] = ROWS,
+  count = rows.length,
+) {
   const columns =
     rows.length === 0
       ? []
@@ -333,5 +337,5 @@ export function structuredText(rows: Record<string, unknown>[] = ROWS) {
           order: rows.map((_row, index) => index),
         }));
 
-  return { columns, count: rows.length };
+  return { columns, count };
 }

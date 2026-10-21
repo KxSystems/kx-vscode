@@ -88,6 +88,11 @@ import { KxNotebookController } from "./services/notebookController";
 import {
   inputVariable,
   KxNotebookTargetActionProvider,
+  trackNotebookOnRepl,
+  trackNotebookRowLimit,
+  pickRowLimit,
+  pickRowLimitFrom,
+  ROW_LIMIT_PRESETS,
 } from "./services/notebookProviders";
 import { KxNotebookSerializer } from "./services/notebookSerializer";
 import { QueryEditorProvider } from "./services/queryEditorProvider";
@@ -300,6 +305,8 @@ export async function activate(context: vscode.ExtensionContext) {
   // Track the last-focused KX target terminal (REPL or connection console) as
   // the active execution target for unassigned files.
   context.subscriptions.push(initActiveTargetTracking());
+  context.subscriptions.push(trackNotebookOnRepl());
+  context.subscriptions.push(trackNotebookRowLimit());
 
   // Make the KDB Results view discoverable from a connection console: the
   // console prints an "Open KDB Results View" hint, which this provider turns
@@ -1110,6 +1117,17 @@ function registerNotebookCommands(): CommandRegistration[] {
         await vscode.window.showNotebookDocument(notebook);
       },
     },
+    // The toolbar shows the current setting as the button label, so each
+    // value has its own command; they all open the same picker.
+    ...["kdb.notebook.rowLimit"]
+      .concat(
+        ROW_LIMIT_PRESETS.map((limit) => `kdb.notebook.rowLimit.${limit}`),
+      )
+      .map((command) => ({ command, callback: () => pickRowLimit() })),
+    ...["first", "last"].map((from) => ({
+      command: `kdb.notebook.rowLimitFrom.${from}`,
+      callback: () => pickRowLimitFrom(),
+    })),
   ];
 
   return notebookCommands;

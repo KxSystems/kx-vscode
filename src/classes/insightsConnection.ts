@@ -32,6 +32,7 @@ import {
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { JwtUser } from "../models/jwt_user";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
+import { RowLimit } from "../models/notebook";
 import { PREVIEW, parseValue } from "../models/query";
 import { StructuredTextResults } from "../models/queryResult";
 import { ScratchpadRequestBody } from "../models/scratchpad";
@@ -893,6 +894,7 @@ export class InsightsConnection {
     isTableView?: boolean,
     timeout?: number,
     requestID?: string,
+    rowLimit?: RowLimit,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       if (isTableView === undefined) {
@@ -906,8 +908,8 @@ export class InsightsConnection {
         expression: query,
         language: !isPython ? "q" : "python",
         context: context || ".",
-        sampleFn: "first",
-        sampleSize: 10000,
+        sampleFn: rowLimit?.from ?? "first",
+        sampleSize: rowLimit?.limit ?? 10000,
         requestID: requestID || crypto.randomUUID(),
       };
 

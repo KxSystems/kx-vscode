@@ -138,6 +138,48 @@ describe("LocalConnection", () => {
       );
     });
 
+    describe("row limit", () => {
+      let kStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        kStub = sinon
+          .stub()
+          .callsArgWith(2, null, { data: '"ok"', error: false });
+        localConn["connection"] = <any>{ k: kStub };
+      });
+
+      it("should send the rowLimit for a q query", async () => {
+        await localConn.executeQuery("til 10", undefined, false, false, {
+          limit: 10,
+          from: "last",
+        });
+
+        assert.deepStrictEqual(kStub.firstCall.args[1], {
+          ctx: ".",
+          code: "til 10",
+          returnFormat: "structuredText",
+          sampleFn: null,
+          sampleSize: null,
+          rowLimit: { size: 10, from: "last" },
+        });
+      });
+
+      it("should send the rowLimit for a python query and keep its sample", async () => {
+        await localConn.executeQuery("1+1", undefined, false, true, {
+          limit: 1000,
+          from: "first",
+        });
+
+        assert.deepStrictEqual(kStub.firstCall.args[1], {
+          code: "1+1",
+          returnFormat: "structuredText",
+          sample_fn: "first",
+          sample_size: 10000,
+          rowLimit: { size: 1000, from: "first" },
+        });
+      });
+    });
+
     // A custom .z.pg, or a gateway that wraps every result, answers with
     // whatever it likes instead of the wrapper's data/error dictionary.
     for (const [shape, response] of [

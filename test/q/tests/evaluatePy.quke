@@ -638,3 +638,91 @@ feature python toStructuredText
             .qu.compare[.test.evaluatePy["structuredText"; "kx.q('0x89504e470d0a1a0a01020304050607080910')"] `data; 0x89504e470d0a1a0a01020304050607080910];
         expect PNG byte strings to be returned serialized if the return format is text
             .qu.compare[.test.evaluatePy["text"; "kx.q('0x89504e470d0a1a0aaabbccddeeff')"] `data; 0x89504e470d0a1a0aaabbccddeeff];
+
+feature python toStructuredText rowLimit
+    before
+        .pykx.pyexec "import pykx as kx";
+        .pykx.pyexec "import pandas as pd";
+        .struct.TABULAR_LIMIT: 600000;
+        .test.src: "\n" sv read0 `:resources/q/evaluatePy.q;
+        // rowLimit is sent by notebooks alongside the default sample, which it overrides
+        .test.evaluatePyRows: {[code; rowLimit]
+            0i (.test.src; `returnFormat`code`sample_fn`sample_size`rowLimit!("structuredText"; code; "first"; 10000; rowLimit))
+            };
+
+    should apply the notebook rowLimit to python structured text
+        expect the last N rows of a pandas dataframe, with the full row count
+            result: .j.k .test.evaluatePyRows["pd.DataFrame({'x': list(range(20))})"; `size`from!(3f; "last")]`data;
+            .qu.compare[(result`count; last[result`columns]`name; last[result`columns]`values); (20f; enlist "x"; ("17";"18";"19"))]
+        expect the last N rows of a pandas dataframe not to gain an index column
+            .qu.compare[
+                .test.evaluatePyRows["pd.DataFrame({'x': list(range(20))})"; `size`from!(3f; "last")]`data;
+                "{\"count\":20,\"columns\":[{\"name\":\"x\",\"type\":\"list\",\"values\":[\"17\",\"18\",\"19\"],\"order\":[0,1,2]}],\"warnings\":[]}"]
+        expect the first N rows of a pandas dataframe, with the full row count
+            .qu.compare[
+                .test.evaluatePyRows["pd.DataFrame({'x': list(range(20))})"; `size`from!(3f; "first")]`data;
+                "{\"count\":20,\"columns\":[{\"name\":\"x\",\"type\":\"list\",\"values\":[\"0\",\"1\",\"2\"],\"order\":[0,1,2]}],\"warnings\":[]}"]
+        expect the last N rows of a q table
+            .qu.compare[
+                .test.evaluatePyRows["kx.q(\"([] x: 1 2 3 4 5; z: `a`b`c`d`e)\")"; `size`from!(2f; "last")]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"x\",\"type\":\"LongVector\",\"values\":[\"pykx.LongAtom(pykx.q('4'))\",\"pykx.LongAtom(pykx.q('5'))\"],\"order\":[0,1]},{\"name\":\"z\",\"type\":\"SymbolVector\",\"values\":[\"pykx.SymbolAtom(pykx.q('`d'))\",\"pykx.SymbolAtom(pykx.q('`e'))\"],\"order\":[0,1]}],\"warnings\":[]}"]
+        expect the last N items of a list
+            .qu.compare[
+                .test.evaluatePyRows["['apple', 'banana', 'cherry', 'date']"; `size`from!(2f; "last")]`data;
+                "{\"count\":4,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'cherry'\",\"'date'\"],\"order\":[0,1]}],\"warnings\":[]}"]
+        expect the whole list when the limit is larger than the list
+            .qu.compare[
+                .test.evaluatePyRows["[1, 2, 3]"; `size`from!(10f; "last")]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"1\",\"2\",\"3\"],\"order\":[0,1,2]}],\"warnings\":[]}"]
+        expect the last N entries of a dictionary
+            .qu.compare[
+                .test.evaluatePyRows["{'a': 1, 'b': 2, 'c': 3}"; `size`from!(2f; "last")]`data;
+                "{\"count\":3,\"columns\":[{\"name\":\"keys\",\"type\":\"list\",\"values\":[\"'b'\",\"'c'\"],\"order\":[0,1],\"isKey\":true},{\"name\":\"values\",\"type\":\"list\",\"values\":[\"2\",\"3\"],\"order\":[0,1]}],\"warnings\":[]}"]
+        expect python strings to be left whole when taking the first N
+            .qu.compare[
+                .test.evaluatePyRows["'The brown fox'"; `size`from!(3f; "first")]`data;
+                "{\"count\":13,\"columns\":[{\"name\":\"values\",\"type\":\"str\",\"values\":[\"'The brown fox'\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect python strings to be left whole when taking the last N
+            .qu.compare[
+                .test.evaluatePyRows["'The brown fox'"; `size`from!(3f; "last")]`data;
+                "{\"count\":13,\"columns\":[{\"name\":\"values\",\"type\":\"str\",\"values\":[\"'The brown fox'\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect q char vectors to be left whole, as q strings are by formatQ
+            .qu.compare[
+                .test.evaluatePyRows["kx.q(\"\\\"hello\\\"\")"; `size`from!(3f; "last")]`data;
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"CharVector\",\"values\":[\"hello\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect TABULAR_LIMIT to trim the last rows from the end and warn
+            .struct.TABULAR_LIMIT: 2;
+            result: .qu.compare[
+                .test.evaluatePyRows["list(range(20))"; `size`from!(5f; "last")]`data;
+                "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"18\",\"19\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
+            .struct.TABULAR_LIMIT: 600000;
+            result
+        expect TABULAR_LIMIT to trim the first rows from the start and warn
+            .struct.TABULAR_LIMIT: 2;
+            result: .qu.compare[
+                .test.evaluatePyRows["list(range(20))"; `size`from!(5f; "first")]`data;
+                "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"0\",\"1\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
+            .struct.TABULAR_LIMIT: 600000;
+            result
+        expect no TABULAR_LIMIT cut or warning when the rowLimit is already below it
+            .struct.TABULAR_LIMIT: 10;
+            result: .qu.compare[
+                .test.evaluatePyRows["list(range(20))"; `size`from!(5f; "last")]`data;
+                "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"15\",\"16\",\"17\",\"18\",\"19\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"];
+            .struct.TABULAR_LIMIT: 600000;
+            result
+        expect no rowLimit to leave the result unchanged
+            .qu.compare[
+                (0i (.test.src; `returnFormat`code`sample_fn`sample_size!("structuredText"; "['apple', 'banana', 'cherry', 'date']"; "first"; 10000)))`data;
+                "{\"count\":4,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'apple'\",\"'banana'\",\"'cherry'\",\"'date'\"],\"order\":[0,1,2,3]}],\"warnings\":[]}"]
+        expect no rowLimit to keep TABULAR_LIMIT trimming from the start
+            .struct.TABULAR_LIMIT: 2;
+            result: .qu.compare[
+                (0i (.test.src; `returnFormat`code`sample_fn`sample_size!("structuredText"; "list(range(20))"; "first"; 10000)))`data;
+                "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"0\",\"1\"],\"order\":[0,1]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
+            .struct.TABULAR_LIMIT: 600000;
+            result
+        expect a rowLimit of (::) to be treated as no rowLimit
+            .qu.compare[
+                .test.evaluatePyRows["['apple', 'banana', 'cherry', 'date']"; ::]`data;
+                "{\"count\":4,\"columns\":[{\"name\":\"values\",\"type\":\"list\",\"values\":[\"'apple'\",\"'banana'\",\"'cherry'\",\"'date'\"],\"order\":[0,1,2,3]}],\"warnings\":[]}"]

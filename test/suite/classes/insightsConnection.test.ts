@@ -22,6 +22,7 @@ import {
 } from "../../../src/classes/insightsConnection";
 import { ext } from "../../../src/extensionVariables";
 import { DataSourceTypes } from "../../../src/models/dataSource";
+import { RowLimit } from "../../../src/models/notebook";
 import * as loggers from "../../../src/utils/loggers";
 
 describe("insightsConnection", () => {
@@ -115,7 +116,7 @@ describe("insightsConnection", () => {
   });
 
   describe("getScratchpadQuery", () => {
-    const withConnection = (requestID?: string) => {
+    const withConnection = (requestID?: string, rowLimit?: RowLimit) => {
       const conn = new InsightsConnection("conn", <any>{
         details: { alias: "conn", server: "https://test.kx.com" },
         label: "conn",
@@ -129,7 +130,15 @@ describe("insightsConnection", () => {
         .resolves(undefined);
 
       return conn
-        .getScratchpadQuery("1+1", ".", false, false, undefined, requestID)
+        .getScratchpadQuery(
+          "1+1",
+          ".",
+          false,
+          false,
+          undefined,
+          requestID,
+          rowLimit,
+        )
         .then(() => getOptions.getCall(0).args[4] as any);
     };
 
@@ -153,6 +162,23 @@ describe("insightsConnection", () => {
       const second = await withConnection();
 
       assert.notStrictEqual(first.requestID, second.requestID);
+    });
+
+    it("should sample the first 10,000 rows without a row limit", async () => {
+      const body = await withConnection();
+
+      assert.strictEqual(body.sampleFn, "first");
+      assert.strictEqual(body.sampleSize, 10000);
+    });
+
+    it("should sample the last rows of a notebook row limit", async () => {
+      const body = await withConnection(undefined, {
+        limit: 1000000000,
+        from: "last",
+      });
+
+      assert.strictEqual(body.sampleFn, "last");
+      assert.strictEqual(body.sampleSize, 1000000000);
     });
   });
 

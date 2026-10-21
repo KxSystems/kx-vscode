@@ -99,6 +99,57 @@ feature toStructuredText
             setenv[`TABULAR_LIMIT;"ADRIAN"];
             .test.exampleList: 1.1 452 -32.9;
             .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat!("."; ".test.exampleList"; ::; "structuredText")]`data; "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"floats\",\"values\":[\"1.1\",\"452f\",\"-32.9\"],\"order\":[2,0,1]}],\"warnings\":[]}"]   
+    should apply the notebook rowLimit before formatting structured text
+        expect the first N rows of a large table, with the full row count
+            .test.bigTable: ([] x: til 1000000);
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; ".test.bigTable"; ::; "structuredText"; `size`from!(10f; "first"))]`data; "{\"count\":1000000,\"columns\":[{\"name\":\"x\",\"type\":\"longs\",\"values\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\"],\"order\":[0,1,2,3,4,5,6,7,8,9]}],\"warnings\":[]}"]
+        expect the last N rows of a large table, with the full row count
+            .test.bigTable: ([] x: til 1000000);
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; ".test.bigTable"; ::; "structuredText"; `size`from!(10f; "last"))]`data; "{\"count\":1000000,\"columns\":[{\"name\":\"x\",\"type\":\"longs\",\"values\":[\"999990\",\"999991\",\"999992\",\"999993\",\"999994\",\"999995\",\"999996\",\"999997\",\"999998\",\"999999\"],\"order\":[0,1,2,3,4,5,6,7,8,9]}],\"warnings\":[]}"]
+        expect only the final row when the limit is the last 1
+            .test.bigTable: ([] x: til 1000000);
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; ".test.bigTable"; ::; "structuredText"; `size`from!(1f; "last"))]`data; "{\"count\":1000000,\"columns\":[{\"name\":\"x\",\"type\":\"longs\",\"values\":[\"999999\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect the whole table when the limit is larger than the table
+            .test.smallTable: ([] name: `a`b`c; v: 1 2 3);
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; ".test.smallTable"; ::; "structuredText"; `size`from!(100f; "last"))]`data; "{\"count\":3,\"columns\":[{\"name\":\"name\",\"type\":\"symbols\",\"values\":[\"`a\",\"`b\",\"`c\"],\"order\":[0,1,2]},{\"name\":\"v\",\"type\":\"longs\",\"values\":[\"1\",\"2\",\"3\"],\"order\":[0,1,2]}],\"warnings\":[]}"]
+        expect TABULAR_LIMIT to trim the last rows from the end and warn
+            setenv[`TABULAR_LIMIT;"10"];
+            .test.table20: ([] x: til 20; y: 100 + til 20);
+            result: .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; ".test.table20"; ::; "structuredText"; `size`from!(15f; "last"))]`data; "{\"count\":20,\"columns\":[{\"name\":\"x\",\"type\":\"longs\",\"values\":[\"15\",\"16\",\"17\",\"18\",\"19\"],\"order\":[0,1,2,3,4]},{\"name\":\"y\",\"type\":\"longs\",\"values\":[\"115\",\"116\",\"117\",\"118\",\"119\"],\"order\":[0,1,2,3,4]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
+            setenv[`TABULAR_LIMIT;"600000"];
+            result
+        expect TABULAR_LIMIT to trim the first rows from the start and warn
+            setenv[`TABULAR_LIMIT;"10"];
+            .test.table20: ([] x: til 20; y: 100 + til 20);
+            result: .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; ".test.table20"; ::; "structuredText"; `size`from!(15f; "first"))]`data; "{\"count\":20,\"columns\":[{\"name\":\"x\",\"type\":\"longs\",\"values\":[\"0\",\"1\",\"2\",\"3\",\"4\"],\"order\":[0,1,2,3,4]},{\"name\":\"y\",\"type\":\"longs\",\"values\":[\"100\",\"101\",\"102\",\"103\",\"104\"],\"order\":[0,1,2,3,4]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
+            setenv[`TABULAR_LIMIT;"600000"];
+            result
+        expect TABULAR_LIMIT without a rowLimit to keep reporting the truncated count
+            setenv[`TABULAR_LIMIT;"10"];
+            .test.table20: ([] x: til 20; y: 100 + til 20);
+            result: .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat!("."; ".test.table20"; ::; "structuredText")]`data; "{\"count\":5,\"columns\":[{\"name\":\"x\",\"type\":\"longs\",\"values\":[\"0\",\"1\",\"2\",\"3\",\"4\"],\"order\":[0,1,2,3,4]},{\"name\":\"y\",\"type\":\"longs\",\"values\":[\"100\",\"101\",\"102\",\"103\",\"104\"],\"order\":[0,1,2,3,4]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"];
+            setenv[`TABULAR_LIMIT;"600000"];
+            result
+        expect the last N items of a list
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; "til 10"; ::; "structuredText"; `size`from!(3f; "last"))]`data; "{\"count\":10,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"7\",\"8\",\"9\"],\"order\":[0,1,2]}],\"warnings\":[]}"]
+        expect the last N entries of a dictionary
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; "`a`b`c`d`e!1 2 3 4 5"; ::; "structuredText"; `size`from!(2f; "last"))]`data; "{\"count\":5,\"columns\":[{\"name\":\"key\",\"type\":\"symbols\",\"values\":[\"`d\",\"`e\"],\"order\":[0,1],\"isKey\":true},{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"4\",\"5\"],\"order\":[0,1]}],\"warnings\":[]}"]
+        expect the last N rows of a keyed table
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; "([k: `a`b`c`d] v: 10 20 30 40)"; ::; "structuredText"; `size`from!(2f; "last"))]`data; "{\"count\":4,\"columns\":[{\"name\":\"k\",\"type\":\"symbols\",\"values\":[\"`c\",\"`d\"],\"order\":[0,1],\"isKey\":true},{\"name\":\"v\",\"type\":\"longs\",\"values\":[\"30\",\"40\"],\"order\":[0,1]}],\"warnings\":[]}"]
+        expect atoms to be unaffected
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; "42"; ::; "structuredText"; `size`from!(5f; "last"))]`data; "{\"count\":1,\"columns\":[{\"name\":\"values\",\"type\":\"long\",\"values\":[\"42\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect strings to be left whole when taking the first N
+            .test.exampleString: "ThisIsAExampleString";
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; ".test.exampleString"; ::; "structuredText"; `size`from!(5f; "first"))]`data; "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"chars\",\"values\":[\"\\\"ThisIsAExampleString\\\"\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect strings to be left whole when taking the last N
+            .test.exampleString: "ThisIsAExampleString";
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; ".test.exampleString"; ::; "structuredText"; `size`from!(5f; "last"))]`data; "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"chars\",\"values\":[\"\\\"ThisIsAExampleString\\\"\"],\"order\":[0]}],\"warnings\":[]}"]
+        expect a long size to work the same as the float node-q sends
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; "til 10"; ::; "structuredText"; `size`from!(3; "last"))]`data; .test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; "til 10"; ::; "structuredText"; `size`from!(3f; "last"))]`data]
+        expect no rowLimit to leave the result unchanged
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat!("."; "til 10"; ::; "structuredText")]`data; "{\"count\":10,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\"],\"order\":[0,1,2,3,4,5,6,7,8,9]}],\"warnings\":[]}"]
+        expect a rowLimit of (::) to be treated as no rowLimit
+            .qu.compare[.test.evaluateAndFormat[`ctx`code`sampleFn`returnFormat`rowLimit!("."; "til 10"; ::; "structuredText"; ::)]`data; "{\"count\":10,\"columns\":[{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"0\",\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\"],\"order\":[0,1,2,3,4,5,6,7,8,9]}],\"warnings\":[]}"]
     should return a dictionary in structured text
         expect return dictionary to contain proper keys in the form of `data`error`errorMsg`stacktrace
             .test.exampleList: 1.1 452 -32.9;
