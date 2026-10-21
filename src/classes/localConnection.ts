@@ -24,7 +24,6 @@ import {
 } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
 import { handleQueryResults } from "../utils/execution";
-import { kdbOutputLog } from "../utils/loggers";
 import { MessageKind, notify } from "../utils/notifications";
 import { appendStacktrace, queryWrapper } from "../utils/queryUtils";
 
@@ -290,10 +289,10 @@ export class LocalConnection {
     ext.variables.length = 0;
 
     if (!Array.isArray(globals)) {
-      kdbOutputLog(
-        `[${logger}] Global variable query returned ${typeof globals}, expected a table; completions will be empty.`,
-        "WARNING",
-        true,
+      notify(
+        "Global variable query did not return a table, completions will be empty.",
+        MessageKind.DEBUG,
+        { logger },
       );
       return;
     }
