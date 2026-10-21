@@ -204,7 +204,6 @@ export namespace ext {
   export const variables: Array<string> = [];
   export const tables: Array<string> = [];
   // eslint-disable-next-line prefer-const
-  export let keywords: Array<string> = [];
 
   export const qObjectCategories = [
     "Dictionaries",
