@@ -227,6 +227,7 @@ export function getInsightsServers() {
   );
 
   return Object.values(servers)
+    .filter((server) => typeof server?.alias === "string")
     .map(({ alias }) => alias)
     .sort((a, b) => a.localeCompare(b));
 }
@@ -240,6 +241,7 @@ function getServers() {
 
   return [
     ...Object.values(servers)
+      .filter((server) => typeof server?.serverAlias === "string")
       .map(({ serverAlias }) => serverAlias)
       .sort((a, b) => a.localeCompare(b)),
     ...getInsightsServers(),

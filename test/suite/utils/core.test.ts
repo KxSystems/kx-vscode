@@ -26,6 +26,7 @@ import {
 import * as coreUtils from "../../../src/utils/core";
 import * as cpUtils from "../../../src/utils/cpUtils";
 import * as loggers from "../../../src/utils/loggers";
+import * as notifications from "../../../src/utils/notifications";
 import * as shellUtils from "../../../src/utils/shell";
 
 describe("core", () => {
@@ -293,6 +294,155 @@ describe("core", () => {
         .resolves();
       coreUtils.noSelectedConnectionAction();
       assert.ok(stub.calledOnce);
+    });
+  });
+
+  describe("corrupted connection settings", () => {
+    let getStub: sinon.SinonStub,
+      updateStub: sinon.SinonStub,
+      notifyStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getStub = sinon.stub();
+      updateStub = sinon.stub().resolves();
+      sinon
+        .stub(vscode.workspace, "getConfiguration")
+        .returns({ get: getStub, update: updateStub } as any);
+      notifyStub = sinon.stub(notifications, "notify");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("getServers should skip entries without a string serverAlias", () => {
+      getStub.withArgs("kdb.servers").returns({
+        bad1: { serverName: "x" },
+        bad2: null,
+        bad3: { serverAlias: 5 },
+        good: { serverAlias: "good", serverName: "localhost" },
+      });
+
+      const result = coreUtils.getServers();
+
+      assert.deepStrictEqual(Object.keys(result), ["good"]);
+      assert.strictEqual(notifyStub.callCount, 3);
+    });
+
+    it("getServers should return {} when the setting is not an object", () => {
+      getStub.withArgs("kdb.servers").returns(["not", "an", "object"]);
+
+      assert.deepStrictEqual(coreUtils.getServers(), {});
+      assert.ok(notifyStub.calledOnce);
+    });
+
+    it("getServers should report the same problem only once", () => {
+      getStub.withArgs("kdb.servers").returns({ dup: { serverName: "x" } });
+
+      coreUtils.getServers();
+      coreUtils.getServers();
+
+      assert.strictEqual(notifyStub.callCount, 1);
+    });
+
+    it("getServers should report a problem again after it was fixed", () => {
+      const broken = { again: { serverName: "x" } };
+      getStub.withArgs("kdb.servers").returns(broken);
+      coreUtils.getServers();
+
+      getStub
+        .withArgs("kdb.servers")
+        .returns({ again: { serverAlias: "again" } });
+      coreUtils.getServers();
+
+      getStub.withArgs("kdb.servers").returns(broken);
+      coreUtils.getServers();
+
+      assert.strictEqual(notifyStub.callCount, 2);
+    });
+
+    it("getInsights should skip entries without a string alias", () => {
+      getStub.withArgs("kdb.insightsEnterpriseConnections").returns({
+        bad: { server: "https://x" },
+        good: { alias: "good", server: "https://good" },
+      });
+
+      const result = coreUtils.getInsights();
+
+      assert.deepStrictEqual(Object.keys(result), ["good"]);
+      assert.ok(notifyStub.calledOnce);
+    });
+
+    it("getInsights should return {} when the setting is a string", () => {
+      getStub.withArgs("kdb.insightsEnterpriseConnections").returns("oops");
+
+      assert.deepStrictEqual(coreUtils.getInsights(), {});
+      assert.ok(notifyStub.calledOnce);
+    });
+
+    it("updateServers should keep the invalid entries it was not given", async () => {
+      const bad = { serverName: "x" };
+      getStub.withArgs("kdb.servers").returns({
+        bad,
+        old: { serverAlias: "old" },
+      });
+
+      await coreUtils.updateServers({ added: { serverAlias: "added" } as any });
+
+      assert.ok(updateStub.calledOnce);
+      assert.strictEqual(updateStub.firstCall.args[0], "kdb.servers");
+      assert.deepStrictEqual(updateStub.firstCall.args[1], {
+        bad,
+        added: { serverAlias: "added" },
+      });
+    });
+
+    it("updateInsights should keep the invalid entries it was not given", async () => {
+      const bad = { server: "https://x" };
+      getStub
+        .withArgs("kdb.insightsEnterpriseConnections")
+        .returns({ bad, good: { alias: "good" } });
+
+      await coreUtils.updateInsights({ good: { alias: "good2" } as any });
+
+      assert.deepStrictEqual(updateStub.firstCall.args[1], {
+        bad,
+        good: { alias: "good2" },
+      });
+    });
+
+    it("getInsights should not migrate legacy data over invalid entries", () => {
+      getStub
+        .withArgs("kdb.insightsEnterpriseConnections")
+        .returns({ bad: { server: "https://x" } });
+      getStub.withArgs("kdb.insights").returns({ l: { alias: "l" } });
+
+      assert.deepStrictEqual(coreUtils.getInsights(), {});
+      assert.ok(updateStub.notCalled);
+    });
+
+    it("getInsights should migrate legacy entries but keep the legacy setting when some are invalid", () => {
+      getStub.withArgs("kdb.insights").returns({
+        l: { alias: "l" },
+        bad: { server: "https://x" },
+      });
+
+      assert.deepStrictEqual(Object.keys(coreUtils.getInsights()), ["l"]);
+      assert.ok(
+        updateStub.calledWith(
+          "kdb.insightsEnterpriseConnections",
+          sinon.match({ l: { alias: "l" } }),
+        ),
+      );
+      assert.ok(updateStub.neverCalledWith("kdb.insights"));
+    });
+
+    it("getInsights should clear the legacy setting once all entries migrate", () => {
+      getStub.withArgs("kdb.insights").returns({ l: { alias: "l" } });
+
+      coreUtils.getInsights();
+
+      assert.ok(updateStub.calledWith("kdb.insights", undefined));
     });
   });
 

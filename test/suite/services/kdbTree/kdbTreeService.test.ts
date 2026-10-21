@@ -18,6 +18,7 @@ import { LocalConnection } from "../../../../src/classes/localConnection";
 import { ext } from "../../../../src/extensionVariables";
 import { ServerObject } from "../../../../src/models/serverObject";
 import { KdbTreeService } from "../../../../src/services/kdbTreeService";
+import * as loggers from "../../../../src/utils/loggers";
 
 describe("kdbTreeService", () => {
   const localConn = new LocalConnection("localhost:5001", "server1", []);
@@ -308,6 +309,27 @@ describe("kdbTreeService", () => {
       const result = await KdbTreeService.loadViews(localConn);
       assert.strictEqual(result[0], "vw1", "Should return the first view");
     });
+
+    // A custom .z.pg or a gateway can answer with something other than the
+    // symbol list views returns; executeQueryRaw turns a null answer into "".
+    for (const [shape, answer] of [
+      ["a string", "wrapped"],
+      ["a dictionary", { a: 1, b: 2 }],
+      ["nothing", ""],
+    ] as const) {
+      it(`Should list no views and warn when the answer is ${shape}`, async () => {
+        const log = sinon.stub(loggers, "kdbOutputLog");
+        sinon.stub(localConn, "executeQueryRaw").resolves(answer);
+
+        const result = await KdbTreeService.loadViews(localConn);
+
+        assert.deepStrictEqual(result, []);
+        assert.ok(
+          log.calledWithMatch(sinon.match("expected a list"), "WARNING"),
+          "no warning was logged",
+        );
+      });
+    }
   });
   /**
    * The listing a process answers with, filed the way the tree draws it. The

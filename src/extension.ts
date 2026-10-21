@@ -710,7 +710,10 @@ function registerConnectionsCommands(): CommandRegistration[] {
   const connectionCommands: CommandRegistration[] = [
     {
       command: "kdb.connections.connect",
-      callback: async (viewItem: KdbNode | InsightsNode) => {
+      callback: async (viewItem?: KdbNode | InsightsNode) => {
+        if (!viewItem?.label) {
+          return;
+        }
         await connect(viewItem.label);
       },
     },
@@ -722,13 +725,19 @@ function registerConnectionsCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.connections.setActive",
-      callback: async (viewItem: KdbNode) => {
+      callback: async (viewItem?: KdbNode) => {
+        if (!viewItem) {
+          return;
+        }
         activeConnection(viewItem);
       },
     },
     {
       command: "kdb.connections.addAuthentication",
-      callback: async (viewItem: KdbNode) => {
+      callback: async (viewItem?: KdbNode) => {
+        if (!viewItem?.children?.[0]) {
+          return;
+        }
         const username = await vscode.window.showInputBox({
           prompt: "Username",
           title: "Add Authentication",
@@ -747,27 +756,39 @@ function registerConnectionsCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.connections.enableTLS",
-      callback: async (viewItem: KdbNode) => {
+      callback: async (viewItem?: KdbNode) => {
+        if (!viewItem?.children?.[0]) {
+          return;
+        }
         await enableTLS(viewItem.children[0]);
       },
     },
     {
       command: "kdb.connections.remove.insights",
-      callback: async (viewItem: InsightsNode) => {
+      callback: async (viewItem?: InsightsNode) => {
+        if (!viewItem) {
+          return;
+        }
         await removeConnection(viewItem);
       },
     },
     {
       command: "kdb.connections.remove.kdb",
-      callback: async (viewItem: KdbNode) => {
+      callback: async (viewItem?: KdbNode) => {
+        if (!viewItem) {
+          return;
+        }
         await removeConnection(viewItem);
       },
     },
     {
       command: "kdb.connections.disconnect",
-      callback: async (viewItem: InsightsNode | KdbNode | string) => {
+      callback: async (viewItem?: InsightsNode | KdbNode | string) => {
         const connLabel =
-          typeof viewItem === "string" ? viewItem : viewItem.label;
+          typeof viewItem === "string" ? viewItem : viewItem?.label;
+        if (!connLabel) {
+          return;
+        }
         await disconnect(connLabel);
       },
     },
@@ -783,7 +804,10 @@ function registerConnectionsCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.connections.export.single",
-      callback: async (viewItem: KdbNode | InsightsNode) => {
+      callback: async (viewItem?: KdbNode | InsightsNode) => {
+        if (!viewItem?.label) {
+          return;
+        }
         notify("Export single conection.", MessageKind.DEBUG, {
           logger,
           telemetry: "Connection.Export.Single",
@@ -804,7 +828,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.content.selectView",
       callback: async (viewItem) => {
-        const connLabel = viewItem.connLabel;
+        const connLabel = viewItem?.connLabel;
         if (connLabel) {
           const executorName = viewItem.coreIcon.substring(2);
           executeQuery(
@@ -825,7 +849,10 @@ function registerConnectionsCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.connections.open.meta",
-      callback: async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {
+      callback: async (viewItem?: InsightsMetaNode | MetaObjectPayloadNode) => {
+        if (!viewItem) {
+          return;
+        }
         await openMeta(viewItem);
       },
     },
@@ -837,7 +864,10 @@ function registerConnectionsCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.connections.edit",
-      callback: async (viewItem: KdbNode | InsightsNode) => {
+      callback: async (viewItem?: KdbNode | InsightsNode) => {
+        if (!viewItem) {
+          return;
+        }
         await editConnection(viewItem);
       },
     },
@@ -888,10 +918,10 @@ function registerConnectionsCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.connections.refresh.meta",
-      callback: async (viewItem: InsightsNode) => {
-        const runner = Runner.create(() => refreshGetMeta(viewItem.label));
+      callback: async (viewItem?: InsightsNode) => {
+        const runner = Runner.create(() => refreshGetMeta(viewItem?.label));
         runner.location = vscode.ProgressLocation.Notification;
-        runner.title = `Refreshing meta data for ${viewItem.label || "all connections"}.`;
+        runner.title = `Refreshing meta data for ${viewItem?.label || "all connections"}.`;
         await runner.execute();
       },
     },
