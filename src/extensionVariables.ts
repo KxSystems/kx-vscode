@@ -140,7 +140,7 @@ export namespace ext {
 
   export const urlLinks = {
     survey:
-      "https://app.userevidence.com/surveys/19ef1ece-d53d-4dc8-8852-78509615b629/share",
+      "https://app.userevidence.com/surveys/08f20f94-7d58-4194-903b-6090a5916028/share",
     suggestFeature: "https://forum.kx.com/c/ideas-feature-requests",
     reportBug: "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
   };
