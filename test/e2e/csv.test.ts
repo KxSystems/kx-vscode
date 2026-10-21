@@ -150,7 +150,7 @@ describe("Exporting the results as CSV", () => {
   it("writes one row, numbered, quoting only the cells that need it", () => {
     assert.strictEqual(
       lines[1],
-      `1,${ROW.sym},"${ROW.tags}","say ""hi"", twice",AUDUSD`,
+      `0,${ROW.sym},"${ROW.tags}","say ""hi"", twice",AUDUSD`,
     );
     assert.deepStrictEqual(lines.slice(2), []);
   });

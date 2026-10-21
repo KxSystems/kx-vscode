@@ -227,6 +227,7 @@ export function getInsightsServers() {
   );
 
   return Object.values(servers)
+    .filter((server) => typeof server?.alias === "string")
     .map(({ alias }) => alias)
     .sort((a, b) => a.localeCompare(b));
 }
@@ -240,6 +241,7 @@ function getServers() {
 
   return [
     ...Object.values(servers)
+      .filter((server) => typeof server?.serverAlias === "string")
       .map(({ serverAlias }) => serverAlias)
       .sort((a, b) => a.localeCompare(b)),
     ...getInsightsServers(),
@@ -1004,6 +1006,22 @@ export async function resolveRunTarget(
   }
 
   return { kind: "repl" };
+}
+
+// Whether resolveRunTarget sends this file to the REPL, worked out without
+// looking up the connection assigned to it.
+export function runsOnRepl(uri: Uri): boolean {
+  const server = getServerForUri(uri);
+  if (server !== undefined) {
+    return isRepl(server);
+  }
+  const active = getActiveTarget();
+  return !(
+    active?.kind === "connection" &&
+    new ConnectionManagementService().retrieveConnectedConnection(
+      active.connLabel,
+    )
+  );
 }
 
 export async function runActiveEditor(type?: ExecutionTypes) {

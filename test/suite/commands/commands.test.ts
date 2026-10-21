@@ -73,6 +73,8 @@ describe("Commands", () => {
         "kdb.scratchpad.python.run.file",
         "kdb.execute.block",
         "kdb.toggleParameterCache",
+        "kdb.notebook.rowLimit",
+        "kdb.notebook.rowLimitFrom.first",
       ];
       const shown = palette.filter(
         (cmd: any) => cmd.when !== "true" && cmd.when !== "false",

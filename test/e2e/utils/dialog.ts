@@ -29,8 +29,9 @@ import * as vscode from "vscode";
  * test can assert what the user was offered as well as what was done with the
  * answer.
  *
- * A quick pick nothing has been queued for is passed to the workbench and
- * shown as usual, the way an unanswered notification is. A file dialog is not:
+ * A quick pick or an input box nothing has been queued for is passed to the
+ * workbench and shown as usual, the way an unanswered notification is. A file
+ * dialog is not:
  * there is no one to dismiss it, so an unanswered one is answered the way a
  * dialog closed without a choice is, and a test that forgets to queue an answer
  * fails on the outcome rather than hanging until the timeout.
@@ -41,9 +42,12 @@ import * as vscode from "vscode";
  */
 
 export interface Request {
-  kind: "open" | "save" | "pick";
+  kind: "open" | "save" | "pick" | "input";
   prompt: string;
   options: any;
+  // What an input box's validateInput made of the value typed into it, when it
+  // refused it.
+  invalid?: string;
 }
 
 export const requests: Request[] = [];
@@ -53,11 +57,16 @@ interface Choice {
   match?: string;
   uri?: vscode.Uri;
   label?: string;
+  value?: string;
 }
 
 const choices: Choice[] = [];
 
-type Stubbed = "showOpenDialog" | "showSaveDialog" | "showQuickPick";
+type Stubbed =
+  | "showOpenDialog"
+  | "showSaveDialog"
+  | "showQuickPick"
+  | "showInputBox";
 
 let real: { [method in Stubbed]: any } | undefined;
 
@@ -73,7 +82,9 @@ function wording(kind: Request["kind"], options: any): string {
   const parts =
     kind === "pick"
       ? [options?.title, options?.placeHolder]
-      : [options?.title, options?.saveLabel, options?.openLabel];
+      : kind === "input"
+        ? [options?.title, options?.prompt]
+        : [options?.title, options?.saveLabel, options?.openLabel];
   return parts.filter(Boolean).join(" ");
 }
 
@@ -94,6 +105,7 @@ function install() {
     showOpenDialog: vscode.window.showOpenDialog,
     showSaveDialog: vscode.window.showSaveDialog,
     showQuickPick: vscode.window.showQuickPick,
+    showInputBox: vscode.window.showInputBox,
   };
 
   for (const [kind, method] of [
@@ -130,6 +142,29 @@ function install() {
       );
     },
   );
+
+  const input = real.showInputBox;
+
+  // A value the box's own validation refuses cannot be accepted, so it is
+  // answered the way a box dismissed with Escape is.
+  replace("showInputBox", async (options: any = {}, ...rest: any[]) => {
+    const prompt = wording("input", options);
+    const request: Request = { kind: "input", prompt, options };
+    requests.push(request);
+
+    const choice = take("input", prompt);
+    if (!choice) {
+      return input.call(vscode.window, options, ...rest);
+    }
+
+    const invalid = await options.validateInput?.(choice.value ?? "");
+    const message = typeof invalid === "string" ? invalid : invalid?.message;
+    if (message) {
+      request.invalid = message;
+      return undefined;
+    }
+    return choice.value;
+  });
 }
 
 /**
@@ -158,6 +193,15 @@ export function saves(uri: vscode.Uri, match?: string) {
 export function picks(match: string, label: string) {
   install();
   choices.push({ kind: "pick", match, label });
+}
+
+/**
+ * Types `value` into the next input box whose title or prompt contains
+ * `match`, and accepts it.
+ */
+export function types(match: string, value: string) {
+  install();
+  choices.push({ kind: "input", match, value });
 }
 
 export function cancels(kind: Request["kind"], match?: string) {

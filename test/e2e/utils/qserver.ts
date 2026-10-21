@@ -22,7 +22,17 @@ const codec = require("node-q/lib/c.js");
 // requests, the arguments the extension packed alongside it.
 export interface Request {
   fn: string;
-  args?: { code?: string; ctx?: string; returnFormat?: string };
+  args?: {
+    code?: string;
+    ctx?: string;
+    returnFormat?: string;
+    sampleFn?: string | null;
+    sampleSize?: number | null;
+    sample_fn?: string;
+    sample_size?: number;
+    // Only a notebook cell asks for it: how many table rows, from which end.
+    rowLimit?: { size: number; from: string };
+  };
 }
 
 /**
@@ -91,8 +101,15 @@ export class FakeQ {
 
   // What a query answers with. A suite that renders the result rather than
   // asserting on the request replaces it with something worth rendering — the
-  // structured text a real process answers a results view query with.
-  data: unknown = "OK";
+  // structured text a real process answers a results view query with. A
+  // function is called with the arguments of each query, so a suite can stand
+  // in for a process that answers according to what it was asked, the way
+  // formatQ.q picks the rows a notebook's rowLimit asks for.
+  data: unknown | ((args: NonNullable<Request["args"]>) => unknown) = "OK";
+
+  // What a query answers with in place of the wrapper's dictionary: the
+  // envelope a gateway that wraps every result sends back instead.
+  envelope?: unknown;
 
   // Any query carrying this comes back as a q error instead of a result.
   static readonly FAILS = "FAIL_QUERY";
@@ -225,12 +242,17 @@ export class FakeQ {
       }
     }
 
+    if (this.envelope !== undefined) {
+      return this.envelope;
+    }
+
     if (args.code.includes(FakeQ.FAILS)) {
       return { error: true, errorMsg: FAILURE };
     }
 
     // What LocalConnection.executeQuery expects: no error, and data it can
     // JSON.parse.
-    return { error: false, data: JSON.stringify(this.data) };
+    const data = typeof this.data === "function" ? this.data(args) : this.data;
+    return { error: false, data: JSON.stringify(data) };
   }
 }

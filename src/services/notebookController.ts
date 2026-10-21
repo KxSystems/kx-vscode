@@ -14,7 +14,7 @@
 import * as crypto from "crypto";
 import * as vscode from "vscode";
 
-import { getCellKind } from "./notebookProviders";
+import { getCellKind, getRowLimit } from "./notebookProviders";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
@@ -30,7 +30,7 @@ import {
   resolveRunTarget,
 } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
-import { CellKind } from "../models/notebook";
+import { CellKind, RowLimit } from "../models/notebook";
 import { getBasename, isQuickAlias } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import { registerImageTarget } from "../utils/plotUtils";
@@ -251,6 +251,7 @@ export class KxNotebookController {
 
     const conn = runTarget.conn;
     const { isInsights, connVersion } = this.getInsightProps(conn);
+    const rowLimit = getRowLimit(notebook);
 
     for (const cell of cells) {
       const execution = controller.createNotebookCellExecution(cell);
@@ -296,6 +297,7 @@ export class KxNotebookController {
           target,
           variable,
           context,
+          rowLimit,
         );
 
         let results = await Promise.race([
@@ -328,15 +330,13 @@ export class KxNotebookController {
           results = `Scratchpad variable (${variable}) populated.`;
         }
 
-        const rendered =
-          target || kind === CellKind.SQL
-            ? render(results, kind === CellKind.PYTHON, isInsights)
-            : render(
-                results,
-                kind === CellKind.PYTHON,
-                isInsights,
-                connVersion,
-              );
+        const rendered = render(
+          results,
+          kind === CellKind.PYTHON,
+          isInsights,
+          rowLimit,
+          target || kind === CellKind.SQL ? undefined : connVersion,
+        );
 
         this.writeOutput(execution, rendered, cellTarget);
         success = true;
@@ -417,6 +417,7 @@ export class KxNotebookController {
     target?: string,
     variable?: string,
     context = ".",
+    rowLimit?: RowLimit,
   ): Promise<any> {
     const uri = cell.notebook.uri;
     const executorName = getBasename(uri);
@@ -465,6 +466,7 @@ export class KxNotebookController {
         execution.token,
         timeout,
         requestID,
+        rowLimit,
       );
     }
   }
@@ -492,10 +494,29 @@ interface Rendered {
   mime: string;
 }
 
-function renderTable(table: any): string {
+function renderTable(table: any, rowLimit: RowLimit, total?: number): string {
   const defs: any[] = table.columnDefs;
+  const rowData: any[] = table.rowData || [];
+  const { limit, from } = rowLimit;
+  // q and Insights already pick the rows, so this only cuts a result from a
+  // process that ignores the limit (a secure process on an older vscode.q,
+  // a datasource query).
+  const shown =
+    rowData.length <= limit
+      ? rowData
+      : from === "last"
+        ? rowData.slice(-limit)
+        : rowData.slice(0, limit);
+  // total is the row count of the whole result, which q reports; the last
+  // rows are numbered from the end of it, as the results panel numbers them.
+  const count = Math.max(total ?? 0, rowData.length);
+  const offset = from === "last" ? count - shown.length : 0;
   const fields: string[] = defs.map((def) =>
     "field" in def ? def.field || "" : "",
+  );
+  // The index column convertToGrid adds, not a column of the result
+  const indexAt = defs.findIndex(
+    (def) => def.field === "index" && def.pinned === "left",
   );
 
   const rows: string[] = ["<table>", "<thead>", "<tr>"];
@@ -505,22 +526,43 @@ function renderTable(table: any): string {
   }
   rows.push("</tr>", "</thead>", "<tbody>");
 
-  for (const row of table.rowData || []) {
+  shown.forEach((row, position) => {
     rows.push("<tr>");
-    for (const field of fields) {
-      rows.push(`<td>${field ? escapeHtml(`${row[field]}`) : "n/a"}</td>`);
-    }
+    fields.forEach((field, column) => {
+      const value = column === indexAt ? offset + position : row[field];
+      rows.push(`<td>${field ? escapeHtml(`${value}`) : "n/a"}</td>`);
+    });
     rows.push("</tr>");
-  }
+  });
   rows.push("</tbody>", "</table>");
 
+  if (shown.length < count) {
+    rows.push(
+      `<p>Showing ${from} ${shown.length.toLocaleString("en-US")} of ${count.toLocaleString("en-US")} rows.</p>`,
+    );
+  }
+
   return rows.join("\n");
+}
+
+// Column types formatQ.q (chars) and evaluatePy.q (str, CharVector) give a
+// string result
+const TEXT_TYPES = new Set(["chars", "str", "CharVector"]);
+
+function isTextResult(results: any): boolean {
+  const columns = results.columns;
+  return (
+    Array.isArray(columns) &&
+    columns.length === 1 &&
+    TEXT_TYPES.has(columns[0]?.type)
+  );
 }
 
 function render(
   results: any,
   isPython: boolean,
   isInsights: boolean,
+  rowLimit: RowLimit,
   connVersion?: string,
 ): Rendered {
   const plot = resultToBase64(results);
@@ -533,9 +575,20 @@ function render(
   }
 
   if (results) {
-    const table = convertToGrid(results, isInsights, connVersion, isPython);
+    // A string is one value, but q and Python count its characters
+    const total =
+      typeof results.count === "number" && !isTextResult(results)
+        ? results.count
+        : undefined;
+    const table = convertToGrid(
+      results,
+      isInsights,
+      connVersion,
+      isPython,
+      false,
+    );
     if (table.columnDefs) {
-      return { text: renderTable(table), mime: "text/html" };
+      return { text: renderTable(table, rowLimit, total), mime: "text/html" };
     }
   }
 

@@ -17,6 +17,7 @@ import { join } from "path";
 import { commands } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { RowLimit } from "../models/notebook";
 import {
   QueryResult,
   QueryResultType,
@@ -24,6 +25,7 @@ import {
 } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
 import { handleQueryResults } from "../utils/execution";
+import { kdbOutputLog } from "../utils/loggers";
 import { MessageKind, notify } from "../utils/notifications";
 import { appendStacktrace, queryWrapper } from "../utils/queryUtils";
 
@@ -157,6 +159,7 @@ export class LocalConnection {
     context?: string,
     stringify?: boolean,
     isPython?: boolean,
+    rowLimit?: RowLimit,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.connection) {
@@ -164,6 +167,14 @@ export class LocalConnection {
       }
 
       const wrapper = queryWrapper(!!isPython, this.useAPI);
+
+      // Only notebooks send rowLimit. formatQ.q and evaluatePy.q pick these
+      // rows before their TABULAR_LIMIT cut, so the last rows are the last of
+      // the whole result. A vscode.q loaded on a secure process before this
+      // key existed ignores it.
+      const limitArgs = rowLimit && {
+        rowLimit: { size: rowLimit.limit, from: rowLimit.from },
+      };
 
       // Different objects are needed because of the difference between snake_case and camelCase
       // for sampleFn/sampleSize and sample_fn/sample_size
@@ -173,6 +184,7 @@ export class LocalConnection {
             returnFormat: stringify ? "text" : "structuredText",
             sample_fn: "first",
             sample_size: 10000,
+            ...limitArgs,
           }
         : {
             ctx: context ?? ".",
@@ -180,6 +192,7 @@ export class LocalConnection {
             returnFormat: stringify ? "text" : "structuredText",
             sampleFn: null,
             sampleSize: null,
+            ...limitArgs,
           };
 
       this.connection.k(wrapper, args, (err: Error, res: QueryResult) => {
@@ -190,6 +203,10 @@ export class LocalConnection {
               QueryResultType.Error,
             ),
           );
+        } else if (!isQueryResponse(res)) {
+          // A custom .z.pg, or a gateway that wraps every result, can answer
+          // with something other than the dictionary the wrapper builds.
+          resolve(unreadableResponse());
         } else if (res.error) {
           resolve(
             handleQueryResults(
@@ -208,7 +225,13 @@ export class LocalConnection {
           if (stringify || Array.isArray(result)) {
             resolve(result);
           } else {
-            resolve(JSON.parse(result));
+            try {
+              resolve(JSON.parse(result));
+            } catch {
+              // An envelope that reuses the wrapper's key names passes
+              // isQueryResponse with data that is not structured text.
+              resolve(unreadableResponse());
+            }
           }
         }
         this.updateGlobal();
@@ -252,15 +275,18 @@ export class LocalConnection {
 
     const result = await this.executeQueryRaw(code, [null]);
 
-    if (result !== undefined) {
-      const result2: ServerObject[] = (0, eval)(result);
-      const result3: ServerObject[] = result2.filter((item) => {
-        return ext.qNamespaceFilters.indexOf(item.name) === -1;
-      });
-      return result3;
-    } else {
+    if (!Array.isArray(result)) {
+      kdbOutputLog(
+        `[${logger}] Server object query returned ${typeof result}, expected a table; no objects will be listed.`,
+        "WARNING",
+        true,
+      );
       return new Array<ServerObject>();
     }
+
+    return (result as ServerObject[]).filter(
+      (item) => ext.qNamespaceFilters.indexOf(item.name) === -1,
+    );
   }
 
   private updateGlobal() {
@@ -360,4 +386,31 @@ export class LocalConnection {
     }
     return this.options;
   }
+}
+
+// What the query wrappers (evaluateQ.q/formatQ.q, evaluatePy.q) answer with: a
+// dictionary carrying data, error and errorMsg. A failure has a message; a
+// success has text, a byte list (a PNG) or nothing as its data. A gateway's own
+// envelope can reuse those key names, so the values are checked too.
+function isQueryResponse(res: unknown): res is QueryResult {
+  if (typeof res !== "object" || res === null) {
+    return false;
+  }
+  const { data, error, errorMsg } = res as Record<string, unknown>;
+  if (error === true) {
+    return typeof errorMsg === "string";
+  }
+  return (
+    error === false &&
+    (data === null || typeof data === "string" || Array.isArray(data))
+  );
+}
+
+function unreadableResponse() {
+  return handleQueryResults(
+    withErrorPrefix(
+      "The process returned a response the extension could not read. A custom .z.pg handler or a gateway may be changing query results.",
+    ),
+    QueryResultType.Error,
+  );
 }

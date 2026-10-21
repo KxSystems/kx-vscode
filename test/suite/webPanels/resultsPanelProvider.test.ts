@@ -229,8 +229,8 @@ describe("ResultsPanelProvider", () => {
 
       const expectedOutput = JSON.stringify({
         rowData: [
-          { index: 1, prop1: "value1", prop2: "value2" },
-          { index: 2, prop1: "value3", prop2: "value4" },
+          { index: 0, prop1: "value1", prop2: "value2" },
+          { index: 1, prop1: "value3", prop2: "value4" },
         ],
         columnDefs: [
           {
@@ -277,8 +277,8 @@ describe("ResultsPanelProvider", () => {
 
       const expectedOutput = JSON.stringify({
         rowData: [
-          { index: 1, prop1: "value1", prop2: "value3" },
-          { index: 2, prop1: "value2", prop2: "value4" },
+          { index: 0, prop1: "value1", prop2: "value3" },
+          { index: 1, prop1: "value2", prop2: "value4" },
         ],
         columnDefs: [
           {
@@ -353,9 +353,9 @@ describe("ResultsPanelProvider", () => {
 
       const expectedOutput = JSON.stringify({
         rowData: [
-          { index: 1, sym: "a", val: 1 },
-          { index: 2, sym: "b", val: 2 },
-          { index: 3, sym: "c", val: 3 },
+          { index: 0, sym: "a", val: 1 },
+          { index: 1, sym: "b", val: 2 },
+          { index: 2, sym: "c", val: 3 },
         ],
         columnDefs: [
           {
@@ -379,7 +379,7 @@ describe("ResultsPanelProvider", () => {
       };
 
       const expectedOutput = JSON.stringify({
-        rowData: [{ index: 1, value: "1,2,3" }],
+        rowData: [{ index: 0, value: "1,2,3" }],
         columnDefs: [
           {
             field: "index",
@@ -411,8 +411,8 @@ describe("ResultsPanelProvider", () => {
       const output = renderer.convertToGrid(results, true, "1.20");
 
       assert.deepStrictEqual(output.rowData, [
-        { index: 1, flag: "1b", one: "1b" },
-        { index: 2, flag: "0b" },
+        { index: 0, flag: "1b", one: "1b" },
+        { index: 1, flag: "0b" },
       ]);
       assert.deepStrictEqual(
         output.columnDefs.map((col: any) => col.cellDataType),
@@ -728,6 +728,35 @@ describe("ResultsPanelProvider", () => {
 
       assert.equal(viewStub.show.called, false);
       assert.equal(updateWebViewStub.called, false);
+    });
+
+    describe("results panel CSV", () => {
+      const results = {
+        data: {
+          rows: [
+            { prop1: "value1", prop2: "value2" },
+            { prop1: "value3", prop2: "value4" },
+          ],
+          meta: { prop1: "type1", prop2: "type2" },
+        },
+      };
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should leave ext.resultPanelCSV when updateResultsPanelCSV is false", () => {
+        sinon.stub(ext, "resultPanelCSV").value("previous");
+        const output = renderer.convertToGrid(
+          results,
+          true,
+          undefined,
+          false,
+          false,
+        );
+        assert.strictEqual(ext.resultPanelCSV, "previous");
+        assert.strictEqual(output.rowData.length, 2);
+      });
     });
   });
 

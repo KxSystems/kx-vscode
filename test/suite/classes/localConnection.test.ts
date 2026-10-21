@@ -16,6 +16,7 @@ import * as sinon from "sinon";
 
 import { LocalConnection } from "../../../src/classes/localConnection";
 import { ext } from "../../../src/extensionVariables";
+import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
 
 describe("LocalConnection", () => {
@@ -138,6 +139,77 @@ describe("LocalConnection", () => {
         "Error: undefinedFn\n  [1]  b:undefinedFn[2];\n         ^\n",
       );
     });
+
+    describe("row limit", () => {
+      let kStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        kStub = sinon
+          .stub()
+          .callsArgWith(2, null, { data: '"ok"', error: false });
+        localConn["connection"] = <any>{ k: kStub };
+      });
+
+      it("should send the rowLimit for a q query", async () => {
+        await localConn.executeQuery("til 10", undefined, false, false, {
+          limit: 10,
+          from: "last",
+        });
+
+        assert.deepStrictEqual(kStub.firstCall.args[1], {
+          ctx: ".",
+          code: "til 10",
+          returnFormat: "structuredText",
+          sampleFn: null,
+          sampleSize: null,
+          rowLimit: { size: 10, from: "last" },
+        });
+      });
+
+      it("should send the rowLimit for a python query and keep its sample", async () => {
+        await localConn.executeQuery("1+1", undefined, false, true, {
+          limit: 1000,
+          from: "first",
+        });
+
+        assert.deepStrictEqual(kStub.firstCall.args[1], {
+          code: "1+1",
+          returnFormat: "structuredText",
+          sample_fn: "first",
+          sample_size: 10000,
+          rowLimit: { size: 1000, from: "first" },
+        });
+      });
+    });
+
+    // A custom .z.pg, or a gateway that wraps every result, answers with
+    // whatever it likes instead of the wrapper's data/error dictionary.
+    for (const [shape, response] of [
+      ["a string", "wrapped"],
+      ["a dictionary without data", { a: 1, b: 2 }],
+      ["nothing", null],
+      ["an envelope whose data is not text", { data: { a: 1 }, code: 200 }],
+      ["an error flag without a message", { error: true, msg: "timeout" }],
+      // Envelopes that reuse the wrapper's key names get past the shape check,
+      // but their data is not the structured text asked for.
+      ["an envelope whose data is not JSON", { data: "OK", error: false }],
+      ["an envelope with no data", { data: null, error: false }],
+    ] as const) {
+      it(`should resolve with an 'Error:'-prefixed message when the process answers with ${shape}`, async () => {
+        localConn["connection"] = <any>{
+          k: sinon.stub().callsArgWith(2, null, response),
+        };
+
+        const result = await localConn.executeQuery("til 10");
+
+        assert.ok(
+          typeof result === "string" &&
+            result.startsWith("Error: ") &&
+            result.includes("could not read"),
+          `not the unreadable-response error: ${JSON.stringify(result)}`,
+        );
+      });
+    }
   });
 
   describe("loadServerObjects", () => {
@@ -172,6 +244,47 @@ describe("LocalConnection", () => {
         [".e2e", "trade"],
         "an internal namespace was listed",
       );
+    });
+
+    describe("when the process does not answer with a table", () => {
+      let log: sinon.SinonStub;
+
+      beforeEach(() => {
+        localConn["connection"] = <any>{};
+        localConn.useAPI = true;
+        log = sinon.stub(loggers, "kdbOutputLog");
+      });
+
+      afterEach(() => {
+        log.restore();
+        delete (globalThis as any).evaluatedByListing;
+      });
+
+      it("should list nothing and log a warning", async () => {
+        sinon.stub(localConn, "executeQueryRaw").resolves("wrapped");
+
+        const result = await localConn.loadServerObjects();
+
+        assert.deepStrictEqual(result, []);
+        assert.ok(
+          log.calledWithMatch(sinon.match("expected a table"), "WARNING"),
+          "no warning was logged",
+        );
+      });
+
+      it("should not run what the process sends back", async () => {
+        sinon
+          .stub(localConn, "executeQueryRaw")
+          .resolves("globalThis.evaluatedByListing = true; []");
+
+        await localConn.loadServerObjects();
+
+        assert.strictEqual(
+          (globalThis as any).evaluatedByListing,
+          undefined,
+          "the response was evaluated as code",
+        );
+      });
     });
   });
 

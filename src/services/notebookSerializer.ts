@@ -48,6 +48,10 @@ export class KxNotebookSerializer implements vscode.NotebookSerializer {
         return target;
       }),
     );
+    notebook.metadata = {
+      rowLimit: data.rowLimit,
+      rowLimitFrom: data.rowLimitFrom,
+    };
     return notebook;
   }
 
@@ -76,6 +80,8 @@ export class KxNotebookSerializer implements vscode.NotebookSerializer {
           }),
         };
       }),
+      rowLimit: data.metadata?.rowLimit || undefined,
+      rowLimitFrom: data.metadata?.rowLimitFrom || undefined,
     };
     return new TextEncoder().encode(JSON.stringify(notebook));
   }

@@ -611,6 +611,30 @@ describe("Executing on a kdb+ connection", () => {
     });
   });
 
+  describe("behind a gateway that wraps every result", () => {
+    after(async () => {
+      kdb.envelope = undefined;
+      await vscode.commands.executeCommand("kdb.results.destination.terminal");
+    });
+
+    // Its envelope reuses the wrapper's key names, but the data is not the
+    // structured text the results view asks for.
+    it("finishes the query rather than leaving it running", async () => {
+      await vscode.commands.executeCommand("kdb.results.destination.view");
+      await focus(Q_FILE);
+      kdb.envelope = { error: false, data: "OK" };
+
+      kdb.clear();
+      let finished = false;
+      vscode.commands
+        .executeCommand("kdb.execute.fileQuery")
+        .then(() => (finished = true));
+
+      await until(() => finished, "the query to finish");
+      assert.strictEqual(kdb.queries().length, 1, "the query was not sent");
+    });
+  });
+
   describe("what a kdb+ connection cannot do", () => {
     it("does not populate a scratchpad", async () => {
       await focus(Q_FILE);

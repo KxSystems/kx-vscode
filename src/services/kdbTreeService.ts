@@ -13,6 +13,9 @@
 
 import { LocalConnection } from "../classes/localConnection";
 import { ServerObject } from "../models/serverObject";
+import { kdbOutputLog } from "../utils/loggers";
+
+const logger = "kdbTreeService";
 
 export class KdbTreeService {
   static async loadNamespaces(
@@ -111,10 +114,20 @@ export class KdbTreeService {
   static async loadViews(conn: LocalConnection): Promise<string[]> {
     const code = conn.useAPI ? ".vscode.getViews" : "views";
     const rawViewArray = await conn.executeQueryRaw(code, [null]);
-    const views = rawViewArray?.filter((item: any) => {
+
+    if (!Array.isArray(rawViewArray)) {
+      kdbOutputLog(
+        `[${logger}] View query returned ${typeof rawViewArray}, expected a list; no views will be listed.`,
+        "WARNING",
+        true,
+      );
+      return new Array<string>();
+    }
+
+    const views = rawViewArray.filter((item: any) => {
       return item !== "s#" && item !== "" && item !== ",";
     });
-    const sorted = views?.sort((object1: any, object2: any) => {
+    const sorted = views.sort((object1: any, object2: any) => {
       if (object1 < object2) {
         return -1;
       } else if (object1 > object2) {
@@ -122,7 +135,7 @@ export class KdbTreeService {
       }
       return 0;
     });
-    return sorted ?? new Array<string>();
+    return sorted;
   }
 
   private static getNamespaces(

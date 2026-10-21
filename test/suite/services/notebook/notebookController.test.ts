@@ -27,6 +27,7 @@ import { ext } from "../../../../src/extensionVariables";
 import { ConnectionManagementService } from "../../../../src/services/connectionManagerService";
 import { KdbNode } from "../../../../src/services/kdbTreeProvider";
 import * as controlller from "../../../../src/services/notebookController";
+import * as providers from "../../../../src/services/notebookProviders";
 import * as notifications from "../../../../src/utils/notifications";
 import * as plotUtils from "../../../../src/utils/plotUtils";
 import * as queryUtils from "../../../../src/utils/queryUtils";
@@ -445,6 +446,33 @@ describe("Controller", () => {
           );
         });
 
+        it("should number table rows from 0 in the index column", async () => {
+          executeQueryStub.resolves({
+            count: 2,
+            columns: [
+              {
+                name: "x",
+                type: "symbols",
+                values: ["a", "b"],
+                order: [0],
+              },
+            ],
+          });
+
+          await instance.execute(
+            [notebookTestUtils.createCell("sql")],
+            notebookTestUtils.createNotebook(),
+            createController(),
+          );
+
+          const rows = [...rendered().text.matchAll(/<tr>\s*<td>(\d+)<\/td>/g)];
+          assert.deepStrictEqual(
+            rows.map((m: RegExpMatchArray) => m[1]),
+            ["0", "1"],
+            rendered().text,
+          );
+        });
+
         it("should escape markup in a text result", async () => {
           executeQueryStub.resolves("{x<y}\n     ^");
 
@@ -649,6 +677,224 @@ describe("Controller", () => {
 
             assert.strictEqual(success, undefined);
           });
+        });
+      });
+    });
+  });
+
+  describe("Row limit", () => {
+    let writeOutputStub: sinon.SinonStub;
+    let getRowLimitStub: sinon.SinonStub;
+
+    const runOn = (conn: unknown) =>
+      sinon
+        .stub(workspaceCommand, "resolveRunTarget")
+        .resolves(<workspaceCommand.RunTarget>{ kind: "connection", conn });
+
+    const range = (start: number, end: number) =>
+      Array.from({ length: end - start }, (_, i) => start + i);
+
+    const table = (values: number[], count = values.length) => ({
+      count,
+      columns: [
+        {
+          name: "x",
+          type: "longs",
+          values: values.map(String),
+          order: values.map((_, i) => i),
+        },
+      ],
+    });
+
+    const rendered = () => writeOutputStub.lastCall.args[1].text;
+
+    // The index and the value of each row shown.
+    const rows = (text: string) =>
+      [...text.matchAll(/<tr>\s*<td>(\d+)<\/td>\s*<td>([^<]*)<\/td>/g)].map(
+        (m) => [Number(m[1]), Number(m[2])],
+      );
+
+    const footer = (text: string) => text.match(/<p>Showing [^<]*<\/p>/)?.[0];
+
+    const run = (language = "q") =>
+      instance.execute(
+        [notebookTestUtils.createCell(language)],
+        notebookTestUtils.createNotebook(),
+        createController(),
+      );
+
+    beforeEach(() => {
+      writeOutputStub = sinon.stub(
+        controlller.KxNotebookController.prototype,
+        "writeOutput",
+      );
+      getRowLimitStub = sinon
+        .stub(providers, "getRowLimit")
+        .returns({ limit: 100, from: "first" });
+    });
+
+    describe("Local connection", () => {
+      beforeEach(() => {
+        runOn(new LocalConnection("127.0.0.1:5001", "rowLimitLocal", []));
+        createInstance();
+      });
+
+      for (const language of ["q", "python"]) {
+        it(`should send the row limit with a ${language} cell`, async () => {
+          getRowLimitStub.returns({ limit: 10, from: "last" });
+          executeQueryStub.resolves(table([1]));
+
+          await run(language);
+
+          const args = executeQueryStub.firstCall.args;
+          assert.strictEqual(args[4], language === "python");
+          assert.deepStrictEqual(args[10], { limit: 10, from: "last" });
+        });
+      }
+
+      it("should show the first 10 of 100 rows", async () => {
+        getRowLimitStub.returns({ limit: 10, from: "first" });
+        executeQueryStub.resolves(table(range(0, 10), 100));
+
+        await run();
+
+        assert.deepStrictEqual(
+          rows(rendered()),
+          range(0, 10).map((i) => [i, i]),
+        );
+        assert.strictEqual(
+          footer(rendered()),
+          "<p>Showing first 10 of 100 rows.</p>",
+        );
+      });
+
+      it("should number the last 10 of 100 rows from the end", async () => {
+        getRowLimitStub.returns({ limit: 10, from: "last" });
+        executeQueryStub.resolves(table(range(90, 100), 100));
+
+        await run();
+
+        assert.deepStrictEqual(
+          rows(rendered()),
+          range(90, 100).map((i) => [i, i]),
+        );
+        assert.strictEqual(
+          footer(rendered()),
+          "<p>Showing last 10 of 100 rows.</p>",
+        );
+      });
+
+      it("should show no footer when every row is shown", async () => {
+        executeQueryStub.resolves(table(range(0, 100)));
+
+        await run();
+
+        assert.strictEqual(rows(rendered()).length, 100);
+        assert.strictEqual(footer(rendered()), undefined);
+      });
+
+      for (const type of ["chars", "str", "CharVector"]) {
+        it(`should show no footer for a ${type} string result`, async () => {
+          getRowLimitStub.returns({ limit: 10, from: "last" });
+          executeQueryStub.resolves({
+            count: 11,
+            columns: [
+              {
+                name: "values",
+                type,
+                values: ['"hello world"'],
+                order: [0],
+              },
+            ],
+          });
+
+          await run();
+
+          assert.strictEqual(footer(rendered()), undefined);
+          assert.match(rendered(), /<td>0<\/td>/);
+        });
+      }
+
+      it("should format the footer counts in en-US", async () => {
+        getRowLimitStub.returns({ limit: 10, from: "first" });
+        sinon.stub(Number.prototype, "toLocaleString").callsFake(function (
+          this: number,
+          locale?: string | string[],
+        ) {
+          return Intl.NumberFormat(locale ?? "de-DE").format(this);
+        });
+        executeQueryStub.resolves(table(range(0, 10), 25000));
+
+        await run();
+
+        assert.strictEqual(
+          footer(rendered()),
+          "<p>Showing first 10 of 25,000 rows.</p>",
+        );
+      });
+
+      it("should lay out only the limit of a result a process did not cut", async () => {
+        ext.resultPanelCSV = "panel,csv";
+        executeQueryStub.resolves(table(range(0, 1000000)));
+
+        await run();
+
+        assert.strictEqual(rows(rendered()).length, 100);
+        assert.ok(rendered().length < 20000);
+        assert.strictEqual(ext.resultPanelCSV, "panel,csv");
+      });
+    });
+
+    describe("Insights connection", () => {
+      let conn: sinon.SinonStubbedInstance<InsightsConnection>;
+
+      beforeEach(() => {
+        conn = sinon.createStubInstance(InsightsConnection);
+        conn.connLabel = "rowLimitInsights";
+        ext.scratchpadStarted.add(conn.connLabel);
+        runOn(conn);
+        getRowLimitStub.returns({ limit: 1000, from: "last" });
+        executeQueryStub.resolves("ok");
+        createInstance();
+      });
+
+      afterEach(() => {
+        ext.scratchpadStarted.delete(conn.connLabel);
+      });
+
+      for (const language of ["q", "python"]) {
+        it(`should send the row limit with a ${language} cell`, async () => {
+          await run(language);
+
+          const args = executeQueryStub.firstCall.args;
+          assert.strictEqual(args[4], language === "python");
+          assert.deepStrictEqual(args[10], { limit: 1000, from: "last" });
+        });
+      }
+    });
+
+    describe("REPL", () => {
+      it("should not apply the row limit to REPL output", async () => {
+        sinon
+          .stub(workspaceCommand, "resolveRunTarget")
+          .resolves({ kind: "repl" });
+        sinon.stub(ReplConnection.prototype, "show");
+        sinon
+          .stub(ReplConnection, "getOrCreateInstance")
+          .resolves(Object.create(ReplConnection.prototype));
+        const output = range(0, 50).join("\n");
+        sinon
+          .stub(ReplConnection.prototype, "executeQuery")
+          .resolves({ output });
+        getRowLimitStub.returns({ limit: 1, from: "first" });
+        createInstance();
+
+        await run();
+
+        sinon.assert.notCalled(executeQueryStub);
+        assert.deepStrictEqual(writeOutputStub.lastCall.args[1], {
+          text: output,
+          mime: "text/plain",
         });
       });
     });
