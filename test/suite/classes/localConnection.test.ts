@@ -15,7 +15,9 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 
 import { LocalConnection } from "../../../src/classes/localConnection";
+import { ext } from "../../../src/extensionVariables";
 import * as loggers from "../../../src/utils/loggers";
+import * as notifications from "../../../src/utils/notifications";
 
 describe("LocalConnection", () => {
   let localConn: LocalConnection;
@@ -284,5 +286,37 @@ describe("LocalConnection", () => {
         );
       });
     });
+  });
+
+  describe("updateGlobals", () => {
+    let notifyStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      notifyStub = sinon.stub(notifications, "notify");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    for (const [shape, globals] of [
+      ["a dictionary", { a: 1 }],
+      ["a string", "wrapped"],
+      ["null", null],
+    ] as const) {
+      it(`should log at debug level and empty completions when given ${shape}`, () => {
+        ext.variables.push("stale");
+
+        localConn["updateGlobals"](globals);
+
+        assert.strictEqual(ext.variables.length, 0, "completions not cleared");
+        sinon.assert.calledOnce(notifyStub);
+        assert.strictEqual(
+          notifyStub.firstCall.args[1],
+          notifications.MessageKind.DEBUG,
+          "a non-table answer must not raise a popup",
+        );
+      });
+    }
   });
 });

@@ -309,23 +309,32 @@ export class LocalConnection {
     });
   }
 
-  private updateGlobals(
-    globals: {
-      id: number;
-      pid: number;
-      name: string;
-      fname: string;
-      typeNum: number;
-      namespace: string;
-      context: string;
-      isNs: number;
-    }[],
-  ): void {
+  private updateGlobals(globals: unknown): void {
     ext.functions.length = 0;
     ext.tables.length = 0;
     ext.variables.length = 0;
 
-    globals.forEach(({ fname, typeNum, name, namespace, isNs }) => {
+    if (!Array.isArray(globals)) {
+      notify(
+        "Global variable query did not return a table, completions will be empty.",
+        MessageKind.DEBUG,
+        { logger },
+      );
+      return;
+    }
+
+    (
+      globals as {
+        id: number;
+        pid: number;
+        name: string;
+        fname: string;
+        typeNum: number;
+        namespace: string;
+        context: string;
+        isNs: number;
+      }[]
+    ).forEach(({ fname, typeNum, name, namespace, isNs }) => {
       if (!isNs && namespace !== ".vscode") {
         const fullName = namespace === ".q" ? name : fname;
 
