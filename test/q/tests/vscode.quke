@@ -96,9 +96,6 @@ feature .vscode remaining functions
                 `evaluateQ`listMem]
     
     should return information about the process
-        expect a list of reserved words to be returned
-            all `if`min`max`select in .vscode.reservedWords[]
-
         expect a list of views to be returned
             value "foo: 1; bar: 2;";
             value "myView:: foo + bar";

@@ -151,7 +151,6 @@ export class LocalConnection {
 
   public update(): void {
     this.updateGlobal();
-    this.updateReservedKeywords();
   }
 
   public async executeQuery(
@@ -346,22 +345,6 @@ export class LocalConnection {
           ext.variables.push(fullName);
         }
       }
-    });
-  }
-
-  private updateReservedKeywords() {
-    const reservedQuery = this.useAPI ? ".vscode.reservedWords" : "{.Q.res}";
-    this.connection?.k(reservedQuery, null, (err, result) => {
-      if (err) {
-        notify(
-          "Failed to retrieve kdb+ reserved keywords.",
-          MessageKind.ERROR,
-          { logger, params: err },
-        );
-        return;
-      }
-
-      ext.keywords = result;
     });
   }
 

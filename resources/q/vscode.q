@@ -18,8 +18,6 @@ getManifest:{[]
     `version`features!(version; `evaluateQ`listMem)
     }
 
-reservedWords: {.Q.res}
-
 getViews: {views[]}
 
 // Note: These functions are created from templates by running `node build-api.js` to generate `out/vscode.q`
