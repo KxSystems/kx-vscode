@@ -126,6 +126,10 @@ asset.
   REST/WebSocket), `ReplConnection`.
 - **`src/services/`** — VS Code providers: tree data, webview/custom-editor,
   notebook, completion/quickfix.
+- **`src/debugger/`**: the q debug adapter (DAP, inline in the extension host),
+  driving a local q through its `q))` debugger prompt in a **q Debug**
+  terminal. It reads program structure from the language server's
+  `kdb.qls.*` requests (`server/src/structure.ts`).
 - **`src/commands/`**, **`src/models/`**, **`src/utils/`**,
   **`src/validators/`** — command handlers, data models, helpers (config,
   telemetry, secret storage, execution console) and input validators.
