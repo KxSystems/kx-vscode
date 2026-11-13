@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.21.0-rc",
+  "version": "1.22.0-rc",
   "icon": "resources/images/kx-logo-vs.png",
   "repository": {
     "type": "git",
@@ -586,6 +586,11 @@
         "category": "KX",
         "command": "kdb.query.convert",
         "title": "Convert datasources to queries"
+      },
+      {
+        "command": "kdb.debugFile",
+        "title": "KX: Debug File",
+        "icon": "$(debug-alt)"
       }
     ],
     "keybindings": [
@@ -1070,6 +1075,10 @@
         {
           "command": "kdb.notebook.rowLimitFrom.last",
           "when": "false"
+        },
+        {
+          "command": "kdb.debugFile",
+          "when": "editorLangId == q && resourceFilename =~ /\\.q$/i"
         }
       ],
       "webview/context": [
@@ -1310,6 +1319,11 @@
           "command": "kdb.file.populateScratchpad",
           "group": "q2@0",
           "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
+        },
+        {
+          "command": "kdb.debugFile",
+          "group": "q1@3",
+          "when": "resourceFilename =~ /\\.q$/i"
         }
       ],
       "editor/context": [
@@ -1455,6 +1469,70 @@
           }
         ]
       }
+    ],
+    "breakpoints": [
+      {
+        "language": "q"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "q",
+        "languages": [
+          "q"
+        ],
+        "label": "q",
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to the q script to run and debug.",
+                "default": "${file}"
+              },
+              "args": {
+                "type": "array",
+                "description": "Command line arguments passed to the script as .z.x.",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory for the q process. Defaults to the script's folder."
+              },
+              "qExecutable": {
+                "type": "string",
+                "description": "Path to the q executable. Defaults to the q found from kdb.qHomeDirectory, QHOME or ~/.kx."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "q",
+            "request": "launch",
+            "name": "q: Debug File",
+            "program": "${file}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "q: Debug File",
+            "description": "Run and debug a q script.",
+            "body": {
+              "type": "q",
+              "request": "launch",
+              "name": "q: Debug File",
+              "program": "^\"\\${file}\""
+            }
+          }
+        ]
+      }
     ]
   },
   "license": "MIT",
@@ -1510,6 +1588,8 @@
     "@types/vscode-webview": "1.57.5",
     "@types/ws": "8.18.1",
     "@vscode/codicons": "0.0.46-24",
+    "@vscode/debugadapter": "1.68.0",
+    "@vscode/debugprotocol": "1.68.0",
     "@vscode/extension-telemetry": "1.4.0",
     "@vscode/python-environments": "1.4.0",
     "@vscode/test-electron": "3.1.0",

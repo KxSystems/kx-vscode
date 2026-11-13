@@ -77,6 +77,7 @@ import {
   Type,
 } from "./parser";
 import { CommentBegin, CommentEnd, ExitCommentBegin } from "./parser/ranges";
+import { Structure } from "./structure";
 
 const logger = "qLangServer";
 
@@ -93,6 +94,10 @@ export default class QLangServer {
   declare private opened: Set<string>;
   declare private cached: Map<string, Source>;
   declare private modules: Map<string, string | undefined>;
+  declare private readonly structures: Map<
+    string,
+    { mtimeMs: number; size: number; structure: Structure }
+  >;
   declare public documents: TextDocuments<TextDocument>;
   declare public notebooks: NotebookDocuments<TextDocument>;
 
@@ -101,6 +106,7 @@ export default class QLangServer {
     this.params = params;
     this.opened = new Set();
     this.cached = new Map();
+    this.structures = new Map();
     this.modules = new Map();
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
@@ -136,6 +142,30 @@ export default class QLangServer {
     this.connection.onRequest(
       "kdb.qls.parameterCache",
       this.onParameterCache.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.topLevelStatements",
+      this.onTopLevelStatements.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.lambdaPath",
+      this.onLambdaPath.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.statementSeparators",
+      this.onStatementSeparators.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.identifiersOnLines",
+      this.onIdentifiersOnLines.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.statementLambdas",
+      this.onStatementLambdas.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.rootLambdas",
+      this.onRootLambdas.bind(this),
     );
     this.connection.onSelectionRanges(this.onSelectionRanges.bind(this));
     this.connection.onFoldingRanges(this.onFoldingRanges.bind(this));
@@ -440,6 +470,105 @@ export default class QLangServer {
     const end = RangeFrom(Peek(tokens)!);
 
     return Range.create(start.start, end.end);
+  }
+
+  private async getStructure(path: string) {
+    try {
+      const { mtimeMs, size } = await stat(path);
+      const cached = this.structures.get(path);
+      if (cached && cached.mtimeMs === mtimeMs && cached.size === size) {
+        return cached.structure;
+      }
+      const structure = new Structure(
+        await readFile(path, { encoding: "utf8" }),
+      );
+      this.structures.set(path, { mtimeMs, size, structure });
+      return structure;
+    } catch (error) {
+      this.structures.delete(path);
+      this.notify(`Unable to read '${path}'.`, MessageKind.DEBUG, {
+        logger,
+        params: `${error}`,
+      });
+      return undefined;
+    }
+  }
+
+  public async onTopLevelStatements({ path }: { path: string }) {
+    return (await this.getStructure(path))?.topLevelStatements() ?? [];
+  }
+
+  public async onLambdaPath({
+    path,
+    line,
+    anonymous,
+    column,
+  }: {
+    path: string;
+    line: number;
+    anonymous?: boolean;
+    column?: number;
+  }) {
+    return (
+      (await this.getStructure(path))?.lambdaPath(
+        line,
+        anonymous === true,
+        column,
+      ) ?? null
+    );
+  }
+
+  public async onStatementLambdas({
+    path,
+    line,
+    column,
+  }: {
+    path: string;
+    line: number;
+    column: number;
+  }) {
+    return (
+      (await this.getStructure(path))?.statementLambdas(line, column) ?? []
+    );
+  }
+
+  public async onRootLambdas({
+    path,
+    startLine,
+    endLine,
+  }: {
+    path: string;
+    startLine: number;
+    endLine: number;
+  }) {
+    return (
+      (await this.getStructure(path))?.rootLambdas(startLine, endLine) ?? []
+    );
+  }
+
+  public async onStatementSeparators({
+    path,
+    line,
+  }: {
+    path: string;
+    line: number;
+  }) {
+    return (await this.getStructure(path))?.statementSeparators(line) ?? [];
+  }
+
+  public async onIdentifiersOnLines({
+    path,
+    startLine,
+    endLine,
+  }: {
+    path: string;
+    startLine: number;
+    endLine: number;
+  }) {
+    return (
+      (await this.getStructure(path))?.identifiersOnLines(startLine, endLine) ??
+      []
+    );
   }
 
   public async onParameterCache({

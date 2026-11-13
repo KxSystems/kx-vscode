@@ -5,7 +5,7 @@ description:
   Command palette entries, keybindings, settings, execution matrix and telemetry
   events for the kdb VS Code extension.
 tags: [kdb, vscode, reference, keybindings, settings, telemetry]
-timestamp: 2026-10-20
+timestamp: 2026-11-06
 ---
 
 ## Command Palette
@@ -149,6 +149,7 @@ whole file run.
 | Install.kdbx.win32.fail           |              | src/commands/setupCommand.ts             |
 | Repl.Start                        |              | src/commands/workspaceCommand.ts         |
 | Repl.StartFolder                  |              | src/commands/workspaceCommand.ts         |
+| Debug.Start                       |              | src/commands/debugCommand.ts             |
 | ¦                                 |              |                                          |
 | Connection.Create.kdb             |              | src/commands/serverCommand.ts            |
 | Connection.Edit.kdb               |              | src/commands/serverCommand.ts            |
