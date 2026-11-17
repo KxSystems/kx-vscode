@@ -133,10 +133,11 @@ describe("QDebugSession methods", () => {
     driver = new StubDriver();
     show = sinon.spy();
     s.driver = driver;
-    s.debugTerminal = { terminal: { show } };
+    s.terminal = { show };
     s.programPath = program;
     s.programCwd = join(program, "..");
     s.tempDir = mkdtempSync(join(tmpdir(), "kdb-debug-"));
+    (QDebugSession as any).tempDirPrograms.set(basename(s.tempDir), program);
   });
 
   afterEach(async () => {
@@ -213,7 +214,7 @@ describe("QDebugSession methods", () => {
         breakpoints: [{ line: 1 }],
       });
       await s.pendingOp;
-      assert.ok(driver.commands.some((c) => c.startsWith(".dbg.bkname")));
+      assert.ok(driver.commands.some((c) => c.startsWith(".dbg.resolveName")));
     });
 
     it("tolerates a breakpoint request without a source path", async () => {
@@ -563,7 +564,7 @@ describe("QDebugSession methods", () => {
         .on2(/^\.dbg\.pop\[\]$/, "42")
         .on2(/s\d+\.q$/, "hello\n");
       await s.tryRun();
-      assert.ok(driver.commands.includes('.z.x:("a";"b\\"c")'));
+      assert.ok(driver.commands.includes('.z.x:((),"a";(),"b\\"c")'));
       assert.ok(driver.commands.includes("\\d .foo"));
       const loads = driver.commands.filter((c) => /^\\l .*s\d+\.q$/.test(c));
       assert.strictEqual(loads.length, 3);
@@ -634,6 +635,17 @@ describe("QDebugSession methods", () => {
       assert.deepStrictEqual(driver.commands, []);
     });
 
+    it("reads the backtrace once per stop", async () => {
+      driver.promptDepth = 2;
+      driver.on2(/^\.Q\.bt\[\]$/, `>>[1]  ${program}:1: x\n   ^`);
+      await s.reportStopped("step");
+      assert.strictEqual(events("stopped").length, 1);
+      assert.strictEqual(
+        driver.commands.filter((c) => c === ".Q.bt[]").length,
+        1,
+      );
+    });
+
     it("pauses on a top-level breakpoint, then steps over it", async () => {
       s.statements = [
         { startLine: 1, startColumn: 0, endLine: 1, text: "a", namespace: "" },
@@ -665,7 +677,7 @@ describe("QDebugSession methods", () => {
       ];
       s.topLevelPaused = s.statements[0];
       answer("kdb.qls.identifiersOnLines", [{ name: "f", canon: ".f" }]);
-      driver.on2(/^100h~type/, "1b").on2(/^\.dbg\.bktname/, '"..f"');
+      driver.on2(/^100h~type/, "1b").on2(/^\.dbg\.traceName/, '"..f"');
       await s.stepInto();
       assert.ok(driver.commands.includes(".dbg.bs[`.f;`long$()]"));
       assert.strictEqual(events("stopped")[0].body.reason, "step");
@@ -737,7 +749,7 @@ describe("QDebugSession methods", () => {
         return "";
       });
       driver.on2(/^\.Q\.bt\[\]$/, ">>[1]  /lib.q:3: f:{x}");
-      driver.on2(/^\.dbg\.bkname/, '"f"');
+      driver.on2(/^\.dbg\.resolveName/, '"f"');
       await s.stepInto();
       assert.strictEqual(events("stopped")[0].body.reason, "breakpoint");
     });
@@ -816,7 +828,7 @@ describe("QDebugSession methods", () => {
       assert.strictEqual(text, "r:{x}[1]+(.dbg.a0)[2]");
       assert.strictEqual(s.anonAliases.get("1:9"), ".dbg.a0");
       assert.strictEqual(s.anonAliases.get("1:2"), undefined);
-      assert.ok(driver.commands.includes(".dbg.bs[`.dbg.a0;()]"));
+      assert.ok(driver.commands.includes(".dbg.bs[`.dbg.a0;`long$()]"));
     });
 
     it("hoists a lambda that spans lines", async () => {
@@ -890,6 +902,18 @@ describe("QDebugSession methods", () => {
       );
       await s.continueFromBreakpoint();
       assert.deepStrictEqual(driver.data, ["a", "b", "  [x"]);
+    });
+
+    it("hides suspend markers while stepping unless verbose", async () => {
+      sinon.stub(driver, "sendCommand").callsFake(async (...args: any[]) => {
+        args[3]?.("#1\n");
+        return { output: "", depth: 1, namespace: "", errored: false };
+      });
+      await s.stepPosition();
+      assert.deepStrictEqual(driver.data, []);
+      s.verboseTrace = true;
+      await s.stepPosition();
+      assert.deepStrictEqual(driver.data, ["#1\n"]);
     });
   });
 
@@ -1069,7 +1093,7 @@ describe("QDebugSession methods", () => {
         { name: "f", path: [0], rootLine: 0 },
         { name: "", path: [1], rootLine: 0 },
       ]);
-      driver.on2(/^\.dbg\.childidx/, "0");
+      driver.on2(/^\.dbg\.childIndex/, "0");
       driver.on2(/^>$/, () => ">>[2]  /lib.q:7: g:{x}");
       await s.stepInto();
       assert.ok(driver.commands.some((c) => c.startsWith(".dbg.bs[`f;")));
@@ -1183,8 +1207,8 @@ describe("QDebugSession methods", () => {
             }
           : null,
       );
-      driver.on2(/^\.dbg\.bkname\[.*"a"\]$/, '".m.a"');
-      driver.on2(/^\.dbg\.bkname\[.*"b"\]$/, "not json");
+      driver.on2(/^\.dbg\.resolveName\[.*"a"\]$/, '".m.a"');
+      driver.on2(/^\.dbg\.resolveName\[.*"b"\]$/, "not json");
       await s.syncBreakpoints(0, { skipKeys: new Set([".m.a#"]) });
       assert.strictEqual(s.armedTraps.size, 0);
       assert.ok(!driver.commands.some((c) => c.startsWith(".dbg.bs")));
@@ -1210,28 +1234,34 @@ describe("QDebugSession methods", () => {
     });
 
     it("resolves step-in targets and their backtrace names", async () => {
-      driver.on2(/^\.dbg\.childidx/, "x");
+      driver.on2(/^\.dbg\.childIndex/, "x");
       assert.strictEqual(await s.resolveLocalStepInTarget("f", "g"), undefined);
       assert.strictEqual(
         await s.resolveLocalStepInTarget(undefined, "g"),
         undefined,
       );
-      driver.on2(/^\.dbg\.bktname/, "'err");
-      assert.strictEqual(await s.bktName("f", []), undefined);
-      driver.on2(/^\.dbg\.bktname/, "bad");
-      assert.strictEqual(await s.bktName("f", []), undefined);
-      driver.on2(/^\.dbg\.bktname/, '""');
-      assert.strictEqual(await s.bktName("f", []), undefined);
-      driver.on2(/^\.dbg\.bkname/, "'err");
+      driver.on2(/^\.dbg\.traceName/, "'err");
       assert.strictEqual(
-        await s.resolveExternalTrapName("/a.q", "f"),
+        await s.evaluateName(".dbg.traceName[`f;()]"),
         undefined,
       );
-      driver.on2(/^\.dbg\.bkname/, '""');
+      driver.on2(/^\.dbg\.traceName/, "bad");
       assert.strictEqual(
-        await s.resolveExternalTrapName("/a.q", "f"),
+        await s.evaluateName(".dbg.traceName[`f;()]"),
         undefined,
       );
+      driver.on2(/^\.dbg\.traceName/, '""');
+      assert.strictEqual(
+        await s.evaluateName(".dbg.traceName[`f;()]"),
+        undefined,
+      );
+      driver.on2(/^\.dbg\.traceName/, "[1]");
+      assert.strictEqual(
+        await s.evaluateName(".dbg.traceName[`f;()]"),
+        undefined,
+      );
+      driver.on2(/^\.dbg\.traceName/, '"..f"');
+      assert.strictEqual(await s.evaluateName(".dbg.traceName[`f;()]"), "..f");
     });
 
     it("arms nothing to step into without a position", async () => {
@@ -1442,11 +1472,11 @@ describe("QDebugSession methods", () => {
       s.tempStatements.set("s0.q", { startLine: 1, startColumn: 4 });
       answer("kdb.qls.statementSeparators", [{ line: 1, column: 2 }]);
       driver.on2(/^\.Q\.bt\[\]$/, `>>[1]  ${s.tempDir}/s0.q:1: x\n   ^`);
-      await s.captureMarker();
+      await s.captureMarker(await s.position());
       assert.deepStrictEqual(s.currentMarker, { line: 1, col: 0 });
 
       driver.on2(/^\.Q\.bt\[\]$/, ">>[1]  /missing.q:1: x\n   ^");
-      await s.captureMarker();
+      await s.captureMarker(await s.position());
       assert.strictEqual(s.currentMarker, undefined);
     });
 

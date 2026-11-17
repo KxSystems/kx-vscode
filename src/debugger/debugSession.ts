@@ -29,20 +29,30 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
+import type * as vscode from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node";
 
 import {
-  DebugTerminal,
   debugWorkingDirectory,
   getOrCreateDebugTerminal,
 } from "./debugTerminal";
 import {
+  FRAME_LINE_RE,
+  funcName,
+  isCaretLine,
   parseBacktrace,
   parseCurrentPosition,
+  SUSPEND_MARKER_RE,
   type QFrame,
   type QPosition,
 } from "./qBacktrace";
 import { QProcess, type QCommandResult } from "./qProcess";
+import type {
+  LambdaSpan,
+  LineIdentifier,
+  StatementSeparator,
+  StructureRequests,
+} from "../../server/src/protocol";
 
 const THREAD_ID = 1;
 
@@ -50,7 +60,11 @@ const VAR_REF_BASE = 1000;
 
 const GLOBALS_VAR_REF = 999;
 
-const MAX_BREAKPOINT_STEPS = 100000;
+const MAX_STEPS = 100000;
+
+const MAX_FRAME_MOVES = 128;
+
+const MAX_POPS = 64;
 
 const STOP_GRACE_MS = 2000;
 
@@ -79,20 +93,6 @@ interface QStatement {
   namespace: string;
 }
 
-interface QIdentifier {
-  name: string;
-  canon: string;
-}
-
-interface QSeparator {
-  line: number;
-  column: number;
-}
-
-function qStringLiteral(value: string): string {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-
 const SAFE_LOOKUP_RE = /^[.a-zA-Z][\w.]*$/;
 function isSafeLookup(expression: string): boolean {
   return SAFE_LOOKUP_RE.test(expression.trim());
@@ -110,11 +110,10 @@ function qText(value: string): string {
 }
 
 const HEADER_RE = /^((?:>>|\s\s)\[\d+\]\s\s?)(.*):(\d+):\s(.*)$/;
-const CARET_RE = /^\s*\^\s*$/;
 
 function shiftCaret(lines: string[], at: number, delta: number, from: number) {
   const next = lines[at + 1];
-  if (delta === 0 || next === undefined || !CARET_RE.test(next)) return;
+  if (delta === 0 || next === undefined || !isCaretLine(next)) return;
   const caret = next.indexOf("^");
   if (caret < from) return;
   lines[at + 1] = " ".repeat(Math.max(from, caret - delta)) + next.slice(caret);
@@ -152,13 +151,6 @@ function isPhantomStep(
 }
 
 const ANON_PREFIX = ".dbg.a";
-
-interface LambdaSpan {
-  line: number;
-  column: number;
-  endLine: number;
-  endColumn: number;
-}
 
 function anonKey(line: number, column: number): string {
   return `${line}:${column}`;
@@ -210,20 +202,12 @@ function qIdentVector(names: string[]): string {
   return `(${names.join(";")})`;
 }
 
-function trapKey(name: string, descentPath: number[]): string {
-  return `${name}#${descentPath.join(",")}`;
-}
-
 function trapKeyOf(target: QLambdaTarget): string {
-  return trapKey(target.name, target.descentPath);
+  return `${target.name}#${target.descentPath.join(",")}`;
 }
 
-function parseJson<T>(text: string): T | undefined {
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return undefined;
-  }
+function dbgCall(fn: string, target: QLambdaTarget): string {
+  return `.dbg.${fn}[\`${target.name};${qLongList(target.descentPath)}]`;
 }
 
 function errText(err: unknown): string {
@@ -234,10 +218,6 @@ function formatValue(v: unknown): string {
   return typeof v === "string" ? v : JSON.stringify(v);
 }
 
-const FRAME_LINE_RE = /^(?:>>|\s\s)\[\d+\]\s/;
-
-const SUSPEND_MARKER_RE = /^#\d+\s*$/;
-
 function couldBeSuspendPrefix(text: string): boolean {
   return (
     text === "" ||
@@ -245,6 +225,10 @@ function couldBeSuspendPrefix(text: string): boolean {
     /^>{1,2}(\[\d*\]?\s?)?$/.test(text) ||
     /^ {1,2}(\[\d*\]?\s?)?$/.test(text)
   );
+}
+
+function emitOnNewLine(driver: QProcess, text: string): void {
+  driver.emit("data", (driver.atLineStart ? "" : "\n") + text);
 }
 
 class LiveOutputForwarder {
@@ -255,8 +239,7 @@ class LiveOutputForwarder {
 
   public constructor(
     private readonly stopAt: RegExp[],
-    private readonly onVisible: (text: string) => void,
-    private readonly atLineStart: () => boolean = () => true,
+    private readonly driver: QProcess,
   ) {}
 
   private matchesStop(line: string): boolean {
@@ -315,20 +298,16 @@ class LiveOutputForwarder {
       const stripped = text.replace(/^\n+/, "");
       if (stripped.length === 0) return;
 
-      text = (this.atLineStart() ? "" : "\n") + stripped;
+      this.sawContent = true;
+      emitOnNewLine(this.driver, stripped);
+      return;
     }
-    this.sawContent = true;
-    this.onVisible(text);
+    this.driver.emit("data", text);
   }
 }
 
-function frameFuncName(frame: QFrame): string | undefined {
-  const m = /^([.\w]+)[@:]/.exec(frame.text);
-  return m ? m[1] : undefined;
-}
-
-function sameQName(a: string): string {
-  return a.replace(/^\.+/, "");
+function stripLeadingDots(name: string): string {
+  return name.replace(/^\.+/, "");
 }
 
 function statementAt(
@@ -339,13 +318,13 @@ function statementAt(
 }
 
 function frameDisplayName(frame: QFrame, mappedFile?: string): string {
-  const name = frameFuncName(frame);
+  const name = funcName(frame.text);
   if (name?.startsWith(ANON_PREFIX)) return "<lambda>";
   return name ?? (mappedFile ? path.basename(mappedFile) : frame.text);
 }
 
 function statementId(
-  seps: QSeparator[],
+  seps: StatementSeparator[],
   line: number | undefined,
   col: number | undefined,
 ): number {
@@ -358,7 +337,7 @@ function statementId(
 }
 
 function statementStart(
-  seps: QSeparator[],
+  seps: StatementSeparator[],
   lineText: string,
   line: number,
   col: number,
@@ -388,7 +367,7 @@ class QDebugSession extends DebugSession {
   private static releasing?: Promise<void>;
 
   private driver: QProcess | undefined;
-  private debugTerminal: DebugTerminal | undefined;
+  private terminal: vscode.Terminal | undefined;
 
   private verboseTrace = false;
   private onExited: ((code: number) => void) | undefined;
@@ -554,7 +533,7 @@ class QDebugSession extends DebugSession {
       this.programCwd = cwd;
 
       const session = getOrCreateDebugTerminal(cwd, args.qExecutable);
-      this.debugTerminal = session;
+      this.terminal = session.terminal;
       this.driver = session.process;
 
       this.verboseTrace = args.verboseTrace === true;
@@ -627,7 +606,7 @@ class QDebugSession extends DebugSession {
         let line = f.line ?? 0;
         if (virtual) {
           src = new Source(
-            `${frameFuncName(f) ?? "source"}.q`,
+            `${funcName(f.text) ?? "source"}.q`,
             undefined,
             virtual.ref,
           );
@@ -741,31 +720,19 @@ class QDebugSession extends DebugSession {
       return;
     }
 
-    if (this.topLevelPaused) {
-      const res = await this.settle(() => this.evaluateLines(expression));
-      if (res === undefined) {
-        this.sendErrorResponse(response, {
-          id: 1002,
-          format: "Not paused: cannot evaluate.",
-        });
-        return;
-      }
-      response.body = { result: res.output.trim(), variablesReference: 0 };
-      this.sendResponse(response);
-      return;
-    }
-    if (!this.driver?.suspended) {
-      this.sendErrorResponse(response, {
-        id: 1002,
-        format: "Not paused: cannot evaluate.",
-      });
-      return;
-    }
-    const res = await this.settle(async () => {
-      if (!this.driver?.suspended) return undefined;
-      if (args.frameId !== undefined) await this.navigateTo(args.frameId);
-      return this.evaluateLines(expression);
-    });
+    const topLevel = this.topLevelPaused !== undefined;
+    const res =
+      topLevel || this.driver?.suspended
+        ? await this.settle(async () => {
+            if (!topLevel) {
+              if (!this.driver?.suspended) return undefined;
+              if (args.frameId !== undefined) {
+                await this.navigateTo(args.frameId);
+              }
+            }
+            return this.evaluateLines(expression);
+          })
+        : undefined;
     if (res === undefined) {
       this.sendErrorResponse(response, {
         id: 1002,
@@ -776,7 +743,7 @@ class QDebugSession extends DebugSession {
     response.body = { result: res.output.trim(), variablesReference: 0 };
     this.sendResponse(response);
 
-    if (!this.driver?.suspended && !this.topLevelPaused) {
+    if (!topLevel && !this.driver?.suspended && !this.topLevelPaused) {
       this.sendEvent(new TerminatedEvent());
     }
   }
@@ -853,12 +820,12 @@ class QDebugSession extends DebugSession {
       const driver = this.driver;
       await this.abortToTop().catch(() => undefined);
 
-      for (const { name, descentPath } of [
+      for (const target of [
         ...this.armedTraps.values(),
         ...this.stepInTraps.values(),
       ]) {
         await driver
-          .sendCommand(`.dbg.bu[\`${name};${qLongList(descentPath)}]`, false)
+          .sendCommand(dbgCall("bu", target), false)
           .catch(() => undefined);
       }
 
@@ -936,8 +903,7 @@ class QDebugSession extends DebugSession {
     this.driver.emit("data", "\n");
 
     const args = this.launchArgs;
-    const cwd = args.cwd ?? path.dirname(args.program);
-    const programPath = path.resolve(cwd, args.program);
+    const programPath = path.resolve(this.programCwd, args.program);
     const text = this.readSource(programPath);
     if (text === undefined) {
       this.sendEvent(
@@ -958,7 +924,7 @@ class QDebugSession extends DebugSession {
 
     if (args.args && args.args.length > 0) {
       await this.driver.sendCommand(
-        `.z.x:(${args.args.map(qStringLiteral).join(";")})`,
+        `.z.x:(${args.args.map(qText).join(";")})`,
         false,
       );
     }
@@ -977,18 +943,10 @@ class QDebugSession extends DebugSession {
           this.topLevelPaused !== stmt &&
           (await this.hasRequestedTopLevelBreakpoint(stmt))
         ) {
-          await this.reportTopLevelStopped(stmt);
+          this.reportTopLevelStopped(stmt);
           return;
         }
-        this.topLevelPaused = undefined;
-        this.stmtIndex++;
-
-        await this.syncBreakpoints(this.loadedThroughLine);
-
-        await this.recoverStepInTraps();
-
-        await this.loadStatement(stmt);
-        this.loadedThroughLine = Math.max(this.loadedThroughLine, stmt.endLine);
+        await this.advanceStatement(stmt);
         if (this.cancelled) return;
 
         if (this.driver.suspended) {
@@ -1018,36 +976,48 @@ class QDebugSession extends DebugSession {
     return false;
   }
 
-  private async reportTopLevelStopped(
+  private reportTopLevelStopped(
     stmt: QStatement,
     reason: "breakpoint" | "step" = "breakpoint",
-  ): Promise<void> {
+  ): void {
     this.topLevelPaused = stmt;
     this.currentFrames = [];
     this.qCurrentIndex = 0;
     this.currentMarker = { line: stmt.startLine, col: stmt.startColumn };
 
-    this.debugTerminal?.terminal.show(true);
+    this.terminal?.show(true);
     this.sendEvent(new StoppedEvent(reason, THREAD_ID));
   }
 
   private async pauseAfterStep(): Promise<void> {
     await this.flushValue();
     if (this.stmtIndex < this.statements.length) {
-      await this.reportTopLevelStopped(this.statements[this.stmtIndex], "step");
+      this.reportTopLevelStopped(this.statements[this.stmtIndex], "step");
     } else {
       await this.runStatements();
     }
   }
 
-  private async stepOverTopLevel(stmt: QStatement): Promise<void> {
-    if (!this.driver) return;
+  private async advanceStatement(
+    stmt: QStatement,
+    stepInto = false,
+  ): Promise<void> {
     this.topLevelPaused = undefined;
     this.stmtIndex++;
     await this.syncBreakpoints(this.loadedThroughLine);
-    await this.recoverStepInTraps();
-    await this.loadStatement(stmt);
+    if (!stepInto) await this.recoverStepInTraps();
+    this.stepIntoRoots = stepInto;
+    try {
+      await this.loadStatement(stmt);
+    } finally {
+      this.stepIntoRoots = false;
+    }
     this.loadedThroughLine = Math.max(this.loadedThroughLine, stmt.endLine);
+  }
+
+  private async stepOverTopLevel(stmt: QStatement): Promise<void> {
+    if (!this.driver) return;
+    await this.advanceStatement(stmt);
 
     if (this.driver.suspended) {
       if (await this.handleSuspension()) return;
@@ -1063,16 +1033,7 @@ class QDebugSession extends DebugSession {
       stmt.endLine,
       undefined,
     );
-    this.topLevelPaused = undefined;
-    this.stmtIndex++;
-    await this.syncBreakpoints(this.loadedThroughLine);
-    this.stepIntoRoots = true;
-    try {
-      await this.loadStatement(stmt);
-    } finally {
-      this.stepIntoRoots = false;
-    }
-    this.loadedThroughLine = Math.max(this.loadedThroughLine, stmt.endLine);
+    await this.advanceStatement(stmt, true);
 
     if (this.driver.suspended) {
       if (this.driver.stopReason === "exception") {
@@ -1121,14 +1082,17 @@ class QDebugSession extends DebugSession {
 
     this.tempStatements.set(path.basename(file), stmt);
 
-    const driver = this.driver;
+    return this.sendForwarded(`\\l ${file}`);
+  }
+
+  private async sendForwarded(command: string): Promise<QCommandResult> {
+    if (!this.driver) throw new Error("no active debug session");
     const forwarder = new LiveOutputForwarder(
       this.verboseTrace ? [] : [SUSPEND_MARKER_RE, FRAME_LINE_RE],
-      (text) => driver.emit("data", text),
-      () => driver.atLineStart,
+      this.driver,
     );
-    const result = await driver.sendCommand(
-      `\\l ${file}`,
+    const result = await this.driver.sendCommand(
+      command,
       false,
       true,
       (chunk) => forwarder.push(chunk),
@@ -1181,11 +1145,7 @@ class QDebugSession extends DebugSession {
     await this.syncBreakpoints(stmt.endLine, { armOnly: true });
     if (this.stepIntoRoots) {
       for (const alias of aliases) {
-        const target = { name: alias, descentPath: [] };
-        const key = trapKeyOf(target);
-        if (this.stepInTraps.has(key) || this.armedTraps.has(key)) continue;
-        const res = await this.evaluate(`.dbg.bs[\`${alias};()]`);
-        if (!res.errored) this.stepInTraps.set(key, target);
+        await this.armStepInTrap({ name: alias, descentPath: [] });
       }
     }
     return text;
@@ -1205,8 +1165,7 @@ class QDebugSession extends DebugSession {
     this.pendingValue = false;
     const res = await this.driver.sendCommand(".dbg.pop[]", false);
     if (!res.errored && res.output.length > 0) {
-      const prefix = this.driver.atLineStart ? "" : "\n";
-      this.driver.emit("data", `${prefix}${res.output}\n`);
+      emitOnNewLine(this.driver, `${res.output}\n`);
     }
   }
 
@@ -1226,7 +1185,7 @@ class QDebugSession extends DebugSession {
     }
     await this.resetFramePointer();
     if (this.driver.stopReason === "breakpoint") {
-      const resumeLine = await this.currentFunctionResumeLine();
+      const resumeLine = await this.pausedLambdaLine();
       if (resumeLine !== undefined) {
         const outcome = await this.advanceToBreakpoint(resumeLine);
         if (outcome === "exited") {
@@ -1246,7 +1205,7 @@ class QDebugSession extends DebugSession {
     }
   }
 
-  private async currentFunctionResumeLine(): Promise<number | undefined> {
+  private async pausedLambdaLine(): Promise<number | undefined> {
     const pos = await this.position();
     const file = this.mapToProgram(pos?.file);
     if (file === undefined || pos?.line === undefined) return undefined;
@@ -1255,18 +1214,23 @@ class QDebugSession extends DebugSession {
     return pos.line;
   }
 
-  private async stepStatement(): Promise<void> {
+  private async beginStep(
+    topLevel: (stmt: QStatement) => Promise<void>,
+  ): Promise<boolean> {
     if (this.topLevelPaused) {
-      await this.stepOverTopLevel(this.topLevelPaused);
-      return;
+      await topLevel(this.topLevelPaused);
+      return false;
     }
     if (!this.driver?.suspended) {
       await this.runStatements();
-      return;
+      return false;
     }
     await this.resetFramePointer();
-    const start = await this.position();
+    return true;
+  }
 
+  private async stepOrigin() {
+    const start = await this.position();
     if (start?.file === undefined) await this.ensureVirtualSource(start?.name);
     const startLine = this.lineOf(start);
     const file = this.mapToProgram(start?.file);
@@ -1274,171 +1238,103 @@ class QDebugSession extends DebugSession {
       file && startLine !== undefined
         ? await this.lambdaPathAt(file, startLine, this.programColumn(start))
         : undefined;
-    const braceLine = lambda?.startLine;
     const separators =
       file && startLine !== undefined
         ? await this.statementSeparators(file, startLine)
         : [];
-    const startId = statementId(separators, startLine, start?.col);
+    let prevId = statementId(separators, startLine, start?.col);
+    const leftStatement = (pos: QPosition | undefined): boolean => {
+      const line = this.lineOf(pos);
+      if (line === undefined || line === lambda?.startLine) return false;
+      const id = statementId(separators, line, pos?.col);
+      if (line !== startLine || id !== prevId) return true;
+      prevId = id;
+      return false;
+    };
+    return { start, startLine, file, lambda, leftStatement };
+  }
 
-    let prevId = startId;
-    let pc = await this.programCounter();
+  private async stepUntil(
+    stops: (pos: QPosition | undefined) => boolean,
+    skipPhantoms = true,
+  ): Promise<boolean> {
+    if (!this.driver) return false;
+    let pc = skipPhantoms ? await this.programCounter() : undefined;
     let guard = 0;
-    while (this.driver.suspended && guard++ < MAX_BREAKPOINT_STEPS) {
+    while (this.driver.suspended && guard++ < MAX_STEPS) {
       const pos = await this.stepPosition();
       if (!this.driver.suspended) break;
       if (this.driver.stopReason === "exception") {
         await this.reportStopped("exception");
-        return;
+        return true;
       }
-      const prevPc = pc;
-      pc = await this.programCounter();
-      if (isPhantomStep(prevPc, pc) || (pc && pc.position < 0)) continue;
-      const line = this.lineOf(pos);
-      if (line === undefined || line === braceLine) continue;
-      const id = statementId(separators, line, pos?.col);
-
-      if (line !== startLine || id !== prevId) {
+      if (skipPhantoms) {
+        const prevPc = pc;
+        pc = await this.programCounter();
+        if (isPhantomStep(prevPc, pc) || (pc && pc.position < 0)) continue;
+      }
+      if (stops(pos)) {
         await this.recoverStepInTraps();
         await this.reportStopped("step");
-        return;
+        return true;
       }
-      prevId = id;
     }
-    if (this.driver.suspended) {
+    return false;
+  }
+
+  private async finishStep(): Promise<void> {
+    if (this.driver?.suspended) {
       await this.continueFromBreakpoint();
       if (this.driver.suspended) {
         await this.reportStopped(
           this.driver.stopReason === "exception" ? "exception" : "breakpoint",
         );
-      } else {
-        await this.pauseAfterStep();
+        return;
       }
-    } else {
-      await this.pauseAfterStep();
     }
+    await this.pauseAfterStep();
+  }
+
+  private async stepStatement(): Promise<void> {
+    if (!(await this.beginStep((stmt) => this.stepOverTopLevel(stmt)))) return;
+    const { leftStatement } = await this.stepOrigin();
+    if (await this.stepUntil(leftStatement)) return;
+    await this.finishStep();
   }
 
   private async stepInto(): Promise<void> {
-    if (this.topLevelPaused) {
-      await this.stepIntoTopLevel(this.topLevelPaused);
-      return;
-    }
-    if (!this.driver?.suspended) {
-      await this.runStatements();
-      return;
-    }
-    await this.resetFramePointer();
-    const start = await this.position();
-
-    if (start?.file === undefined) await this.ensureVirtualSource(start?.name);
-    const startLine = this.lineOf(start);
-    const startFile = this.mapToProgram(start?.file);
-    const lambda =
-      startFile && startLine !== undefined
-        ? await this.lambdaPathAt(
-            startFile,
-            startLine,
-            this.programColumn(start),
-          )
-        : undefined;
-    const startName = lambda?.name || undefined;
-    const braceLine = lambda?.startLine;
-    const startIndex = start?.index;
-    const separators =
-      startFile && startLine !== undefined
-        ? await this.statementSeparators(startFile, startLine)
-        : [];
-    const startId = statementId(separators, startLine, start?.col);
-
+    if (!(await this.beginStep((stmt) => this.stepIntoTopLevel(stmt)))) return;
+    const { start, startLine, file, lambda, leftStatement } =
+      await this.stepOrigin();
     await this.armStepInTraps(
-      startFile,
+      file,
       startLine,
       startLine,
-      startName,
+      lambda?.name || undefined,
       this.programColumn(start),
     );
-
-    let prevId = startId;
-    let pc = await this.programCounter();
-    let guard = 0;
-    while (this.driver.suspended && guard++ < MAX_BREAKPOINT_STEPS) {
-      const pos = await this.stepPosition();
-      if (!this.driver.suspended) break;
-      if (this.driver.stopReason === "exception") {
-        await this.reportStopped("exception");
-        return;
-      }
-      const prevPc = pc;
-      pc = await this.programCounter();
-      if (isPhantomStep(prevPc, pc) || (pc && pc.position < 0)) continue;
-      if (
-        pos?.index !== undefined &&
-        startIndex !== undefined &&
-        pos.index > startIndex
-      ) {
-        await this.recoverStepInTraps();
-        await this.reportStopped("step");
-        return;
-      }
-      const line = this.lineOf(pos);
-      if (line === undefined || line === braceLine) continue;
-      const id = statementId(separators, line, pos?.col);
-
-      if (line !== startLine || id !== prevId) {
-        await this.recoverStepInTraps();
-        await this.reportStopped("step");
-        return;
-      }
-      prevId = id;
+    const startIndex = start?.index;
+    const descended = (pos: QPosition | undefined) =>
+      pos?.index !== undefined &&
+      startIndex !== undefined &&
+      pos.index > startIndex;
+    if (await this.stepUntil((pos) => descended(pos) || leftStatement(pos))) {
+      return;
     }
     await this.recoverStepInTraps();
-    if (this.driver.suspended) {
-      await this.continueFromBreakpoint();
-      if (this.driver.suspended) {
-        await this.reportStopped(
-          this.driver.stopReason === "exception" ? "exception" : "breakpoint",
-        );
-      } else {
-        await this.pauseAfterStep();
-      }
-    } else {
-      await this.pauseAfterStep();
-    }
+    await this.finishStep();
   }
 
   private async stepOut(): Promise<void> {
-    if (this.topLevelPaused) {
-      await this.stepOverTopLevel(this.topLevelPaused);
-      return;
-    }
-    if (!this.driver?.suspended) {
-      await this.runStatements();
-      return;
-    }
-    await this.resetFramePointer();
-    const start = await this.position();
-    const startIndex = start?.index;
-    let guard = 0;
-    while (this.driver.suspended && guard++ < MAX_BREAKPOINT_STEPS) {
-      const pos = await this.stepPosition();
-      if (!this.driver.suspended) break;
-      if (this.driver.stopReason === "exception") {
-        await this.reportStopped("exception");
-        return;
-      }
-      if (
-        pos?.index !== undefined &&
-        startIndex !== undefined &&
-        pos.index < startIndex
-      ) {
-        await this.recoverStepInTraps();
-        await this.reportStopped("step");
-        return;
-      }
-    }
+    if (!(await this.beginStep((stmt) => this.stepOverTopLevel(stmt)))) return;
+    const startIndex = (await this.position())?.index;
+    const returned = (pos: QPosition | undefined) =>
+      pos?.index !== undefined &&
+      startIndex !== undefined &&
+      pos.index < startIndex;
+    if (await this.stepUntil(returned, false)) return;
     await this.recoverStepInTraps();
-    if (this.driver.suspended) {
+    if (this.driver?.suspended) {
       await this.reportStopped("step");
     } else {
       await this.pauseAfterStep();
@@ -1464,23 +1360,23 @@ class QDebugSession extends DebugSession {
       const target =
         (await this.resolveLocalStepInTarget(enclosingFn, name)) ??
         (await this.resolveGlobalStepInTarget(canon));
-      if (!target) continue;
-      const key = trapKeyOf(target);
-      if (this.stepInTraps.has(key) || this.armedTraps.has(key)) continue;
-      const res = await this.evaluate(
-        `.dbg.bs[\`${target.name};${qLongList(target.descentPath)}]`,
-      );
-      if (!res.errored) this.stepInTraps.set(key, target);
+      if (target) await this.armStepInTrap(target);
     }
     if (enclosingFn === undefined || column === undefined) return;
     for (const target of await this.statementLambdas(file, startLine, column)) {
-      const key = trapKeyOf(target);
-      if (this.stepInTraps.has(key) || this.armedTraps.has(key)) continue;
-      const res = await this.evaluate(
-        `.dbg.bs[\`${target.name};${qLongList(target.descentPath)}]`,
-      );
-      if (!res.errored) this.stepInTraps.set(key, target);
+      await this.armStepInTrap(target);
     }
+  }
+
+  private async armStepInTrap(target: QLambdaTarget): Promise<void> {
+    const key = trapKeyOf(target);
+    if (this.stepInTraps.has(key) || this.armedTraps.has(key)) return;
+    const res = await this.evaluate(dbgCall("bs", target));
+    if (!res.errored) this.stepInTraps.set(key, target);
+  }
+
+  private async disarm(target: QLambdaTarget): Promise<void> {
+    await this.evaluate(dbgCall("bu", target));
   }
 
   private programColumn(pos: QPosition | undefined): number | undefined {
@@ -1498,7 +1394,9 @@ class QDebugSession extends DebugSession {
     name: string,
   ): Promise<QLambdaTarget | undefined> {
     if (enclosingFn === undefined) return undefined;
-    const res = await this.evaluate(`.dbg.childidx[\`${enclosingFn};${name}]`);
+    const res = await this.evaluate(
+      `.dbg.childIndex[\`${enclosingFn};${name}]`,
+    );
     if (res.errored || !/^\d+$/.test(res.output.trim())) return undefined;
     return { name: enclosingFn, descentPath: [Number(res.output.trim())] };
   }
@@ -1506,46 +1404,40 @@ class QDebugSession extends DebugSession {
   private async resolveGlobalStepInTarget(
     name: string,
   ): Promise<QLambdaTarget | undefined> {
-    const res = await this.evaluate(`100h~type .dbg.nested[\`${name};()]`);
+    const res = await this.evaluate(
+      `100h~type ${dbgCall("nested", { name, descentPath: [] })}`,
+    );
     if (res.errored || res.output.trim() !== "1b") return undefined;
 
     return {
       name,
       descentPath: [],
-      backtraceName: await this.bktName(name, []),
+      backtraceName: await this.evaluateName(
+        dbgCall("traceName", { name, descentPath: [] }),
+      ),
     };
   }
 
-  private async resolveExternalTrapName(
-    file: string,
-    leaf: string,
-  ): Promise<string | undefined> {
-    const res = await this.evaluate(
-      `.dbg.bkname[${qStringLiteral(file)};${qStringLiteral(leaf)}]`,
-    );
+  private async evaluateJson(expr: string): Promise<unknown> {
+    const res = await this.evaluate(expr);
     if (res.errored) return undefined;
     try {
-      const parsed = JSON.parse(res.output) as string;
-      return parsed.length > 0 ? parsed : undefined;
+      return JSON.parse(res.output);
     } catch {
       return undefined;
     }
   }
 
-  private async bktName(
-    name: string,
-    descentPath: number[],
-  ): Promise<string | undefined> {
-    const res = await this.evaluate(
-      `.dbg.bktname[\`${name};${qLongList(descentPath)}]`,
-    );
-    if (res.errored) return undefined;
-    try {
-      const parsed = JSON.parse(res.output) as string;
-      return parsed.length > 0 ? parsed : undefined;
-    } catch {
-      return undefined;
-    }
+  private async evaluateName(expr: string): Promise<string | undefined> {
+    const name = await this.evaluateJson(expr);
+    return typeof name === "string" && name.length > 0 ? name : undefined;
+  }
+
+  private async evaluateNames(expr: string): Promise<string[]> {
+    const names = await this.evaluateJson(expr);
+    return Array.isArray(names)
+      ? names.filter((n): n is string => typeof n === "string" && n !== "")
+      : [];
   }
 
   private async recoverStepInTraps(frames?: QFrame[]): Promise<void> {
@@ -1553,21 +1445,19 @@ class QDebugSession extends DebugSession {
     const onStack = new Set<string>();
     if (this.driver?.suspended) {
       for (const f of frames ?? (await this.frames())) {
-        const name = frameFuncName(f);
-        if (name) onStack.add(sameQName(name));
+        const name = funcName(f.text);
+        if (name) onStack.add(stripLeadingDots(name));
       }
     }
     for (const [key, target] of [...this.stepInTraps]) {
       if (
-        onStack.has(sameQName(target.name)) ||
+        onStack.has(stripLeadingDots(target.name)) ||
         (target.backtraceName !== undefined &&
-          onStack.has(sameQName(target.backtraceName)))
+          onStack.has(stripLeadingDots(target.backtraceName)))
       ) {
         continue;
       }
-      await this.evaluate(
-        `.dbg.bu[\`${target.name};${qLongList(target.descentPath)}]`,
-      );
+      await this.disarm(target);
       this.stepInTraps.delete(key);
     }
   }
@@ -1603,7 +1493,7 @@ class QDebugSession extends DebugSession {
       return next;
     };
     let guard = 0;
-    while (this.driver.suspended && guard++ < MAX_BREAKPOINT_STEPS) {
+    while (this.driver.suspended && guard++ < MAX_STEPS) {
       if (this.driver.stopReason === "exception") return "exception";
       if (resumeLine !== undefined && pos?.line === resumeLine) {
         if (!leftResumeLine) {
@@ -1627,7 +1517,7 @@ class QDebugSession extends DebugSession {
     if (this.driver.suspended) {
       this.sendEvent(
         new OutputEvent(
-          `Stopped searching for a breakpoint after ${MAX_BREAKPOINT_STEPS} steps.\n`,
+          `Stopped searching for a breakpoint after ${MAX_STEPS} steps.\n`,
           "console",
         ),
       );
@@ -1643,10 +1533,6 @@ class QDebugSession extends DebugSession {
 
   private mapToProgram(file?: string): string | undefined {
     if (file === undefined) return undefined;
-    if (this.tempDir && file.includes(path.basename(this.tempDir))) {
-      return this.programPath;
-    }
-
     for (const [dir, program] of QDebugSession.tempDirPrograms) {
       if (file.includes(dir)) return program;
     }
@@ -1666,7 +1552,8 @@ class QDebugSession extends DebugSession {
     const exceptionText =
       reason === "exception" ? this.driver?.errorMessage : undefined;
     this.lastExceptionMessage = exceptionText;
-    const allFrames = await this.frames();
+    const trace = await this.backtrace();
+    const allFrames = parseBacktrace(trace);
 
     this.currentFrames = allFrames.filter((f) => !this.isTempLoaderFrame(f));
     this.qCurrentIndex =
@@ -1677,11 +1564,11 @@ class QDebugSession extends DebugSession {
     this.qExecIndex = this.qCurrentIndex;
 
     await this.recoverStepInTraps(this.currentFrames);
-    await this.captureMarker();
+    await this.captureMarker(parseCurrentPosition(trace));
     await this.resolveVirtualSources();
     if (reason === "exception") this.emitExceptionReport();
 
-    this.debugTerminal?.terminal.show(true);
+    this.terminal?.show(true);
 
     this.sendEvent(new StoppedEvent(reason, THREAD_ID));
   }
@@ -1691,8 +1578,7 @@ class QDebugSession extends DebugSession {
     const lines = this.backtraceReportLines();
     if (lines.length === 0) return;
 
-    const prefix = this.driver.atLineStart ? "" : "\n";
-    this.driver.emit("data", prefix + lines.join("\n") + "\n");
+    emitOnNewLine(this.driver, lines.join("\n") + "\n");
   }
 
   private backtraceReportLines(): string[] {
@@ -1749,7 +1635,7 @@ class QDebugSession extends DebugSession {
       const mapped = this.mapToProgram(f.file);
       if (mapped !== undefined && this.readSource(mapped) !== undefined)
         continue;
-      const name = frameFuncName(f);
+      const name = funcName(f.text);
       if (name === undefined) continue;
       const text = await this.fetchSource(name);
       if (text === undefined || text.length === 0) continue;
@@ -1768,14 +1654,10 @@ class QDebugSession extends DebugSession {
   }
 
   private async fetchSource(name: string): Promise<string | undefined> {
-    const res = await this.evaluate(`.dbg.src[\`${name};${qLongList([])}]`);
-    if (res.errored) return undefined;
-    try {
-      const parsed = JSON.parse(res.output) as unknown;
-      return typeof parsed === "string" ? parsed : undefined;
-    } catch {
-      return undefined;
-    }
+    const text = await this.evaluateJson(
+      dbgCall("src", { name, descentPath: [] }),
+    );
+    return typeof text === "string" ? text : undefined;
   }
 
   private matchSourceLine(source: string, frame: QFrame): number {
@@ -1812,18 +1694,11 @@ class QDebugSession extends DebugSession {
     this.virtualSourceText.set(ref, text);
   }
 
-  private async captureMarker(): Promise<void> {
+  private async captureMarker(pos: QPosition | undefined): Promise<void> {
     this.currentMarker = undefined;
-    const pos = await this.position();
-    if (pos?.line === undefined || pos.col === undefined) return;
+    const col = this.programColumn(pos);
+    if (pos?.line === undefined || col === undefined) return;
 
-    const owner = pos.file
-      ? this.tempStatements.get(path.basename(pos.file))
-      : undefined;
-    const col =
-      owner && pos.line === owner.startLine
-        ? pos.col + owner.startColumn
-        : pos.col;
     const file = this.mapToProgram(pos.file);
     const text = file !== undefined ? this.readSource(file) : undefined;
     if (text === undefined || file === undefined) return;
@@ -1841,28 +1716,26 @@ class QDebugSession extends DebugSession {
   ): Promise<void> {
     const wanted = new Set<string>();
     for (const [file, lines] of this.requestedBreakpoints) {
-      const gated = file === this.programPath;
+      const isProgram = file === this.programPath;
       for (const line of lines) {
         const lambda = await this.lambdaPathAt(file, line);
         if (!lambda || lambda.name === "") continue;
 
         let name = lambda.name;
-        if (!gated) {
-          const resolved = await this.resolveExternalTrapName(
-            file,
-            lambda.name,
+        if (!isProgram) {
+          const resolved = await this.evaluateName(
+            `.dbg.resolveName[${qText(file)};${qText(lambda.name)}]`,
           );
           if (resolved === undefined) continue;
           name = resolved;
         }
-        const key = trapKey(name, lambda.descentPath);
+        const target = { name, descentPath: lambda.descentPath };
+        const key = trapKeyOf(target);
         wanted.add(key);
 
-        if (gated && lambda.rootLine > throughLine) continue;
+        if (isProgram && lambda.rootLine > throughLine) continue;
         if (this.armedTraps.has(key)) {
-          const stillTrapped = await this.evaluate(
-            `.dbg.trapped[\`${name};${qLongList(lambda.descentPath)}]`,
-          );
+          const stillTrapped = await this.evaluate(dbgCall("trapped", target));
           if (!stillTrapped.errored && stillTrapped.output.trim() === "1b") {
             continue;
           }
@@ -1870,21 +1743,15 @@ class QDebugSession extends DebugSession {
         }
 
         if (opts.skipKeys?.has(key)) continue;
-        const res = await this.evaluate(
-          `.dbg.bs[\`${name};${qLongList(lambda.descentPath)}]`,
-        );
-        if (!res.errored) {
-          this.armedTraps.set(key, { name, descentPath: lambda.descentPath });
-        }
+        const res = await this.evaluate(dbgCall("bs", target));
+        if (!res.errored) this.armedTraps.set(key, target);
       }
     }
 
     if (opts.armOnly) return;
     for (const [key, target] of [...this.armedTraps]) {
       if (wanted.has(key)) continue;
-      await this.evaluate(
-        `.dbg.bu[\`${target.name};${qLongList(target.descentPath)}]`,
-      );
+      await this.disarm(target);
       this.armedTraps.delete(key);
     }
   }
@@ -1900,11 +1767,11 @@ class QDebugSession extends DebugSession {
 
   private async navigateTo(index: number): Promise<void> {
     let guard = 0;
-    while (this.qCurrentIndex > index && guard++ < 128) {
+    while (this.qCurrentIndex > index && guard++ < MAX_FRAME_MOVES) {
       await this.frameUp();
       this.qCurrentIndex--;
     }
-    while (this.qCurrentIndex < index && guard++ < 128) {
+    while (this.qCurrentIndex < index && guard++ < MAX_FRAME_MOVES) {
       await this.frameDown();
       this.qCurrentIndex++;
     }
@@ -1919,17 +1786,7 @@ class QDebugSession extends DebugSession {
   private async localNamesForFrame(frame: QFrame): Promise<string[]> {
     const target = await this.frameLambda(frame);
     if (!target) return [];
-    const res = await this.evaluate(
-      `.dbg.locals[\`${target.name};${qLongList(target.descentPath)}]`,
-    );
-    if (res.errored) return [];
-    try {
-      const names = JSON.parse(res.output) as string[];
-
-      return names.filter((n) => n.length > 0);
-    } catch {
-      return [];
-    }
+    return this.evaluateNames(dbgCall("locals", target));
   }
 
   private async frameLambda(frame: QFrame): Promise<QLambdaTarget | undefined> {
@@ -1940,17 +1797,16 @@ class QDebugSession extends DebugSession {
         return { name: lam.name, descentPath: lam.descentPath };
       }
     }
-    const name = frameFuncName(frame);
+    const name = funcName(frame.text);
     return name ? { name, descentPath: [] } : undefined;
   }
 
   private async readValues(names: string[]): Promise<DebugProtocol.Variable[]> {
     if (names.length === 0) return [];
     const expr = `.dbg.vals[(${qSymbolVector(names)})!(${qIdentVector(names)})]`;
-    const res = await this.evaluate(expr);
-    const values = res.errored
-      ? undefined
-      : parseJson<Record<string, unknown>>(res.output);
+    const values = (await this.evaluateJson(expr)) as
+      | Record<string, unknown>
+      | undefined;
     if (values) {
       return names.map((name) => new Variable(name, formatValue(values[name])));
     }
@@ -1968,16 +1824,10 @@ class QDebugSession extends DebugSession {
     return this.readValues(await this.globalNames());
   }
 
-  private async globalNames(): Promise<string[]> {
-    const res = await this.evaluate(
-      `.dbg.globalNames[${qStringLiteral(this.currentNamespace)}]`,
+  private globalNames(): Promise<string[]> {
+    return this.evaluateNames(
+      `.dbg.globalNames[${qText(this.currentNamespace)}]`,
     );
-    if (res.errored) return [];
-    try {
-      return (JSON.parse(res.output) as string[]).filter((n) => n.length > 0);
-    } catch {
-      return [];
-    }
   }
 
   private async hoverValue(
@@ -2024,7 +1874,7 @@ class QDebugSession extends DebugSession {
   private async abortToTop(): Promise<void> {
     if (!this.driver) return;
     let guard = 0;
-    while (this.driver.suspended && !this.driver.exited && guard++ < 64) {
+    while (this.driver.suspended && !this.driver.exited && guard++ < MAX_POPS) {
       if (
         this.driver.stopReason === "breakpoint" &&
         (await this.programCounter())?.index === 0
@@ -2042,7 +1892,7 @@ class QDebugSession extends DebugSession {
     while (
       this.driver.promptDepth > target &&
       !this.driver.exited &&
-      guard++ < 64
+      guard++ < MAX_POPS
     ) {
       await this.driver.sendCommand("\\", false);
     }
@@ -2053,10 +1903,8 @@ class QDebugSession extends DebugSession {
     const before = this.driver.promptDepth;
     const reason = this.driver.stopReason;
     const result = await this.driver.sendCommand(expr, false);
-    if (result.depth > before) {
-      await this.popTo(before);
-      this.driver.restoreStopReason(reason);
-    } else if (result.depth === before) {
+    if (result.depth >= before) {
+      if (result.depth > before) await this.popTo(before);
       this.driver.restoreStopReason(reason);
     }
     return result;
@@ -2110,8 +1958,9 @@ class QDebugSession extends DebugSession {
 
   private async programCounter(): Promise<ProgramCounter | undefined> {
     if (!this.driver?.suspended) return undefined;
-    const res = await this.evaluate(".dbg.pc[]");
-    const value = res.errored ? undefined : parseJson<number[]>(res.output);
+    const value = (await this.evaluateJson(".dbg.pc[]")) as
+      | number[]
+      | undefined;
     if (!value || value.length !== 4 || value[0] < 0) return undefined;
     return {
       index: value[0],
@@ -2123,18 +1972,8 @@ class QDebugSession extends DebugSession {
 
   private async stepPosition(): Promise<QPosition | undefined> {
     if (!this.driver) return undefined;
-
-    const driver = this.driver;
-    const forwarder = new LiveOutputForwarder(
-      [SUSPEND_MARKER_RE, FRAME_LINE_RE],
-      (text) => driver.emit("data", text),
-      () => driver.atLineStart,
-    );
-    const result = await driver.sendCommand(">", false, true, (chunk) =>
-      forwarder.push(chunk),
-    );
-    forwarder.finish();
-    return driver.suspended
+    const result = await this.sendForwarded(">");
+    return this.driver.suspended
       ? parseCurrentPosition(this.cleanBacktrace(result.output))
       : undefined;
   }
@@ -2147,32 +1986,36 @@ class QDebugSession extends DebugSession {
     await this.evaluate(".");
   }
 
-  private async frames(): Promise<QFrame[]> {
-    if (!this.driver) return [];
+  private async backtrace(): Promise<string> {
+    if (!this.driver) return "";
     const result = await this.driver.sendCommand(".Q.bt[]", false);
-    return parseBacktrace(this.cleanBacktrace(result.output));
+    return this.cleanBacktrace(result.output);
+  }
+
+  private async frames(): Promise<QFrame[]> {
+    return parseBacktrace(await this.backtrace());
   }
 
   private async position(): Promise<QPosition | undefined> {
-    if (!this.driver) return undefined;
-    const result = await this.driver.sendCommand(".Q.bt[]", false);
-    return parseCurrentPosition(this.cleanBacktrace(result.output));
+    return parseCurrentPosition(await this.backtrace());
   }
 
-  private async continueFromBreakpoint(): Promise<QCommandResult> {
-    if (!this.driver) throw new Error("no active debug session");
+  private continueFromBreakpoint(): Promise<QCommandResult> {
+    return this.sendForwarded(":");
+  }
 
-    const driver = this.driver;
-    const forwarder = new LiveOutputForwarder(
-      this.verboseTrace ? [] : [SUSPEND_MARKER_RE, FRAME_LINE_RE],
-      (text) => driver.emit("data", text),
-      () => driver.atLineStart,
-    );
-    const result = await driver.sendCommand(":", false, true, (chunk) =>
-      forwarder.push(chunk),
-    );
-    forwarder.finish();
-    return result;
+  private async request<M extends keyof StructureRequests>(
+    method: M,
+    params: StructureRequests[M][0],
+    fallback: StructureRequests[M][1],
+  ): Promise<StructureRequests[M][1]> {
+    const client = this.getClient();
+    if (!client) return fallback;
+    try {
+      return await client.sendRequest<StructureRequests[M][1]>(method, params);
+    } catch {
+      return fallback;
+    }
   }
 
   private async lambdaPathAt(
@@ -2182,36 +2025,23 @@ class QDebugSession extends DebugSession {
   ): Promise<
     (QLambdaTarget & { startLine: number; rootLine: number }) | undefined
   > {
-    const client = this.getClient();
-    if (!client) return undefined;
-    try {
-      const result = await client.sendRequest<{
-        name: string;
-        path: number[];
-        startLine: number;
-        rootLine: number;
-        rootColumn?: number;
-      } | null>("kdb.qls.lambdaPath", {
-        path: file,
-        line: line1Based - 1,
-        anonymous: true,
-        column,
-      });
-      if (!result) return undefined;
-      return {
-        name: this.resolveName(
-          file,
-          result.name,
-          result.rootLine,
-          result.rootColumn,
-        ),
-        descentPath: result.path,
-        startLine: result.startLine + 1,
-        rootLine: result.rootLine + 1,
-      };
-    } catch {
-      return undefined;
-    }
+    const result = await this.request(
+      "kdb.qls.lambdaPath",
+      { path: file, line: line1Based - 1, anonymous: true, column },
+      null,
+    );
+    if (!result) return undefined;
+    return {
+      name: this.resolveName(
+        file,
+        result.name,
+        result.rootLine,
+        result.rootColumn,
+      ),
+      descentPath: result.path,
+      startLine: result.startLine + 1,
+      rootLine: result.rootLine + 1,
+    };
   }
 
   private resolveName(
@@ -2229,35 +2059,22 @@ class QDebugSession extends DebugSession {
     line1Based: number,
     column: number,
   ): Promise<QLambdaTarget[]> {
-    const client = this.getClient();
-    if (!client) return [];
-    try {
-      const result = await client.sendRequest<
-        {
-          name: string;
-          path: number[];
-          rootLine: number;
-          rootColumn?: number;
-        }[]
-      >("kdb.qls.statementLambdas", {
-        path: file,
-        line: line1Based - 1,
-        column,
-      });
-      return result
-        .map((target) => ({
-          name: this.resolveName(
-            file,
-            target.name,
-            target.rootLine,
-            target.rootColumn,
-          ),
-          descentPath: target.path,
-        }))
-        .filter((target) => target.name !== "");
-    } catch {
-      return [];
-    }
+    const result = await this.request(
+      "kdb.qls.statementLambdas",
+      { path: file, line: line1Based - 1, column },
+      [],
+    );
+    return result
+      .map((target) => ({
+        name: this.resolveName(
+          file,
+          target.name,
+          target.rootLine,
+          target.rootColumn,
+        ),
+        descentPath: target.path,
+      }))
+      .filter((target) => target.name !== "");
   }
 
   private async rootLambdas(
@@ -2265,87 +2082,63 @@ class QDebugSession extends DebugSession {
     startLine1Based: number,
     endLine1Based: number,
   ): Promise<LambdaSpan[]> {
-    const client = this.getClient();
-    if (!client) return [];
-    try {
-      const result = await client.sendRequest<LambdaSpan[]>(
-        "kdb.qls.rootLambdas",
-        {
-          path: file,
-          startLine: startLine1Based - 1,
-          endLine: endLine1Based - 1,
-        },
-      );
-      return result.map((span) => ({
-        ...span,
-        line: span.line + 1,
-        endLine: span.endLine + 1,
-      }));
-    } catch {
-      return [];
-    }
+    const result = await this.request(
+      "kdb.qls.rootLambdas",
+      {
+        path: file,
+        startLine: startLine1Based - 1,
+        endLine: endLine1Based - 1,
+      },
+      [],
+    );
+    return result.map((span) => ({
+      ...span,
+      line: span.line + 1,
+      endLine: span.endLine + 1,
+    }));
   }
 
   private async topLevelStatements(file: string): Promise<QStatement[]> {
-    const client = this.getClient();
-    if (!client) return [];
-    try {
-      const result = await client.sendRequest<
-        {
-          startLine: number;
-          startChar: number;
-          endLine: number;
-          text: string;
-          namespace: string;
-        }[]
-      >("kdb.qls.topLevelStatements", { path: file });
-      return result.map((s) => ({
-        startLine: s.startLine + 1,
-        startColumn: s.startChar,
-        endLine: s.endLine + 1,
-        text: s.text,
-        namespace: s.namespace,
-      }));
-    } catch {
-      return [];
-    }
+    const result = await this.request(
+      "kdb.qls.topLevelStatements",
+      { path: file },
+      [],
+    );
+    return result.map((s) => ({
+      startLine: s.startLine + 1,
+      startColumn: s.startChar,
+      endLine: s.endLine + 1,
+      text: s.text,
+      namespace: s.namespace,
+    }));
   }
 
   private async statementSeparators(
     file: string,
     line1Based: number,
-  ): Promise<QSeparator[]> {
-    const client = this.getClient();
-    if (!client) return [];
-    try {
-      const result = await client.sendRequest<
-        { line: number; column: number }[]
-      >("kdb.qls.statementSeparators", { path: file, line: line1Based - 1 });
-      return result.map((s) => ({ line: s.line + 1, column: s.column }));
-    } catch {
-      return [];
-    }
+  ): Promise<StatementSeparator[]> {
+    const result = await this.request(
+      "kdb.qls.statementSeparators",
+      { path: file, line: line1Based - 1 },
+      [],
+    );
+    return result.map((s) => ({ line: s.line + 1, column: s.column }));
   }
 
-  private async identifiersOnLines(
+  private identifiersOnLines(
     file: string,
     startLine1Based: number,
     endLine1Based: number,
-  ): Promise<QIdentifier[]> {
-    const client = this.getClient();
-    if (!client) return [];
-    try {
-      return await client.sendRequest<QIdentifier[]>(
-        "kdb.qls.identifiersOnLines",
-        {
-          path: file,
-          startLine: startLine1Based - 1,
-          endLine: endLine1Based - 1,
-        },
-      );
-    } catch {
-      return [];
-    }
+  ): Promise<LineIdentifier[]> {
+    return this.request(
+      "kdb.qls.identifiersOnLines",
+      {
+        path: file,
+        startLine: startLine1Based - 1,
+        endLine: endLine1Based - 1,
+      },
+      [],
+    );
   }
 }
 

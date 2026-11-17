@@ -27,6 +27,10 @@ import {
   getOrCreateDebugTerminal,
   killDebugTerminal,
 } from "../../../src/debugger/debugTerminal";
+import {
+  FRAME_LINE_RE,
+  SUSPEND_MARKER_RE,
+} from "../../../src/debugger/qBacktrace";
 
 const GLOBALS_VAR_REF = 999;
 
@@ -261,8 +265,7 @@ describe("QDebugSession", function () {
     const first = DapClient.start();
     try {
       await launch(first, CTRL_C_FIXTURE);
-      const terminal = (QDebugSession.activeSession as any).debugTerminal
-        .terminal;
+      const terminal = (QDebugSession.activeSession as any).terminal;
       const pty = terminals.ptyOf(terminal);
       assert.ok(pty);
       pty.handleInput!("\x03");
@@ -302,8 +305,7 @@ describe("QDebugSession", function () {
       });
       await client.request("configurationDone", {});
       await new Promise((resolve) => setTimeout(resolve, 300));
-      const terminal = (QDebugSession.activeSession as any).debugTerminal
-        .terminal;
+      const terminal = (QDebugSession.activeSession as any).terminal;
       terminals.ptyOf(terminal)!.handleInput!("1+1\r");
 
       const stopped = await client.waitForEvent("stopped");
@@ -518,7 +520,7 @@ describe("QDebugSession", function () {
         l.includes("topLevelError.q:2: a+`notanumber"),
       );
       assert.ok(frameIdx >= 0);
-      assert.match(reportLines[frameIdx], /^(?:>>|\s\s)\[\d+\]\s/);
+      assert.match(reportLines[frameIdx], FRAME_LINE_RE);
       assert.strictEqual(reportLines[frameIdx + 1]?.trim(), "^");
 
       await client.request("continue", { threadId: 1 });
@@ -656,7 +658,7 @@ describe("QDebugSession", function () {
         l.includes("badLoad.q:1: \\l nosuchfile_xyz.q"),
       );
       assert.ok(frameIdx >= 0);
-      assert.match(reportLines[frameIdx], /^(?:>>|\s\s)\[\d+\]\s/);
+      assert.match(reportLines[frameIdx], FRAME_LINE_RE);
       assert.strictEqual(reportLines[frameIdx + 1]?.trim(), "^");
       assert.ok(!out.includes("qlangx-debug-"));
 
@@ -1827,7 +1829,13 @@ describe("QDebugSession", function () {
           ["f:5", "g:2", "f:5", "f:6"],
         );
         const out = terminals.outputOf(terminal).slice(before);
-        assert.ok(!/^#\d+\s*$/m.test(out.replace(/\r/g, "")), out);
+        assert.ok(
+          !out
+            .replace(/\r/g, "")
+            .split("\n")
+            .some((line) => SUSPEND_MARKER_RE.test(line)),
+          out,
+        );
       } finally {
         client.close();
       }

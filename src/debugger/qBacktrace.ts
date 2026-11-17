@@ -29,6 +29,22 @@ export interface QFrame {
   block: string[];
 }
 
+export const FRAME_LINE_RE = /^(?:>>|\s\s)\[\d+\]\s/;
+
+export const SUSPEND_MARKER_RE = /^#\d+\s*$/;
+
+const CARET_RE = /^\s*\^\s*$/;
+
+export function isCaretLine(line: string): boolean {
+  return CARET_RE.test(line);
+}
+
+const FUNC_NAME_RE = /^([.\w]+)[@:]/;
+
+export function funcName(text: string): string | undefined {
+  return FUNC_NAME_RE.exec(text)?.[1];
+}
+
 const FRAME_RE = /^(>>|\s\s)\[(\d+)\]\s\s?(.*)$/;
 const FILE_RE = /^(.*):(\d+):\s(.*)$/;
 
@@ -55,7 +71,7 @@ export function parseBacktrace(text: string): QFrame[] {
 
     let column: number | undefined;
     const next = lines[i + 1];
-    if (next && next.trim() === "^") {
+    if (next && isCaretLine(next)) {
       const sourceStart = lines[i].length - body.length;
       column = Math.max(0, next.indexOf("^") - sourceStart);
     }
@@ -64,7 +80,7 @@ export function parseBacktrace(text: string): QFrame[] {
     if (file === undefined) {
       for (let j = i + 1; j < lines.length; j++) {
         if (FRAME_RE.test(lines[j])) break;
-        if (/^\s*\^\s*$/.test(lines[j]) && j > i + 1) {
+        if (isCaretLine(lines[j]) && j > i + 1) {
           sourceLine = lines[j - 1];
           break;
         }
@@ -125,16 +141,13 @@ export function parseCurrentPosition(text: string): QPosition | undefined {
       line = Number(fm[2]);
     }
 
-    const name =
-      file === undefined
-        ? (/^([.\w]+)[@:]/.exec(m[3])?.[1] ?? undefined)
-        : undefined;
+    const name = file === undefined ? funcName(m[3]) : undefined;
 
     let col: number | undefined;
     let sourceLine: string | undefined;
     for (let j = i + 1; j < lines.length; j++) {
       if (FRAME_RE.test(lines[j])) break;
-      if (/^\s*\^\s*$/.test(lines[j])) {
+      if (isCaretLine(lines[j])) {
         col = lines[j].indexOf("^");
 
         if (j === i + 1) {

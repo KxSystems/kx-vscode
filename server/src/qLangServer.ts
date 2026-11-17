@@ -77,9 +77,18 @@ import {
   Type,
 } from "./parser";
 import { CommentBegin, CommentEnd, ExitCommentBegin } from "./parser/ranges";
+import type {
+  ColumnParams,
+  FileParams,
+  LambdaPathParams,
+  LineParams,
+  LineRangeParams,
+} from "./protocol";
 import { Structure } from "./structure";
 
 const logger = "qLangServer";
+
+const MAX_STRUCTURES = 32;
 
 const enum MessageKind {
   DEBUG = "DEBUG",
@@ -476,13 +485,18 @@ export default class QLangServer {
     try {
       const { mtimeMs, size } = await stat(path);
       const cached = this.structures.get(path);
+      this.structures.delete(path);
       if (cached && cached.mtimeMs === mtimeMs && cached.size === size) {
+        this.structures.set(path, cached);
         return cached.structure;
       }
       const structure = new Structure(
         await readFile(path, { encoding: "utf8" }),
       );
       this.structures.set(path, { mtimeMs, size, structure });
+      if (this.structures.size > MAX_STRUCTURES) {
+        this.structures.delete(this.structures.keys().next().value!);
+      }
       return structure;
     } catch (error) {
       this.structures.delete(path);
@@ -494,7 +508,7 @@ export default class QLangServer {
     }
   }
 
-  public async onTopLevelStatements({ path }: { path: string }) {
+  public async onTopLevelStatements({ path }: FileParams) {
     return (await this.getStructure(path))?.topLevelStatements() ?? [];
   }
 
@@ -503,12 +517,7 @@ export default class QLangServer {
     line,
     anonymous,
     column,
-  }: {
-    path: string;
-    line: number;
-    anonymous?: boolean;
-    column?: number;
-  }) {
+  }: LambdaPathParams) {
     return (
       (await this.getStructure(path))?.lambdaPath(
         line,
@@ -518,41 +527,19 @@ export default class QLangServer {
     );
   }
 
-  public async onStatementLambdas({
-    path,
-    line,
-    column,
-  }: {
-    path: string;
-    line: number;
-    column: number;
-  }) {
+  public async onStatementLambdas({ path, line, column }: ColumnParams) {
     return (
       (await this.getStructure(path))?.statementLambdas(line, column) ?? []
     );
   }
 
-  public async onRootLambdas({
-    path,
-    startLine,
-    endLine,
-  }: {
-    path: string;
-    startLine: number;
-    endLine: number;
-  }) {
+  public async onRootLambdas({ path, startLine, endLine }: LineRangeParams) {
     return (
       (await this.getStructure(path))?.rootLambdas(startLine, endLine) ?? []
     );
   }
 
-  public async onStatementSeparators({
-    path,
-    line,
-  }: {
-    path: string;
-    line: number;
-  }) {
+  public async onStatementSeparators({ path, line }: LineParams) {
     return (await this.getStructure(path))?.statementSeparators(line) ?? [];
   }
 
@@ -560,11 +547,7 @@ export default class QLangServer {
     path,
     startLine,
     endLine,
-  }: {
-    path: string;
-    startLine: number;
-    endLine: number;
-  }) {
+  }: LineRangeParams) {
     return (
       (await this.getStructure(path))?.identifiersOnLines(startLine, endLine) ??
       []

@@ -368,12 +368,13 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   };
 
-  ext.client = client = new LanguageClient(
+  client = new LanguageClient(
     "kdb LangServer",
     "kdb Language Server",
     serverOptions,
     clientOptions,
   );
+  ext.client = client;
 
   context.subscriptions.push(
     client.onNotification("notify", (params) =>

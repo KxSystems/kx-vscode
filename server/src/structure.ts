@@ -51,48 +51,14 @@ import {
   WhiteSpace,
 } from "./parser/tokens";
 import { Token, inSql, inTable } from "./parser/utils";
-
-export interface TopLevelStatement {
-  startLine: number;
-  startChar: number;
-  endLine: number;
-  text: string;
-  namespace: string;
-}
-
-export interface LambdaPath {
-  name: string;
-  path: number[];
-  startLine: number;
-  rootLine: number;
-  rootColumn?: number;
-}
-
-export interface LambdaTarget {
-  name: string;
-  path: number[];
-  line: number;
-  column: number;
-  rootLine: number;
-  rootColumn?: number;
-}
-
-export interface LambdaSpan {
-  line: number;
-  column: number;
-  endLine: number;
-  endColumn: number;
-}
-
-export interface StatementSeparator {
-  line: number;
-  column: number;
-}
-
-export interface LineIdentifier {
-  name: string;
-  canon: string;
-}
+import type {
+  LambdaPath,
+  LambdaSpan,
+  LambdaTarget,
+  LineIdentifier,
+  StatementSeparator,
+  TopLevelStatement,
+} from "./protocol";
 
 interface Unit {
   type?: TokenType;

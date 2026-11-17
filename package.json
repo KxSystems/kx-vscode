@@ -1508,6 +1508,11 @@
               "qExecutable": {
                 "type": "string",
                 "description": "Path to the q executable. Defaults to the q found from kdb.qHomeDirectory, QHOME or ~/.kx."
+              },
+              "verboseTrace": {
+                "type": "boolean",
+                "description": "Show the raw q debugger output, including suspend markers, backtraces and the commands the debugger sends.",
+                "default": false
               }
             }
           }

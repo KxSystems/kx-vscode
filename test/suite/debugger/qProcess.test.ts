@@ -516,10 +516,4 @@ describe("QProcess without q", () => {
       clock.restore();
     }
   });
-
-  it("strips a trailing prompt from text", () => {
-    assert.strictEqual(loaded.module.stripPrompt("abc\nq))"), "abc");
-    assert.strictEqual(loaded.module.stripPrompt('"x"q)'), '"x"');
-    assert.strictEqual(loaded.module.stripPrompt("abc"), "abc");
-  });
 });

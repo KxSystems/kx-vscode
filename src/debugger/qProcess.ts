@@ -15,6 +15,8 @@ import * as cp from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
+import { FRAME_LINE_RE, SUSPEND_MARKER_RE } from "./qBacktrace";
+
 export const Q_PIPE_ENV = { KX_TTY: "1", KX_LINE: "0" };
 
 export type StopReason = "breakpoint" | "exception";
@@ -23,7 +25,11 @@ const PROMPT_RE = /(?:^|\n|(?<=[^\n\w.]))(q([.\w]*)(\)+))[ \t]*$/;
 
 const FIRST_PROMPT_RE = /(?:^|\n|(?<=[^\n\w.]))(q([.\w]*)(\)+))[ \t]*/;
 
-const FRAME_LINE_RE = /^(?:>>|\s\s)\[\d+\]\s/;
+function stopOf(line: string): { kind: StopReason; signal?: string } {
+  return line.startsWith("'")
+    ? { kind: "exception", signal: line.slice(1).trimEnd() }
+    : { kind: "breakpoint" };
+}
 
 function findStopMarker(
   output: string,
@@ -31,18 +37,13 @@ function findStopMarker(
   const lines = output.split("\n");
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i];
-    if (!(line.startsWith("'") || /^#\d+\s*$/.test(line))) continue;
-    if (!FRAME_LINE_RE.test(lines[i + 1])) continue;
-    return line.startsWith("'")
-      ? { kind: "exception", signal: line.slice(1).trimEnd() }
-      : { kind: "breakpoint" };
+    if (!(line.startsWith("'") || SUSPEND_MARKER_RE.test(line))) continue;
+    if (FRAME_LINE_RE.test(lines[i + 1])) return stopOf(line);
   }
+  const first = output.trimStart().split("\n", 1)[0];
+  if (first.startsWith("'")) return stopOf(first);
+  if (first.startsWith("#")) return { kind: "breakpoint" };
   return undefined;
-}
-
-export function stripPrompt(text: string): string {
-  const m = PROMPT_RE.exec(text);
-  return m ? text.slice(0, m.index) : text;
 }
 
 const KILL_ESCALATION_MS = 300;
@@ -321,15 +322,9 @@ export class QProcess extends EventEmitter {
 
       if (this.depth >= 2) {
         const marker = findStopMarker(output);
-        const body = output.trimStart();
         if (marker) {
           this.lastStop = marker.kind;
           if (marker.signal !== undefined) this.lastErrorMsg = marker.signal;
-        } else if (body.startsWith("#")) this.lastStop = "breakpoint";
-        else if (body.startsWith("'")) {
-          this.lastStop = "exception";
-
-          this.lastErrorMsg = body.slice(1).split("\n", 1)[0].trimEnd();
         }
       }
 
