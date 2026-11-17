@@ -742,7 +742,7 @@ class QDebugSession extends DebugSession {
     }
 
     if (this.topLevelPaused) {
-      const res = await this.settle(() => this.evaluate(expression));
+      const res = await this.settle(() => this.evaluateLines(expression));
       if (res === undefined) {
         this.sendErrorResponse(response, {
           id: 1002,
@@ -764,7 +764,7 @@ class QDebugSession extends DebugSession {
     const res = await this.settle(async () => {
       if (!this.driver?.suspended) return undefined;
       if (args.frameId !== undefined) await this.navigateTo(args.frameId);
-      return this.evaluate(expression);
+      return this.evaluateLines(expression);
     });
     if (res === undefined) {
       this.sendErrorResponse(response, {
@@ -2060,6 +2060,17 @@ class QDebugSession extends DebugSession {
       this.driver.restoreStopReason(reason);
     }
     return result;
+  }
+
+  private async evaluateLines(text: string): Promise<QCommandResult> {
+    const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
+    const outputs: string[] = [];
+    let result: QCommandResult | undefined;
+    for (const line of lines) {
+      result = await this.evaluate(line);
+      if (result.output.length > 0) outputs.push(result.output);
+    }
+    return { ...result!, output: outputs.join("\n") };
   }
 
   private cleanBacktrace(text: string): string {

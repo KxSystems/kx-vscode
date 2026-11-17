@@ -169,6 +169,16 @@ describe("DebugPty", function () {
     pty.handleInput("show x" + ENTER);
     await waitForOutput('"hello world"');
   });
+
+  it("runs a line typed during a long command after it, keeping q in step", async () => {
+    pty.handleInput('system"sleep 1"; -1 "done";' + ENTER);
+    await new Promise((r) => setTimeout(r, 300));
+    pty.handleInput("1+1" + ENTER);
+    await waitForOutput("done");
+    await waitForOutput("2\r\n");
+    const result = await session.process.sendCommand("30+30", false);
+    assert.strictEqual(result.output, "60");
+  });
 });
 
 describe("DebugTerminal without q", () => {

@@ -1246,6 +1246,23 @@ describe("QDebugSession methods", () => {
     });
   });
 
+  describe("evaluating several lines", () => {
+    it("sends each line on its own and joins the results", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^a:1$/, "")
+        .on2(/^b:2$/, "")
+        .on2(/^a\+b$/, "3");
+      driver.on2(/^show a$/, "1");
+      await s.onEvaluate(response("evaluate"), {
+        expression: "a:1\r\nb:2\n\n  \nshow a\na+b",
+        context: "repl",
+      });
+      assert.deepStrictEqual(driver.commands, ["a:1", "b:2", "show a", "a+b"]);
+      assert.strictEqual(responses()[0].body.result, "1\n3");
+    });
+  });
+
   describe("release", () => {
     it("aborts, disarms traps, leaves the namespace and removes the temp dir", async () => {
       driver.promptDepth = 2;

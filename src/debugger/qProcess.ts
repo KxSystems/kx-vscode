@@ -12,6 +12,7 @@
  */
 
 import * as cp from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
 export const Q_PIPE_ENV = { KX_TTY: "1", KX_LINE: "0" };
@@ -19,6 +20,8 @@ export const Q_PIPE_ENV = { KX_TTY: "1", KX_LINE: "0" };
 export type StopReason = "breakpoint" | "exception";
 
 const PROMPT_RE = /(?:^|\n|(?<=[^\n\w.]))(q([.\w]*)(\)+))[ \t]*$/;
+
+const FIRST_PROMPT_RE = /(?:^|\n|(?<=[^\n\w.]))(q([.\w]*)(\)+))[ \t]*/;
 
 const FRAME_LINE_RE = /^(?:>>|\s\s)\[\d+\]\s/;
 
@@ -43,6 +46,13 @@ export function stripPrompt(text: string): string {
 }
 
 const KILL_ESCALATION_MS = 300;
+
+const PROMPT_TAIL = "(q([.\\w]*)(\\)+))[ \\t]*";
+
+interface Sync {
+  entry: QueueEntry;
+  output: string;
+}
 
 export interface QCommandResult {
   output: string;
@@ -86,6 +96,15 @@ export class QProcess extends EventEmitter {
   private lastErrorMsg: string | undefined;
 
   private readonly queue: QueueEntry[] = [];
+
+  private readonly syncToken = `kdbdbg-${randomUUID()}`;
+  private readonly syncRe = new RegExp(
+    `(?<=^|[\\n)])${this.syncToken}-(\\d+)\\n${PROMPT_TAIL}`,
+    "g",
+  );
+  private syncSeq = 0;
+  private typedAhead = false;
+  private sync: Sync | undefined;
 
   public readonly ready: Promise<void>;
 
@@ -174,6 +193,7 @@ export class QProcess extends EventEmitter {
   }
 
   public write(text: string): void {
+    if (this.busy) this.typedAhead = true;
     this.proc.stdin?.write(text);
   }
 
@@ -218,6 +238,7 @@ export class QProcess extends EventEmitter {
   private handleExit(code: number | null): void {
     if (this.exitedFlag) return;
     this.exitedFlag = true;
+    this.sync = undefined;
     const err = new Error("q process exited");
     while (this.queue.length > 0) {
       this.queue.shift()!.reject(err);
@@ -260,32 +281,34 @@ export class QProcess extends EventEmitter {
     const dataStart = this.buffer.length;
     this.buffer += data;
 
+    if (this.sync) {
+      this.scanSync();
+      return;
+    }
+
+    const m = this.promptRe().exec(this.buffer);
+    const upTo = (end: number) => data.slice(0, Math.max(0, end - dataStart));
+    const output = upTo(m ? m.index : this.buffer.length);
+    const withPrompt =
+      m && this.typedAhead ? upTo(m.index + m[0].length) : data;
+
     if (head?.onChunk) {
-      const m = PROMPT_RE.exec(this.buffer);
-      const visibleEnd = m ? Math.max(dataStart, m.index) : this.buffer.length;
-      const visible = data.slice(0, visibleEnd - dataStart);
-      if (visible.length > 0) head.onChunk(visible);
+      if (output.length > 0) head.onChunk(output);
     } else if (this.verbose || (head?.echo ?? true)) {
-      if (this.verbose || (head?.echoPrompt ?? true)) {
-        this.emit("data", data);
-      } else {
-        const m = PROMPT_RE.exec(this.buffer);
-        const visibleEnd = m
-          ? Math.max(dataStart, m.index)
-          : this.buffer.length;
-        const visible = data.slice(0, visibleEnd - dataStart);
-        if (visible.length > 0) this.emit("data", visible);
-      }
+      const visible =
+        this.verbose || (head?.echoPrompt ?? true) ? withPrompt : output;
+      if (visible.length > 0) this.emit("data", visible);
     }
     this.drain();
   }
 
   private drain(): void {
     for (;;) {
+      if (this.sync) return;
       const head = this.queue[0];
 
       if (!head?.sent) return;
-      const m = PROMPT_RE.exec(this.buffer);
+      const m = this.promptRe().exec(this.buffer);
       if (!m) return;
 
       const raw = this.buffer.slice(0, m.index);
@@ -310,14 +333,91 @@ export class QProcess extends EventEmitter {
         }
       }
 
+      if (this.typedAhead) {
+        this.sync = { entry: head, output };
+        this.typedAhead = false;
+        this.sendMarker();
+        this.scanSync();
+        return;
+      }
+
       this.queue.shift();
-      head.resolve({
-        output,
-        depth: this.depth,
-        namespace: this.ns,
-        errored: output.trimStart().startsWith("'"),
-      });
-      this.pump();
+      this.settle(head, output);
     }
+  }
+
+  private promptRe(): RegExp {
+    return this.typedAhead ? FIRST_PROMPT_RE : PROMPT_RE;
+  }
+
+  private settle(entry: QueueEntry, output: string): void {
+    entry.resolve({
+      output,
+      depth: this.depth,
+      namespace: this.ns,
+      errored: output.trimStart().startsWith("'"),
+    });
+    this.pump();
+  }
+
+  private sendMarker(): void {
+    this.syncSeq++;
+    this.proc.stdin?.write(`-1 "${this.syncToken}-${this.syncSeq}";\n`);
+  }
+
+  private scanSync(): void {
+    const sync = this.sync;
+    if (!sync) return;
+    const buffer = this.buffer;
+    let visible = "";
+    let last = 0;
+    let latest = false;
+    this.syncRe.lastIndex = 0;
+    for (let m = this.syncRe.exec(buffer); m; m = this.syncRe.exec(buffer)) {
+      visible += buffer.slice(last, m.index);
+      last = m.index + m[0].length;
+      this.ns = m[3] ?? "";
+      this.depth = (m[4] ?? ")").length;
+      latest = Number(m[1]) === this.syncSeq && last === buffer.length;
+    }
+    const rest = buffer.slice(last);
+    const hold = this.partialMarker(rest);
+    const tail = rest.slice(0, hold);
+    visible += tail;
+    this.buffer = rest.slice(hold);
+
+    if (visible.length > 0) this.emit("data", visible);
+
+    if (latest) {
+      if (this.typedAhead) {
+        this.typedAhead = false;
+        this.sendMarker();
+        return;
+      }
+      this.sync = undefined;
+      this.queue.shift();
+      this.settle(sync.entry, sync.output);
+      this.drain();
+      return;
+    }
+
+    const prompt = PROMPT_RE.exec(tail);
+    if (prompt && this.buffer.length === 0) {
+      this.ns = prompt[2] ?? "";
+      this.depth = (prompt[3] ?? ")").length;
+      this.typedAhead = false;
+      this.sendMarker();
+    }
+  }
+
+  private partialMarker(text: string): number {
+    const token = `${this.syncToken}-`;
+    const shape = new RegExp(`^${token}\\d*(\\n(q[.\\w]*\\)*)?)?$`);
+    for (let i = 0; i < text.length; i++) {
+      if (i > 0 && text[i - 1] !== "\n" && text[i - 1] !== ")") continue;
+      const tail = text.slice(i);
+      if (token.startsWith(tail) || shape.test(tail)) return i;
+    }
+    return text.length;
   }
 }

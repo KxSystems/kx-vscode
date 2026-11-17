@@ -53,6 +53,51 @@ describe("QProcess", function () {
     const next = await proc.sendCommand("1+1", false, false);
     assert.strictEqual(next.output, "2");
   });
+
+  it("keeps replies in step with a line typed while q is busy", async () => {
+    proc = spawnQ();
+    await proc.ready;
+    const shown: string[] = [];
+    proc.on("data", (text: string) => shown.push(text));
+
+    const running = proc.sendCommand('system"sleep 1"; 8', false);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    proc.write("1+1\n");
+    assert.strictEqual((await running).output, "8");
+    assert.strictEqual((await proc.sendCommand("10+10", false)).output, "20");
+    assert.strictEqual((await proc.sendCommand("20+20", false)).output, "40");
+    assert.strictEqual(shown.join(""), "2\nq)");
+  });
+
+  it("hands a line typed while busy to the read0 that waits for it", async () => {
+    proc = spawnQ();
+    await proc.ready;
+    const running = proc.sendCommand('system"sleep 1"; x:read0 0', false);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    proc.write("hello\n");
+    await running;
+    assert.strictEqual((await proc.sendCommand("x", false)).output, '"hello"');
+  });
+
+  it("does not hang when a typed line reads the input itself", async () => {
+    proc = spawnQ();
+    await proc.ready;
+    const running = proc.sendCommand('system"sleep 1"; 8', false);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    proc.write("y:read0 0\n");
+    assert.strictEqual((await running).output, "8");
+    assert.strictEqual((await proc.sendCommand("1+1", false)).output, "2");
+  });
+
+  it("reports the state a typed line leaves behind", async () => {
+    proc = spawnQ();
+    await proc.ready;
+    const running = proc.sendCommand('f:{system"sleep 1"; x+1}; f`a', false);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    proc.write("\\\n");
+    assert.strictEqual((await running).depth, 1);
+    assert.strictEqual(proc.suspended, false);
+  });
 });
 
 describe("QProcess without q", () => {
@@ -271,6 +316,122 @@ describe("QProcess without q", () => {
     clock.restore();
     await reply("done\nq)");
     assert.strictEqual((await slow).output, "done");
+  });
+
+  describe("lines typed while busy", () => {
+    function markers() {
+      return child.lines.filter((line) => line.startsWith('-1 "kdbdbg-'));
+    }
+
+    function marker(n: number) {
+      const line = markers()[n - 1];
+      assert.ok(line, `marker ${n} was not sent`);
+      return line.slice(4, -2);
+    }
+
+    it("drains them behind a marker before settling the command", async () => {
+      await started();
+      const data: string[] = [];
+      proc.on("data", (text: string) => data.push(text));
+      let settled = false;
+      const result = proc.sendCommand("slow", false).then((r) => {
+        settled = true;
+        return r;
+      });
+      proc.write("1+1\n");
+      await reply("8\nq)");
+      assert.strictEqual(settled, false);
+      assert.match(markers()[0], /^-1 "kdbdbg-[0-9a-f-]+-1";$/);
+
+      await reply("2\nq)");
+      assert.strictEqual(markers().length, 2);
+      await reply(`${marker(1)}\nq)`);
+      assert.strictEqual(settled, false);
+      await reply(`${marker(2)}\nq)`);
+      assert.strictEqual((await result).output, "8");
+      assert.deepStrictEqual(data, ["2\nq)"]);
+    });
+
+    it("ends the command at its own prompt when a typed line's reply follows in the same chunk", async () => {
+      await started();
+      const data: string[] = [];
+      proc.on("data", (text: string) => data.push(text));
+      const result = proc.sendCommand("slow", false);
+      proc.write("1+1\n");
+      await reply("8\nq)2\nq)");
+      assert.strictEqual(markers().length, 2);
+      await reply(`${marker(1)}\nq)${marker(2)}\nq)`);
+      assert.strictEqual((await result).output, "8");
+      assert.deepStrictEqual(data, ["2\nq)"]);
+    });
+
+    it("settles at once when nothing was typed", async () => {
+      await started();
+      const result = proc.sendCommand("1");
+      await reply("1\nq)");
+      assert.strictEqual((await result).output, "1");
+      assert.deepStrictEqual(markers(), []);
+    });
+
+    it("sends a fresh marker when a typed line swallows one", async () => {
+      await started();
+      const result = proc.sendCommand("slow", false);
+      proc.write("y:read0 0\n");
+      await reply("8\nq)");
+      await reply("q)");
+      assert.strictEqual(markers().length, 2);
+      await reply(`${marker(2)}\nq)`);
+      assert.strictEqual((await result).output, "8");
+    });
+
+    it("keeps draining while more is typed", async () => {
+      await started();
+      const result = proc.sendCommand("slow", false);
+      proc.write("a\n");
+      await reply("8\nq)");
+      proc.write("b\n");
+      await reply(`1\nq)${marker(1)}\nq)`);
+      assert.strictEqual(markers().length, 2);
+      await reply(`2\nq)${marker(2)}\nq)`);
+      assert.strictEqual((await result).output, "8");
+      assert.strictEqual(markers().length, 2);
+    });
+
+    it("takes the depth and namespace from the last marker's prompt", async () => {
+      await started();
+      const result = proc.sendCommand("f[]", false);
+      proc.write("\\d .foo\n");
+      await reply("'type\nq))");
+      await reply(`q.foo)${marker(1)}\nq.foo)`);
+      const r = await result;
+      assert.strictEqual(r.output, "'type");
+      assert.strictEqual(r.depth, 1);
+      assert.strictEqual(r.namespace, ".foo");
+    });
+
+    it("never shows a marker split across chunks", async () => {
+      await started();
+      const data: string[] = [];
+      proc.on("data", (text: string) => data.push(text));
+      const result = proc.sendCommand("slow", false);
+      proc.write("x\n");
+      await reply("8\nq)");
+      const text = `${marker(1)}\nq)`;
+      await reply(text.slice(0, 10));
+      await reply(text.slice(10, -1));
+      await reply(text.slice(-1));
+      assert.strictEqual((await result).output, "8");
+      assert.deepStrictEqual(data, []);
+    });
+
+    it("does not count a write made while q is idle", async () => {
+      await started();
+      proc.write("x\n");
+      const result = proc.sendCommand("1");
+      await reply("1\nq)");
+      assert.strictEqual((await result).output, "1");
+      assert.deepStrictEqual(markers(), []);
+    });
   });
 
   it("rejects pending commands when q exits, and refuses new ones", async () => {

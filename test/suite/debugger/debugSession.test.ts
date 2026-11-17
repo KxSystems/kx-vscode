@@ -33,6 +33,7 @@ const GLOBALS_VAR_REF = 999;
 const THROWS_FIXTURE = fixture("throws.q");
 const SLEEP_FIXTURE = fixture("sleep.q");
 const CTRL_C_FIXTURE = fixture("ctrlC.q");
+const TYPE_AHEAD_FIXTURE = fixture("typeAhead.q");
 const TOP_LEVEL_ERROR_FIXTURE = fixture("topLevelError.q");
 const DICT_THEN_ERROR_FIXTURE = fixture("dictThenError.q");
 const PARTIAL_THEN_ERROR_FIXTURE = fixture("partialThenError.q");
@@ -281,6 +282,46 @@ describe("QDebugSession", function () {
       await (QDebugSession as any).releasing;
     } finally {
       second.close();
+    }
+  });
+
+  it("stops at the breakpoint when a line is typed during a sleep", async () => {
+    const client = DapClient.start();
+    try {
+      await client.request("initialize", {
+        adapterID: "q",
+        pathFormat: "path",
+        linesStartAt1: true,
+        columnsStartAt1: true,
+      });
+      await client.waitForEvent("initialized");
+      await client.request("launch", { program: TYPE_AHEAD_FIXTURE });
+      await client.request("setBreakpoints", {
+        source: { path: TYPE_AHEAD_FIXTURE },
+        breakpoints: [{ line: 2 }],
+      });
+      await client.request("configurationDone", {});
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const terminal = (QDebugSession.activeSession as any).debugTerminal
+        .terminal;
+      terminals.ptyOf(terminal)!.handleInput!("1+1\r");
+
+      const stopped = await client.waitForEvent("stopped");
+      assert.strictEqual(stopped.reason, "breakpoint");
+      const frames = await stackFrames(client, 1);
+      assert.strictEqual(frames[0].name, "f");
+      assert.strictEqual(frames[0].line, 2);
+
+      await client.request("continue", { threadId: 1 });
+      await client.waitForEvent("terminated");
+      const output = terminals.outputOf(terminal);
+      const typed = output.slice(output.lastIndexOf("1+1"));
+      assert.match(typed, /^1\+1\r\n2\r\nq\)/);
+      assert.match(typed, /\n8(\r\n|$)/);
+      await client.request("disconnect", {});
+      await (QDebugSession as any).releasing;
+    } finally {
+      client.close();
     }
   });
 
