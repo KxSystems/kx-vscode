@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { join } from "path";
+import { basename, join } from "path";
 import * as vscode from "vscode";
 
 import { QDebugSession } from "../debugger/debugSession";
@@ -21,7 +21,10 @@ import { MessageKind, notify } from "../utils/notifications";
 
 export const DEBUG_TYPE = "q";
 
-const activePrograms = new Set<string>();
+const STOP = "Stop and Debug";
+
+const activeSessions = new Map<string, vscode.DebugSession>();
+let confirming = false;
 
 function programOf(session: vscode.DebugSession) {
   const program = session.configuration.program;
@@ -43,9 +46,6 @@ export async function debugFile(uri?: vscode.Uri) {
     await document.save();
   }
   const program = document.uri.fsPath;
-  if (activePrograms.has(program)) {
-    return;
-  }
   await vscode.debug.startDebugging(
     vscode.workspace.getWorkspaceFolder(document.uri),
     {
@@ -57,19 +57,44 @@ export async function debugFile(uri?: vscode.Uri) {
   );
 }
 
+async function stopRunningSessions(
+  configuration: vscode.DebugConfiguration,
+): Promise<boolean> {
+  const running = [...activeSessions.values()];
+  if (running.length === 0) return true;
+  if (confirming) return false;
+  const current = programOf(running[0]);
+  const next = configuration.program;
+  confirming = true;
+  try {
+    const choice = await notify(
+      `${current ? basename(current) : running[0].name} is being debugged. Stop it and debug ${typeof next === "string" ? basename(next) : configuration.name} instead?`,
+      MessageKind.WARNING,
+      { logger: "debugCommand" },
+      STOP,
+      "Cancel",
+    );
+    if (choice !== STOP) return false;
+    await Promise.all(
+      running.map((session) => vscode.debug.stopDebugging(session)),
+    );
+    return true;
+  } finally {
+    confirming = false;
+  }
+}
+
 export function registerDebugger(context: vscode.ExtensionContext) {
   const helper = context.asAbsolutePath(join("resources", "q", "debug.q"));
   context.subscriptions.push(
     vscode.debug.onDidStartDebugSession((session) => {
-      const program = programOf(session);
-      if (program) activePrograms.add(program);
+      if (session.type === DEBUG_TYPE) activeSessions.set(session.id, session);
     }),
     vscode.debug.onDidTerminateDebugSession((session) => {
-      const program = programOf(session);
-      if (program) activePrograms.delete(program);
+      activeSessions.delete(session.id);
     }),
     vscode.debug.registerDebugConfigurationProvider(DEBUG_TYPE, {
-      resolveDebugConfiguration(_folder, configuration) {
+      async resolveDebugConfiguration(_folder, configuration) {
         if (!configuration.type && !configuration.request) {
           const document = vscode.window.activeTextEditor?.document;
           if (document?.languageId !== "q") {
@@ -81,7 +106,9 @@ export function registerDebugger(context: vscode.ExtensionContext) {
           configuration.program = document.uri.fsPath;
         }
         configuration.internalConsoleOptions = "neverOpen";
-        return configuration;
+        return (await stopRunningSessions(configuration))
+          ? configuration
+          : undefined;
       },
     }),
     vscode.debug.registerDebugAdapterDescriptorFactory(DEBUG_TYPE, {

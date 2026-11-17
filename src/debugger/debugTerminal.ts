@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as path from "path";
 import * as vscode from "vscode";
 
 import { QProcess } from "./qProcess";
@@ -112,7 +113,7 @@ class DebugPty implements vscode.Pseudoterminal {
   }
 }
 
-let current: DebugTerminal | undefined;
+const terminals = new Map<string, DebugTerminal>();
 
 function debugEnvironment(cwd: string) {
   const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(cwd));
@@ -121,6 +122,14 @@ function debugEnvironment(cwd: string) {
     env.QPATH = moduleSearchPath(cwd, env.QPATH, env.QHOME);
   }
   return { qBinPath, env, folder };
+}
+
+export function debugWorkingDirectory(program: string, cwd?: string): string {
+  if (cwd) return cwd;
+  const folder = path.isAbsolute(program)
+    ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(program))
+    : undefined;
+  return folder?.uri.fsPath ?? path.dirname(program);
 }
 
 export function getOrCreateDebugTerminal(
@@ -134,19 +143,19 @@ export function getOrCreateDebugTerminal(
     throw new QNotFoundError("no q was found.");
   }
 
+  const existing = terminals.get(cwd);
   if (
-    current &&
-    !current.process.exited &&
-    current.cwd === cwd &&
-    current.executable === executable
+    existing &&
+    !existing.process.exited &&
+    existing.executable === executable
   ) {
-    return current;
+    return existing;
   }
-  current?.process.kill();
+  existing?.process.kill();
 
   const qProcess = new QProcess(executable, [], cwd, env);
   const terminal = vscode.window.createTerminal({
-    name: "q Debug",
+    name: `q Debug (${path.basename(cwd) || cwd})`,
     pty: new DebugPty(qProcess),
     isTransient: true,
   });
@@ -157,14 +166,14 @@ export function getOrCreateDebugTerminal(
     cwd,
     executable,
   };
-  current = session;
+  terminals.set(cwd, session);
   qProcess.on("exit", () => {
-    if (current === session) current = undefined;
+    if (terminals.get(cwd) === session) terminals.delete(cwd);
   });
   return session;
 }
 
 export function killDebugTerminal(): void {
-  current?.process.kill();
-  current = undefined;
+  for (const session of terminals.values()) session.process.kill();
+  terminals.clear();
 }

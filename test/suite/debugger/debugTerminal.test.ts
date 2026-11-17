@@ -213,7 +213,7 @@ describe("DebugTerminal without q", () => {
 
   it("starts q in a transient q Debug terminal with the module search path", () => {
     const { session } = open();
-    assert.strictEqual(created[0].name, "q Debug");
+    assert.strictEqual(created[0].name, "q Debug (work)");
     assert.strictEqual(created[0].isTransient, true);
     assert.strictEqual(session.cwd, "/work");
     assert.strictEqual(session.executable, "/q/bin/q");
@@ -242,11 +242,48 @@ describe("DebugTerminal without q", () => {
     assert.strictEqual(loaded.spawn.callCount, 1);
   });
 
-  it("replaces the session for another folder, killing the old q", () => {
+  it("keeps a separate session for each folder", () => {
     const first = open();
     const second = open("/elsewhere");
     assert.notStrictEqual(first.session, second.session);
-    assert.deepStrictEqual(first.child.signals, [undefined]);
+    assert.deepStrictEqual(first.child.signals, []);
+    assert.strictEqual(created[1].name, "q Debug (elsewhere)");
+    assert.strictEqual(open().session, first.session);
+    assert.strictEqual(open("/elsewhere").session, second.session);
+    assert.strictEqual(loaded.spawn.callCount, 2);
+  });
+
+  it("replaces the session for the same folder when the q changes", () => {
+    const first = open();
+    const second = open("/work", "/other/q");
+    assert.notStrictEqual(first.session, second.session);
+    assert.deepStrictEqual(first.child.signals, ["SIGTERM"]);
+  });
+
+  it("names the terminal after the full path for a root folder", () => {
+    open("/");
+    assert.strictEqual(created[0].name, "q Debug (/)");
+  });
+
+  it("runs workspace files in their workspace folder", () => {
+    const folder = { uri: vscode.Uri.file("/ws"), name: "ws", index: 0 };
+    const lookup = sinon
+      .stub(vscode.workspace, "getWorkspaceFolder")
+      .returns(folder);
+    assert.strictEqual(
+      terminalModule.debugWorkingDirectory("/ws/a/b.q"),
+      vscode.Uri.file("/ws").fsPath,
+    );
+    assert.strictEqual(
+      terminalModule.debugWorkingDirectory("/ws/a/b.q", "/given"),
+      "/given",
+    );
+    lookup.returns(undefined);
+    assert.strictEqual(
+      terminalModule.debugWorkingDirectory("/out/a/b.q"),
+      "/out/a",
+    );
+    assert.strictEqual(terminalModule.debugWorkingDirectory("b.q"), ".");
   });
 
   it("starts a new session once q has exited", () => {
@@ -256,10 +293,12 @@ describe("DebugTerminal without q", () => {
     assert.notStrictEqual(first.session, second.session);
   });
 
-  it("forgets the session when killed", () => {
+  it("forgets every session when killed", () => {
     const first = open();
+    const other = open("/elsewhere");
     terminalModule.killDebugTerminal();
-    assert.deepStrictEqual(first.child.signals, [undefined]);
+    assert.deepStrictEqual(first.child.signals, ["SIGTERM"]);
+    assert.deepStrictEqual(other.child.signals, ["SIGTERM"]);
     assert.notStrictEqual(open().session, first.session);
   });
 
@@ -278,7 +317,7 @@ describe("DebugTerminal without q", () => {
     const { pty, child } = open();
     listen(pty);
     pty.close();
-    assert.deepStrictEqual(child.signals, [undefined]);
+    assert.deepStrictEqual(child.signals, ["SIGTERM"]);
     child.emit("exit", 2);
     assert.deepStrictEqual(closed, [2]);
   });

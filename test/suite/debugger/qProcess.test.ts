@@ -38,33 +38,20 @@ describe("QProcess", function () {
     proc = undefined;
   });
 
-  it("does not attribute a timed-out command's late output to the next command", async () => {
+  it("interrupts a command blocked in a child process", async () => {
     proc = spawnQ();
     await proc.ready;
 
-    await assert.rejects(
-      proc.sendCommand('system"sleep 1"', false, false, 100),
-      /Timed out/,
-    );
+    const started = Date.now();
+    const blocked = proc.sendCommand('system"sleep 20"', false, false);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    proc.interrupt();
+    const result = await blocked;
+    assert.ok(Date.now() - started < 5000);
+    assert.strictEqual(result.errored, true);
 
-    const result = await proc.sendCommand("1+1", false, false, 5000);
-    assert.strictEqual(result.output, "2");
-    assert.strictEqual(result.depth, 1);
-  });
-
-  it("stays usable for many commands after a timeout", async () => {
-    proc = spawnQ();
-    await proc.ready;
-
-    await assert.rejects(
-      proc.sendCommand('system"sleep 1"', false, false, 100),
-      /Timed out/,
-    );
-
-    const a = await proc.sendCommand("2*3", false, false, 5000);
-    assert.strictEqual(a.output, "6");
-    const b = await proc.sendCommand('"hello"', false, false, 5000);
-    assert.strictEqual(b.output, '"hello"');
+    const next = await proc.sendCommand("1+1", false, false);
+    assert.strictEqual(next.output, "2");
   });
 });
 
@@ -104,6 +91,7 @@ describe("QProcess without q", () => {
     const [command, options] = loaded.spawn.firstCall.args;
     assert.strictEqual(command, "exec '/opt/q' '-p' 'it'\\''s' 2>&1");
     assert.strictEqual(options.shell, "bash");
+    assert.strictEqual(options.detached, process.platform !== "win32");
     assert.strictEqual(options.cwd, "/work");
     assert.strictEqual(options.env.A, "1");
     assert.strictEqual(options.env.KX_TTY, "1");
@@ -263,7 +251,7 @@ describe("QProcess without q", () => {
     const data: string[] = [];
     const chunks: string[] = [];
     proc.on("data", (text: string) => data.push(text));
-    const result = proc.sendCommand("f[]", true, true, 1000, (text) =>
+    const result = proc.sendCommand("f[]", true, true, (text) =>
       chunks.push(text),
     );
     await reply("a\n");
@@ -273,22 +261,16 @@ describe("QProcess without q", () => {
     assert.deepStrictEqual(data, []);
   });
 
-  it("skips the prompt left by a command that timed out", async () => {
+  it("waits for a slow command however long it takes", async () => {
     await started();
-    await assert.rejects(proc.sendCommand("slow", true, true, 10), /Timed out/);
-    const next = proc.sendCommand("1+1");
-    await reply("late\nq)");
-    await reply("2\nq)");
-    assert.strictEqual((await next).output, "2");
-  });
-
-  it("drops a queued command that timed out before it was sent", async () => {
-    await started();
-    const first = proc.sendCommand("a");
-    await assert.rejects(proc.sendCommand("b", true, true, 10), /Timed out/);
-    await reply("1\nq)");
-    assert.strictEqual((await first).output, "1");
-    assert.deepStrictEqual(child.lines, ["a"]);
+    const clock = sinon.useFakeTimers({
+      toFake: ["setTimeout", "clearTimeout"],
+    });
+    const slow = proc.sendCommand("slow");
+    clock.tick(60 * 60 * 1000);
+    clock.restore();
+    await reply("done\nq)");
+    assert.strictEqual((await slow).output, "done");
   });
 
   it("rejects pending commands when q exits, and refuses new ones", async () => {
@@ -324,6 +306,25 @@ describe("QProcess without q", () => {
     assert.deepStrictEqual(child.signals, ["SIGINT"]);
   });
 
+  it("signals the whole process group so children are interrupted too", async function () {
+    if (process.platform === "win32") this.skip();
+    await started();
+    child.pid = 42;
+    const kill = sinon.stub(process, "kill").returns(true);
+    proc.interrupt();
+    sinon.assert.calledOnceWithExactly(kill, -42, "SIGINT");
+    assert.deepStrictEqual(child.signals, []);
+  });
+
+  it("signals q alone when its process group cannot be signalled", async function () {
+    if (process.platform === "win32") this.skip();
+    await started();
+    child.pid = 42;
+    sinon.stub(process, "kill").throws(new Error("ESRCH"));
+    proc.interrupt();
+    assert.deepStrictEqual(child.signals, ["SIGINT"]);
+  });
+
   it("escalates a plain kill to SIGKILL when q does not exit", async () => {
     const clock = sinon.useFakeTimers({
       toFake: ["setTimeout", "clearTimeout"],
@@ -332,7 +333,7 @@ describe("QProcess without q", () => {
       start();
       proc.kill();
       clock.tick(300);
-      assert.deepStrictEqual(child.signals, [undefined, "SIGKILL"]);
+      assert.deepStrictEqual(child.signals, ["SIGTERM", "SIGKILL"]);
     } finally {
       clock.restore();
     }
@@ -349,7 +350,7 @@ describe("QProcess without q", () => {
       child.emit("exit", 0);
       clock.tick(300);
       proc.kill("SIGTERM");
-      assert.deepStrictEqual(child.signals, [undefined]);
+      assert.deepStrictEqual(child.signals, ["SIGTERM"]);
     } finally {
       clock.restore();
     }

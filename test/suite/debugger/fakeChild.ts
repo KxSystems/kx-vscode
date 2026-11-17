@@ -30,6 +30,7 @@ export class FakeChild extends EventEmitter {
   public readonly stdin = new FakeStdin();
   public readonly stdout = new EventEmitter();
   public readonly signals: (string | undefined)[] = [];
+  public pid?: number;
 
   public kill(signal?: string): boolean {
     this.signals.push(signal);

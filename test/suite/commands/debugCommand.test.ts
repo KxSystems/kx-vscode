@@ -112,8 +112,45 @@ describe("debugCommand", () => {
     let provider: vscode.DebugConfigurationProvider;
     let factory: vscode.DebugAdapterDescriptorFactory;
     let context: vscode.ExtensionContext;
+    let started: (session: vscode.DebugSession) => void;
+    let terminated: (session: vscode.DebugSession) => void;
+    let running: vscode.DebugSession[];
+
+    function launch(program = "/p.q") {
+      return provider.resolveDebugConfiguration!(undefined, {
+        type: DEBUG_TYPE,
+        request: "launch",
+        name: "n",
+        program,
+      });
+    }
+
+    function start(id: string, type = DEBUG_TYPE, program = "/run.q") {
+      const session = <vscode.DebugSession>(<unknown>{
+        id,
+        type,
+        name: id,
+        configuration: { program },
+      });
+      running.push(session);
+      started(session);
+      return session;
+    }
 
     beforeEach(() => {
+      running = [];
+      sinon.stub(vscode.debug, "onDidStartDebugSession").callsFake(((
+        listener: (session: vscode.DebugSession) => void,
+      ) => {
+        started = listener;
+        return { dispose() {} };
+      }) as never);
+      sinon.stub(vscode.debug, "onDidTerminateDebugSession").callsFake(((
+        listener: (session: vscode.DebugSession) => void,
+      ) => {
+        terminated = listener;
+        return { dispose() {} };
+      }) as never);
       sinon
         .stub(vscode.debug, "registerDebugConfigurationProvider")
         .callsFake((_type, value) => {
@@ -131,6 +168,69 @@ describe("debugCommand", () => {
         asAbsolutePath: (path: string) => `/ext/${path}`,
       });
       registerDebugger(context);
+    });
+
+    afterEach(() => {
+      running.forEach((session) => terminated(session));
+    });
+
+    it("should start without asking when nothing is being debugged", async () => {
+      const notify = sinon.stub(notifications, "notify");
+      assert.ok(await launch());
+      sinon.assert.notCalled(notify);
+    });
+
+    it("should keep the running session when the new one is cancelled", async () => {
+      start("a");
+      const notify = sinon.stub(notifications, "notify").resolves("Cancel");
+      const stop = sinon.stub(vscode.debug, "stopDebugging").resolves();
+      assert.strictEqual(await launch("/dir/next.q"), undefined);
+      sinon.assert.calledWithMatch(
+        notify,
+        "run.q is being debugged. Stop it and debug next.q instead?",
+        sinon.match.any,
+        sinon.match.any,
+        "Stop and Debug",
+        "Cancel",
+      );
+      sinon.assert.notCalled(stop);
+    });
+
+    it("should stop the running session before starting the new one", async () => {
+      const session = start("a");
+      sinon.stub(notifications, "notify").resolves("Stop and Debug");
+      const stop = sinon.stub(vscode.debug, "stopDebugging").resolves();
+      const configuration = await launch("/next.q");
+      assert.strictEqual(configuration?.program, "/next.q");
+      sinon.assert.calledOnceWithExactly(stop, session);
+    });
+
+    it("should ask once for requests made while asking", async () => {
+      start("a");
+      let answer!: (choice: string) => void;
+      const notify = sinon
+        .stub(notifications, "notify")
+        .returns(new Promise((resolve) => (answer = resolve)) as never);
+      sinon.stub(vscode.debug, "stopDebugging").resolves();
+      const first = launch();
+      assert.strictEqual(await launch(), undefined);
+      answer("Stop and Debug");
+      assert.ok(await first);
+      sinon.assert.calledOnce(notify);
+    });
+
+    it("should not ask about sessions of other debuggers", async () => {
+      start("a", "node");
+      const notify = sinon.stub(notifications, "notify");
+      assert.ok(await launch());
+      sinon.assert.notCalled(notify);
+    });
+
+    it("should not ask once the running session has ended", async () => {
+      terminated(start("a"));
+      const notify = sinon.stub(notifications, "notify");
+      assert.ok(await launch());
+      sinon.assert.notCalled(notify);
     });
 
     it("should register its disposables", () => {

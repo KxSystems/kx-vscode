@@ -31,6 +31,7 @@ import {
 const GLOBALS_VAR_REF = 999;
 
 const THROWS_FIXTURE = fixture("throws.q");
+const SLEEP_FIXTURE = fixture("sleep.q");
 const TOP_LEVEL_ERROR_FIXTURE = fixture("topLevelError.q");
 const DICT_THEN_ERROR_FIXTURE = fixture("dictThenError.q");
 const PARTIAL_THEN_ERROR_FIXTURE = fixture("partialThenError.q");
@@ -220,6 +221,35 @@ describe("QDebugSession", function () {
       await client.request("continue", { threadId: threadId });
       await client.waitForEvent("terminated");
       await client.request("disconnect", {});
+    } finally {
+      client.close();
+    }
+  });
+
+  it("stops a program blocked in a system call at once and keeps q", async () => {
+    const client = DapClient.start();
+    try {
+      await client.request("initialize", {
+        adapterID: "q",
+        pathFormat: "path",
+        linesStartAt1: true,
+        columnsStartAt1: true,
+      });
+      await client.waitForEvent("initialized");
+      await client.request("launch", { program: SLEEP_FIXTURE });
+      await client.request("configurationDone", {});
+      await terminals.waitFor("before");
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const stopping = Date.now();
+      await client.request("disconnect", {});
+      await (QDebugSession as any).releasing;
+      assert.ok(Date.now() - stopping < 5000);
+
+      const q = getOrCreateDebugTerminal(FIXTURES).process;
+      assert.strictEqual(q.exited, false);
+      assert.strictEqual((await q.sendCommand("1+1", false)).output, "2");
+      assert.ok(!terminals.outputOf(terminals.latest).includes("after"));
     } finally {
       client.close();
     }

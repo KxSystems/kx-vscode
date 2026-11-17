@@ -31,7 +31,11 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import type { LanguageClient } from "vscode-languageclient/node";
 
-import { DebugTerminal, getOrCreateDebugTerminal } from "./debugTerminal";
+import {
+  DebugTerminal,
+  debugWorkingDirectory,
+  getOrCreateDebugTerminal,
+} from "./debugTerminal";
 import {
   parseBacktrace,
   parseCurrentPosition,
@@ -47,6 +51,8 @@ const VAR_REF_BASE = 1000;
 const GLOBALS_VAR_REF = 999;
 
 const MAX_BREAKPOINT_STEPS = 100000;
+
+const STOP_GRACE_MS = 2000;
 
 interface QLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
   program: string;
@@ -544,7 +550,7 @@ class QDebugSession extends DebugSession {
     await QDebugSession.releasing?.catch(() => undefined);
 
     try {
-      const cwd = args.cwd ?? path.dirname(args.program);
+      const cwd = debugWorkingDirectory(args.program, args.cwd);
       this.programCwd = cwd;
 
       const session = getOrCreateDebugTerminal(cwd, args.qExecutable);
@@ -841,6 +847,9 @@ class QDebugSession extends DebugSession {
       this.onExited = undefined;
     }
     if (this.driver && !this.driver.exited) {
+      await this.interruptRunning(this.driver);
+    }
+    if (this.driver && !this.driver.exited) {
       const driver = this.driver;
       await this.abortToTop().catch(() => undefined);
 
@@ -871,6 +880,22 @@ class QDebugSession extends DebugSession {
       );
       this.tempDir = undefined;
     }
+  }
+
+  private async interruptRunning(driver: QProcess): Promise<void> {
+    if (!driver.busy) return;
+    driver.interrupt();
+    let timer: NodeJS.Timeout | undefined;
+    const expired = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(true), STOP_GRACE_MS);
+    });
+    const idle = Promise.all([
+      this.pendingOp,
+      driver.sendCommand("", false, false).catch(() => undefined),
+    ]).then(() => false);
+    const timedOut = await Promise.race([idle, expired]);
+    clearTimeout(timer);
+    if (timedOut) driver.kill();
   }
 
   private respond(
@@ -964,6 +989,7 @@ class QDebugSession extends DebugSession {
 
         await this.loadStatement(stmt);
         this.loadedThroughLine = Math.max(this.loadedThroughLine, stmt.endLine);
+        if (this.cancelled) return;
 
         if (this.driver.suspended) {
           if (await this.handleSuspension()) return;
@@ -972,6 +998,7 @@ class QDebugSession extends DebugSession {
       await this.flushValue();
       this.sendEvent(new TerminatedEvent());
     } catch (err) {
+      if (this.cancelled) return;
       this.sendEvent(
         new OutputEvent(`Debugger error: ${errText(err)}\n`, "stderr"),
       );
@@ -1104,7 +1131,6 @@ class QDebugSession extends DebugSession {
       `\\l ${file}`,
       false,
       true,
-      undefined,
       (chunk) => forwarder.push(chunk),
     );
     forwarder.finish();
@@ -1636,6 +1662,7 @@ class QDebugSession extends DebugSession {
   private async reportStopped(
     reason: "breakpoint" | "step" | "exception",
   ): Promise<void> {
+    if (this.cancelled) return;
     const exceptionText =
       reason === "exception" ? this.driver?.errorMessage : undefined;
     this.lastExceptionMessage = exceptionText;
@@ -2092,12 +2119,8 @@ class QDebugSession extends DebugSession {
       (text) => driver.emit("data", text),
       () => driver.atLineStart,
     );
-    const result = await driver.sendCommand(
-      ">",
-      false,
-      true,
-      undefined,
-      (chunk) => forwarder.push(chunk),
+    const result = await driver.sendCommand(">", false, true, (chunk) =>
+      forwarder.push(chunk),
     );
     forwarder.finish();
     return driver.suspended
@@ -2134,12 +2157,8 @@ class QDebugSession extends DebugSession {
       (text) => driver.emit("data", text),
       () => driver.atLineStart,
     );
-    const result = await driver.sendCommand(
-      ":",
-      false,
-      true,
-      undefined,
-      (chunk) => forwarder.push(chunk),
+    const result = await driver.sendCommand(":", false, true, (chunk) =>
+      forwarder.push(chunk),
     );
     forwarder.finish();
     return result;

@@ -62,7 +62,6 @@ class StubDriver extends EventEmitter {
     command: string,
     _echo?: boolean,
     _echoPrompt?: boolean,
-    _timeout?: number,
     onChunk?: (text: string) => void,
   ) {
     if (this.exited) throw new Error("q process is not running");
@@ -610,6 +609,31 @@ describe("QDebugSession methods", () => {
       await s.runStatements();
     });
 
+    it("reports nothing for a statement interrupted by a stop", async () => {
+      s.statements = [
+        { startLine: 1, startColumn: 0, endLine: 1, text: "x", namespace: "" },
+      ];
+      sinon.stub(s, "loadStatement").callsFake(async () => {
+        s.cancelled = true;
+        driver.promptDepth = 2;
+        driver.stopReason = "exception";
+        throw new Error("q process exited");
+      });
+      await s.runStatements();
+      assert.strictEqual(events("output").length, 0);
+      assert.strictEqual(events("stopped").length, 0);
+      assert.strictEqual(events("terminated").length, 0);
+    });
+
+    it("does not report a stop once cancelled", async () => {
+      driver.promptDepth = 2;
+      driver.stopReason = "exception";
+      s.cancelled = true;
+      await s.reportStopped("exception");
+      assert.strictEqual(events("stopped").length, 0);
+      assert.deepStrictEqual(driver.commands, []);
+    });
+
     it("pauses on a top-level breakpoint, then steps over it", async () => {
       s.statements = [
         { startLine: 1, startColumn: 0, endLine: 1, text: "a", namespace: "" },
@@ -828,7 +852,7 @@ describe("QDebugSession methods", () => {
     it("forwards live output until a suspension marker", async () => {
       driver.on2(/s\d+\.q$/, "");
       sinon.stub(driver, "sendCommand").callsFake(async (...args: any[]) => {
-        const onChunk = args[4];
+        const onChunk = args[3];
         if (onChunk) {
           onChunk("\n\nhel");
           onChunk("lo\n#");
@@ -849,7 +873,7 @@ describe("QDebugSession methods", () => {
 
     it("forwards held output at the end", async () => {
       sinon.stub(driver, "sendCommand").callsFake(async (...args: any[]) => {
-        const onChunk = args[4];
+        const onChunk = args[3];
         onChunk?.("#1");
         return { output: "", depth: 1, namespace: "", errored: false };
       });
@@ -858,9 +882,9 @@ describe("QDebugSession methods", () => {
       s.verboseTrace = true;
       (driver.sendCommand as sinon.SinonStub).callsFake(
         async (...args: any[]) => {
-          args[4]?.("a");
-          args[4]?.("b");
-          args[4]?.("  [x");
+          args[3]?.("a");
+          args[3]?.("b");
+          args[3]?.("  [x");
           return { output: "", depth: 1, namespace: "", errored: false };
         },
       );
@@ -1244,6 +1268,52 @@ describe("QDebugSession methods", () => {
       assert.ok(driver.commands.includes("\\d ."));
       assert.strictEqual(existsSync(temp), false);
       assert.strictEqual(QDebugSession.activeSession, undefined);
+    });
+
+    it("interrupts a running statement and waits for it before cleaning up", async () => {
+      const order: string[] = [];
+      let finish!: () => void;
+      s.pendingOp = new Promise<void>((resolve) => (finish = resolve)).then(
+        () => order.push("statement"),
+      );
+      driver.busy = true;
+      (driver as any).interrupt = sinon.spy(() => {
+        order.push("interrupt");
+        setImmediate(finish);
+      });
+      driver.on2(/^\\d \.$/, () => {
+        order.push("cleanup");
+        return "";
+      });
+      await s.release();
+      assert.deepStrictEqual(order, ["interrupt", "statement", "cleanup"]);
+      sinon.assert.notCalled(driver.kill);
+    });
+
+    it("kills a q that does not come back from the interrupt", async () => {
+      const clock = sinon.useFakeTimers({
+        toFake: ["setTimeout", "clearTimeout"],
+      });
+      try {
+        s.pendingOp = new Promise(() => undefined);
+        driver.busy = true;
+        (driver as any).interrupt = sinon.spy();
+        (driver as any).kill = sinon.spy(() => (driver.exited = true));
+        const released = s.release();
+        await clock.tickAsync(2000);
+        await released;
+        sinon.assert.calledOnce((driver as any).interrupt);
+        sinon.assert.calledOnce(driver.kill);
+        assert.ok(!driver.commands.includes("\\d ."));
+      } finally {
+        clock.restore();
+      }
+    });
+
+    it("does not interrupt a q that is idle", async () => {
+      (driver as any).interrupt = sinon.spy();
+      await s.release();
+      sinon.assert.notCalled((driver as any).interrupt);
     });
 
     it("releases a session whose q has exited", async () => {

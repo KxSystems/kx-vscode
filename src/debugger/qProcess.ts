@@ -20,8 +20,6 @@ export type StopReason = "breakpoint" | "exception";
 
 const PROMPT_RE = /(?:^|\n|(?<=[^\n\w.]))(q([.\w]*)(\)+))[ \t]*$/;
 
-const PROMPT_ANYWHERE_RE = /(?:^|\n|(?<=[^\n\w.]))(q([.\w]*)(\)+))[ \t]*/;
-
 const FRAME_LINE_RE = /^(?:>>|\s\s)\[\d+\]\s/;
 
 function findStopMarker(
@@ -44,8 +42,6 @@ export function stripPrompt(text: string): string {
   return m ? text.slice(0, m.index) : text;
 }
 
-const DEFAULT_COMMAND_TIMEOUT = 15000;
-
 const KILL_ESCALATION_MS = 300;
 
 export interface QCommandResult {
@@ -64,7 +60,6 @@ interface QueueEntry {
   sent: boolean;
   resolve: (r: QCommandResult) => void;
   reject: (e: Error) => void;
-  timer: NodeJS.Timeout;
 
   echo: boolean;
 
@@ -75,6 +70,8 @@ interface QueueEntry {
 
 export class QProcess extends EventEmitter {
   private readonly proc: cp.ChildProcess;
+
+  private readonly grouped = process.platform !== "win32";
 
   public verbose = false;
 
@@ -87,8 +84,6 @@ export class QProcess extends EventEmitter {
   private lastStop: StopReason | undefined;
 
   private lastErrorMsg: string | undefined;
-
-  private orphanPromptsPending = 0;
 
   private readonly queue: QueueEntry[] = [];
 
@@ -109,6 +104,7 @@ export class QProcess extends EventEmitter {
 
       env: { ...process.env, ...env, ...Q_PIPE_ENV },
       shell: "bash",
+      detached: this.grouped,
     });
 
     this.proc.on("error", (err) => this.handleSpawnError(err));
@@ -123,12 +119,7 @@ export class QProcess extends EventEmitter {
       if (text.length > 0) this.atLineStart = /[\r\n]$/.test(text);
     });
 
-    this.ready = this.enqueue(
-      undefined,
-      true,
-      true,
-      DEFAULT_COMMAND_TIMEOUT,
-    ).then(() => undefined);
+    this.ready = this.enqueue(undefined, true, true).then(() => undefined);
   }
 
   public get exited(): boolean {
@@ -170,13 +161,12 @@ export class QProcess extends EventEmitter {
     command: string,
     echo = true,
     echoPrompt = true,
-    timeout = DEFAULT_COMMAND_TIMEOUT,
     onChunk?: (text: string) => void,
   ): Promise<QCommandResult> {
     if (this.exitedFlag) {
       return Promise.reject(new Error("q process is not running"));
     }
-    return this.enqueue(command, echo, echoPrompt, timeout, onChunk);
+    return this.enqueue(command, echo, echoPrompt, onChunk);
   }
 
   public write(text: string): void {
@@ -189,13 +179,26 @@ export class QProcess extends EventEmitter {
 
   public kill(signal?: NodeJS.Signals): void {
     if (this.exitedFlag) return;
-    this.proc.kill(signal);
+    this.signal(signal ?? "SIGTERM");
 
     if (signal === undefined) {
       const timer = setTimeout(() => {
-        if (!this.exitedFlag) this.proc.kill("SIGKILL");
+        if (!this.exitedFlag) this.signal("SIGKILL");
       }, KILL_ESCALATION_MS);
       timer.unref?.();
+    }
+  }
+
+  private signal(signal: NodeJS.Signals): void {
+    const pid = this.proc.pid;
+    if (!this.grouped || pid === undefined) {
+      this.proc.kill(signal);
+      return;
+    }
+    try {
+      process.kill(-pid, signal);
+    } catch {
+      this.proc.kill(signal);
     }
   }
 
@@ -213,9 +216,7 @@ export class QProcess extends EventEmitter {
     this.exitedFlag = true;
     const err = new Error("q process exited");
     while (this.queue.length > 0) {
-      const head = this.queue.shift()!;
-      clearTimeout(head.timer);
-      head.reject(err);
+      this.queue.shift()!.reject(err);
     }
     this.emit("exit", code ?? 0);
   }
@@ -224,32 +225,14 @@ export class QProcess extends EventEmitter {
     command: string | undefined,
     echo: boolean,
     echoPrompt: boolean,
-    timeout: number,
     onChunk?: (text: string) => void,
   ): Promise<QCommandResult> {
     return new Promise<QCommandResult>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        const idx = this.queue.findIndex((q) => q.timer === timer);
-        if (idx !== -1) {
-          const entry = this.queue[idx];
-          this.queue.splice(idx, 1);
-
-          if (idx === 0 && entry.sent) {
-            this.buffer = "";
-            this.orphanPromptsPending++;
-          }
-        }
-        reject(new Error("Timed out waiting for q prompt"));
-
-        this.pump();
-        this.drain();
-      }, timeout);
       this.queue.push({
         command,
         sent: false,
         resolve,
         reject,
-        timer,
         echo,
         echoPrompt,
         onChunk,
@@ -273,10 +256,6 @@ export class QProcess extends EventEmitter {
     const dataStart = this.buffer.length;
     this.buffer += data;
 
-    if (this.orphanPromptsPending > 0) {
-      this.drain();
-      return;
-    }
     if (head?.onChunk) {
       const m = PROMPT_RE.exec(this.buffer);
       const visibleEnd = m ? Math.max(dataStart, m.index) : this.buffer.length;
@@ -299,15 +278,6 @@ export class QProcess extends EventEmitter {
 
   private drain(): void {
     for (;;) {
-      if (this.orphanPromptsPending > 0) {
-        const m = PROMPT_ANYWHERE_RE.exec(this.buffer);
-        if (!m) return;
-        this.buffer = this.buffer.slice(m.index + m[0].length);
-        this.ns = m[2] ?? "";
-        this.depth = (m[3] ?? ")").length;
-        this.orphanPromptsPending--;
-        continue;
-      }
       const head = this.queue[0];
 
       if (!head?.sent) return;
@@ -337,7 +307,6 @@ export class QProcess extends EventEmitter {
       }
 
       this.queue.shift();
-      clearTimeout(head.timer);
       head.resolve({
         output,
         depth: this.depth,
