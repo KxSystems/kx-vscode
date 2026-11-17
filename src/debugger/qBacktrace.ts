@@ -46,7 +46,7 @@ export function funcName(text: string): string | undefined {
 }
 
 const FRAME_RE = /^(>>|\s\s)\[(\d+)\]\s\s?(.*)$/;
-const FILE_RE = /^(.*):(\d+):\s(.*)$/;
+const FILE_RE = /^(.*?):(\d+):\s(.*)$/;
 
 export function parseBacktrace(text: string): QFrame[] {
   const lines = text.split("\n");

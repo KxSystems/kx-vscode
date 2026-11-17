@@ -556,7 +556,7 @@ describe("QDebugSession methods", () => {
 
     it("loads each statement from a temp file and terminates", async () => {
       answer("kdb.qls.topLevelStatements", statements);
-      s.launchArgs = { program, args: ["a", 'b"c'] };
+      s.launchArgs = { program };
       s.started = true;
       s.configDone = true;
       driver
@@ -564,7 +564,6 @@ describe("QDebugSession methods", () => {
         .on2(/^\.dbg\.pop\[\]$/, "42")
         .on2(/s\d+\.q$/, "hello\n");
       await s.tryRun();
-      assert.ok(driver.commands.includes('.z.x:((),"a";(),"b\\"c")'));
       assert.ok(driver.commands.includes("\\d .foo"));
       const loads = driver.commands.filter((c) => /^\\l .*s\d+\.q$/.test(c));
       assert.strictEqual(loads.length, 3);
@@ -1002,7 +1001,7 @@ describe("QDebugSession methods", () => {
         return { file: "/lib.q", line: 1 };
       });
       const outcome = await s.advanceToBreakpoint();
-      assert.strictEqual(outcome, "breakpoint");
+      assert.strictEqual(outcome, "pause");
       assert.ok(events("output")[0].body.output.includes("Stopped searching"));
       assert.strictEqual(clock.steps, 100000);
     });

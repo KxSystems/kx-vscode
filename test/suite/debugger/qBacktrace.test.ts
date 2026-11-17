@@ -133,6 +133,12 @@ describe("qBacktrace", () => {
   });
 
   describe("parseCurrentPosition", () => {
+    it("should split the file at the first line number", () => {
+      const pos = parseCurrentPosition(">>[1]  /w/t.q:3: b:1: x\n" + caret(17));
+      assert.strictEqual(pos?.file, "/w/t.q");
+      assert.strictEqual(pos?.line, 3);
+    });
+
     it("should pick the current frame", () => {
       const moved = STACK.replace(">>", "  ").replace("  [2]", ">>[2]");
       assert.deepStrictEqual(parseCurrentPosition(moved), {

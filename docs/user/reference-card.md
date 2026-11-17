@@ -17,7 +17,7 @@ timestamp: 2026-11-06
 | KX: Start REPL                                    | KX: New Workbook (q)                               | KX: Focus on Workbooks view         |
 | KX: Import Connections                            | KX: New Workbook (Python)                          | KX: Focus on Query History view     |
 | KX: Export Connections                            | KX: New Workbook (SQL)                             | KX: Focus on Help and Feedback view |
-|                                                   | KX: New Query                                      | KX: Focus on KDB Results view       |
+| KX: Debug File                                    | KX: New Query                                      | KX: Focus on KDB Results view       |
 |                                                   | KX: Convert datasources to queries                 |                                     |
 | KX: Set Notebook Row Limit (not used by the REPL) | KX: Show First or Last Rows (not used by the REPL) |                                     |
 

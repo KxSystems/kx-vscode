@@ -70,7 +70,6 @@ const STOP_GRACE_MS = 2000;
 
 interface QLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
   program: string;
-  args?: string[];
   cwd?: string;
   qExecutable?: string;
 
@@ -109,7 +108,7 @@ function qText(value: string): string {
     .replace(/\t/g, "\\t")}"`;
 }
 
-const HEADER_RE = /^((?:>>|\s\s)\[\d+\]\s\s?)(.*):(\d+):\s(.*)$/;
+const HEADER_RE = /^((?:>>|\s\s)\[\d+\]\s\s?)(.*?):(\d+):\s(.*)$/;
 
 function shiftCaret(lines: string[], at: number, delta: number, from: number) {
   const next = lines[at + 1];
@@ -922,12 +921,6 @@ class QDebugSession extends DebugSession {
     this.currentNamespace = ".";
     await this.driver.sendCommand("\\d .", false);
 
-    if (args.args && args.args.length > 0) {
-      await this.driver.sendCommand(
-        `.z.x:(${args.args.map(qText).join(";")})`,
-        false,
-      );
-    }
     await this.serialized(() => this.runStatements());
   }
 
@@ -1477,7 +1470,7 @@ class QDebugSession extends DebugSession {
 
   private async advanceToBreakpoint(
     resumeLine?: number,
-  ): Promise<"breakpoint" | "exception" | "exited"> {
+  ): Promise<"breakpoint" | "exception" | "pause" | "exited"> {
     if (!this.driver) return "exited";
     let pos =
       resumeLine === undefined
@@ -1521,7 +1514,7 @@ class QDebugSession extends DebugSession {
           "console",
         ),
       );
-      return "breakpoint";
+      return "pause";
     }
     return "exited";
   }
@@ -1546,7 +1539,7 @@ class QDebugSession extends DebugSession {
   }
 
   private async reportStopped(
-    reason: "breakpoint" | "step" | "exception",
+    reason: "breakpoint" | "step" | "exception" | "pause",
   ): Promise<void> {
     if (this.cancelled) return;
     const exceptionText =

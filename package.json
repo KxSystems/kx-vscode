@@ -1493,14 +1493,6 @@
                 "description": "Path to the q script to run and debug.",
                 "default": "${file}"
               },
-              "args": {
-                "type": "array",
-                "description": "Command line arguments passed to the script as .z.x.",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
               "cwd": {
                 "type": "string",
                 "description": "Working directory for the q process. Defaults to the script's folder."
