@@ -125,12 +125,31 @@ describe("DebugPty", function () {
   });
 
   it("Ctrl+C interrupts without killing the underlying q process", async () => {
-    pty.handleInput(CTRL_C);
+    pty.handleInput('system"sleep 20"' + ENTER);
     await new Promise((r) => setTimeout(r, 200));
+    pty.handleInput(CTRL_C);
+    const start = Date.now();
+    while (session.process.busy) {
+      if (Date.now() - start > 5000) throw new Error("still busy");
+      await new Promise((r) => setTimeout(r, 25));
+    }
     assert.strictEqual(session.process.exited, false);
+    assert.ok(Date.now() - start < 5000);
 
     pty.handleInput("21+21" + ENTER);
     await waitForOutput("42");
+  });
+
+  it("Ctrl+C at a suspended prompt leaves q answering", async () => {
+    pty.handleInput("{x+1}`a" + ENTER);
+    await waitForOutput("'type");
+    while (session.process.busy) await new Promise((r) => setTimeout(r, 25));
+    assert.strictEqual(session.process.suspended, true);
+    pty.handleInput(CTRL_C);
+    await new Promise((r) => setTimeout(r, 200));
+    const result = await session.process.sendCommand("20+22", false);
+    assert.strictEqual(result.output, "42");
+    await session.process.sendCommand("\\", false);
   });
 
   it("feeds a line typed mid-execution straight to a blocked read0, instead of deadlocking behind it", async () => {
@@ -365,14 +384,35 @@ describe("DebugTerminal without q", () => {
     assert.deepStrictEqual(child.stdin.written, ["read0 0\n", "typed\n"]);
   });
 
-  it("interrupts on Ctrl+C and drops escape sequences", () => {
-    const { pty, child } = open();
+  it("interrupts what q is running on Ctrl+C and drops escape sequences", async () => {
+    const { session, pty, child } = open();
     listen(pty);
     pty.open(undefined);
+    child.out("q)");
+    await session.ready;
+    void session.process.sendCommand("f[]", false);
     pty.handleInput!("\x03");
     pty.handleInput!("\x1b[A");
     assert.deepStrictEqual(child.signals, ["SIGINT"]);
-    assert.strictEqual(written, "");
+    assert.strictEqual(written, "q)");
+  });
+
+  it("drops the typed line on Ctrl+C at an idle prompt instead of interrupting q", async () => {
+    const { session, pty, child } = open();
+    listen(pty);
+    pty.open(undefined);
+    child.out("q)");
+    await session.ready;
+    const stopped = session.process.sendCommand("f[]", false);
+    child.out("'type\nq.foo))");
+    await stopped;
+    written = "";
+    pty.handleInput!("1+");
+    pty.handleInput!("\x03");
+    assert.deepStrictEqual(child.signals, []);
+    assert.strictEqual(written, "1+^C\r\nq.foo))");
+    pty.handleInput!("2\r");
+    assert.deepStrictEqual(child.lines.slice(-1), ["2"]);
   });
 
   it("ignores input once q has exited", () => {

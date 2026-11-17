@@ -32,6 +32,7 @@ const GLOBALS_VAR_REF = 999;
 
 const THROWS_FIXTURE = fixture("throws.q");
 const SLEEP_FIXTURE = fixture("sleep.q");
+const CTRL_C_FIXTURE = fixture("ctrlC.q");
 const TOP_LEVEL_ERROR_FIXTURE = fixture("topLevelError.q");
 const DICT_THEN_ERROR_FIXTURE = fixture("dictThenError.q");
 const PARTIAL_THEN_ERROR_FIXTURE = fixture("partialThenError.q");
@@ -252,6 +253,34 @@ describe("QDebugSession", function () {
       assert.ok(!terminals.outputOf(terminals.latest).includes("after"));
     } finally {
       client.close();
+    }
+  });
+
+  it("debugs again after Ctrl+C in the terminal while stopped on an error", async () => {
+    const first = DapClient.start();
+    try {
+      await launch(first, CTRL_C_FIXTURE);
+      const terminal = (QDebugSession.activeSession as any).debugTerminal
+        .terminal;
+      const pty = terminals.ptyOf(terminal);
+      assert.ok(pty);
+      pty.handleInput!("\x03");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await first.request("disconnect", {});
+      await (QDebugSession as any).releasing;
+    } finally {
+      first.close();
+    }
+
+    const second = DapClient.start();
+    try {
+      const threadId = await launch(second, CTRL_C_FIXTURE);
+      const frames = await stackFrames(second, threadId);
+      assert.strictEqual(frames[0].name, "quux");
+      await second.request("disconnect", {});
+      await (QDebugSession as any).releasing;
+    } finally {
+      second.close();
     }
   });
 

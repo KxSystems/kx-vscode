@@ -143,6 +143,10 @@ export class QProcess extends EventEmitter {
     return this.ns;
   }
 
+  public get prompt(): string {
+    return `q${this.ns}${")".repeat(this.depth)}`;
+  }
+
   public get stopReason(): StopReason | undefined {
     return this.suspended ? this.lastStop : undefined;
   }

@@ -73,7 +73,12 @@ class DebugPty implements vscode.Pseudoterminal {
     if (this.qProcess.exited) return;
 
     if (data === CTRL_C) {
-      this.qProcess.interrupt();
+      if (this.qProcess.busy) {
+        this.qProcess.interrupt();
+      } else {
+        this.lineBuffer = "";
+        this.writeOutput(`^C\n${this.qProcess.prompt}`);
+      }
       return;
     }
 
