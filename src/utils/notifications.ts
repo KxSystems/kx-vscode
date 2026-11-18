@@ -118,6 +118,7 @@ export function notify<T extends string>(
     telemetry?: string | boolean | Error;
     properties?: { [key: string]: string };
     measurements?: { [key: string]: number };
+    modal?: boolean;
   } = {},
   ...items: T[]
 ): Thenable<T | undefined> {
@@ -150,14 +151,20 @@ export function notify<T extends string>(
     items.push(<T>action);
   }
 
-  const notification =
+  const show =
     kind === MessageKind.ERROR
-      ? vscode.window.showErrorMessage<T>(message, ...items)
+      ? vscode.window.showErrorMessage
       : kind === MessageKind.WARNING
-        ? vscode.window.showWarningMessage<T>(message, ...items)
+        ? vscode.window.showWarningMessage
         : kind === MessageKind.INFO
-          ? vscode.window.showInformationMessage<T>(message, ...items)
-          : Promise.resolve(undefined);
+          ? vscode.window.showInformationMessage
+          : undefined;
+
+  const notification = !show
+    ? Promise.resolve(undefined)
+    : options.modal
+      ? show<T>(message, { modal: true }, ...items)
+      : show<T>(message, ...items);
 
   if (action === "Details") {
     notification.then((res) => {

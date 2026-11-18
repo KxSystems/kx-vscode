@@ -6,6 +6,7 @@
     },
     "editor.formatOnSave": true
   },
+  "debug.javascript.enableNetworkView": false,
   "launcher.mappings": [
     {
       "name": "Test Selected File",

@@ -25,6 +25,7 @@ import { initActiveTargetTracking } from "./classes/activeTargetTracker";
 import { OPEN_RESULTS_HINT } from "./classes/connectionConsole";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
+import { debugFile, registerDebugger } from "./commands/debugCommand";
 import { convertDataSources } from "./commands/queryCommand";
 import {
   activeConnection,
@@ -222,6 +223,7 @@ export async function activate(context: vscode.ExtensionContext) {
   ext.secretSettings = AuthSettings.instance;
 
   registerAllExtensionCommands();
+  registerDebugger(context);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
@@ -372,6 +374,7 @@ export async function activate(context: vscode.ExtensionContext) {
     serverOptions,
     clientOptions,
   );
+  ext.client = client;
 
   context.subscriptions.push(
     client.onNotification("notify", (params) =>
@@ -1152,6 +1155,15 @@ function registerReplCommands(): CommandRegistration[] {
   return replCommands;
 }
 
+function registerDebugCommands(): CommandRegistration[] {
+  return [
+    {
+      command: "kdb.debugFile",
+      callback: (uri?: vscode.Uri) => debugFile(uri),
+    },
+  ];
+}
+
 function registerAllExtensionCommands(): void {
   const allCommands: CommandRegistration[] = [
     ...registerSetupCommands(),
@@ -1166,6 +1178,7 @@ function registerAllExtensionCommands(): void {
     ...registerLSCommands(),
     ...registerNotebookCommands(),
     ...registerReplCommands(),
+    ...registerDebugCommands(),
   ];
 
   allCommands.forEach((command) => {

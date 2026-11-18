@@ -75,6 +75,7 @@ describe("Commands", () => {
         "kdb.toggleParameterCache",
         "kdb.notebook.rowLimit",
         "kdb.notebook.rowLimitFrom.first",
+        "kdb.debugFile",
       ];
       const shown = palette.filter(
         (cmd: any) => cmd.when !== "true" && cmd.when !== "false",
