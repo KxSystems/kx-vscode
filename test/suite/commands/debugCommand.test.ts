@@ -20,6 +20,7 @@ import {
   debugFile,
   registerDebugger,
 } from "../../../src/commands/debugCommand";
+import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
 
 describe("debugCommand", () => {
@@ -182,17 +183,65 @@ describe("debugCommand", () => {
 
     it("should keep the running session when the new one is cancelled", async () => {
       start("a");
-      const notify = sinon.stub(notifications, "notify").resolves("Cancel");
+      const notify = sinon.stub(notifications, "notify").resolves(undefined);
       const stop = sinon.stub(vscode.debug, "stopDebugging").resolves();
       assert.strictEqual(await launch("/dir/next.q"), undefined);
-      sinon.assert.calledWithMatch(
+      sinon.assert.calledOnceWithExactly(
         notify,
         "run.q is being debugged. Stop it and debug next.q instead?",
-        sinon.match.any,
-        sinon.match.any,
+        notifications.MessageKind.WARNING,
+        { logger: "debugCommand", modal: true },
         "Stop and Debug",
-        "Cancel",
       );
+      sinon.assert.notCalled(stop);
+    });
+
+    it("should ask in a modal dialog", async () => {
+      start("a");
+      sinon.stub(loggers, "kdbOutputLog");
+      const show = sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves(undefined);
+      assert.strictEqual(await launch("/next.q"), undefined);
+      sinon.assert.calledOnceWithExactly(
+        show,
+        "run.q is being debugged. Stop it and debug next.q instead?",
+        { modal: true },
+        "Stop and Debug" as never,
+      );
+    });
+
+    it("should ask again after a dismissed prompt", async () => {
+      start("a");
+      const notify = sinon.stub(notifications, "notify").resolves(undefined);
+      sinon.stub(vscode.debug, "stopDebugging").resolves();
+      assert.strictEqual(await launch("/next.q"), undefined);
+      notify.resolves("Stop and Debug");
+      assert.ok(await launch("/other.q"));
+      sinon.assert.calledTwice(notify);
+    });
+
+    it("should ask to restart the same file", async () => {
+      const session = start("a");
+      const notify = sinon.stub(notifications, "notify").resolves("Restart");
+      const stop = sinon.stub(vscode.debug, "stopDebugging").resolves();
+      const configuration = await launch("/run.q");
+      assert.strictEqual(configuration?.program, "/run.q");
+      sinon.assert.calledOnceWithExactly(
+        notify,
+        "run.q is being debugged. Restart it?",
+        notifications.MessageKind.WARNING,
+        { logger: "debugCommand", modal: true },
+        "Restart",
+      );
+      sinon.assert.calledOnceWithExactly(stop, session);
+    });
+
+    it("should keep the session when the restart is cancelled", async () => {
+      start("a");
+      sinon.stub(notifications, "notify").resolves(undefined);
+      const stop = sinon.stub(vscode.debug, "stopDebugging").resolves();
+      assert.strictEqual(await launch("/run.q"), undefined);
       sinon.assert.notCalled(stop);
     });
 

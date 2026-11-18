@@ -22,6 +22,7 @@ import { MessageKind, notify } from "../utils/notifications";
 export const DEBUG_TYPE = "q";
 
 const STOP = "Stop and Debug";
+const RESTART = "Restart";
 
 const activeSessions = new Map<string, vscode.DebugSession>();
 let confirming = false;
@@ -65,16 +66,22 @@ async function stopRunningSessions(
   if (confirming) return false;
   const current = programOf(running[0]);
   const next = configuration.program;
+  const name = current ? basename(current) : running[0].name;
+  const same =
+    typeof next === "string" &&
+    running.every((session) => programOf(session) === next);
+  const action = same ? RESTART : STOP;
   confirming = true;
   try {
     const choice = await notify(
-      `${current ? basename(current) : running[0].name} is being debugged. Stop it and debug ${typeof next === "string" ? basename(next) : configuration.name} instead?`,
+      same
+        ? `${name} is being debugged. Restart it?`
+        : `${name} is being debugged. Stop it and debug ${typeof next === "string" ? basename(next) : configuration.name} instead?`,
       MessageKind.WARNING,
-      { logger: "debugCommand" },
-      STOP,
-      "Cancel",
+      { logger: "debugCommand", modal: true },
+      action,
     );
-    if (choice !== STOP) return false;
+    if (choice !== action) return false;
     await Promise.all(
       running.map((session) => vscode.debug.stopDebugging(session)),
     );
