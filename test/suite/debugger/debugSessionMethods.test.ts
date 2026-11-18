@@ -273,7 +273,7 @@ describe("QDebugSession methods", () => {
         .throws(new Error("x"));
       await s.onLaunch(response(), { program });
       assert.strictEqual((previous as any).cancelled, true);
-      assert.strictEqual(QDebugSession.activeSession, session);
+      assert.strictEqual((QDebugSession as any).current, session);
       previous.dispose();
     });
 
@@ -1354,7 +1354,7 @@ describe("QDebugSession methods", () => {
       assert.ok(driver.commands.includes(".dbg.bu[`g;`long$(1)]"));
       assert.ok(driver.commands.includes("\\d ."));
       assert.strictEqual(existsSync(temp), false);
-      assert.strictEqual(QDebugSession.activeSession, undefined);
+      assert.strictEqual((QDebugSession as any).current, undefined);
     });
 
     it("interrupts a running statement and waits for it before cleaning up", async () => {
@@ -1420,6 +1420,32 @@ describe("QDebugSession methods", () => {
       assert.strictEqual(s.mapToProgram("/x.q"), "/x.q");
       assert.strictEqual(s.mapToProgram(undefined), undefined);
       assert.ok(name.startsWith("kdb-debug-"));
+    });
+
+    it("maps only files directly inside a temp folder", () => {
+      const name = basename(s.tempDir);
+      for (const file of [
+        `/src/${name}x/s0.q`,
+        `/src/${name}.q`,
+        `/src/${name}-notes/s0.q`,
+        `${s.tempDir}/sub/s0.q`,
+      ]) {
+        assert.strictEqual(s.mapToProgram(file), file);
+      }
+    });
+
+    it("recognises only a loader of a file in its own temp folder", () => {
+      const name = basename(s.tempDir);
+      for (const file of [
+        `/src/${name}.q`,
+        `/src/${name}x/s0.q`,
+        `${s.tempDir}/sub/s0.q`,
+      ]) {
+        assert.strictEqual(
+          s.isTempLoaderFrame(frame({ text: `\\l ${file}` })),
+          false,
+        );
+      }
     });
 
     it("recognises the frame that loaded a temp file", () => {

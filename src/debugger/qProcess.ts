@@ -17,7 +17,7 @@ import { EventEmitter } from "node:events";
 
 import { FRAME_LINE_RE, SUSPEND_MARKER_RE } from "./qBacktrace";
 
-export const Q_PIPE_ENV = { KX_TTY: "1", KX_LINE: "0" };
+const Q_PIPE_ENV = { KX_TTY: "1", KX_LINE: "0" };
 
 export type StopReason = "breakpoint" | "exception";
 

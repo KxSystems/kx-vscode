@@ -265,7 +265,7 @@ describe("QDebugSession", function () {
     const first = DapClient.start();
     try {
       await launch(first, CTRL_C_FIXTURE);
-      const terminal = (QDebugSession.activeSession as any).terminal;
+      const terminal = (QDebugSession as any).current.terminal;
       const pty = terminals.ptyOf(terminal);
       assert.ok(pty);
       pty.handleInput!("\x03");
@@ -305,7 +305,7 @@ describe("QDebugSession", function () {
       });
       await client.request("configurationDone", {});
       await new Promise((resolve) => setTimeout(resolve, 300));
-      const terminal = (QDebugSession.activeSession as any).terminal;
+      const terminal = (QDebugSession as any).current.terminal;
       terminals.ptyOf(terminal)!.handleInput!("1+1\r");
 
       const stopped = await client.waitForEvent("stopped");
@@ -781,11 +781,11 @@ describe("QDebugSession", function () {
     const client = DapClient.start();
     try {
       const threadId = await launch(client, THROWS_FIXTURE);
-      assert.notStrictEqual(QDebugSession.activeSession, undefined);
+      assert.notStrictEqual((QDebugSession as any).current, undefined);
 
       await client.request("continue", { threadId });
       await client.waitForEvent("terminated");
-      assert.strictEqual(QDebugSession.activeSession, undefined);
+      assert.strictEqual((QDebugSession as any).current, undefined);
     } finally {
       client.close();
     }

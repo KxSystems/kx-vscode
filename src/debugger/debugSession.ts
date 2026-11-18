@@ -358,11 +358,6 @@ function statementStart(
 
 class QDebugSession extends DebugSession {
   private static current?: QDebugSession;
-
-  public static get activeSession(): QDebugSession | undefined {
-    return QDebugSession.current;
-  }
-
   private static releasing?: Promise<void>;
 
   private driver: QProcess | undefined;
@@ -1526,16 +1521,16 @@ class QDebugSession extends DebugSession {
 
   private mapToProgram(file?: string): string | undefined {
     if (file === undefined) return undefined;
-    for (const [dir, program] of QDebugSession.tempDirPrograms) {
-      if (file.includes(dir)) return program;
-    }
-    return file;
+    return (
+      QDebugSession.tempDirPrograms.get(path.basename(path.dirname(file))) ??
+      file
+    );
   }
 
   private isTempLoaderFrame(f: QFrame): boolean {
     const m = /^\\l\s+(\S+)/.exec(f.text);
     if (!m || this.tempDir === undefined) return false;
-    return m[1].includes(path.basename(this.tempDir));
+    return path.basename(path.dirname(m[1])) === path.basename(this.tempDir);
   }
 
   private async reportStopped(
