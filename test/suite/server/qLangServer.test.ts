@@ -676,4 +676,87 @@ describe("qLangServer", () => {
       assert.ok(result.some((item) => item.textEdit?.newText === "replace"));
     });
   });
+  describe("structure requests", () => {
+    const fixtures = join(
+      __dirname,
+      "../../../../test/suite/server/fixtures/debugger",
+    );
+    const path = join(fixtures, "structure.q");
+    const missing = join(fixtures, "missing.q");
+
+    it("should answer from the file on disk", async () => {
+      const top = await server.onTopLevelStatements({ path });
+      assert.strictEqual(top[0].startLine, 0);
+      assert.deepStrictEqual(await server.onLambdaPath({ path, line: 17 }), {
+        name: "w",
+        path: [0],
+        startLine: 16,
+        rootLine: 15,
+      });
+      assert.deepStrictEqual(
+        await server.onStatementSeparators({ path, line: 10 }),
+        [{ line: 10, column: 11 }],
+      );
+      assert.deepStrictEqual(
+        await server.onIdentifiersOnLines({ path, startLine: 11, endLine: 11 }),
+        [
+          { name: "k", canon: ".q2.k" },
+          { name: "x", canon: ".q2.x" },
+        ],
+      );
+    });
+
+    it("should answer the stepping requests", async () => {
+      assert.deepStrictEqual(
+        await server.onStatementLambdas({ path, line: 17, column: 4 }),
+        [{ name: "w", path: [0, 0], line: 17, column: 4, rootLine: 15 }],
+      );
+      assert.deepStrictEqual(
+        await server.onRootLambdas({ path, startLine: 13, endLine: 13 }),
+        [{ line: 13, column: 5, endLine: 13, endColumn: 10 }],
+      );
+      assert.deepStrictEqual(
+        await server.onLambdaPath({ path, line: 13, anonymous: true }),
+        { name: "", path: [], startLine: 13, rootLine: 13, rootColumn: 5 },
+      );
+    });
+
+    it("should reuse the analysis while the file is unchanged", async () => {
+      await server.onTopLevelStatements({ path });
+      const cached = server["structures"].get(path)?.structure;
+      await server.onLambdaPath({ path, line: 0 });
+      assert.strictEqual(server["structures"].get(path)?.structure, cached);
+    });
+
+    it("should answer empty for an unreadable file", async () => {
+      assert.deepStrictEqual(
+        await server.onTopLevelStatements({ path: missing }),
+        [],
+      );
+      assert.strictEqual(
+        await server.onLambdaPath({ path: missing, line: 0 }),
+        null,
+      );
+      assert.deepStrictEqual(
+        await server.onStatementSeparators({ path: missing, line: 0 }),
+        [],
+      );
+      assert.deepStrictEqual(
+        await server.onStatementLambdas({ path: missing, line: 0, column: 0 }),
+        [],
+      );
+      assert.deepStrictEqual(
+        await server.onRootLambdas({ path: missing, startLine: 0, endLine: 0 }),
+        [],
+      );
+      assert.deepStrictEqual(
+        await server.onIdentifiersOnLines({
+          path: missing,
+          startLine: 0,
+          endLine: 0,
+        }),
+        [],
+      );
+    });
+  });
 });
