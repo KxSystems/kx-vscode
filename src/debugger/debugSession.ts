@@ -1034,8 +1034,9 @@ class QDebugSession extends DebugSession {
         return;
       }
 
-      await this.recoverStepInTraps();
-      const pos = await this.position();
+      const trace = await this.backtrace();
+      await this.recoverStepInTraps(parseBacktrace(trace));
+      const pos = parseCurrentPosition(trace);
       const file = this.mapToProgram(pos?.file);
       const lambda =
         file !== undefined && pos?.line !== undefined
@@ -1267,7 +1268,6 @@ class QDebugSession extends DebugSession {
         if (isPhantomStep(prevPc, pc) || (pc && pc.position < 0)) continue;
       }
       if (stops(pos)) {
-        await this.recoverStepInTraps();
         await this.reportStopped("step");
         return true;
       }

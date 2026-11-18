@@ -702,6 +702,47 @@ describe("QDebugSession methods", () => {
       assert.strictEqual(events("stopped")[0].body.reason, "step");
     });
 
+    it("reads the backtrace once before a step-into stop", async () => {
+      s.statements = [
+        {
+          startLine: 1,
+          startColumn: 0,
+          endLine: 1,
+          text: "f 1",
+          namespace: "",
+        },
+      ];
+      s.topLevelPaused = s.statements[0];
+      answer("kdb.qls.identifiersOnLines", [{ name: "f", canon: ".f" }]);
+      driver.on2(/^100h~type/, "1b").on2(/^\.dbg\.traceName/, '"..f"');
+      driver.on2(/s\d+\.q$/, () => {
+        driver.promptDepth = 2;
+        driver.stopReason = "breakpoint";
+        return "";
+      });
+      driver.on2(/^\.Q\.bt\[\]$/, `>>[1]  ${program}:1: f:{x}\n   ^`);
+      await s.stepInto();
+      assert.ok(s.stepInTraps.size > 0);
+      assert.strictEqual(events("stopped")[0].body.reason, "step");
+      assert.strictEqual(
+        driver.commands.filter((c) => c === ".Q.bt[]").length,
+        2,
+      );
+    });
+
+    it("reads the backtrace once when a step stops", async () => {
+      driver.promptDepth = 2;
+      s.stepInTraps.set("f#", { name: "f", descentPath: [] });
+      driver.on2(/^\.Q\.bt\[\]$/, `>>[1]  ${program}:1: f:{x}\n   ^`);
+      assert.strictEqual(await s.stepUntil(() => true, false), true);
+      assert.strictEqual(events("stopped")[0].body.reason, "step");
+      assert.deepStrictEqual([...s.stepInTraps.keys()], ["f#"]);
+      assert.strictEqual(
+        driver.commands.filter((c) => c === ".Q.bt[]").length,
+        1,
+      );
+    });
+
     it("steps into a top-level statement that raises", async () => {
       s.statements = [
         {
