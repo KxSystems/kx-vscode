@@ -1267,27 +1267,22 @@ class QDebugSession extends DebugSession {
         return true;
       }
     }
-    return false;
-  }
-
-  private async finishStep(): Promise<void> {
-    if (this.driver?.suspended) {
-      await this.continueFromBreakpoint();
-      if (this.driver.suspended) {
-        await this.reportStopped(
-          this.driver.stopReason === "exception" ? "exception" : "breakpoint",
-        );
-        return;
-      }
-    }
-    await this.pauseAfterStep();
+    if (!this.driver.suspended) return false;
+    this.sendEvent(
+      new OutputEvent(
+        `Stopped stepping after ${MAX_STEPS} steps.\n`,
+        "console",
+      ),
+    );
+    await this.reportStopped("pause");
+    return true;
   }
 
   private async stepStatement(): Promise<void> {
     if (!(await this.beginStep((stmt) => this.stepOverTopLevel(stmt)))) return;
     const { leftStatement } = await this.stepOrigin();
     if (await this.stepUntil(leftStatement)) return;
-    await this.finishStep();
+    await this.pauseAfterStep();
   }
 
   private async stepInto(): Promise<void> {
@@ -1310,7 +1305,7 @@ class QDebugSession extends DebugSession {
       return;
     }
     await this.recoverStepInTraps();
-    await this.finishStep();
+    await this.pauseAfterStep();
   }
 
   private async stepOut(): Promise<void> {
@@ -1322,11 +1317,7 @@ class QDebugSession extends DebugSession {
       pos.index < startIndex;
     if (await this.stepUntil(returned, false)) return;
     await this.recoverStepInTraps();
-    if (this.driver?.suspended) {
-      await this.reportStopped("step");
-    } else {
-      await this.pauseAfterStep();
-    }
+    await this.pauseAfterStep();
   }
 
   private async armStepInTraps(

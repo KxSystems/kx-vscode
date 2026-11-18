@@ -1184,6 +1184,32 @@ describe("QDebugSession methods", () => {
       assert.strictEqual(events("stopped")[0].body.reason, "exception");
     });
 
+    for (const [command, index] of [
+      ["stepStatement", 1],
+      ["stepInto", 1],
+      ["stepOut", 2],
+    ] as const) {
+      it(`pauses with a message when ${command} reaches the step limit`, async () => {
+        suspendedAt("/lib.q", 2, index);
+        sinon.stub(s, "programCounter").resolves(undefined);
+        const stepPosition = sinon
+          .stub(s, "stepPosition")
+          .resolves({ file: "/lib.q", line: 2, index });
+        await s[command]();
+        sinon.assert.callCount(stepPosition, 100000);
+        assert.ok(
+          events("output").some((e: any) =>
+            e.body.output.includes("Stopped stepping after 100000 steps"),
+          ),
+        );
+        assert.deepStrictEqual(
+          events("stopped").map((e: any) => e.body.reason),
+          ["pause"],
+        );
+        assert.ok(!driver.commands.includes(":"));
+      });
+    }
+
     it("pauses after stepping out of the last function", async () => {
       suspendedAt("/lib.q", 2, 2);
       driver.on2(/^>$/, () => {
