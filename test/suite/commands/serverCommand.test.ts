@@ -1997,7 +1997,7 @@ describe("serverCommand", () => {
           appendError: (value: string) => writes.push(["error", value]),
           appendParts: (parts: any[]) => writes.push(["parts", parts]),
           appendResult: (lines: string[]) => writes.push(["result", lines]),
-          terminal: { show: sinon.stub() },
+          follow: sinon.stub(),
         });
       }
     });

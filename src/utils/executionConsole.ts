@@ -76,7 +76,7 @@ export class ExecutionConsole {
         appendError: (value) => console.appendError(value),
         appendParts: (parts) => console.appendParts(parts),
         appendResult: (lines) => console.appendResult(lines),
-        reveal: () => console.terminal.show(true),
+        reveal: () => console.follow(),
       };
     }
     return {
