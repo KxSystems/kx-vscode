@@ -26,6 +26,8 @@ const MAX_COLUMNS = 2000;
 const CLEAR = "\x1b[2J\x1b[3J\x1b[H";
 const WIDTH_QUERY = `\x1b7\x1b[${MAX_COLUMNS}G\x1b[6n\x1b8`;
 const FIT_COMMAND = "workbench.action.terminal.sizeToContentWidth";
+const SCROLL_COMMAND = "workbench.action.terminal.scrollToBottom";
+const ACTIVATE_TIMEOUT = 1000;
 // The size a pty is opened with, echoed back in the first report, and the
 // layout the panel reports once it has laid the terminal out.
 const OPENED = { columns: 80, rows: 30 };
@@ -39,6 +41,7 @@ describe("ConnectionConsole", () => {
   let executed: string[];
   let terminal: vscode.Terminal;
   let active: vscode.Terminal | undefined;
+  let activation: vscode.EventEmitter<vscode.Terminal | undefined>;
   let clock: sinon.SinonFakeTimers;
 
   beforeEach(() => {
@@ -46,6 +49,10 @@ describe("ConnectionConsole", () => {
     revealed = [];
     executed = [];
     active = undefined;
+    activation = new vscode.EventEmitter<vscode.Terminal | undefined>();
+    sinon
+      .stub(vscode.window, "onDidChangeActiveTerminal")
+      .callsFake((listener: any) => activation.event(listener));
     clock = sinon.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     sinon.stub(vscode.window, "createTerminal").callsFake((options: any) => {
       pty = options.pty;
@@ -68,6 +75,7 @@ describe("ConnectionConsole", () => {
   });
 
   afterEach(() => {
+    activation.dispose();
     sinon.restore();
   });
 
@@ -308,6 +316,67 @@ describe("ConnectionConsole", () => {
     const console = await started();
     console.reveal();
     assert.deepStrictEqual(revealed, [true]);
+  });
+
+  it("should follow its output by revealing itself and scrolling to the bottom", async () => {
+    const console = await started();
+    console.follow();
+    await idle();
+    assert.deepStrictEqual(revealed, [true]);
+    assert.deepStrictEqual(executed, [SCROLL_COMMAND]);
+  });
+
+  it("should scroll to the bottom once it becomes the active terminal", async () => {
+    const console = await started();
+    active = undefined;
+    (<any>terminal).show = (preserveFocus?: boolean) => {
+      revealed.push(!!preserveFocus);
+    };
+    console.follow();
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
+    assert.deepStrictEqual(executed, []);
+    active = terminal;
+    activation.fire(terminal);
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
+    assert.deepStrictEqual(executed, [SCROLL_COMMAND]);
+  });
+
+  it("should not scroll another terminal to the bottom", async () => {
+    const console = await started();
+    const other = <vscode.Terminal>(<any>{});
+    active = other;
+    (<any>terminal).show = (preserveFocus?: boolean) => {
+      revealed.push(!!preserveFocus);
+    };
+    console.follow();
+    activation.fire(other);
+    await clock.tickAsync(ACTIVATE_TIMEOUT);
+    activation.fire(terminal);
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
+    assert.deepStrictEqual(executed, []);
+  });
+
+  it("should not scroll a console disposed before it becomes active", async () => {
+    const console = await started();
+    active = undefined;
+    (<any>terminal).show = () => {};
+    console.follow();
+    console.dispose();
+    active = terminal;
+    activation.fire(terminal);
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
+    assert.deepStrictEqual(executed, []);
+  });
+
+  it("should keep going when scrolling to the bottom fails", async () => {
+    const console = await started();
+    (<any>vscode.commands.executeCommand).callsFake(
+      () => <any>Promise.reject(new Error("no such command")),
+    );
+    console.follow();
+    await idle();
+    console.appendLine("after");
+    assert.strictEqual(payload(), "after\r\n");
   });
 
   it("should write a row as it is until a width is reported", async () => {

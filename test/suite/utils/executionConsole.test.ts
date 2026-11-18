@@ -230,20 +230,20 @@ describe("executionConsole", () => {
       let appendError: sinon.SinonStub;
       let appendParts: sinon.SinonStub;
       let appendResult: sinon.SinonStub;
-      let show: sinon.SinonStub;
+      let follow: sinon.SinonStub;
 
       beforeEach(() => {
         appendLine = sinon.stub();
         appendError = sinon.stub();
         appendParts = sinon.stub();
         appendResult = sinon.stub();
-        show = sinon.stub();
+        follow = sinon.stub();
         ext.connectionConsoles.set(connLabel, <any>{
           appendLine,
           appendError,
           appendParts,
           appendResult,
-          terminal: { show },
+          follow,
         });
         getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
         getConfigurationStub.returns({
@@ -257,14 +257,14 @@ describe("executionConsole", () => {
         getConfigurationStub.restore();
       });
 
-      it("should write to the connection console and reveal its terminal", () => {
+      it("should write to the connection console and follow its output", () => {
         queryConsole.append("test", "a:1", "fileName", connLabel);
 
         sinon.assert.calledWith(appendResult, ["test"]);
-        sinon.assert.calledWith(show, true);
+        sinon.assert.calledOnce(follow);
       });
 
-      it("should write errors to the connection console", () => {
+      it("should write errors to the connection console and follow its output", () => {
         queryConsole.appendQueryError(
           "a:1",
           "error",
@@ -276,6 +276,20 @@ describe("executionConsole", () => {
         sinon.assert.calledWith(appendParts, [
           { text: "Error: error", error: true },
         ]);
+        sinon.assert.calledOnce(follow);
+      });
+
+      it("should not follow the connection console when auto focus is off", () => {
+        getConfigurationStub.returns({
+          get: (key: string, fallback: boolean) =>
+            key === "autoFocusOutputOnEntry" ? false : fallback,
+          update: sinon.stub(),
+        });
+
+        queryConsole.append("test", "a:1", "fileName", connLabel);
+
+        sinon.assert.calledWith(appendResult, ["test"]);
+        sinon.assert.notCalled(follow);
       });
 
       it("should fall back to the shared channel for unknown connections", () => {
@@ -313,7 +327,7 @@ describe("executionConsole", () => {
           appendError: (value: string) => writes.push(["error", value]),
           appendParts: (parts: any[]) => writes.push(["parts", parts]),
           appendResult: (lines: string[]) => writes.push(["result", lines]),
-          terminal: { show: sinon.stub() },
+          follow: sinon.stub(),
         });
       });
 

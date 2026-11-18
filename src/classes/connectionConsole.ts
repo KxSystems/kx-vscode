@@ -57,7 +57,11 @@ const CURSOR_POSITION = /\[\d+;(\d+)R/;
 
 const SIZE_TO_CONTENT = "workbench.action.terminal.sizeToContentWidth";
 
+const SCROLL_TO_BOTTOM = "workbench.action.terminal.scrollToBottom";
+
 const LAYOUT_TIMEOUT = 1000;
+
+const ACTIVATE_TIMEOUT = 1000;
 
 // A terminal's dimensions as a value that can be compared. VS Code reports a
 // placeholder size (80x30) before the panel has laid the terminal out, so the
@@ -317,6 +321,41 @@ export class ConnectionConsole {
    */
   reveal(): void {
     this.pty.show(true);
+  }
+
+  follow(): void {
+    this.reveal();
+    void this.scrollToBottom();
+  }
+
+  private async scrollToBottom(): Promise<void> {
+    if (!(await this.activated()) || this._exited) {
+      return;
+    }
+    try {
+      await vscode.commands.executeCommand(SCROLL_TO_BOTTOM);
+    } catch {
+      return;
+    }
+  }
+
+  private activated(): Promise<boolean> {
+    if (vscode.window.activeTerminal === this.pty) {
+      return Promise.resolve(true);
+    }
+    return new Promise((resolve) => {
+      const settle = (value: boolean) => {
+        clearTimeout(timer);
+        listener.dispose();
+        resolve(value);
+      };
+      const listener = vscode.window.onDidChangeActiveTerminal((terminal) => {
+        if (terminal === this.pty) {
+          settle(true);
+        }
+      });
+      const timer = setTimeout(() => settle(false), ACTIVATE_TIMEOUT);
+    });
   }
 
   dispose(): void {
