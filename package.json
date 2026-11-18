@@ -1078,7 +1078,7 @@
         },
         {
           "command": "kdb.debugFile",
-          "when": "editorLangId == q && resourceFilename =~ /\\.q$/i"
+          "when": "resourceFilename =~ /\\.q$/i"
         }
       ],
       "webview/context": [
