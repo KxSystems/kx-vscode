@@ -40,6 +40,8 @@ export class LocalConnection {
   // When useAPI is true, the remote q process only supports calls to named functions,
   // and the extension can only rely on calling those functions predefined in the vscode.q library
   public useAPI: boolean;
+  // What .vscode.getManifest answered on connect, when useAPI is true
+  public manifest?: { version: string; features: string[] };
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
 
@@ -114,8 +116,9 @@ export class LocalConnection {
 
         // Set useAPI to true if connecting a process with .vscode defined, so the functions
         // in that namespace will be used instead of sending the functions with each request.
-        this.connection?.k(".vscode.getManifest", null, (err) => {
+        this.connection?.k(".vscode.getManifest", null, (err, manifest) => {
           this.useAPI = !err;
+          this.manifest = err ? undefined : toManifest(manifest);
           this.update();
           notify(
             (this.useAPI
@@ -138,7 +141,15 @@ export class LocalConnection {
       this.connection?.close();
       this.connection = undefined;
       this.connected = false;
+      this.manifest = undefined;
     }
+  }
+
+  // Whether the process can run a query with readOnly set. The lambdas sent
+  // when useAPI is false always can; a .vscode API process only from the
+  // vscode.q version that reports the readOnly feature.
+  public supportsReadOnly(): boolean {
+    return !this.useAPI || !!this.manifest?.features.includes("readOnly");
   }
 
   public async setActive() {
@@ -159,6 +170,7 @@ export class LocalConnection {
     stringify?: boolean,
     isPython?: boolean,
     rowLimit?: RowLimit,
+    readOnly?: boolean,
   ): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.connection) {
@@ -192,6 +204,9 @@ export class LocalConnection {
             sampleFn: null,
             sampleSize: null,
             ...limitArgs,
+            // Only MCP calls send readOnly: evaluateQ.q then runs the code
+            // under reval
+            ...(readOnly && { readOnly: true }),
           };
 
       this.connection.k(wrapper, args, (err: Error, res: QueryResult) => {
@@ -387,6 +402,21 @@ function isQueryResponse(res: unknown): res is QueryResult {
     error === false &&
     (data === null || typeof data === "string" || Array.isArray(data))
   );
+}
+
+function toManifest(
+  res: unknown,
+): { version: string; features: string[] } | undefined {
+  if (typeof res !== "object" || res === null) {
+    return undefined;
+  }
+  const { version, features } = res as Record<string, unknown>;
+  return {
+    version: typeof version === "string" ? version : "",
+    features: Array.isArray(features)
+      ? features.filter((f): f is string => typeof f === "string")
+      : [],
+  };
 }
 
 function unreadableResponse() {

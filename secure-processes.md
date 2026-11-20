@@ -62,6 +62,7 @@ Note that this example is a demonstration only, and not intended to provide secu
 // @param args        {dict}
 // @desc args.ctx     {string} The context to evaluate code in. This will already be set by the parent function.
 // @desc args.code    {string} The code to run, which may be one expression, or multiple expressions, as a single string.
+// @desc args.readOnly {boolean} Present and true only on requests from the extension's MCP server (see below).
 // @desc returnFormat {string} The result format requested by the extension. Formatting is handled by the parent function.
 //  "text" will return the stringified value
 //  "structuredText" will return stringified values in a tabular format, with metadata
@@ -80,3 +81,21 @@ Note that this example is a demonstration only, and not intended to provide secu
 
 It's the responsibility of the process owner to ensure .vscode.customQEvaluator is secured,
 e.g. that it prevents overwriting .z.ps, .z.pg, or .vscode.customQEvaluator
+
+## Read-only requests from the MCP server
+
+The extension's MCP server, which lets AI agents query connections the user has
+allowed, sends `readOnly: 1b` in `args`. `.vscode.runQQuery` then evaluates the
+code under `reval`: for a client request it can't change globals, write files,
+run system commands or read files outside the process's working directory.
+Errors come back as `'noupdate`, `'access` or `'sys`.
+
+- `.vscode.i.evaluateQ` evaluates each expression with `reval`.
+- A `.vscode.customQEvaluator` is called through `reval` as a whole, so it can't
+  write globals (such as a log table) during a read-only request.
+- `.vscode.getManifest` reports `readOnly` in its features from version 1.1.0.
+  The extension refuses MCP requests on a process whose manifest doesn't, rather
+  than running them with write access.
+- `reval` needs kdb+ 4.0 (2020.03.17) or later, or KDB-X.
+
+`reval` guards against accidental changes; it isn't a sandbox for hostile code.

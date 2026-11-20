@@ -54,6 +54,7 @@ import {
   KdbNode,
   MetaObjectPayloadNode,
 } from "../services/kdbTreeProvider";
+import { setMcpAccess } from "../services/mcp/mcpAccess";
 import { MetaContentProvider } from "../services/metaContentProvider";
 import { inputVariable } from "../services/notebookProviders";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
@@ -61,6 +62,7 @@ import {
   checkOpenSslInstalled,
   getInsights,
   getKeyForServerName,
+  getServerName,
   getServers,
   isQuickAlias,
   offerReconnectionAfterEdit,
@@ -593,6 +595,12 @@ export async function editKdbConnection(
           };
 
           await updateServers(servers);
+        }
+        // MCP access is tied to the exact label (alias [host:port]), so a
+        // rename or a new address resets it
+        const oldLabel = getServerName(oldServer);
+        if (oldLabel !== getServerName(kdbData)) {
+          await setMcpAccess(oldLabel, undefined);
         }
         const newServers = getServers();
         if (newServers != undefined) {

@@ -26,6 +26,13 @@ import { OPEN_RESULTS_HINT } from "./classes/connectionConsole";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import { debugFile, registerDebugger } from "./commands/debugCommand";
+import {
+  allowMcpAccess,
+  generateMcpConfig,
+  regenerateMcpToken,
+  removeAllMcpAccessCommand,
+  removeMcpAccess,
+} from "./commands/mcpCommand";
 import { convertDataSources } from "./commands/queryCommand";
 import {
   activeConnection,
@@ -85,6 +92,7 @@ import {
   KdbTreeProvider,
   MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
+import { kdbMcpServer, registerMcpServer } from "./services/mcp/mcpServer";
 import { KxNotebookController } from "./services/notebookController";
 import {
   inputVariable,
@@ -224,6 +232,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   registerAllExtensionCommands();
   registerDebugger(context);
+  registerMcpServer(context);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
@@ -1155,6 +1164,31 @@ function registerReplCommands(): CommandRegistration[] {
   return replCommands;
 }
 
+function registerMcpCommands(): CommandRegistration[] {
+  return [
+    {
+      command: "kdb.mcp.regenerateToken",
+      callback: () => regenerateMcpToken(),
+    },
+    {
+      command: "kdb.mcp.allowAccess",
+      callback: (viewItem?: KdbNode) => allowMcpAccess(viewItem),
+    },
+    {
+      command: "kdb.mcp.removeAccess",
+      callback: (viewItem?: KdbNode) => removeMcpAccess(viewItem),
+    },
+    {
+      command: "kdb.mcp.generateConfig",
+      callback: () => generateMcpConfig(),
+    },
+    {
+      command: "kdb.mcp.removeAllAccess",
+      callback: () => removeAllMcpAccessCommand(),
+    },
+  ];
+}
+
 function registerDebugCommands(): CommandRegistration[] {
   return [
     {
@@ -1179,6 +1213,7 @@ function registerAllExtensionCommands(): void {
     ...registerNotebookCommands(),
     ...registerReplCommands(),
     ...registerDebugCommands(),
+    ...registerMcpCommands(),
   ];
 
   allCommands.forEach((command) => {
@@ -1190,6 +1225,7 @@ function registerAllExtensionCommands(): void {
 }
 
 export async function deactivate(): Promise<void> {
+  await kdbMcpServer.stop();
   await ext.telemetry.dispose();
 
   if (ext.client) {

@@ -181,6 +181,20 @@
           "default": "first",
           "description": "Default for whether a KX notebook cell output shows the first or the last rows of a table; each notebook can set its own",
           "scope": "machine-overridable"
+        },
+        "kdb.mcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Allow AI agents to query kdb connections through the extension's MCP server. Each connection must still be allowed and connected. Turning this off stops the server and refuses all MCP access, keeping each connection's choice.",
+          "scope": "application"
+        },
+        "kdb.mcp.port": {
+          "type": "number",
+          "default": 7464,
+          "minimum": 1024,
+          "maximum": 65535,
+          "markdownDescription": "The port a workspace's kdb MCP server first uses, on 127.0.0.1. Each workspace then keeps its own port. Set this in a workspace's settings to fix that workspace's port.",
+          "scope": "window"
         }
       }
     },
@@ -591,6 +605,31 @@
         "command": "kdb.debugFile",
         "title": "KX: Debug File",
         "icon": "$(debug-alt)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.regenerateToken",
+        "title": "Regenerate MCP token"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.allowAccess",
+        "title": "Allow MCP access (read only)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.removeAccess",
+        "title": "Remove MCP access"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.removeAllAccess",
+        "title": "Remove MCP access from all connections"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.generateConfig",
+        "title": "Generate MCP config"
       }
     ],
     "keybindings": [
@@ -1079,6 +1118,14 @@
         {
           "command": "kdb.debugFile",
           "when": "resourceFilename =~ /\\.q$/i"
+        },
+        {
+          "command": "kdb.mcp.allowAccess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.mcp.removeAccess",
+          "when": "false"
         }
       ],
       "webview/context": [
@@ -1255,6 +1302,16 @@
           "command": "kdb.connections.content.selectView",
           "when": "view == kdb-servers && viewItem in kdb.selectContentNodesContext",
           "group": "inline"
+        },
+        {
+          "command": "kdb.mcp.allowAccess",
+          "when": "view == kdb-servers && viewItem in kdb.rootNodes && viewItem not in kdb.mcp.allowed && config.kdb.mcp.enabled && isWorkspaceTrusted",
+          "group": "mcp@1"
+        },
+        {
+          "command": "kdb.mcp.removeAccess",
+          "when": "view == kdb-servers && viewItem in kdb.rootNodes && viewItem in kdb.mcp.allowed && config.kdb.mcp.enabled",
+          "group": "mcp@1"
         }
       ],
       "editor/title": [
@@ -1530,6 +1587,12 @@
           }
         ]
       }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "kdb.mcp",
+        "label": "kdb"
+      }
     ]
   },
   "license": "MIT",
@@ -1574,6 +1637,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@types/fs-extra": "11.0.4",
     "@types/jsdom": "28.0.3",
     "@types/mocha": "10.0.10",
@@ -1628,7 +1692,8 @@
     "vscode-languageserver": "9.0.1",
     "vscode-languageserver-textdocument": "1.0.13",
     "vscode-uri": "3.1.0",
-    "ws": "8.21.3"
+    "ws": "8.21.3",
+    "zod": "4.6.7"
   },
   "overrides": {
     "@microsoft/applicationinsights-core-js": "3.3.11",

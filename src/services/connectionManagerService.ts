@@ -18,6 +18,8 @@ import { ConnectionConsole } from "../classes/connectionConsole";
 import { LocalConnection } from "../classes/localConnection";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "./kdbTreeProvider";
+import { setMcpAccess } from "./mcp/mcpAccess";
+import { startMcpServerIfNeeded, stopMcpServerIfUnused } from "./mcp/mcpServer";
 import { InsightsConnection } from "../classes/insightsConnection";
 import {
   ExportedConnections,
@@ -243,6 +245,8 @@ export class ConnectionManagementService {
       this.removeConnectionFromContextString(connNode.label);
       this.disconnect(connNode.label);
     }
+    // A deleted connection loses its MCP access, even if re-added later
+    await setMcpAccess(connNode.label, undefined);
     let kind = ".kdb";
     if (connNode instanceof InsightsNode) {
       const insights = getInsights();
@@ -299,6 +303,10 @@ export class ConnectionManagementService {
     this.setActiveConnection(connNode);
     ext.connectionNode = connNode;
     ext.serverProvider.reload();
+    // Connecting an MCP-allowed connection starts the MCP server
+    if (connNode instanceof KdbNode) {
+      void startMcpServerIfNeeded();
+    }
   }
 
   private createConnectionConsole(connLabel: string): void {
@@ -328,6 +336,7 @@ export class ConnectionManagementService {
       ext.connectedConnectionList.indexOf(connection),
       1,
     );
+    void stopMcpServerIfUnused();
     ext.connectedContextStrings.splice(
       ext.connectedContextStrings.indexOf(connection.connLabel),
       1,
