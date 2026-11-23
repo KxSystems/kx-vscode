@@ -22,10 +22,11 @@ import {
   setMcpAccess,
 } from "../services/mcp/mcpAccess";
 import {
+  claimName,
   forgetPortClaim,
   getPortClaims,
+  MCP_HOST,
   workspaceKey,
-  claimName,
 } from "../services/mcp/mcpPorts";
 import {
   kdbMcpServer,
@@ -49,6 +50,19 @@ export async function regenerateMcpToken(): Promise<void> {
   );
 }
 
+// Tells the user MCP is turned off, and returns true when it is
+function reportIfMcpOff(): boolean {
+  if (isMcpEnabled()) {
+    return false;
+  }
+  notify(
+    "MCP access is turned off. Turn on the kdb.mcp.enabled setting first.",
+    MessageKind.INFO,
+    { logger },
+  );
+  return true;
+}
+
 // Shown once, the first time any connection is allowed
 async function confirmFirstAllow(label: string): Promise<boolean> {
   if (ext.context.globalState.get<boolean>(EXPLAINED_KEY)) {
@@ -60,7 +74,7 @@ async function confirmFirstAllow(label: string): Promise<boolean> {
     {
       modal: true,
       detail:
-        "Agents in VS Code (Copilot, Codex, Claude Code) will be able to run q on this connection while it's connected in this window, through the kdb extension's MCP server. The q they run can change data, write files and run system commands on that process.\n\nYour agent will also ask you to approve the server, and each call unless you choose to always allow it. You can remove access at any time.",
+        "Agents in VS Code (Copilot, Codex, Claude Code) will be able to run q on this connection while it's connected in this window, through the kdb extension's MCP server. The q they run can change data, write files and run system commands on that process.\n\nYour agent will also ask you to approve the server, and each call unless you choose to always allow it. You can remove access at any time.\n\nDon't type passwords or other credentials into the agent's chat, and don't have it write them into q. What the agent runs and gets back stays in its chat history. The extension doesn't log the q text.",
     },
     allow,
   );
@@ -75,12 +89,7 @@ export async function allowMcpAccess(viewItem?: KdbNode): Promise<void> {
   if (!(viewItem instanceof KdbNode)) {
     return;
   }
-  if (!isMcpEnabled()) {
-    notify(
-      "MCP access is turned off. Turn on the kdb.mcp.enabled setting first.",
-      MessageKind.INFO,
-      { logger },
-    );
+  if (reportIfMcpOff()) {
     return;
   }
   if (!workspace.isTrusted) {
@@ -129,8 +138,8 @@ export async function removeAllMcpAccessCommand(): Promise<void> {
 }
 
 // The agent-side server name, e.g. kdb-taxi-analysis
-export function mcpServerName(workspace: string): string {
-  const slug = workspace
+export function mcpServerName(workspaceLabel: string): string {
+  const slug = workspaceLabel
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/-+/g, "-")
@@ -139,12 +148,7 @@ export function mcpServerName(workspace: string): string {
 }
 
 export async function generateMcpConfig(): Promise<void> {
-  if (!isMcpEnabled()) {
-    notify(
-      "MCP access is turned off. Turn on the kdb.mcp.enabled setting first.",
-      MessageKind.INFO,
-      { logger },
-    );
+  if (reportIfMcpOff()) {
     return;
   }
 
@@ -173,7 +177,7 @@ async function copyMcpConfig(
   port: number,
   token: string,
 ): Promise<void> {
-  const url = `http://127.0.0.1:${port}/mcp`;
+  const url = `http://${MCP_HOST}:${port}/mcp`;
   const envVar = MCP_TOKEN_ENV;
   const bearer = `Bearer ${token}`;
   const envBearer = `Bearer \${${envVar}}`;

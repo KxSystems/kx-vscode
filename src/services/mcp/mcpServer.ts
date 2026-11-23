@@ -15,7 +15,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { randomBytes, timingSafeEqual } from "crypto";
 import { createServer, IncomingMessage, Server, ServerResponse } from "http";
-import { posix } from "path";
 import {
   commands,
   Disposable,
@@ -28,27 +27,27 @@ import {
   workspace,
 } from "vscode";
 
-import { isMcpAllowed, isMcpEnabled, updateMcpContext } from "./mcpAccess";
+import { isMcpEnabled, updateMcpContext } from "./mcpAccess";
 import {
   askForAnotherPort,
   choosePort,
+  claimName,
   describePortHolder,
   MCP_HOST,
   McpHealth,
   probeHealth,
   getPortClaims,
+  keyHash,
   savePortClaim,
   workspaceKey,
 } from "./mcpPorts";
-import { registerTools } from "./tools";
-import { LocalConnection } from "../../classes/localConnection";
+import { isAllowedAndConnected, registerTools } from "./tools";
 import { ext } from "../../extensionVariables";
 import { MessageKind, notify } from "../../utils/notifications";
 
 const logger = "mcp";
 
 const TOKEN_KEY = "kdb.mcp.token";
-const HOST = MCP_HOST;
 
 const LOCAL_HOSTNAMES = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
@@ -56,11 +55,8 @@ const LOCAL_HOSTNAMES = new Set(["127.0.0.1", "localhost", "[::1]"]);
 // use the .code-workspace file or the first folder, which stay the same
 // whether the folder is opened locally or remotely
 export function workspaceName(): string {
-  const file = workspace.workspaceFile;
-  if (file && file.scheme !== "untitled") {
-    return posix.basename(file.path).replace(/\.code-workspace$/, "");
-  }
-  return workspace.workspaceFolders?.[0]?.name ?? "no folder";
+  const key = workspaceKey();
+  return key ? claimName(key) : "no folder";
 }
 
 class KdbMcpServer implements Disposable {
@@ -116,7 +112,7 @@ class KdbMcpServer implements Disposable {
     }
     return new McpHttpServerDefinition(
       `kdb (${workspaceName()})`,
-      Uri.parse(`http://${HOST}:${this.port}/mcp`),
+      Uri.parse(`http://${MCP_HOST}:${this.port}/mcp`),
       { Authorization: `Bearer ${this.token}` },
     );
   }
@@ -175,7 +171,6 @@ class KdbMcpServer implements Disposable {
     if (cancelled() || this.declined) {
       return false;
     }
-    const token = await this.getToken();
     const key = workspaceKey();
     const choice = choosePort();
     let port = choice.port;
@@ -187,10 +182,14 @@ class KdbMcpServer implements Disposable {
       const result = await this.bind(port);
       let health: McpHealth | undefined;
       if (!(result instanceof Server) && result.code === "EADDRINUSE") {
-        health = await probeHealth(port, token);
+        health = await probeHealth(port);
         // Another window for this workspace already serves on this port. Leave
         // it running and don't start here; the next connect tries again.
-        if (key && health?.key === key && health.pid !== process.pid) {
+        if (
+          key &&
+          health?.keyHash === keyHash(key) &&
+          health.pid !== process.pid
+        ) {
           notify(
             `MCP port ${port} is already used by another VS Code window for workspace '${health.workspace}'. Close that window, or set kdb.mcp.port in this workspace to use another port.`,
             MessageKind.INFO,
@@ -252,7 +251,7 @@ class KdbMcpServer implements Disposable {
       void this.tellPortMoved(choice.port, port);
     }
     notify(
-      `MCP server listening on http://${HOST}:${port}/mcp for workspace '${workspaceName()}'`,
+      `MCP server listening on http://${MCP_HOST}:${port}/mcp for workspace '${workspaceName()}'`,
       MessageKind.DEBUG,
       { logger },
     );
@@ -297,7 +296,7 @@ class KdbMcpServer implements Disposable {
     try {
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject);
-        server.listen(port, HOST, () => {
+        server.listen(port, MCP_HOST, () => {
           server.off("error", reject);
           resolve();
         });
@@ -319,30 +318,33 @@ class KdbMcpServer implements Disposable {
     try {
       // The Host check blocks DNS rebinding; the Origin check blocks browsers
       const host = req.headers.host;
-      if (host !== `${HOST}:${port}` && host !== `localhost:${port}`) {
+      if (host !== `${MCP_HOST}:${port}` && host !== `localhost:${port}`) {
         return reply(res, 403, { error: "Host not allowed" });
       }
       if (!isLocalOrigin(req.headers.origin)) {
         return reply(res, 403, { error: "Origin not allowed" });
       }
-      if (!this.authorized(req.headers.authorization)) {
-        res.setHeader("WWW-Authenticate", "Bearer");
-        return reply(res, 401, { error: "Unauthorized" });
-      }
+      const path = new URL(req.url ?? "/", `http://${MCP_HOST}`).pathname;
 
-      const path = new URL(req.url ?? "/", `http://${HOST}`).pathname;
-
+      // Unauthenticated so a port probe never sends the token. It reveals the
+      // workspace name, a hash of the folder and the pid, not the path.
       if (path === "/health") {
         if (req.method !== "GET") {
           res.setHeader("Allow", "GET");
           return reply(res, 405, { error: "Method not allowed" });
         }
+        const key = workspaceKey();
         return reply(res, 200, {
           server: "kdb-mcp",
           workspace: workspaceName(),
-          key: workspaceKey(),
+          keyHash: key === undefined ? undefined : keyHash(key),
           pid: process.pid,
         });
+      }
+
+      if (!this.authorized(req.headers.authorization)) {
+        res.setHeader("WWW-Authenticate", "Bearer");
+        return reply(res, 401, { error: "Unauthorized" });
       }
 
       if (path === "/mcp") {
@@ -424,12 +426,7 @@ function reply(res: ServerResponse, status: number, body: object): void {
 export const kdbMcpServer = new KdbMcpServer();
 
 function hasAllowedConnection(): boolean {
-  return ext.connectedConnectionList.some(
-    (conn) =>
-      conn instanceof LocalConnection &&
-      conn.connected &&
-      isMcpAllowed(conn.connLabel),
-  );
+  return ext.connectedConnectionList.some(isAllowedAndConnected);
 }
 
 // The server runs only while an allowed connection is connected in this

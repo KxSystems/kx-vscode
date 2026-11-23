@@ -13,7 +13,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { workspace } from "vscode";
+import { commands, workspace } from "vscode";
 import { z } from "zod";
 
 import { isMcpAllowed, isMcpEnabled } from "./mcpAccess";
@@ -48,6 +48,26 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// A running q query can't be cancelled over the connection, and closing the
+// connection may not stop it in q. So the user is told and chooses whether to
+// disconnect; the agent is not disconnected on its own.
+function offerDisconnect(connectionName: string): void {
+  const disconnect = "Disconnect";
+  void notify(
+    `A q query from an agent on '${connectionName}' timed out after ${QUERY_TIMEOUT_MS / 1000} seconds and may still be running in q.`,
+    MessageKind.WARNING,
+    { logger },
+    disconnect,
+  ).then((picked) => {
+    if (picked === disconnect) {
+      void commands.executeCommand(
+        "kdb.connections.disconnect",
+        connectionName,
+      );
+    }
+  });
+}
+
 function maxOutputChars(): number {
   return workspace
     .getConfiguration("kdb")
@@ -66,7 +86,7 @@ function capOutput(output: string): string {
   );
 }
 
-export type McpResolution =
+type McpResolution =
   | { kind: "ok"; connection: LocalConnection }
   | { kind: "refused"; message: string };
 
@@ -74,36 +94,54 @@ function refused(message: string): McpResolution {
   return { kind: "refused", message };
 }
 
+// Connected in this window and allowed for MCP
+export function isAllowedAndConnected(conn: unknown): conn is LocalConnection {
+  return (
+    conn instanceof LocalConnection &&
+    conn.connected &&
+    isMcpAllowed(conn.connLabel)
+  );
+}
+
+// A label shared with an Insights connection is never served through MCP
+function sharesLabelWithInsights(label: string): boolean {
+  return ext.connectionsList.some(
+    (node) => node instanceof InsightsNode && node.label === label,
+  );
+}
+
 // Both checks of the core rule, on every call, with an exact label match
 // (never ConnectionManagementService's ip:port regex or its fallback to the
 // active connection).
-export function resolveForMcp(name: string): McpResolution {
+function resolveForMcp(connectionName: string): McpResolution {
   if (!isMcpEnabled()) {
     return refused("MCP access is turned off in the kdb extension settings.");
   }
 
-  const nodes = ext.connectionsList.filter((node) => node.label === name);
+  const nodes = ext.connectionsList.filter(
+    (node) => node.label === connectionName,
+  );
   if (nodes.length === 0) {
-    return refused(`No connection named '${name}'.`);
+    return refused(`No connection named '${connectionName}'.`);
   }
   // A label shared by a kdb and an Insights connection is treated as Insights
-  if (nodes.some((node) => node instanceof InsightsNode)) {
+  if (sharesLabelWithInsights(connectionName)) {
     return refused("Insights connections aren't supported through MCP yet.");
   }
 
-  if (!isMcpAllowed(name)) {
+  if (!isMcpAllowed(connectionName)) {
     return refused(
-      `Connection '${name}' is not allowed for MCP. Ask the user to enable 'Allow MCP access' on it.`,
+      `Connection '${connectionName}' is not allowed for MCP. Ask the user to enable 'Allow MCP access' on it.`,
     );
   }
 
   const connection = ext.connectedConnectionList.find(
     (conn): conn is LocalConnection =>
-      conn instanceof LocalConnection && conn.connLabel === name,
+      conn instanceof LocalConnection && conn.connLabel === connectionName,
   );
   if (!connection?.connected) {
     return refused(
-      `Connection '${name}' is allowed but not connected. Ask the user to connect to it in the kdb explorer.`,
+      `Connection '${connectionName}' is allowed but not connected. Ask the user to connect to it in the kdb explorer.`,
     );
   }
 
@@ -112,24 +150,10 @@ export function resolveForMcp(name: string): McpResolution {
 
 // Allowed and connected, which is what list_connections shows
 function listUsableConnections() {
-  return (
-    ext.connectedConnectionList
-      .filter(
-        (conn): conn is LocalConnection =>
-          conn instanceof LocalConnection &&
-          conn.connected &&
-          isMcpAllowed(conn.connLabel),
-      )
-      // Leave out a label an Insights connection shares
-      .filter(
-        (conn) =>
-          !ext.connectionsList.some(
-            (node) =>
-              node instanceof InsightsNode && node.label === conn.connLabel,
-          ),
-      )
-      .map((conn) => ({ name: conn.connLabel }))
-  );
+  return ext.connectedConnectionList
+    .filter(isAllowedAndConnected)
+    .filter((conn) => !sharesLabelWithInsights(conn.connLabel))
+    .map((conn) => ({ name: conn.connLabel }));
 }
 
 function text(message: string, isError = false): CallToolResult {
@@ -140,14 +164,15 @@ function log(message: string) {
   notify(message, MessageKind.DEBUG, { logger });
 }
 
-export async function runQ(
+async function runQ(
   connectionName: string,
   code: string,
 ): Promise<CallToolResult> {
   const started = Date.now();
+  // The q text is left out: it can hold credentials typed or generated into it
   const outcome = (result: CallToolResult, summary: string) => {
     log(
-      `run_q on '${connectionName}' ${summary} in ${Date.now() - started}ms: ${code}`,
+      `run_q on '${connectionName}' ${summary} in ${Date.now() - started}ms (${code.length} characters)`,
     );
     return result;
   };
@@ -165,6 +190,7 @@ export async function runQ(
     );
   } catch (error) {
     if (error instanceof QueryTimeout) {
+      offerDisconnect(connectionName);
       return outcome(text(error.message, true), "timed out");
     }
     const message = error instanceof Error ? error.message : String(error);
@@ -185,7 +211,7 @@ const RUN_Q_DESCRIPTION = `Run q code on a kdb connection the user has allowed a
 The code runs in that q process, so it can change its data and files.
 Output longer than the user's limit is cut short. Call list_connections first to find the connection names.`;
 
-export function registerTools(server: McpServer, workspaceName: string): void {
+export function registerTools(server: McpServer, workspaceLabel: string): void {
   server.registerTool(
     "list_connections",
     {
@@ -197,7 +223,7 @@ export function registerTools(server: McpServer, workspaceName: string): void {
       const connections = listUsableConnections();
       log(`list_connections returned ${connections.length} connection(s)`);
       return text(
-        JSON.stringify({ workspace: workspaceName, connections }, null, 2),
+        JSON.stringify({ workspace: workspaceLabel, connections }, null, 2),
       );
     },
   );

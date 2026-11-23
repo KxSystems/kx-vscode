@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { createHash } from "crypto";
 import { existsSync } from "fs";
 import { request } from "http";
 import { createServer } from "net";
@@ -24,8 +25,8 @@ import { ext } from "../../extensionVariables";
 const PORTS_KEY = "kdb.mcp.ports";
 
 export const MCP_HOST = "127.0.0.1";
-// Provisional until the default port is decided
-export const DEFAULT_MCP_PORT = 7464;
+// The port used when neither a workspace setting nor a saved port applies
+const DEFAULT_MCP_PORT = 7464;
 const MIN_PORT = 1024;
 const MAX_PORT = 65535;
 const SCAN_LIMIT = 100;
@@ -101,7 +102,7 @@ export function claimName(key: string): string {
 }
 
 // kdb.mcp.port set in .vscode/settings.json or a .code-workspace file
-export function workspacePortSetting(): number | undefined {
+function workspacePortSetting(): number | undefined {
   const inspected = workspace
     .getConfiguration("kdb")
     .inspect<number>("mcp.port");
@@ -146,7 +147,7 @@ function canBind(port: number): Promise<boolean> {
 }
 
 // Scans upwards, skipping claimed ports and ports that fail to bind
-export async function nextFreePort(after: number): Promise<number | undefined> {
+async function nextFreePort(after: number): Promise<number | undefined> {
   const claimed = portsClaimedByOthers(workspaceKey());
   const first = after + PORT_GAP;
   const last = Math.min(first + SCAN_LIMIT, MAX_PORT);
@@ -161,14 +162,18 @@ export async function nextFreePort(after: number): Promise<number | undefined> {
 export type McpHealth = {
   server: "kdb-mcp";
   workspace: string;
-  // workspaceKey() of the window that answered, and its extension host
-  key?: string;
+  // keyHash() of the workspaceKey() the window that answered serves
+  keyHash?: string;
   pid?: number;
 };
 
+// A hash, so the health reply doesn't expose the folder path
+export function keyHash(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
+}
+
 function call(
   port: number,
-  token: string,
   path: string,
 ): Promise<{ status: number; body: string } | undefined> {
   return new Promise((resolve) => {
@@ -178,7 +183,6 @@ function call(
         port,
         path,
         method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
         timeout: 1000,
       },
       (res) => {
@@ -196,13 +200,13 @@ function call(
   });
 }
 
-// Another window's kdb MCP server answers /health, since every window shares
-// the token. Undefined means another program holds the port.
+// Another window's kdb MCP server answers /health without the token, so
+// probing never sends the secret to a foreign program. Undefined means
+// another program holds the port.
 export async function probeHealth(
   port: number,
-  token: string,
 ): Promise<McpHealth | undefined> {
-  const res = await call(port, token, "/health");
+  const res = await call(port, "/health");
   if (res?.status !== 200) {
     return undefined;
   }

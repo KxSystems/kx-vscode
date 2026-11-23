@@ -1138,6 +1138,22 @@
         {
           "command": "kdb.mcp.removeAccess",
           "when": "false"
+        },
+        {
+          "command": "kdb.mcp.removeAllAccess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.mcp.generateConfig",
+          "when": "false"
+        },
+        {
+          "command": "kdb.mcp.showServers",
+          "when": "false"
+        },
+        {
+          "command": "kdb.mcp.regenerateToken",
+          "when": "false"
         }
       ],
       "webview/context": [
