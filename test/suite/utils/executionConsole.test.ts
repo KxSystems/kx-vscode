@@ -231,6 +231,7 @@ describe("executionConsole", () => {
       let appendParts: sinon.SinonStub;
       let appendResult: sinon.SinonStub;
       let follow: sinon.SinonStub;
+      let mark: sinon.SinonStub;
 
       beforeEach(() => {
         appendLine = sinon.stub();
@@ -238,12 +239,14 @@ describe("executionConsole", () => {
         appendParts = sinon.stub();
         appendResult = sinon.stub();
         follow = sinon.stub();
+        mark = sinon.stub();
         ext.connectionConsoles.set(connLabel, <any>{
           appendLine,
           appendError,
           appendParts,
           appendResult,
           follow,
+          mark,
         });
         getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
         getConfigurationStub.returns({
@@ -261,7 +264,7 @@ describe("executionConsole", () => {
         queryConsole.append("test", "a:1", "fileName", connLabel);
 
         sinon.assert.calledWith(appendResult, ["test"]);
-        sinon.assert.calledOnce(follow);
+        sinon.assert.callOrder(mark, appendResult, follow);
       });
 
       it("should write errors to the connection console and follow its output", () => {
@@ -276,7 +279,7 @@ describe("executionConsole", () => {
         sinon.assert.calledWith(appendParts, [
           { text: "Error: error", error: true },
         ]);
-        sinon.assert.calledOnce(follow);
+        sinon.assert.callOrder(mark, appendParts, follow);
       });
 
       it("should not follow the connection console when auto focus is off", () => {
@@ -289,6 +292,7 @@ describe("executionConsole", () => {
         queryConsole.append("test", "a:1", "fileName", connLabel);
 
         sinon.assert.calledWith(appendResult, ["test"]);
+        sinon.assert.calledOnce(mark);
         sinon.assert.notCalled(follow);
       });
 
@@ -328,6 +332,7 @@ describe("executionConsole", () => {
           appendParts: (parts: any[]) => writes.push(["parts", parts]),
           appendResult: (lines: string[]) => writes.push(["result", lines]),
           follow: sinon.stub(),
+          mark: sinon.stub(),
         });
       });
 

@@ -40,6 +40,7 @@ interface ConsoleSink {
   appendParts: (parts: { text: string; error?: boolean }[]) => void;
   // The lines of a result, kept apart from the banner lines around them.
   appendResult: (lines: string[]) => void;
+  mark: () => void;
   reveal: () => void;
 }
 
@@ -76,6 +77,7 @@ export class ExecutionConsole {
         appendError: (value) => console.appendError(value),
         appendParts: (parts) => console.appendParts(parts),
         appendResult: (lines) => console.appendResult(lines),
+        mark: () => console.mark(),
         reveal: () => console.follow(),
       };
     }
@@ -86,6 +88,7 @@ export class ExecutionConsole {
         this._console.appendLine(parts.map((part) => part.text).join("")),
       appendResult: (lines) =>
         lines.forEach((line) => this._console.appendLine(line)),
+      mark: () => {},
       reveal: () => this._console.show(true),
     };
   }
@@ -138,6 +141,9 @@ export class ExecutionConsole {
       write(footer);
     }
     sink.appendLine("");
+    if (getAutoFocusOutputOnEntrySetting()) {
+      sink.reveal();
+    }
   }
 
   public checkOutput(
@@ -175,11 +181,9 @@ export class ExecutionConsole {
   ): void {
     const hideDetails = getHideDetailedConsoleQueryOutputSetting();
     const sink = this.resolveSink(connLabel);
+    sink.mark();
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
-    if (getAutoFocusOutputOnEntrySetting()) {
-      sink.reveal();
-    }
 
     if (Array.isArray(output)) {
       dataSourceRes = convertRowsToConsole(output);
@@ -245,9 +249,7 @@ export class ExecutionConsole {
   ): void {
     const hideDetails = getHideDetailedConsoleQueryOutputSetting();
     const sink = this.resolveSink(connLabel);
-    if (getAutoFocusOutputOnEntrySetting()) {
-      sink.reveal();
-    }
+    sink.mark();
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {

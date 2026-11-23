@@ -1998,6 +1998,7 @@ describe("serverCommand", () => {
           appendParts: (parts: any[]) => writes.push(["parts", parts]),
           appendResult: (lines: string[]) => writes.push(["result", lines]),
           follow: sinon.stub(),
+          mark: sinon.stub(),
         });
       }
     });
