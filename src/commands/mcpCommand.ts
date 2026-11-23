@@ -222,18 +222,21 @@ async function copyMcpConfig(
             description: `.mcp.json uses \${${envVar}}`,
             text: mcpJson(envBearer),
             usesEnv: true,
+            terminal: false,
           },
           {
             label: "Token in the config",
             description: ".mcp.json with the token written in",
             text: mcpJson(bearer),
             usesEnv: false,
+            terminal: false,
           },
           {
             label: "Token in the config, as a command",
             description: "run in a terminal",
             text: `claude mcp add --transport http ${name} ${url} --header "Authorization: ${bearer}"`,
             usesEnv: false,
+            terminal: true,
           },
         ]
       : [
@@ -242,6 +245,7 @@ async function copyMcpConfig(
             description: `config.toml uses ${envVar}`,
             text: codexToml(`bearer_token_env_var = ${JSON.stringify(envVar)}`),
             usesEnv: true,
+            terminal: false,
           },
           {
             label: "Token in the config",
@@ -250,6 +254,7 @@ async function copyMcpConfig(
               `http_headers = { Authorization = ${JSON.stringify(bearer)} }`,
             ),
             usesEnv: false,
+            terminal: false,
           },
         ];
 
@@ -264,9 +269,11 @@ async function copyMcpConfig(
   await env.clipboard.writeText(picked.text);
   const exportLine = "Copy export line";
   const where = agent.agent === "claude" ? ".mcp.json" : "~/.codex/config.toml";
-  const message = picked.usesEnv
-    ? `Copied. Paste into ${where}, then set ${envVar} in your environment (the export line) and restart the agent.`
-    : `Copied. Paste into ${where}. It contains your MCP token, so keep it out of source control.`;
+  const message = picked.terminal
+    ? `Copied. Paste into a terminal to add the server to ${agent.label}. It contains your MCP token, so keep it out of source control.`
+    : picked.usesEnv
+      ? `Copied. Paste into ${where}, then set ${envVar} in your environment (the export line) and restart the agent.`
+      : `Copied. Paste into ${where}. It contains your MCP token, so keep it out of source control.`;
   const choice = await notify(
     message,
     MessageKind.INFO,
