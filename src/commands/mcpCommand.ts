@@ -16,10 +16,17 @@ import { env, window, workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { KdbNode } from "../services/kdbTreeProvider";
 import {
+  EXPLAINED_KEY,
   isMcpEnabled,
   removeAllMcpAccess,
   setMcpAccess,
 } from "../services/mcp/mcpAccess";
+import {
+  forgetPortClaim,
+  getPortClaims,
+  workspaceKey,
+  claimName,
+} from "../services/mcp/mcpPorts";
 import {
   kdbMcpServer,
   startMcpServerIfNeeded,
@@ -30,6 +37,9 @@ import { MessageKind, notify } from "../utils/notifications";
 
 const logger = "mcpCommand";
 
+// The environment variable the env var configs read the token from
+const MCP_TOKEN_ENV = "KDB_MCP_TOKEN";
+
 export async function regenerateMcpToken(): Promise<void> {
   await kdbMcpServer.regenerateToken();
   notify(
@@ -38,8 +48,6 @@ export async function regenerateMcpToken(): Promise<void> {
     { logger, telemetry: "MCP.RegenerateToken" },
   );
 }
-
-const EXPLAINED_KEY = "kdb.mcp.explained";
 
 // Shown once, the first time any connection is allowed
 async function confirmFirstAllow(label: string): Promise<boolean> {
@@ -52,7 +60,7 @@ async function confirmFirstAllow(label: string): Promise<boolean> {
     {
       modal: true,
       detail:
-        "Agents in VS Code (Copilot, Codex, Claude Code) will be able to run read-only q on this connection while it's connected in this window, through the kdb extension's MCP server. They can't change data, write files or run system commands.\n\nYour agent will also ask you to approve the server, and each call unless you choose to always allow it. You can remove access at any time.",
+        "Agents in VS Code (Copilot, Codex, Claude Code) will be able to run q on this connection while it's connected in this window, through the kdb extension's MCP server. The q they run can change data, write files and run system commands on that process.\n\nYour agent will also ask you to approve the server, and each call unless you choose to always allow it. You can remove access at any time.",
     },
     allow,
   );
@@ -87,13 +95,12 @@ export async function allowMcpAccess(viewItem?: KdbNode): Promise<void> {
     return;
   }
 
-  await setMcpAccess(viewItem.label, "read");
+  await setMcpAccess(viewItem.label, true);
   ext.serverProvider.reload();
-  notify(
-    `MCP access (read only) allowed on ${viewItem.label}`,
-    MessageKind.DEBUG,
-    { logger, telemetry: "MCP.AllowAccess" },
-  );
+  notify(`MCP access allowed on ${viewItem.label}`, MessageKind.DEBUG, {
+    logger,
+    telemetry: "MCP.AllowAccess",
+  });
   // Starts the server if this connection is already connected
   await startMcpServerIfNeeded(true);
 }
@@ -102,7 +109,7 @@ export async function removeMcpAccess(viewItem?: KdbNode): Promise<void> {
   if (!(viewItem instanceof KdbNode)) {
     return;
   }
-  await setMcpAccess(viewItem.label, undefined);
+  await setMcpAccess(viewItem.label, false);
   ext.serverProvider.reload();
   await stopMcpServerIfUnused();
   notify(`MCP access removed from ${viewItem.label}`, MessageKind.DEBUG, {
@@ -152,49 +159,188 @@ export async function generateMcpConfig(): Promise<void> {
     );
     return;
   }
-  const url = `http://127.0.0.1:${port}/mcp`;
-  const name = mcpServerName(workspaceName());
-  const token = await kdbMcpServer.getToken();
-  const header = `Authorization: Bearer ${token}`;
+  await copyMcpConfig(
+    mcpServerName(workspaceName()),
+    port,
+    await kdbMcpServer.getToken(),
+  );
+}
 
-  const options = [
-    {
-      label: "Claude Code: command",
-      description: "run in a terminal",
-      text: `claude mcp add --transport http ${name} ${url} --header "${header}"`,
-    },
-    {
-      label: "Claude Code: .mcp.json entry",
-      description: "paste into .mcp.json in your project folder",
-      text: JSON.stringify(
-        {
-          mcpServers: {
-            [name]: {
-              type: "http",
-              url,
-              headers: { Authorization: `Bearer ${token}` },
-            },
+// Asks for the agent and where the token comes from, then copies the config
+// for the server at that port
+async function copyMcpConfig(
+  name: string,
+  port: number,
+  token: string,
+): Promise<void> {
+  const url = `http://127.0.0.1:${port}/mcp`;
+  const envVar = MCP_TOKEN_ENV;
+  const bearer = `Bearer ${token}`;
+  const envBearer = `Bearer \${${envVar}}`;
+
+  const mcpJson = (authorization: string) =>
+    JSON.stringify(
+      {
+        mcpServers: {
+          [name]: {
+            type: "http",
+            url,
+            headers: { Authorization: authorization },
           },
         },
-        null,
-        2,
-      ),
-    },
-  ];
+      },
+      null,
+      2,
+    );
+  const codexToml = (...lines: string[]) =>
+    [`[mcp_servers.${name}]`, `url = ${JSON.stringify(url)}`, ...lines].join(
+      "\n",
+    );
 
-  const picked = await window.showQuickPick(options, {
-    title: "Copy MCP config",
-    placeHolder: "Which config do you want to copy?",
+  // Step 1: which agent. Step 2: where the token lives. The env var choice
+  // keeps the token out of the config, so the config survives regeneration.
+  const agent = await window.showQuickPick(
+    [
+      { label: "Claude Code", agent: "claude" as const },
+      { label: "Codex", agent: "codex" as const },
+    ],
+    { title: "Copy MCP config", placeHolder: "Which agent?" },
+  );
+  if (!agent) {
+    return;
+  }
+
+  const choices =
+    agent.agent === "claude"
+      ? [
+          {
+            label: "Token from environment variable (recommended)",
+            description: `.mcp.json uses \${${envVar}}`,
+            text: mcpJson(envBearer),
+            usesEnv: true,
+          },
+          {
+            label: "Token in the config",
+            description: ".mcp.json with the token written in",
+            text: mcpJson(bearer),
+            usesEnv: false,
+          },
+          {
+            label: "Token in the config, as a command",
+            description: "run in a terminal",
+            text: `claude mcp add --transport http ${name} ${url} --header "Authorization: ${bearer}"`,
+            usesEnv: false,
+          },
+        ]
+      : [
+          {
+            label: "Token from environment variable (recommended)",
+            description: `config.toml uses ${envVar}`,
+            text: codexToml(`bearer_token_env_var = ${JSON.stringify(envVar)}`),
+            usesEnv: true,
+          },
+          {
+            label: "Token in the config",
+            description: "config.toml with the token written in",
+            text: codexToml(
+              `http_headers = { Authorization = ${JSON.stringify(bearer)} }`,
+            ),
+            usesEnv: false,
+          },
+        ];
+
+  const picked = await window.showQuickPick(choices, {
+    title: `Copy MCP config for ${agent.label}`,
+    placeHolder: "Where should the token come from?",
   });
   if (!picked) {
     return;
   }
 
   await env.clipboard.writeText(picked.text);
-  notify(
-    `Copied (${picked.description}). It contains your MCP token, so keep it out of source control.` +
-      "",
+  const exportLine = "Copy export line";
+  const where = agent.agent === "claude" ? ".mcp.json" : "~/.codex/config.toml";
+  const message = picked.usesEnv
+    ? `Copied. Paste into ${where}, then set ${envVar} in your environment (the export line) and restart the agent.`
+    : `Copied. Paste into ${where}. It contains your MCP token, so keep it out of source control.`;
+  const choice = await notify(
+    message,
     MessageKind.INFO,
     { logger, telemetry: "MCP.GenerateConfig" },
+    ...(picked.usesEnv ? [exportLine] : []),
   );
+  if (choice === exportLine) {
+    await env.clipboard.writeText(`export ${envVar}='${token}'`);
+    notify(
+      `Copied the export line. Add it to ~/.bashrc (WSL or Linux), or set ${envVar} as a Windows user environment variable.`,
+      MessageKind.INFO,
+      { logger },
+    );
+  }
+}
+
+// Lists the port each workspace has saved, with a config to copy or the port
+// to forget. Config for another workspace works without its server running:
+// it's the same token, on the port that workspace keeps.
+export async function showMcpServers(): Promise<void> {
+  const claims = Object.entries(getPortClaims());
+  if (claims.length === 0) {
+    notify(
+      "No workspace has a kdb MCP server port saved yet. A port is saved the first time a workspace's server starts.",
+      MessageKind.INFO,
+      { logger },
+    );
+    return;
+  }
+
+  const current = workspaceKey();
+  const server = await window.showQuickPick(
+    claims.map(([key, port]) => ({
+      label: claimName(key),
+      description: `port ${port}${key === current ? " · this window" : ""}`,
+      key,
+      port,
+    })),
+    { title: "kdb MCP servers", placeHolder: "Which workspace?" },
+  );
+  if (!server) {
+    return;
+  }
+
+  const action = await window.showQuickPick(
+    [
+      { label: "Copy MCP config", action: "copy" as const },
+      {
+        label: "Forget port",
+        description: "the next start picks a port again",
+        action: "forget" as const,
+      },
+    ],
+    { title: `kdb MCP server: ${server.label}` },
+  );
+  if (!action) {
+    return;
+  }
+
+  if (action.action === "copy") {
+    await copyMcpConfig(
+      mcpServerName(server.label),
+      server.port,
+      await kdbMcpServer.getToken(),
+    );
+    return;
+  }
+  // This window's own port is in use, so it stays saved
+  if (server.key === current) {
+    notify(
+      "This window is using that port, so it can't be forgotten here. Open the other workspace to forget it.",
+      MessageKind.INFO,
+      { logger },
+    );
+    return;
+  }
+  await forgetPortClaim(server.key);
+  notify(`Forgot the MCP port for ${server.label}`, MessageKind.INFO, {
+    logger,
+  });
 }

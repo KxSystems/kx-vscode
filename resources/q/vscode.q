@@ -12,12 +12,10 @@
 // The public API that must be allowed for IPC calls is any function in .vscode, except those under .vscode.i
 \d .vscode
 
-version: "1.1.0"
+version: "1.0.0"
 
-// readOnly: runQQuery honours args`readOnly (sent only by the MCP server),
-// evaluating the code under reval so it cannot change data
 getManifest:{[]
-    `version`features!(version; `evaluateQ`listMem`readOnly)
+    `version`features!(version; `evaluateQ`listMem)
     }
 
 getViews: {views[]}
@@ -48,8 +46,7 @@ runQQuery: {[args]
 
     evaluator: $[`customQEvaluator in key .vscode;
         {[args]
-            // With readOnly set, the custom evaluator runs under reval too
-            .Q.trp[{[args] `data`error`errorMsg!($[1b ~ args`readOnly; reval (.vscode.customQEvaluator; args); .vscode.customQEvaluator args]; 0b; "")};
+            .Q.trp[{[args] `data`error`errorMsg!(.vscode.customQEvaluator args; 0b; "")};
                 args;
                 {[err; stacktrace]
                     if [err ~ enlist " "; err: "syntax error"];

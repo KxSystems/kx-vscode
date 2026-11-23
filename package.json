@@ -188,6 +188,13 @@
           "markdownDescription": "Allow AI agents to query kdb connections through the extension's MCP server. Each connection must still be allowed and connected. Turning this off stops the server and refuses all MCP access, keeping each connection's choice.",
           "scope": "application"
         },
+        "kdb.mcp.maxOutputChars": {
+          "type": "number",
+          "default": 20000,
+          "minimum": 1000,
+          "markdownDescription": "The most characters of q output an agent gets back from one run_q call. Longer output is cut short, with a note telling the agent to narrow the query.",
+          "scope": "application"
+        },
         "kdb.mcp.port": {
           "type": "number",
           "default": 7464,
@@ -614,7 +621,7 @@
       {
         "category": "KX",
         "command": "kdb.mcp.allowAccess",
-        "title": "Allow MCP access (read only)"
+        "title": "Allow MCP access"
       },
       {
         "category": "KX",
@@ -630,6 +637,11 @@
         "category": "KX",
         "command": "kdb.mcp.generateConfig",
         "title": "Generate MCP config"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.showServers",
+        "title": "Show MCP servers"
       }
     ],
     "keybindings": [
@@ -1637,7 +1649,6 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
-    "@modelcontextprotocol/sdk": "1.32.2",
     "@types/fs-extra": "11.0.4",
     "@types/jsdom": "28.0.3",
     "@types/mocha": "10.0.10",
@@ -1692,8 +1703,7 @@
     "vscode-languageserver": "9.0.1",
     "vscode-languageserver-textdocument": "1.0.13",
     "vscode-uri": "3.1.0",
-    "ws": "8.21.3",
-    "zod": "4.6.7"
+    "ws": "8.21.3"
   },
   "overrides": {
     "@microsoft/applicationinsights-core-js": "3.3.11",
@@ -1706,5 +1716,9 @@
     "tmp": ">=0.2.6",
     "undici": "7.29.1",
     "form-data": ">=4.0.6"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "4.6.7"
   }
 }

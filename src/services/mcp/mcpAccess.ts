@@ -18,10 +18,11 @@ import { ext } from "../../extensionVariables";
 // Access lives in globalState rather than kdb.servers, so that editing
 // settings.json can't grant it and editKdbConnection can't drop it.
 const ACCESS_KEY = "kdb.mcp.access";
+// Set once the first-allow confirmation has been accepted
+export const EXPLAINED_KEY = "kdb.mcp.explained";
 
-export type McpAccessMode = "read";
-
-type AccessMap = { [connectionLabel: string]: McpAccessMode };
+// A label is in the map when MCP access is allowed for it, stored as true
+type AccessMap = { [connectionLabel: string]: true };
 
 export function isMcpEnabled(): boolean {
   return workspace.getConfiguration("kdb").get<boolean>("mcp.enabled", true);
@@ -29,18 +30,33 @@ export function isMcpEnabled(): boolean {
 
 function getAccessMap(): AccessMap {
   // ext.context is unset in unit tests that build KdbNodes directly
-  return { ...(ext.context?.globalState?.get<AccessMap>(ACCESS_KEY) ?? {}) };
+  const stored =
+    ext.context?.globalState?.get<Record<string, unknown>>(ACCESS_KEY) ?? {};
+  const map: AccessMap = {};
+  for (const [label, value] of Object.entries(stored)) {
+    if (value === true) {
+      map[label] = true;
+    }
+  }
+  return map;
 }
 
-export function getMcpAccess(label: string): McpAccessMode | undefined {
-  const map = getAccessMap();
-  return Object.prototype.hasOwnProperty.call(map, label)
-    ? map[label]
-    : undefined;
+// Entries saved by an earlier read-only build hold a mode string rather than
+// true. They are dropped, and the first-allow confirmation is shown again, so
+// the access they gave is not carried over as full access.
+export async function purgeLegacyMcpAccess(): Promise<void> {
+  const stored =
+    ext.context?.globalState?.get<Record<string, unknown>>(ACCESS_KEY);
+  if (!stored || Object.values(stored).every((value) => value === true)) {
+    return;
+  }
+  await ext.context.globalState.update(ACCESS_KEY, getAccessMap());
+  await ext.context.globalState.update(EXPLAINED_KEY, undefined);
+  updateMcpContext();
 }
 
 export function isMcpAllowed(label: string): boolean {
-  return getMcpAccess(label) !== undefined;
+  return Object.prototype.hasOwnProperty.call(getAccessMap(), label);
 }
 
 export function getMcpAllowedLabels(): string[] {
@@ -49,19 +65,16 @@ export function getMcpAllowedLabels(): string[] {
 
 export async function setMcpAccess(
   label: string,
-  mode: McpAccessMode | undefined,
+  allowed: boolean,
 ): Promise<void> {
   const map = getAccessMap();
-  const current = Object.prototype.hasOwnProperty.call(map, label)
-    ? map[label]
-    : undefined;
   // Deleting or editing a connection calls this for every connection, so
   // skip the write (and the need for ext.context) when nothing changes
-  if (current === mode) {
+  if (isMcpAllowed(label) === allowed) {
     return;
   }
-  if (mode) {
-    map[label] = mode;
+  if (allowed) {
+    map[label] = true;
   } else {
     delete map[label];
   }

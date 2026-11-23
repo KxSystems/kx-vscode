@@ -1,9 +1,6 @@
 {[args]
   ctx:args`ctx;
   code:args`code;
-  // readOnly is only sent by the MCP server. reval stops the code changing
-  // globals, writing files or running system commands.
-  readOnly: 1b ~ args`readOnly;
 
   if [`histogram in key `.qp;
   if [not `display2 in key `.qp; 
@@ -96,7 +93,7 @@
   }/[();] lines;
   : "\n" sv fixSpecialSyntax each lines;
   } fixSpecialSyntax;
-  evalInContext: {[readOnly; ctx; expressions]
+  evalInContext: {[ctx; expressions]
   cachedCtx: string system "d";
   system "d ", ctx;
   index: 0;
@@ -108,7 +105,7 @@
   prefix: ";[::;";
   suffix: $[(not isLastLine) and not ";" ~ last expr; ";]"; "]"];
   expr: prefix , expr , suffix;
-  result: .Q.trp[{[readOnly; expr] `data`error`errorMsg`stacktrace!({$[x ~ (::); (::); x]} $[readOnly; reval (value; enlist expr); value expr]; 0b; ""; ())}[readOnly];
+  result: .Q.trp[{[expr] `data`error`errorMsg`stacktrace!({$[x ~ (::); (::); x]} value expr; 0b; ""; ())};
   expr;
   {[suffix; prefix; err; stacktrace]
   if [err ~ enlist " ";
@@ -140,5 +137,5 @@
   `$("f'";"f/";"f\\";"f':";"f/:";"f\\:";"dynamicload");
   typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
   isAtom: {not type[x] within 0 99h};
-  evalInContext[readOnly; ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code]
+  evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code]
   }

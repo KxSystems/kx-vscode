@@ -17,12 +17,14 @@ import { randomBytes, timingSafeEqual } from "crypto";
 import { createServer, IncomingMessage, Server, ServerResponse } from "http";
 import { posix } from "path";
 import {
+  commands,
   Disposable,
   EventEmitter,
   ExtensionContext,
   lm,
   McpHttpServerDefinition,
   Uri,
+  window,
   workspace,
 } from "vscode";
 
@@ -32,6 +34,9 @@ import {
   choosePort,
   describePortHolder,
   MCP_HOST,
+  McpHealth,
+  probeHealth,
+  getPortClaims,
   savePortClaim,
   workspaceKey,
 } from "./mcpPorts";
@@ -171,7 +176,8 @@ class KdbMcpServer implements Disposable {
       return false;
     }
     const token = await this.getToken();
-    const choice = await choosePort();
+    const key = workspaceKey();
+    const choice = choosePort();
     let port = choice.port;
 
     for (;;) {
@@ -179,6 +185,20 @@ class KdbMcpServer implements Disposable {
         return false;
       }
       const result = await this.bind(port);
+      let health: McpHealth | undefined;
+      if (!(result instanceof Server) && result.code === "EADDRINUSE") {
+        health = await probeHealth(port, token);
+        // Another window for this workspace already serves on this port. Leave
+        // it running and don't start here; the next connect tries again.
+        if (key && health?.key === key && health.pid !== process.pid) {
+          notify(
+            `MCP port ${port} is already used by another VS Code window for workspace '${health.workspace}'. Close that window, or set kdb.mcp.port in this workspace to use another port.`,
+            MessageKind.INFO,
+            { logger },
+          );
+          return false;
+        }
+      }
       if (result instanceof Server) {
         if (cancelled()) {
           result.close();
@@ -189,7 +209,7 @@ class KdbMcpServer implements Disposable {
       }
 
       const inUse = result.code === "EADDRINUSE";
-      if (!inUse || choice.fromWorkspaceSetting) {
+      if (!inUse || choice.source === "setting") {
         notify(
           inUse
             ? `Port ${port} is in use, so the kdb MCP server couldn't start. This workspace sets kdb.mcp.port, so choose another port there.`
@@ -200,11 +220,11 @@ class KdbMcpServer implements Disposable {
         return false;
       }
 
-      const holder = await describePortHolder(port, token);
+      const holder = describePortHolder(health);
       notify(`MCP port ${port} is used by ${holder}`, MessageKind.DEBUG, {
         logger,
       });
-      const next = await askForAnotherPort(port, holder);
+      const next = await askForAnotherPort(port, `is used by ${holder}`);
       if (next === undefined) {
         this.declined = true;
         return false;
@@ -213,9 +233,13 @@ class KdbMcpServer implements Disposable {
     }
 
     this.port = port;
-    const key = workspaceKey();
-    if (key && !choice.fromWorkspaceSetting) {
+    if (key && choice.source !== "setting") {
+      // No saved port until now: the first start for this workspace
+      const firstStart = getPortClaims()[key] === undefined;
       await savePortClaim(key, port);
+      if (firstStart) {
+        this.offerConfig(port);
+      }
     } else if (!key && !this.toldSessionOnly) {
       this.toldSessionOnly = true;
       notify(
@@ -224,6 +248,9 @@ class KdbMcpServer implements Disposable {
         { logger },
       );
     }
+    if (choice.source === "saved" && port !== choice.port) {
+      void this.tellPortMoved(choice.port, port);
+    }
     notify(
       `MCP server listening on http://${HOST}:${port}/mcp for workspace '${workspaceName()}'`,
       MessageKind.DEBUG,
@@ -231,6 +258,36 @@ class KdbMcpServer implements Disposable {
     );
     this.changed.fire();
     return true;
+  }
+
+  // Codex and Claude Code need the port in their configs, which Copilot doesn't
+  private offerConfig(port: number): void {
+    const copy = "Copy MCP config";
+    void notify(
+      `The kdb MCP server for this workspace is on port ${port}. Copy the config to connect Codex or Claude Code to it.`,
+      MessageKind.INFO,
+      { logger },
+      copy,
+    ).then((picked) => {
+      if (picked === copy) {
+        void commands.executeCommand("kdb.mcp.generateConfig");
+      }
+    });
+  }
+
+  // Copilot follows the provider, but Codex and Claude Code configs name the
+  // port
+  private async tellPortMoved(from: number, to: number): Promise<void> {
+    const generate = "Generate MCP config";
+    const picked = await notify(
+      `The kdb MCP server for this workspace moved from port ${from} to ${to}. Codex and Claude Code configs made for port ${from} need generating again. Copilot updates by itself.`,
+      MessageKind.INFO,
+      { logger },
+      generate,
+    );
+    if (picked === generate) {
+      await commands.executeCommand("kdb.mcp.generateConfig");
+    }
   }
 
   private async bind(port: number): Promise<Server | NodeJS.ErrnoException> {
@@ -283,6 +340,8 @@ class KdbMcpServer implements Disposable {
         return reply(res, 200, {
           server: "kdb-mcp",
           workspace: workspaceName(),
+          key: workspaceKey(),
+          pid: process.pid,
         });
       }
 
@@ -423,5 +482,15 @@ export function registerMcpServer(context: ExtensionContext): void {
       }
     }),
     workspace.onDidGrantWorkspaceTrust(() => void startMcpServerIfNeeded()),
+    // Access is saved for every window, so another window may have changed it
+    // while this one was in the background. Its menus and markers only update
+    // from its own changes, so refresh them when it's focused again.
+    window.onDidChangeWindowState((state) => {
+      if (state.focused) {
+        updateMcpContext();
+        ext.serverProvider.reload();
+        void stopMcpServerIfUnused();
+      }
+    }),
   );
 }

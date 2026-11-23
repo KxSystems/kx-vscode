@@ -14,6 +14,7 @@
 import { existsSync } from "fs";
 import { request } from "http";
 import { createServer } from "net";
+import { posix } from "path";
 import { Uri, window, workspace } from "vscode";
 
 import { ext } from "../../extensionVariables";
@@ -28,6 +29,9 @@ export const DEFAULT_MCP_PORT = 7464;
 const MIN_PORT = 1024;
 const MAX_PORT = 65535;
 const SCAN_LIMIT = 100;
+// Suggested ports start this far above a taken one, to stay clear of the
+// ports next to it that people often use for q (e.g. 7465)
+const PORT_GAP = 10;
 
 type PortClaims = { [workspaceKey: string]: number };
 
@@ -87,6 +91,15 @@ function portsClaimedByOthers(key: string | undefined): Set<number> {
   );
 }
 
+// The name workspaceName() gives the workspace a claim belongs to
+export function claimName(key: string): string {
+  try {
+    return posix.basename(Uri.parse(key).path).replace(/\.code-workspace$/, "");
+  } catch {
+    return key;
+  }
+}
+
 // kdb.mcp.port set in .vscode/settings.json or a .code-workspace file
 export function workspacePortSetting(): number | undefined {
   const inspected = workspace
@@ -103,30 +116,25 @@ function defaultPort(): number {
 
 export type PortChoice = {
   port: number;
-  // A workspace setting is the user's explicit choice, so it's never replaced
-  fromWorkspaceSetting: boolean;
+  // setting: a workspace setting is the user's explicit choice, so it's never
+  // replaced. saved: agent configs already point at it, so moving it needs
+  // saying.
+  source: "setting" | "saved" | "default";
 };
 
-// The workspace setting, then the saved port, then the default unless another
-// workspace has claimed it, then the next free unclaimed port
-export async function choosePort(): Promise<PortChoice> {
+// The workspace setting, then the saved port, then the default
+export function choosePort(): PortChoice {
   const setting = workspacePortSetting();
   if (setting !== undefined) {
-    return { port: setting, fromWorkspaceSetting: true };
+    return { port: setting, source: "setting" };
   }
   const key = workspaceKey();
   const saved = key ? getPortClaims()[key] : undefined;
   if (saved !== undefined) {
-    return { port: saved, fromWorkspaceSetting: false };
+    return { port: saved, source: "saved" };
   }
   const port = defaultPort();
-  if (!portsClaimedByOthers(key).has(port)) {
-    return { port, fromWorkspaceSetting: false };
-  }
-  return {
-    port: (await nextFreePort(port)) ?? port,
-    fromWorkspaceSetting: false,
-  };
+  return { port, source: "default" };
 }
 
 function canBind(port: number): Promise<boolean> {
@@ -140,8 +148,9 @@ function canBind(port: number): Promise<boolean> {
 // Scans upwards, skipping claimed ports and ports that fail to bind
 export async function nextFreePort(after: number): Promise<number | undefined> {
   const claimed = portsClaimedByOthers(workspaceKey());
-  const last = Math.min(after + SCAN_LIMIT, MAX_PORT);
-  for (let port = after + 1; port <= last; port++) {
+  const first = after + PORT_GAP;
+  const last = Math.min(first + SCAN_LIMIT, MAX_PORT);
+  for (let port = first; port <= last; port++) {
     if (!claimed.has(port) && (await canBind(port))) {
       return port;
     }
@@ -149,46 +158,68 @@ export async function nextFreePort(after: number): Promise<number | undefined> {
   return undefined;
 }
 
-// Another window's kdb MCP server answers /health with its workspace, since
-// every window shares the token. Anything else is "another program".
-export function describePortHolder(
+export type McpHealth = {
+  server: "kdb-mcp";
+  workspace: string;
+  // workspaceKey() of the window that answered, and its extension host
+  key?: string;
+  pid?: number;
+};
+
+function call(
   port: number,
   token: string,
-): Promise<string> {
-  const other = "another program";
+  path: string,
+): Promise<{ status: number; body: string } | undefined> {
   return new Promise((resolve) => {
     const req = request(
       {
         host: MCP_HOST,
         port,
-        path: "/health",
+        path,
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
         timeout: 1000,
       },
       (res) => {
-        let body = "";
+        let text = "";
         res.setEncoding("utf8");
-        res.on("data", (chunk) => (body += chunk));
-        res.on("end", () => {
-          try {
-            const health = JSON.parse(body);
-            resolve(
-              health?.server === "kdb-mcp" &&
-                typeof health.workspace === "string"
-                ? `the kdb MCP server for workspace '${health.workspace}'`
-                : other,
-            );
-          } catch {
-            resolve(other);
-          }
-        });
+        res.on("data", (chunk) => (text += chunk));
+        res.on("end", () =>
+          resolve({ status: res.statusCode ?? 0, body: text }),
+        );
       },
     );
     req.on("timeout", () => req.destroy());
-    req.on("error", () => resolve(other));
+    req.on("error", () => resolve(undefined));
     req.end();
   });
+}
+
+// Another window's kdb MCP server answers /health, since every window shares
+// the token. Undefined means another program holds the port.
+export async function probeHealth(
+  port: number,
+  token: string,
+): Promise<McpHealth | undefined> {
+  const res = await call(port, token, "/health");
+  if (res?.status !== 200) {
+    return undefined;
+  }
+  try {
+    const health = JSON.parse(res.body);
+    return health?.server === "kdb-mcp" && typeof health.workspace === "string"
+      ? health
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function describePortHolder(health: McpHealth | undefined): string {
+  return health
+    ? `the kdb MCP server for workspace '${health.workspace}'`
+    : "another program";
 }
 
 function validatePort(value: string): string | undefined {
@@ -198,10 +229,11 @@ function validatePort(value: string): string | undefined {
     : `Enter a whole number from ${MIN_PORT} to ${MAX_PORT}.`;
 }
 
-// Undefined means Don't start
+// reason completes "Port N …", e.g. "is used by another program".
+// Undefined means Don't start.
 export async function askForAnotherPort(
   port: number,
-  holder: string,
+  reason: string,
 ): Promise<number | undefined> {
   const next = await nextFreePort(port);
   const useNext = next !== undefined ? `Use port ${next}` : undefined;
@@ -212,7 +244,7 @@ export async function askForAnotherPort(
   );
 
   const picked = await window.showWarningMessage(
-    `Port ${port} is used by ${holder}, so the kdb MCP server for this window can't start there.`,
+    `Port ${port} ${reason}, so the kdb MCP server for this window can't start there.`,
     ...items,
   );
   if (picked === useNext) {
@@ -222,7 +254,7 @@ export async function askForAnotherPort(
     const value = await window.showInputBox({
       title: "kdb MCP server port",
       prompt: `A port from ${MIN_PORT} to ${MAX_PORT} for this workspace's MCP server`,
-      value: String(next ?? port + 1),
+      value: String(next ?? port + PORT_GAP),
       validateInput: validatePort,
     });
     return value === undefined ? undefined : Number(value);

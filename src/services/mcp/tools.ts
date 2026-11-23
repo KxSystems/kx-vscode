@@ -13,20 +13,61 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { workspace } from "vscode";
 import { z } from "zod";
 
-import { getMcpAccess, isMcpEnabled, McpAccessMode } from "./mcpAccess";
+import { isMcpAllowed, isMcpEnabled } from "./mcpAccess";
 import { LocalConnection } from "../../classes/localConnection";
 import { ext } from "../../extensionVariables";
-import { isErrorResult, queryConstants } from "../../models/queryResult";
+import { isErrorResult } from "../../models/queryResult";
 import { MessageKind, notify } from "../../utils/notifications";
 import { sanitizeQuery } from "../../utils/queryUtils";
 import { InsightsNode } from "../kdbTreeProvider";
 
 const logger = "mcp";
 
+// A query still running after this is reported to the agent as timed out. The
+// query isn't cancelled: local connections have no cancel.
+const QUERY_TIMEOUT_MS = 60_000;
+
+class QueryTimeout extends Error {}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new QueryTimeout(
+            `The query did not finish within ${ms / 1000} seconds. It may still be running in q, and this connection can't cancel it. Wait, or check the process before running more queries.`,
+          ),
+        ),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function maxOutputChars(): number {
+  return workspace
+    .getConfiguration("kdb")
+    .get<number>("mcp.maxOutputChars", 20000);
+}
+
+// The output cut to the limit, with a note telling the agent how to narrow it
+function capOutput(output: string): string {
+  const limit = maxOutputChars();
+  if (output.length <= limit) {
+    return output;
+  }
+  return (
+    output.slice(0, limit) +
+    `\n\n[Output cut short: the first ${limit} of ${output.length} characters are shown. Narrow the query, for example by selecting fewer columns or rows, counting first, or using a smaller sample.]`
+  );
+}
+
 export type McpResolution =
-  | { kind: "ok"; connection: LocalConnection; mode: McpAccessMode }
+  | { kind: "ok"; connection: LocalConnection }
   | { kind: "refused"; message: string };
 
 function refused(message: string): McpResolution {
@@ -50,8 +91,7 @@ export function resolveForMcp(name: string): McpResolution {
     return refused("Insights connections aren't supported through MCP yet.");
   }
 
-  const mode = getMcpAccess(name);
-  if (!mode) {
+  if (!isMcpAllowed(name)) {
     return refused(
       `Connection '${name}' is not allowed for MCP. Ask the user to enable 'Allow MCP access' on it.`,
     );
@@ -67,71 +107,29 @@ export function resolveForMcp(name: string): McpResolution {
     );
   }
 
-  if (mode === "read" && !connection.supportsReadOnly()) {
-    return refused(
-      `Connection '${name}' can't enforce read-only access (its vscode.q is too old), so MCP calls are refused. Ask the user to update vscode.q on that process.`,
-    );
-  }
-
-  return { kind: "ok", connection, mode };
+  return { kind: "ok", connection };
 }
 
 // Allowed and connected, which is what list_connections shows
 function listUsableConnections() {
-  return ext.connectedConnectionList
-    .filter(
-      (conn): conn is LocalConnection =>
-        conn instanceof LocalConnection && conn.connected,
-    )
-    .map((conn) => ({ conn, mode: getMcpAccess(conn.connLabel) }))
-    .filter(
-      ({ conn, mode }) =>
-        mode !== undefined &&
-        // Leave out a label an Insights connection shares
-        !ext.connectionsList.some(
-          (node) =>
-            node instanceof InsightsNode && node.label === conn.connLabel,
-        ),
-    )
-    .map(({ conn, mode }) => ({
-      name: conn.connLabel,
-      access: mode!,
-      canEnforceReadOnly: conn.supportsReadOnly(),
-    }));
-}
-
-// reval restricts q, not embedded Python, and not what another process does
-// with a message sent over a handle. These checks catch the obvious ways in;
-// they are a guard against accidents, not a complete filter.
-function refusedConstruct(code: string): string | undefined {
-  if (/^[ \t]*p\)/m.test(code) || /(^|[^\w.])\.(p|pykx)\./.test(code)) {
-    return "Python isn't supported through MCP. Use q.";
-  }
-  if (/\bhopen\b/.test(code)) {
-    return "Opening handles to other processes isn't allowed through MCP. Query this connection only.";
-  }
-  return undefined;
-}
-
-// q errors the agent can act on, keyed by the q signal
-function explainError(connection: string, result: string): string {
-  const signal = result
-    .slice(queryConstants.error.length)
-    .trim()
-    .replace(/^'/, "")
-    .split(/\s/)[0];
-  switch (signal) {
-    case "noupdate":
-      return `Connection '${connection}' is read only for MCP, so this code can't change data. Rewrite it without assignments, or ask the user to make the change.`;
-    case "access":
-      return "q's working directory or permissions don't allow this. In read-only mode, only files in q's working directory and below can be read.";
-    case "sys":
-      return "System commands are blocked in read-only mode.";
-    case "reval":
-      return `Connection '${connection}' can't enforce read-only access (it needs kdb+ 4.0 or later), so MCP calls are refused.`;
-    default:
-      return "";
-  }
+  return (
+    ext.connectedConnectionList
+      .filter(
+        (conn): conn is LocalConnection =>
+          conn instanceof LocalConnection &&
+          conn.connected &&
+          isMcpAllowed(conn.connLabel),
+      )
+      // Leave out a label an Insights connection shares
+      .filter(
+        (conn) =>
+          !ext.connectionsList.some(
+            (node) =>
+              node instanceof InsightsNode && node.label === conn.connLabel,
+          ),
+      )
+      .map((conn) => ({ name: conn.connLabel }))
+  );
 }
 
 function text(message: string, isError = false): CallToolResult {
@@ -154,11 +152,6 @@ export async function runQ(
     return result;
   };
 
-  const construct = refusedConstruct(code);
-  if (construct) {
-    return outcome(text(construct, true), "refused (Python or hopen)");
-  }
-
   const resolution = resolveForMcp(connectionName);
   if (resolution.kind === "refused") {
     return outcome(text(resolution.message, true), "refused");
@@ -166,48 +159,38 @@ export async function runQ(
 
   let result: unknown;
   try {
-    result = await resolution.connection.executeQuery(
-      sanitizeQuery(code),
-      ".",
-      true,
-      false,
-      undefined,
-      resolution.mode === "read",
+    result = await withTimeout(
+      resolution.connection.executeQuery(sanitizeQuery(code), ".", true, false),
+      QUERY_TIMEOUT_MS,
     );
   } catch (error) {
+    if (error instanceof QueryTimeout) {
+      return outcome(text(error.message, true), "timed out");
+    }
     const message = error instanceof Error ? error.message : String(error);
     return outcome(text(message, true), "failed");
   }
 
   if (isErrorResult(result)) {
-    const hint = explainError(connectionName, result);
-    return outcome(
-      text(hint ? `${result}\n\n${hint}` : result, true),
-      "returned a q error",
-    );
+    return outcome(text(capOutput(result), true), "returned a q error");
   }
 
   const output =
     typeof result === "string" ? result : JSON.stringify(result ?? "");
-  return outcome(text(output), "succeeded");
+  return outcome(text(capOutput(output)), "succeeded");
 }
 
 const RUN_Q_DESCRIPTION = `Run q code on a kdb connection the user has allowed and connected, and return the result as console text, or the q error.
 
-Access is read only: the code is evaluated with q's reval, so it can't change data.
-- No assignments to globals (t: select ...), inserts, upserts, updates in place or definitions. Use a single expression, or a lambda with local variables, e.g. {t: select from trips where fare > 10; count t}[]
-- No system commands (\\l, \\cd, system "...").
-- Files can only be read from q's working directory and below, using relative paths.
-- Python (p), .p, .pykx) isn't supported; use q.
-- Don't open handles to other processes (hopen).
-Call list_connections first to find the connection names.`;
+The code runs in that q process, so it can change its data and files.
+Output longer than the user's limit is cut short. Call list_connections first to find the connection names.`;
 
 export function registerTools(server: McpServer, workspaceName: string): void {
   server.registerTool(
     "list_connections",
     {
       description:
-        "List the kdb connections the user has allowed for MCP and connected in this VS Code window, with their access mode, and the workspace name.",
+        "List the kdb connections the user has allowed for MCP and connected in this VS Code window, and the workspace name.",
       annotations: { readOnlyHint: true },
     },
     async () => {
@@ -229,7 +212,7 @@ export function registerTools(server: McpServer, workspaceName: string): void {
           .describe("The exact connection name from list_connections"),
         code: z.string().describe("The q code to run"),
       },
-      annotations: { readOnlyHint: true, openWorldHint: false },
+      annotations: { openWorldHint: false },
     },
     async ({ connection, code }) => runQ(connection, code),
   );

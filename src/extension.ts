@@ -32,6 +32,7 @@ import {
   regenerateMcpToken,
   removeAllMcpAccessCommand,
   removeMcpAccess,
+  showMcpServers,
 } from "./commands/mcpCommand";
 import { convertDataSources } from "./commands/queryCommand";
 import {
@@ -92,6 +93,7 @@ import {
   KdbTreeProvider,
   MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
+import { purgeLegacyMcpAccess } from "./services/mcp/mcpAccess";
 import { kdbMcpServer, registerMcpServer } from "./services/mcp/mcpServer";
 import { KxNotebookController } from "./services/notebookController";
 import {
@@ -160,6 +162,7 @@ let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
   ext.context = context;
+  await purgeLegacyMcpAccess();
   ext.outputChannel = vscode.window.createOutputChannel("kdb", { log: true });
   ext.openSslVersion = await checkOpenSslInstalled();
 
@@ -1185,6 +1188,10 @@ function registerMcpCommands(): CommandRegistration[] {
     {
       command: "kdb.mcp.removeAllAccess",
       callback: () => removeAllMcpAccessCommand(),
+    },
+    {
+      command: "kdb.mcp.showServers",
+      callback: () => showMcpServers(),
     },
   ];
 }

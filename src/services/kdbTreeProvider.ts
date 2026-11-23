@@ -631,7 +631,7 @@ export class KdbNode extends vscode.TreeItem {
       `${this.details.serverName}:${this.details.serverPort}`,
     );
     if (showsMcpMarker(this.label)) {
-      tooltipMd.appendMarkdown("\n\nMCP access: read only");
+      tooltipMd.appendMarkdown("\n\nMCP access allowed");
     }
     return tooltipMd;
   }

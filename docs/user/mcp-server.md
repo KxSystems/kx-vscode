@@ -2,8 +2,8 @@
 type: Guide
 title: MCP Server
 description:
-  How the kdb extension's MCP server lets AI agents in VS Code run read-only q
-  on the connections you allow.
+  How the kdb extension's MCP server lets AI agents in VS Code run q on the
+  connections you allow.
 tags: [kdb, vscode, mcp, ai, agents, copilot]
 timestamp: 2026-11-20
 ---
@@ -13,8 +13,8 @@ timestamp: 2026-11-20
 The extension includes a
 [Model Context Protocol](https://modelcontextprotocol.io) server, so AI agents
 in VS Code (GitHub Copilot, Codex, Claude Code) can query the q processes you
-have connected to and allowed. In this version access is **read only**: an agent
-can query data but can't change it.
+have connected to and allowed. An agent can run q on those connections, and the
+q it runs can change data and files on that process.
 
 ## What an agent can use
 
@@ -27,48 +27,25 @@ It never opens, reopens or logs in to a connection itself, and both conditions
 are checked on every call. Passwords never pass through MCP. Only kdb+/KDB-X
 connections are supported; Insights connections aren't yet.
 
-## Read-only access
-
-Every MCP call is evaluated with q's `reval`. The agent's code can't:
-
-- assign, insert into, update or redefine globals;
-- write files;
-- read files outside the q process's working directory;
-- run system commands, `exit`, or `hopen` a file.
-
-This needs kdb+ 4.0 (2020.03.17) or later, or KDB-X. On a process locked down
-with the `.vscode` API (see [secure-processes.md](../../secure-processes.md)),
-its `vscode.q` must be version 1.1.0 or later. If a process can't enforce read
-only, MCP calls to it are refused; they never run with write access instead.
-Python (`p)`) code is refused.
-
-Because of this, you load the data yourself, at q startup or from a workbook.
-Start q in the folder that holds any files the agent should read. A segmented
-database with partitions outside the working directory fails with `'access`.
-
-`reval` guards against accidents. It isn't a sandbox for hostile code. In
-particular it doesn't restrict:
-
-- embedded Python (embedPy or PyKX), which can do anything the q process can;
-- what another process does with a message sent to it over an open handle.
-
-The extension refuses code that uses `p)`, `.p.`, `.pykx.` or `hopen`, but that
-check is a safety net, not a complete filter. Only allow MCP access on processes
-where an agent making a mistake would be acceptable.
-
 ## Tools
 
-| Tool               | What it does                                                                      |
-| :----------------- | :-------------------------------------------------------------------------------- |
-| `list_connections` | The connections that are allowed and connected, with their access mode (`read`).  |
-| `run_q`            | Runs q on a connection, read only, and returns console-style text or the q error. |
+| Tool               | What it does                                                          |
+| :----------------- | :-------------------------------------------------------------------- |
+| `list_connections` | The connections that are allowed and connected.                       |
+| `run_q`            | Runs q on a connection and returns console-style text or the q error. |
+
+- Output longer than `kdb.mcp.maxOutputChars` (default 20000) is cut short, and
+  the agent is told to narrow the query.
+- A query still running after 60 seconds is reported as timed out. It isn't
+  cancelled, because local connections have no cancel, so it may still be
+  running in q.
 
 Every call is logged to the **kdb** output channel.
 
 ## Allowing a connection
 
-Right-click a kdb connection in the kdb explorer and choose **Allow MCP access
-(read only)**. The first time, a confirmation explains what this means. Allowed
+Right-click a kdb connection in the kdb explorer and choose **Allow MCP
+access**. The first time, a confirmation explains what this means. Allowed
 connections show **MCP** in the explorer. Access is saved across restarts, and
 can be allowed whether or not the connection is open.
 
@@ -93,20 +70,32 @@ can be allowed whether or not the connection is open.
 ### Ports
 
 Each workspace keeps its own port, so an agent config made for a workspace stays
-valid across sessions, and windows open at the same time don't clash.
+valid across sessions. A second window on a workspace that already runs the
+server doesn't take its port over: it leaves the server running and doesn't
+start its own.
 
 - The first time a workspace's server starts, it uses `kdb.mcp.port` (default
-  `7464`), or the next free port if another workspace already has that one. The
-  port is then saved for the workspace, on this machine only; it never appears
-  in `.vscode/settings.json`.
-- If the saved port is taken, a notification says what holds it (another
-  window's kdb MCP server, named by its workspace, or another program) and
-  offers **Use port N**, **Choose port…** or **Don't start**. The port you pick
-  is saved.
+  `7464`). The port is then saved for the workspace, on this machine only; it
+  never appears in `.vscode/settings.json`. That first start also offers **Copy
+  MCP config**.
+- If the default is held by another workspace's saved port, or by another
+  program, a notification says what holds it and offers **Use port N**, **Choose
+  port…** or **Don't start**. Suggested ports start 10 above the taken one, to
+  stay clear of the ports next to it. The port you pick is saved.
+- If another window for the same workspace already serves on the port, this
+  window says so and doesn't start. It tries again the next time it connects, so
+  a window that dropped without closing (WSL or SSH) recovers once its port is
+  free.
+- **KX: Show MCP servers** lists each workspace and its saved port. You can copy
+  a config for any of them, or forget a port. Forget the port for another
+  workspace; a window can't forget the port it's using.
 - Setting `kdb.mcp.port` in the workspace's settings overrides the saved port.
   If that port is taken, the server doesn't start, and you choose another in the
   setting.
 - With no folder open, the port lasts for the session only.
+
+Changing a saved port tells you the Codex and Claude Code configs need
+generating again.
 
 ### Copilot
 
@@ -126,3 +115,19 @@ Run **KX: Generate MCP config** and pick one:
 Both contain the token, so keep them out of source control. Each workspace has
 its own entry (`kdb-<workspace>`). After **KX: Regenerate MCP token**, generate
 the config again.
+
+### Choosing the config
+
+Run **KX: Generate MCP config**, pick the agent, then pick where the token comes
+from. **Token from environment variable** is recommended:
+
+1. Paste the config into `.mcp.json` (Claude Code) or `~/.codex/config.toml`
+   (Codex). It doesn't contain the token, so it doesn't change when the token is
+   regenerated.
+2. Click **Copy export line** on the notification and add the line to
+   `~/.bashrc` (WSL or Linux), or set `KDB_MCP_TOKEN` as a Windows user
+   environment variable.
+3. Restart the terminal or agent so it sees the variable.
+
+After **KX: Regenerate MCP token**, copy a new export line, replace the old one,
+and restart the terminal or agent. The config files stay as they are.

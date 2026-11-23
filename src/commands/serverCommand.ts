@@ -600,7 +600,7 @@ export async function editKdbConnection(
         // rename or a new address resets it
         const oldLabel = getServerName(oldServer);
         if (oldLabel !== getServerName(kdbData)) {
-          await setMcpAccess(oldLabel, undefined);
+          await setMcpAccess(oldLabel, false);
         }
         const newServers = getServers();
         if (newServers != undefined) {

@@ -246,7 +246,7 @@ export class ConnectionManagementService {
       this.disconnect(connNode.label);
     }
     // A deleted connection loses its MCP access, even if re-added later
-    await setMcpAccess(connNode.label, undefined);
+    await setMcpAccess(connNode.label, false);
     let kind = ".kdb";
     if (connNode instanceof InsightsNode) {
       const insights = getInsights();
