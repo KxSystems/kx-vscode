@@ -353,6 +353,16 @@ describe("executionConsole", () => {
           ]);
         });
 
+        it("should put the footer right under a result ending in a newline", () => {
+          queryConsole.append("2\n", "1+1", "fileName", connLabel);
+
+          assert.deepStrictEqual(body(), [
+            ["result", ["2"]],
+            ["line", "<<<"],
+            ["line", ""],
+          ]);
+        });
+
         it("should write the error block in red around a plain query echo and end it with a blank line", () => {
           queryConsole.appendQueryError(
             "1+`a",
@@ -572,6 +582,18 @@ describe("executionConsole", () => {
 
           assert.deepStrictEqual(writes, [
             ["result", ["2"]],
+            ["line", ""],
+          ]);
+        });
+
+        it("should separate results ending in a newline by a single blank line", () => {
+          queryConsole.append("76\n", "rand 100", "fileName", connLabel);
+          queryConsole.append("26\n", "rand 100", "fileName", connLabel);
+
+          assert.deepStrictEqual(writes, [
+            ["result", ["76"]],
+            ["line", ""],
+            ["result", ["26"]],
             ["line", ""],
           ]);
         });

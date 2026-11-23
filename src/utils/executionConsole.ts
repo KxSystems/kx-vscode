@@ -220,7 +220,7 @@ export class ExecutionConsole {
       sink.appendResult(dataSourceRes);
     } else {
       output = Array.isArray(output) ? output.join("\n") : output;
-      sink.appendResult(output.split("\n"));
+      sink.appendResult(output.replace(/\n+$/, "").split("\n"));
     }
     this.endBlock(
       sink,
