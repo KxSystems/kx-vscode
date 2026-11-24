@@ -147,7 +147,7 @@ function canBind(port: number): Promise<boolean> {
 }
 
 // Scans upwards, skipping claimed ports and ports that fail to bind
-async function nextFreePort(after: number): Promise<number | undefined> {
+export async function nextFreePort(after: number): Promise<number | undefined> {
   const claimed = portsClaimedByOthers(workspaceKey());
   const first = after + PORT_GAP;
   const last = Math.min(first + SCAN_LIMIT, MAX_PORT);

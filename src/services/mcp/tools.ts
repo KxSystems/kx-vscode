@@ -13,59 +13,54 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { commands, workspace } from "vscode";
+import { workspace } from "vscode";
 import { z } from "zod";
 
 import { isMcpAllowed, isMcpEnabled } from "./mcpAccess";
+import {
+  explainProcessStop,
+  queryTimeoutSeconds,
+  TIMEOUT_GRACE_MS,
+} from "./qTimeout";
 import { LocalConnection } from "../../classes/localConnection";
 import { ext } from "../../extensionVariables";
-import { isErrorResult } from "../../models/queryResult";
+import { isErrorResult, queryConstants } from "../../models/queryResult";
 import { MessageKind, notify } from "../../utils/notifications";
 import { sanitizeQuery } from "../../utils/queryUtils";
 import { InsightsNode } from "../kdbTreeProvider";
 
 const logger = "mcp";
 
-// A query still running after this is reported to the agent as timed out. The
-// query isn't cancelled: local connections have no cancel.
-const QUERY_TIMEOUT_MS = 60_000;
-
 class QueryTimeout extends Error {}
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+// A query still running after kdb.mcp.queryTimeoutSeconds (plus a grace, so a
+// q \T of the same value answers first) is reported to the agent as timed
+// out. The query isn't cancelled: local connections have no cancel.
+function withTimeout<T>(promise: Promise<T>, seconds: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(
       () =>
         reject(
           new QueryTimeout(
-            `The query did not finish within ${ms / 1000} seconds. It may still be running in q, and this connection can't cancel it. Wait, or check the process before running more queries.`,
+            `The query exceeded its configured ${seconds}-second execution budget, and q did not respond within the additional ${TIMEOUT_GRACE_MS / 1000}-second grace period. q did not confirm that execution stopped, so the query may still be running, and this connection can't cancel it. Wait, or check the process before running more queries.`,
           ),
         ),
-      ms,
+      seconds * 1000 + TIMEOUT_GRACE_MS,
     );
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-// A running q query can't be cancelled over the connection, and closing the
-// connection may not stop it in q. So the user is told and chooses whether to
-// disconnect; the agent is not disconnected on its own.
-function offerDisconnect(connectionName: string): void {
-  const disconnect = "Disconnect";
-  void notify(
-    `A q query from an agent on '${connectionName}' timed out after ${QUERY_TIMEOUT_MS / 1000} seconds and may still be running in q.`,
+// Disconnecting doesn't stop a running query in q (it finishes first, and a
+// reconnect waits behind it), so the user is only told why the connection is
+// busy, with nothing offered.
+function warnTimedOut(connectionName: string, seconds: number): void {
+  notify(
+    `An agent's query on '${connectionName}' exceeded its configured ${seconds}-second execution budget, and q did not respond within the additional ${TIMEOUT_GRACE_MS / 1000}-second grace period. q did not confirm that execution stopped, so the query may still be running, and queries on this connection wait until it finishes.`,
     MessageKind.WARNING,
     { logger },
-    disconnect,
-  ).then((picked) => {
-    if (picked === disconnect) {
-      void commands.executeCommand(
-        "kdb.connections.disconnect",
-        connectionName,
-      );
-    }
-  });
+  );
 }
 
 function maxOutputChars(): number {
@@ -84,6 +79,11 @@ function capOutput(output: string): string {
     output.slice(0, limit) +
     `\n\n[Output cut short: the first ${limit} of ${output.length} characters are shown. Narrow the query, for example by selecting fewer columns or rows, counting first, or using a smaller sample.]`
   );
+}
+
+// q's 'stop, which \T (and an interrupt) end a query with
+function isStopError(result: string): boolean {
+  return /^'?stop\b/.test(result.slice(queryConstants.error.length));
 }
 
 type McpResolution =
@@ -182,15 +182,17 @@ async function runQ(
     return outcome(text(resolution.message, true), "refused");
   }
 
+  const seconds = queryTimeoutSeconds();
+  const sent = Date.now();
   let result: unknown;
   try {
     result = await withTimeout(
       resolution.connection.executeQuery(sanitizeQuery(code), ".", true, false),
-      QUERY_TIMEOUT_MS,
+      seconds,
     );
   } catch (error) {
     if (error instanceof QueryTimeout) {
-      offerDisconnect(connectionName);
+      warnTimedOut(connectionName, seconds);
       return outcome(text(error.message, true), "timed out");
     }
     const message = error instanceof Error ? error.message : String(error);
@@ -198,6 +200,16 @@ async function runQ(
   }
 
   if (isErrorResult(result)) {
+    if (isStopError(result)) {
+      const stop = await explainProcessStop(
+        resolution.connection,
+        Date.now() - sent,
+      );
+      return outcome(
+        text(`${stop.message}\n\n${capOutput(result)}`, true),
+        stop.timedOut ? "stopped by the process timeout" : "stopped by q",
+      );
+    }
     return outcome(text(capOutput(result), true), "returned a q error");
   }
 

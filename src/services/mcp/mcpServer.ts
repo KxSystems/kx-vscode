@@ -41,6 +41,7 @@ import {
   savePortClaim,
   workspaceKey,
 } from "./mcpPorts";
+import { checkProcessTimeouts } from "./qTimeout";
 import { isAllowedAndConnected, registerTools } from "./tools";
 import { ext } from "../../extensionVariables";
 import { MessageKind, notify } from "../../utils/notifications";
@@ -434,6 +435,11 @@ function hasAllowedConnection(): boolean {
 export async function startMcpServerIfNeeded(retry = false): Promise<void> {
   if (hasAllowedConnection()) {
     await kdbMcpServer.start(retry);
+    if (kdbMcpServer.running) {
+      void checkProcessTimeouts(
+        ext.connectedConnectionList.filter(isAllowedAndConnected),
+      );
+    }
   }
 }
 

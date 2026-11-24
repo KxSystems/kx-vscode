@@ -36,18 +36,69 @@ connections are supported; Insights connections aren't yet.
 
 - Output longer than `kdb.mcp.maxOutputChars` (default 20000) is cut short, and
   the agent is told to narrow the query.
-- A query still running after 60 seconds is reported as timed out. It isn't
-  cancelled, because local connections have no cancel, so it may still be
-  running in q.
+- A query still running after `kdb.mcp.queryTimeoutSeconds` (default 60) is
+  reported as timed out. The extension can't cancel it, so it may still be
+  running in q, and later queries on that connection wait behind it.
 
 Every call is logged to the **kdb** output channel.
+
+## Query timeout on the q process
+
+`kdb.mcp.queryTimeoutSeconds` (default 60) is the time q gets to run an agent
+query. With `\T` set to the same value, q stops the query at that limit and
+returns `'stop`. The extension waits 2 seconds longer than the setting, only so
+that the error can reach it; that is not extra time for q. If q's `\T` is
+shorter, q stops the query first.
+
+The agent is told which of two things happened:
+
+- **q confirmed the stop.** q returned `'stop` at its `\T` limit: "The q process
+  stopped the query after its 60-second execution limit." The query is no longer
+  running. q also returns `'stop` for an interrupt or from application code, so
+  a `'stop` that doesn't arrive at about the `\T` limit is reported as stopped,
+  not timed out.
+- **q didn't answer.** The extra 2 seconds ran out with no response: "The query
+  exceeded its configured 60-second execution budget, and q did not respond
+  within the additional 2-second grace period. q did not confirm that execution
+  stopped, so the query may still be running." Later queries on that connection
+  wait behind it.
+
+The grace period makes the second case rarer but can't rule it out: not every
+native function, plugin or blocking system call responds to `\T` promptly, and
+without `\T` nothing stops the query.
+
+To have q itself stop agent queries that run too long, set a query timeout on
+the process with `\T` (for example `\T 60`, or start q with `-T 60`). The first
+time the MCP server serves a connection, the extension reads its `\T` and warns
+when it is 0 (no timeout), or longer than `kdb.mcp.queryTimeoutSeconds`.
+
+The extension never changes `\T`. It is process-wide: it stops every client's
+long queries, not only the agent's, so setting it is left to whoever runs the
+process. A locked-down process that refuses `system` calls is skipped.
+
+### Agent tool timeout
+
+The agent has its own deadline for an MCP tool call. If it gives up first, it
+never sees the result or q's error.
+
+> **The agent's MCP tool timeout must be greater than
+> `kdb.mcp.queryTimeoutSeconds` + 2 seconds**.
+
+- **Codex**: configs from **Generate MCP config** set `tool_timeout_sec` to the
+  setting plus 12 (72 by default), since Codex's own default of 60 is too short.
+  Regenerate the config after changing the setting.
+- **Other agents** (Claude Code, Copilot): the generated config can't set a
+  timeout for them, so set it in the agent. Claude Code reads it from the
+  `MCP_TOOL_TIMEOUT` environment variable, in milliseconds, for example
+  `MCP_TOOL_TIMEOUT=72000`. For Copilot, check its MCP settings.
 
 ## Allowing a connection
 
 Right-click a kdb connection in the kdb explorer and choose **Allow MCP
 access**. The first time, a confirmation explains what this means. Allowed
 connections show **MCP** in the explorer. Access is saved across restarts, and
-can be allowed whether or not the connection is open.
+can be allowed whether or not the connection is open. Renaming a connection
+keeps its access; changing its host or port, or removing it, clears access.
 
 - **Remove MCP access** on the same menu takes effect immediately; the agent's
   next call is refused, and your own connection stays open.

@@ -23,6 +23,7 @@ import {
   claimName,
   keyHash,
   MCP_HOST,
+  nextFreePort,
   probeHealth,
   savePortClaim,
   workspaceKey,
@@ -136,6 +137,46 @@ describe("MCP ports", () => {
       await savePortClaim(key!, 7601);
 
       assert.deepStrictEqual(choosePort(), { port: 7601, source: "saved" });
+    });
+  });
+
+  describe("nextFreePort", () => {
+    // A port nothing is using, with the ten below it as the "taken" port
+    async function freeBase(): Promise<number> {
+      const server = await listen((_req, res) => res.end());
+      const port = server.port;
+      await server.close();
+      return port - 10;
+    }
+
+    it("starts ten above the taken port", async () => {
+      const taken = await freeBase();
+
+      assert.strictEqual(await nextFreePort(taken), taken + 10);
+    });
+
+    it("skips a port another workspace has claimed", async () => {
+      const taken = await freeBase();
+      await savePortClaim("vscode-remote://other/proj", taken + 10);
+
+      const port = await nextFreePort(taken);
+
+      assert.ok(port !== undefined && port > taken + 10);
+    });
+
+    it("skips a port that is already bound", async () => {
+      const server = await listen((_req, res) => res.end());
+      try {
+        const port = await nextFreePort(server.port - 10);
+
+        assert.ok(port !== undefined && port > server.port);
+      } finally {
+        await server.close();
+      }
+    });
+
+    it("returns undefined when there is no room above the taken port", async () => {
+      assert.strictEqual(await nextFreePort(65530), undefined);
     });
   });
 });

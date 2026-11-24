@@ -82,6 +82,24 @@ export async function setMcpAccess(
   updateMcpContext();
 }
 
+// Editing a connection can change its label (alias [host:port]). A rename on
+// the same host and port keeps access, since it's the same process. A new
+// host or port clears it: that may be a different process the user never
+// allowed.
+export async function updateMcpAccessOnEdit(
+  oldLabel: string,
+  newLabel: string,
+  sameAddress: boolean,
+): Promise<void> {
+  if (oldLabel === newLabel) {
+    return;
+  }
+  if (sameAddress && isMcpAllowed(oldLabel)) {
+    await setMcpAccess(newLabel, true);
+  }
+  await setMcpAccess(oldLabel, false);
+}
+
 export async function removeAllMcpAccess(): Promise<void> {
   await ext.context.globalState.update(ACCESS_KEY, {});
   updateMcpContext();

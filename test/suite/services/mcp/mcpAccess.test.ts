@@ -21,6 +21,7 @@ import {
   isMcpAllowed,
   purgeLegacyMcpAccess,
   setMcpAccess,
+  updateMcpAccessOnEdit,
 } from "../../../../src/services/mcp/mcpAccess";
 
 // The globalState key mcpAccess.ts stores access under
@@ -36,17 +37,17 @@ describe("MCP access", () => {
   });
 
   it("allows only the labels that were set", async () => {
-    await setMcpAccess("prod", true);
+    await setMcpAccess("local-q", true);
 
-    assert.strictEqual(isMcpAllowed("prod"), true);
+    assert.strictEqual(isMcpAllowed("local-q"), true);
     assert.strictEqual(isMcpAllowed("dev"), false);
   });
 
   it("removes access when it is set to false", async () => {
-    await setMcpAccess("prod", true);
-    await setMcpAccess("prod", false);
+    await setMcpAccess("local-q", true);
+    await setMcpAccess("local-q", false);
 
-    assert.strictEqual(isMcpAllowed("prod"), false);
+    assert.strictEqual(isMcpAllowed("local-q"), false);
   });
 
   it("does not treat inherited object properties as allowed labels", () => {
@@ -55,35 +56,73 @@ describe("MCP access", () => {
   });
 
   it("skips the write when access is already in that state", async () => {
-    await setMcpAccess("prod", true);
+    await setMcpAccess("local-q", true);
     const update = sinon.spy(ext.context.globalState, "update");
 
-    await setMcpAccess("prod", true);
+    await setMcpAccess("local-q", true);
 
     assert.strictEqual(update.called, false);
   });
 
   it("drops legacy read-only entries and asks for confirmation again", async () => {
     await ext.context.globalState.update(ACCESS_KEY, {
-      prod: true,
+      "local-q": true,
       old: "read",
     });
     await ext.context.globalState.update(EXPLAINED_KEY, true);
 
     await purgeLegacyMcpAccess();
 
-    assert.strictEqual(isMcpAllowed("prod"), true);
+    assert.strictEqual(isMcpAllowed("local-q"), true);
     assert.strictEqual(isMcpAllowed("old"), false);
     assert.strictEqual(ext.context.globalState.get(EXPLAINED_KEY), undefined);
   });
 
   it("leaves access alone when no legacy entries exist", async () => {
-    await setMcpAccess("prod", true);
+    await setMcpAccess("local-q", true);
     await ext.context.globalState.update(EXPLAINED_KEY, true);
 
     await purgeLegacyMcpAccess();
 
-    assert.strictEqual(isMcpAllowed("prod"), true);
+    assert.strictEqual(isMcpAllowed("local-q"), true);
     assert.strictEqual(ext.context.globalState.get(EXPLAINED_KEY), true);
+  });
+
+  describe("updateMcpAccessOnEdit", () => {
+    const OLD = "dev [127.0.0.1:5001]";
+    const RENAMED = "research [127.0.0.1:5001]";
+    const MOVED = "dev [10.0.0.1:5001]";
+
+    it("keeps access on a rename to the same host and port", async () => {
+      await setMcpAccess(OLD, true);
+
+      await updateMcpAccessOnEdit(OLD, RENAMED, true);
+
+      assert.strictEqual(isMcpAllowed(RENAMED), true);
+      assert.strictEqual(isMcpAllowed(OLD), false);
+    });
+
+    it("clears access when the host or port changes", async () => {
+      await setMcpAccess(OLD, true);
+
+      await updateMcpAccessOnEdit(OLD, MOVED, false);
+
+      assert.strictEqual(isMcpAllowed(MOVED), false);
+      assert.strictEqual(isMcpAllowed(OLD), false);
+    });
+
+    it("does not grant access on a rename that had none", async () => {
+      await updateMcpAccessOnEdit(OLD, RENAMED, true);
+
+      assert.strictEqual(isMcpAllowed(RENAMED), false);
+    });
+
+    it("keeps access when the label is unchanged (auth, TLS or tags edits)", async () => {
+      await setMcpAccess(OLD, true);
+
+      await updateMcpAccessOnEdit(OLD, OLD, true);
+
+      assert.strictEqual(isMcpAllowed(OLD), true);
+    });
   });
 });

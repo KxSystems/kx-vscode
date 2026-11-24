@@ -102,6 +102,7 @@ to them. Whether a right click pastes is VS Code's
 | kdb.autoFocusOutputOnEntry                         | machine             | `boolean` | `true`        |
 | [kdb.mcp.enabled](mcp-server.md)                   | application         | `boolean` | `true`        |
 | [kdb.mcp.maxOutputChars](mcp-server.md)            | application         | `number`  | `20000`       |
+| [kdb.mcp.queryTimeoutSeconds](mcp-server.md)       | application         | `number`  | `60`          |
 | [kdb.mcp.port](mcp-server.md)                      | window              | `number`  | `7464`        |
 | kdb.notebookRowLimit                               | machine-overridable | `number`  | `100`         |
 | kdb.notebookRowLimitFrom                           | machine-overridable | `string`  | `"first"`     |

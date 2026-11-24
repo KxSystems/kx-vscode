@@ -92,6 +92,10 @@ describe("MCP tools", () => {
 
   beforeEach(() => {
     ext.context = fakeContext();
+    // Calls are logged; other test files usually create this first
+    ext.outputChannel ??= vscode.window.createOutputChannel("kdb", {
+      log: true,
+    });
     ext.connectionsList.length = 0;
     ext.connectedConnectionList.length = 0;
     tools = captureTools();
@@ -107,16 +111,16 @@ describe("MCP tools", () => {
 
   describe("list_connections", () => {
     it("lists only allowed connections that are connected", async () => {
-      addLocal("prod", true);
+      addLocal("local-q", true);
       addLocal("off", true);
       addLocal("sleeping", false);
-      await setMcpAccess(nodeName("prod"), true);
+      await setMcpAccess(nodeName("local-q"), true);
       await setMcpAccess(nodeName("sleeping"), true);
 
       const result = await tools.get("list_connections")!({});
       const body = JSON.parse(result.content[0].text);
 
-      assert.deepStrictEqual(body.connections, [{ name: nodeName("prod") }]);
+      assert.deepStrictEqual(body.connections, [{ name: nodeName("local-q") }]);
       assert.strictEqual(body.workspace, "test-workspace");
     });
 
@@ -143,10 +147,10 @@ describe("MCP tools", () => {
     });
 
     it("refuses a connection that is not allowed", async () => {
-      const conn = addLocal("prod", true);
+      const conn = addLocal("local-q", true);
       const execute = sinon.stub(conn, "executeQuery").resolves("42");
 
-      const result = await runQ(nodeName("prod"), "1+1");
+      const result = await runQ(nodeName("local-q"), "1+1");
 
       assert.strictEqual(result.isError, true);
       assert.match(result.content[0].text, /not allowed for MCP/);
@@ -154,21 +158,21 @@ describe("MCP tools", () => {
     });
 
     it("refuses an allowed connection that is not connected", async () => {
-      addLocal("prod", false);
-      await setMcpAccess(nodeName("prod"), true);
+      addLocal("local-q", false);
+      await setMcpAccess(nodeName("local-q"), true);
 
-      const result = await runQ(nodeName("prod"), "1+1");
+      const result = await runQ(nodeName("local-q"), "1+1");
 
       assert.match(result.content[0].text, /allowed but not connected/);
     });
 
     it("refuses a label that an Insights connection shares", async () => {
-      const conn = addLocal("prod", true);
-      addInsightsNodeNamed(nodeName("prod"));
-      await setMcpAccess(nodeName("prod"), true);
+      const conn = addLocal("local-q", true);
+      addInsightsNodeNamed(nodeName("local-q"));
+      await setMcpAccess(nodeName("local-q"), true);
       const execute = sinon.stub(conn, "executeQuery").resolves("42");
 
-      const result = await runQ(nodeName("prod"), "1+1");
+      const result = await runQ(nodeName("local-q"), "1+1");
 
       assert.match(
         result.content[0].text,
@@ -180,11 +184,11 @@ describe("MCP tools", () => {
 
   describe("run_q", () => {
     it("runs the query without a trailing semicolon", async () => {
-      const conn = addLocal("prod", true);
-      await setMcpAccess(nodeName("prod"), true);
+      const conn = addLocal("local-q", true);
+      await setMcpAccess(nodeName("local-q"), true);
       const execute = sinon.stub(conn, "executeQuery").resolves("42");
 
-      const result = await runQ(nodeName("prod"), "1+1;");
+      const result = await runQ(nodeName("local-q"), "1+1;");
 
       assert.strictEqual(execute.firstCall.args[0], "1+1");
       assert.strictEqual(result.isError, false);
@@ -192,22 +196,22 @@ describe("MCP tools", () => {
     });
 
     it("reports a q error as an error result", async () => {
-      const conn = addLocal("prod", true);
-      await setMcpAccess(nodeName("prod"), true);
+      const conn = addLocal("local-q", true);
+      await setMcpAccess(nodeName("local-q"), true);
       sinon.stub(conn, "executeQuery").resolves(`${queryConstants.error}type`);
 
-      const result = await runQ(nodeName("prod"), "bad");
+      const result = await runQ(nodeName("local-q"), "bad");
 
       assert.strictEqual(result.isError, true);
       assert.strictEqual(result.content[0].text, `${queryConstants.error}type`);
     });
 
     it("cuts output at the configured limit and says so", async () => {
-      const conn = addLocal("prod", true);
-      await setMcpAccess(nodeName("prod"), true);
+      const conn = addLocal("local-q", true);
+      await setMcpAccess(nodeName("local-q"), true);
       sinon.stub(conn, "executeQuery").resolves("x".repeat(25000));
 
-      const result = await runQ(nodeName("prod"), "til 25000");
+      const result = await runQ(nodeName("local-q"), "til 25000");
       const text = result.content[0].text;
 
       assert.ok(text.startsWith("x".repeat(20000)));
@@ -215,44 +219,62 @@ describe("MCP tools", () => {
     });
 
     it("reports a query that runs past the timeout", async () => {
-      const conn = addLocal("prod", true);
-      await setMcpAccess(nodeName("prod"), true);
+      const conn = addLocal("local-q", true);
+      await setMcpAccess(nodeName("local-q"), true);
       sinon.stub(conn, "executeQuery").returns(new Promise(() => undefined));
-      // Keeps the popup out of the test window and records what it offers
+      // Keeps the popup out of the test window and records what it shows
       const offered = sinon.stub(notifications, "notify").resolves(undefined);
       const clock = sinon.useFakeTimers();
       try {
-        const pending = runQ(nodeName("prod"), "1+1");
-        await clock.tickAsync(60_000);
+        const pending = runQ(nodeName("local-q"), "1+1");
+        await clock.tickAsync(62_000);
         const result = await pending;
 
         assert.strictEqual(result.isError, true);
         assert.match(
           result.content[0].text,
-          /did not finish within 60 seconds/,
+          /exceeded its configured 60-second execution budget, and q did not respond within the additional 2-second grace period/,
         );
-        // The log also calls notify, so pick out the offer by its button
-        const offers = offered
+        // The log also calls notify, so pick out the warning by its kind
+        const warnings = offered
           .getCalls()
-          .filter((call) => call.args[3] === "Disconnect");
-        assert.strictEqual(offers.length, 1);
-        assert.strictEqual(
-          offers[0].args[1],
-          notifications.MessageKind.WARNING,
+          .filter((call) => call.args[1] === notifications.MessageKind.WARNING);
+        assert.strictEqual(warnings.length, 1);
+        assert.match(
+          String(warnings[0].args[0]),
+          /exceeded its configured 60-second execution budget, and q did not respond within the additional 2-second grace period/,
         );
+        // Nothing is offered: disconnecting wouldn't stop the query in q
+        assert.strictEqual(warnings[0].args.length, 3);
       } finally {
         clock.restore();
       }
     });
 
+    it("explains a 'stop from q and keeps q's error", async () => {
+      const conn = addLocal("local-q", true);
+      await setMcpAccess(nodeName("local-q"), true);
+      sinon.stub(conn, "executeQuery").resolves(`${queryConstants.error}stop`);
+      // \T reads as 0, so it isn't put down to a timeout
+      sinon.stub(conn, "executeQueryRaw").resolves("0");
+
+      const result = await runQ(nodeName("local-q"), "do[1e9;1]");
+      const text = result.content[0].text;
+
+      assert.strictEqual(result.isError, true);
+      assert.match(text, /stopped the query \('stop\)/);
+      assert.match(text, /It is no longer running/);
+      assert.ok(text.endsWith(`${queryConstants.error}stop`));
+    });
+
     it("keeps the q text out of the log", async () => {
-      const conn = addLocal("prod", true);
-      await setMcpAccess(nodeName("prod"), true);
+      const conn = addLocal("local-q", true);
+      await setMcpAccess(nodeName("local-q"), true);
       sinon.stub(conn, "executeQuery").resolves("ok");
       const logged = sinon.stub(loggers, "kdbOutputLog");
       const code = "\\password secret_password_123";
 
-      await runQ(nodeName("prod"), code);
+      await runQ(nodeName("local-q"), code);
 
       const messages = logged.getCalls().map((call) => String(call.args[0]));
       assert.ok(messages.length > 0);

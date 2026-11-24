@@ -34,6 +34,7 @@ import {
   stopMcpServerIfUnused,
   workspaceName,
 } from "../services/mcp/mcpServer";
+import { agentToolTimeoutSeconds } from "../services/mcp/qTimeout";
 import { MessageKind, notify } from "../utils/notifications";
 
 const logger = "mcpCommand";
@@ -196,10 +197,15 @@ async function copyMcpConfig(
       null,
       2,
     );
+  // tool_timeout_sec outlasts the extension's own deadline, which Codex's
+  // default of 60 seconds would cut short
   const codexToml = (...lines: string[]) =>
-    [`[mcp_servers.${name}]`, `url = ${JSON.stringify(url)}`, ...lines].join(
-      "\n",
-    );
+    [
+      `[mcp_servers.${name}]`,
+      `url = ${JSON.stringify(url)}`,
+      ...lines,
+      `tool_timeout_sec = ${agentToolTimeoutSeconds()}`,
+    ].join("\n");
 
   // Step 1: which agent. Step 2: where the token lives. The env var choice
   // keeps the token out of the config, so the config survives regeneration.
