@@ -56,6 +56,7 @@ const MID_SESSION_BREAKPOINT_FIXTURE = fixture("midSessionBreakpoint.q");
 const GLOBALS_RACE_FIXTURE = fixture("globalsRace.q");
 const MID_LINE_FN_FIXTURE = fixture("midLineFn.q");
 const NAMESPACE_FIXTURE = fixture("namespace.q");
+const RUNTIME_NAMESPACE_FIXTURE = fixture("runtimeNamespace.q");
 const NAMESPACE_BREAK_FIXTURE = fixture("namespaceBreak.q");
 const NAMESPACE_GLOBALS_FIXTURE = fixture("namespaceGlobals.q");
 const COMMENTS_FIXTURE = fixture("comments.q");
@@ -347,6 +348,33 @@ describe("QDebugSession", function () {
       assert.strictEqual(await inNamespace("s"), "3");
       assert.strictEqual(await inNamespace("`helper in key `."), "0b");
       assert.strictEqual(await inNamespace("`helper in key `.foo"), "1b");
+
+      await client.request("continue", { threadId });
+      await client.waitForEvent("terminated");
+      await client.request("disconnect", {});
+    } finally {
+      client.close();
+    }
+  });
+
+  it("keeps a namespace changed at run time by a system call", async () => {
+    const client = DapClient.start();
+    try {
+      const threadId = await launch(client, RUNTIME_NAMESPACE_FIXTURE, [4]);
+      const frames = await stackFrames(client, threadId);
+      assert.strictEqual(frames[0].line, 4);
+
+      const evaluate = async (expression: string): Promise<string> =>
+        (
+          await client.request<{ result: string }>("evaluate", {
+            expression,
+            frameId: frames[0].id,
+            context: "repl",
+          })
+        ).result;
+
+      assert.strictEqual(await evaluate('system "d"'), "`.foo");
+      assert.strictEqual(await evaluate("r"), "10 20 30");
 
       await client.request("continue", { threadId });
       await client.waitForEvent("terminated");

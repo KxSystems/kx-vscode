@@ -81,6 +81,8 @@
 
 .dbg.v:(::);
 .dbg.pop:{r:.dbg.v; .dbg.v::(::); r};
+.dbg.ns:"";
+.dbg.popNs:{r:.dbg.ns; .dbg.ns::""; .dbg.out r};
 .dbg.wraps:{[s]
   p:@[parse;s;{`.dbg.noparse}];
   if[`.dbg.noparse~p; :0b];

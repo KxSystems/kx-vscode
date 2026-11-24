@@ -98,6 +98,7 @@ function isSafeLookup(expression: string): boolean {
 }
 
 const CAPTURE = ".dbg.v::(";
+const NAMESPACE_PROBE = '.dbg.ns:string system"d"';
 
 function qText(value: string): string {
   return `(),"${value
@@ -397,6 +398,8 @@ class QDebugSession extends DebugSession {
   private readonly tempStatements = new Map<string, QStatement>();
 
   private currentNamespace = ".";
+
+  private runtimeNamespace = false;
 
   private currentFrames: QFrame[] = [];
 
@@ -824,7 +827,10 @@ class QDebugSession extends DebugSession {
       }
 
       await driver.sendCommand("\\d .", false).then(
-        () => (this.currentNamespace = "."),
+        () => {
+          this.currentNamespace = ".";
+          this.runtimeNamespace = false;
+        },
         () => undefined,
       );
 
@@ -914,6 +920,7 @@ class QDebugSession extends DebugSession {
     this.stmtIndex = 0;
 
     this.currentNamespace = ".";
+    this.runtimeNamespace = false;
     await this.driver.sendCommand("\\d .", false);
 
     await this.serialized(() => this.runStatements());
@@ -1059,11 +1066,13 @@ class QDebugSession extends DebugSession {
     if (!this.driver || !this.tempDir) {
       return Promise.reject(new Error("no active debug session"));
     }
-    await this.enterNamespace(stmt.namespace);
+    if (!this.runtimeNamespace) await this.enterNamespace(stmt.namespace);
+    this.runtimeNamespace = false;
     const text = await this.hoistRootLambdas(stmt);
     const capture = await this.capturesValue(text);
     const body = capture ? `${CAPTURE}${text})` : text;
-    const padded = "\n".repeat(stmt.startLine - 1) + body;
+    const padded =
+      "\n".repeat(stmt.startLine - 1) + body + `\n${NAMESPACE_PROBE}`;
     this.pendingValue = capture;
     const file = path.join(this.tempDir, `s${this.tempSeq++}.q`);
     if (capture) this.capturedFiles.add(path.basename(file));
@@ -1150,12 +1159,24 @@ class QDebugSession extends DebugSession {
   }
 
   private async flushValue(): Promise<void> {
+    await this.syncNamespace();
     if (!this.pendingValue || !this.driver || this.driver.suspended) return;
     this.pendingValue = false;
     const res = await this.driver.sendCommand(".dbg.pop[]", false);
     if (!res.errored && res.output.length > 0) {
       emitOnNewLine(this.driver, `${res.output}\n`);
     }
+  }
+
+  private async syncNamespace(): Promise<void> {
+    if (!this.driver || this.driver.suspended) return;
+    const ns = await this.evaluateJson(".dbg.popNs[]");
+    if (typeof ns !== "string" || !ns.startsWith(".")) return;
+    if (ns !== this.currentNamespace) {
+      await this.driver.sendCommand(`\\d ${ns}`, false);
+      this.currentNamespace = ns;
+    }
+    this.runtimeNamespace = true;
   }
 
   private async enterNamespace(ns: string): Promise<void> {

@@ -13,7 +13,7 @@
 
 import * as assert from "assert";
 import { EventEmitter } from "node:events";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import * as sinon from "sinon";
@@ -572,6 +572,50 @@ describe("QDebugSession methods", () => {
       assert.strictEqual(events("terminated").length, 1);
       await s.tryRun();
       assert.strictEqual(events("terminated").length, 1);
+    });
+
+    it("follows a namespace a statement changes at run time", async () => {
+      answer("kdb.qls.topLevelStatements", [
+        {
+          startLine: 1,
+          startChar: 0,
+          endLine: 1,
+          text: '{system "d .foo"}[]',
+          namespace: "",
+        },
+        {
+          startLine: 2,
+          startChar: 0,
+          endLine: 2,
+          text: "r:bar*10",
+          namespace: "",
+        },
+        { startLine: 3, startChar: 0, endLine: 3, text: "x:1", namespace: "" },
+      ]);
+      s.launchArgs = { program };
+      s.started = true;
+      s.configDone = true;
+      const namespaces = ['""', '".foo"', '".foo"', '".bar"'];
+      driver.on2(/^\.dbg\.popNs\[\]$/, () => namespaces.shift() ?? '""');
+      await s.tryRun();
+      const switches = driver.commands.filter((c) => c.startsWith("\\d "));
+      assert.deepStrictEqual(switches, ["\\d .", "\\d .foo", "\\d .bar"]);
+      assert.strictEqual(s.currentNamespace, ".bar");
+      const load = driver.commands.find((c) => /^\\l .*s\d+\.q$/.test(c));
+      const file = load!.slice(3);
+      assert.ok(
+        readFileSync(file, "utf8").endsWith('\n.dbg.ns:string system"d"'),
+      );
+      assert.strictEqual(events("terminated").length, 1);
+    });
+
+    it("leaves the namespace alone while suspended or without q", async () => {
+      driver.promptDepth = 2;
+      await s.syncNamespace();
+      s.driver = undefined;
+      await s.syncNamespace();
+      assert.deepStrictEqual(driver.commands, []);
+      assert.strictEqual(s.runtimeNamespace, false);
     });
 
     it("waits until launched and configured", async () => {
