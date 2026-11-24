@@ -23,14 +23,8 @@ export async function run(): Promise<void> {
   const options: Mocha.MochaOptions = {
     ui: "bdd",
     color: true,
-    reporter: "mocha-multi-reporters",
+    reporter: "spec",
     timeout: headless ? 2_000 : 600_000,
-    reporterOptions: {
-      reporterEnabled: "spec, mocha-junit-reporter",
-      mochaJunitReporterReporterOptions: {
-        mochaFile: path.join(__dirname, "..", "..", "test-results.xml"),
-      },
-    },
   };
 
   const mocha = new Mocha(options);
