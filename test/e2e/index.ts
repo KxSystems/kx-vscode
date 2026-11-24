@@ -24,13 +24,7 @@ export async function run(): Promise<void> {
     ui: "bdd",
     color: true,
     timeout: 60_000,
-    reporter: "mocha-multi-reporters",
-    reporterOptions: {
-      reporterEnabled: "spec, mocha-junit-reporter",
-      mochaJunitReporterReporterOptions: {
-        mochaFile: path.join(__dirname, "..", "..", "test-results-e2e.xml"),
-      },
-    },
+    reporter: "spec",
   });
 
   const testsRoot = path.join(__dirname, "..");
