@@ -12,38 +12,29 @@
  */
 
 import * as assert from "assert";
-import * as http from "http";
-import { AddressInfo } from "net";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
 
 import { fakeContext } from "./fakeContext";
+import { freePort, serveHttp } from "./mcpTestHelpers";
 import { ext } from "../../../../src/extensionVariables";
 import {
+  askForAnotherPort,
   choosePort,
   claimName,
+  describePortHolder,
+  forgetPortClaim,
+  getPortClaims,
   keyHash,
-  MCP_HOST,
   nextFreePort,
   probeHealth,
   savePortClaim,
   workspaceKey,
 } from "../../../../src/services/mcp/mcpPorts";
 
-// Starts a local HTTP server that answers with the given handler
-function listen(
-  handler: http.RequestListener,
-): Promise<{ port: number; close: () => Promise<void> }> {
-  return new Promise((resolve) => {
-    const server = http.createServer(handler);
-    server.listen(0, MCP_HOST, () => {
-      const { port } = server.address() as AddressInfo;
-      resolve({
-        port,
-        close: () => new Promise((done) => server.close(() => done())),
-      });
-    });
-  });
-}
+// Keys for workspaces that aren't local folders, so their claims are kept
+const REMOTE_KEY = "untitled-claims-test:demo";
+const REMOTE_FORGET_KEY = "untitled-claims-test:forget";
 
 describe("MCP ports", () => {
   beforeEach(() => {
@@ -84,7 +75,7 @@ describe("MCP ports", () => {
   describe("probeHealth", () => {
     it("reads a kdb MCP server's health without sending a token", async () => {
       let authorization: string | undefined = "unset";
-      const server = await listen((req, res) => {
+      const server = await serveHttp((req, res) => {
         authorization = req.headers.authorization;
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(
@@ -108,7 +99,7 @@ describe("MCP ports", () => {
     });
 
     it("returns undefined when another program holds the port", async () => {
-      const server = await listen((_req, res) => {
+      const server = await serveHttp((_req, res) => {
         res.writeHead(200, { "Content-Type": "text/html" });
         res.end("<html>not mcp</html>");
       });
@@ -120,7 +111,7 @@ describe("MCP ports", () => {
     });
 
     it("returns undefined when nothing is listening", async () => {
-      const server = await listen((_req, res) => res.end());
+      const server = await serveHttp((_req, res) => res.end());
       const port = server.port;
       await server.close();
 
@@ -143,10 +134,7 @@ describe("MCP ports", () => {
   describe("nextFreePort", () => {
     // A port nothing is using, with the ten below it as the "taken" port
     async function freeBase(): Promise<number> {
-      const server = await listen((_req, res) => res.end());
-      const port = server.port;
-      await server.close();
-      return port - 10;
+      return (await freePort()) - 10;
     }
 
     it("starts ten above the taken port", async () => {
@@ -165,7 +153,7 @@ describe("MCP ports", () => {
     });
 
     it("skips a port that is already bound", async () => {
-      const server = await listen((_req, res) => res.end());
+      const server = await serveHttp((_req, res) => res.end());
       try {
         const port = await nextFreePort(server.port - 10);
 
@@ -177,6 +165,112 @@ describe("MCP ports", () => {
 
     it("returns undefined when there is no room above the taken port", async () => {
       assert.strictEqual(await nextFreePort(65530), undefined);
+    });
+  });
+
+  describe("port claims", () => {
+    it("keeps a claim for a remote workspace", async () => {
+      await savePortClaim(REMOTE_KEY, 7470);
+
+      assert.strictEqual(getPortClaims()[REMOTE_KEY], 7470);
+    });
+
+    it("drops a claim for a local folder that no longer exists", async () => {
+      const gone = "file:///no/such/folder/for/claims-test.code-workspace";
+      await savePortClaim(gone, 7471);
+
+      assert.strictEqual(getPortClaims()[gone], undefined);
+    });
+
+    it("forgets a claim", async () => {
+      await savePortClaim(REMOTE_FORGET_KEY, 7472);
+
+      await forgetPortClaim(REMOTE_FORGET_KEY);
+
+      assert.strictEqual(getPortClaims()[REMOTE_FORGET_KEY], undefined);
+    });
+  });
+
+  describe("describePortHolder", () => {
+    it("names the workspace of another kdb MCP server", () => {
+      assert.strictEqual(
+        describePortHolder({ server: "kdb-mcp", workspace: "sales" }),
+        "the kdb MCP server for workspace 'sales'",
+      );
+    });
+
+    it("says another program when nothing identified itself", () => {
+      assert.strictEqual(describePortHolder(undefined), "another program");
+    });
+  });
+
+  describe("askForAnotherPort", () => {
+    it("returns the suggested free port when the user picks it", async () => {
+      sinon
+        .stub(vscode.window, "showWarningMessage")
+        .callsFake(((_message: string, ...items: string[]) =>
+          Promise.resolve(
+            items.find((item) => item.startsWith("Use port")),
+          )) as any);
+
+      const next = await askForAnotherPort(7460, "is used by another program");
+
+      assert.strictEqual(typeof next, "number");
+      assert.ok(
+        next! >= 7470,
+        "the suggestion starts ten above the taken port",
+      );
+    });
+
+    it("returns undefined when the user picks Don't start", async () => {
+      sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves("Don't start" as any);
+
+      assert.strictEqual(
+        await askForAnotherPort(7460, "is used by another program"),
+        undefined,
+      );
+    });
+
+    it("returns the port typed in when the user chooses one", async () => {
+      sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves("Choose port…" as any);
+      sinon.stub(vscode.window, "showInputBox").resolves("7777");
+
+      assert.strictEqual(
+        await askForAnotherPort(7460, "is used by another program"),
+        7777,
+      );
+    });
+
+    it("returns undefined when the typed port is cancelled", async () => {
+      sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves("Choose port…" as any);
+      sinon.stub(vscode.window, "showInputBox").resolves(undefined);
+
+      assert.strictEqual(
+        await askForAnotherPort(7460, "is used by another program"),
+        undefined,
+      );
+    });
+
+    it("rejects a port outside the allowed range", async () => {
+      sinon
+        .stub(vscode.window, "showWarningMessage")
+        .resolves("Choose port…" as any);
+      const input = sinon
+        .stub(vscode.window, "showInputBox")
+        .resolves(undefined);
+
+      await askForAnotherPort(7460, "is used by another program");
+
+      const validate = input.firstCall.args[0]!.validateInput!;
+      assert.ok(validate("80"), "a privileged port is refused");
+      assert.ok(validate("65536"), "a port above 65535 is refused");
+      assert.strictEqual(validate("7777"), undefined);
     });
   });
 });

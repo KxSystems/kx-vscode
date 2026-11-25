@@ -13,19 +13,21 @@
 
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
 
 import { fakeContext } from "./fakeContext";
+import { ACCESS_KEY } from "./mcpTestHelpers";
 import { ext } from "../../../../src/extensionVariables";
 import {
   EXPLAINED_KEY,
+  getMcpAllowedLabels,
   isMcpAllowed,
+  isMcpEnabled,
   purgeLegacyMcpAccess,
   setMcpAccess,
   updateMcpAccessOnEdit,
+  updateMcpContext,
 } from "../../../../src/services/mcp/mcpAccess";
-
-// The globalState key mcpAccess.ts stores access under
-const ACCESS_KEY = "kdb.mcp.access";
 
 describe("MCP access", () => {
   beforeEach(() => {
@@ -123,6 +125,44 @@ describe("MCP access", () => {
       await updateMcpAccessOnEdit(OLD, OLD, true);
 
       assert.strictEqual(isMcpAllowed(OLD), true);
+    });
+  });
+
+  describe("isMcpEnabled", () => {
+    it("is on by default", () => {
+      sinon
+        .stub(vscode.workspace, "getConfiguration")
+        .returns({ get: (_key: string, fallback: unknown) => fallback } as any);
+
+      assert.strictEqual(isMcpEnabled(), true);
+    });
+
+    it("follows the kdb.mcp.enabled setting", () => {
+      sinon
+        .stub(vscode.workspace, "getConfiguration")
+        .returns({ get: () => false } as any);
+
+      assert.strictEqual(isMcpEnabled(), false);
+    });
+  });
+
+  describe("bulk access", () => {
+    it("lists every allowed label", async () => {
+      await setMcpAccess("dev", true);
+      await setMcpAccess("prod", true);
+      await setMcpAccess("gone", true);
+      await setMcpAccess("gone", false);
+
+      assert.deepStrictEqual(getMcpAllowedLabels().sort(), ["dev", "prod"]);
+    });
+
+    it("sets the kdb.mcp.allowed context to the allowed labels", async () => {
+      const execute = sinon.stub(vscode.commands, "executeCommand").resolves();
+      await setMcpAccess("dev", true);
+
+      updateMcpContext();
+
+      assert.ok(execute.calledWith("setContext", "kdb.mcp.allowed", ["dev"]));
     });
   });
 });
