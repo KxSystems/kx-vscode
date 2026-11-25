@@ -68,6 +68,9 @@ class KdbMcpServer implements Disposable {
   // The user picked Don't start; cleared by an explicit action
   private declined = false;
   private toldSessionOnly = false;
+  // Said once per window session that another window holds the port; later
+  // connects only log it
+  private toldOtherWindow = false;
   private port?: number;
   private token?: string;
   private readonly changed = new EventEmitter<void>();
@@ -193,9 +196,10 @@ class KdbMcpServer implements Disposable {
         ) {
           notify(
             `MCP port ${port} is already used by another VS Code window for workspace '${health.workspace}'. Close that window, or set kdb.mcp.port in this workspace to use another port.`,
-            MessageKind.INFO,
+            this.toldOtherWindow ? MessageKind.DEBUG : MessageKind.INFO,
             { logger },
           );
+          this.toldOtherWindow = true;
           return false;
         }
       }

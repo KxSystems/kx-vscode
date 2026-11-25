@@ -134,9 +134,10 @@ start its own.
   port…** or **Don't start**. Suggested ports start 10 above the taken one, to
   stay clear of the ports next to it. The port you pick is saved.
 - If another window for the same workspace already serves on the port, this
-  window says so and doesn't start. It tries again the next time it connects, so
-  a window that dropped without closing (WSL or SSH) recovers once its port is
-  free.
+  window says so once and doesn't start. AI agents in this window may still
+  reach the other window's server, and then use its connections and access, not
+  this window's. It tries again the next time it connects, so a window that
+  dropped without closing (WSL or SSH) recovers once its port is free.
 - **KX: Show MCP servers** lists each workspace and its saved port. You can copy
   a config for any of them, or forget a port. Forget the port for another
   workspace; a window can't forget the port it's using.
