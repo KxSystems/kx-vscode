@@ -64,6 +64,7 @@ export interface LineParams extends FileParams {
 export interface LambdaPathParams extends LineParams {
   anonymous?: boolean;
   column?: number;
+  body?: boolean;
 }
 
 export interface ColumnParams extends LineParams {

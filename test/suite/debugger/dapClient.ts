@@ -76,6 +76,7 @@ export function fakeLanguageClient(): LanguageClient {
               params.line,
               params.anonymous === true,
               params.column,
+              params.body === true,
             ) ?? null
           );
         case "kdb.qls.statementLambdas":

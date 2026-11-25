@@ -224,6 +224,25 @@ describe("QProcess without q", () => {
     assert.strictEqual(proc.errorMessage, "oops");
   });
 
+  it("takes the stop marker from the last frame q printed", async () => {
+    await started();
+    const result = proc.sendCommand("f[]");
+    await reply("'oops\n  [1]  printed\n#0\n  [2]  /lib.q:2: g:{x}\n  ^\nq))");
+    await result;
+    assert.strictEqual(proc.stopReason, "breakpoint");
+  });
+
+  it("reports an exception whose backtrace has several frames", async () => {
+    await started();
+    const result = proc.sendCommand("f[]");
+    await reply(
+      "tried\n'notfound: m\n  [5]  (.Q.m.mn)\n\n  [3]  /a.q:1: use `m\n  ^\nq))",
+    );
+    await result;
+    assert.strictEqual(proc.stopReason, "exception");
+    assert.strictEqual(proc.errorMessage, "notfound: m");
+  });
+
   it("falls back to the first line when there is no frame line", async () => {
     await started();
     const exception = proc.sendCommand("f[]");

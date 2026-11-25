@@ -37,12 +37,13 @@ import {
   getOrCreateDebugTerminal,
 } from "./debugTerminal";
 import {
-  FRAME_LINE_RE,
+  bannerStart,
   funcName,
   isCaretLine,
+  isTrapMarker,
   parseBacktrace,
   parseCurrentPosition,
-  SUSPEND_MARKER_RE,
+  suspendBanner,
   type QFrame,
   type QPosition,
 } from "./qBacktrace";
@@ -127,6 +128,12 @@ function wrapLine(line: string, width: number): string[] {
     parts.push(line.slice(at, at + width));
   }
   return parts.length > 0 ? parts : [""];
+}
+
+type StepMode = "over" | "into" | "out";
+
+interface ForwardedResult extends QCommandResult {
+  trapped: boolean;
 }
 
 interface ProgramCounter {
@@ -232,68 +239,87 @@ function emitOnNewLine(driver: QProcess, text: string): void {
 }
 
 class LiveOutputForwarder {
-  private holding = "";
-  private lineDecidedSafe = false;
-  private stopped = false;
+  private held: string[] = [];
+  private partial = "";
+  private partialShown = false;
+  private shownLine = "";
+  private previous: string | undefined;
   private sawContent = false;
 
   public constructor(
-    private readonly stopAt: RegExp[],
+    private readonly hideBanner: boolean,
     private readonly driver: QProcess,
   ) {}
 
-  private matchesStop(line: string): boolean {
-    return this.stopAt.some((re) => re.test(line));
-  }
-
   public push(chunk: string): void {
-    if (this.stopped) return;
-    let i = 0;
-    for (;;) {
-      const newlineIdx = chunk.indexOf("\n", i);
-      if (newlineIdx === -1) {
-        const segment = chunk.slice(i);
-        if (segment.length === 0) return;
-        if (this.lineDecidedSafe) {
-          this.emit(segment);
-          return;
-        }
-        this.holding += segment;
-        if (!couldBeSuspendPrefix(this.holding)) {
-          this.lineDecidedSafe = true;
-          this.emit(this.holding);
-          this.holding = "";
-        }
-        return;
-      }
-      const segment = chunk.slice(i, newlineIdx);
-      i = newlineIdx + 1;
-      if (this.lineDecidedSafe) {
-        this.emit(segment + "\n");
-      } else {
-        this.holding += segment;
-        if (this.matchesStop(this.holding)) {
-          this.stopped = true;
-          return;
-        }
-        this.emit(this.holding + "\n");
-      }
-      this.holding = "";
-      this.lineDecidedSafe = false;
-    }
+    const parts = chunk.split("\n");
+    const tail = parts.pop() ?? "";
+    for (const part of parts) this.pushLine(part);
+    this.pushPartial(tail);
   }
 
-  public finish(): void {
-    if (this.stopped || this.holding.length === 0) return;
-    if (this.matchesStop(this.holding)) {
-      this.stopped = true;
+  public finish(trapped: boolean): void {
+    const lines = this.partial ? [...this.held, this.partial] : this.held;
+    if (this.driver.suspended) {
+      let start = bannerStart(lines, this.previous);
+      if (!trapped && isTrapMarker(lines[start]) && start + 1 < lines.length) {
+        start++;
+      }
+      this.emitLines(lines.slice(0, start));
+    } else {
+      this.emitLines(this.held);
+      this.emit(this.partial);
+    }
+    this.held = [];
+    this.partial = "";
+  }
+
+  private pushLine(text: string): void {
+    if (this.partialShown) {
+      this.partialShown = false;
+      this.previous = this.shownLine + text;
+      this.shownLine = "";
+      this.emit(text + "\n");
       return;
     }
-    this.emit(this.holding);
-    this.holding = "";
+    const line = this.partial + text;
+    this.partial = "";
+    if (!this.hideBanner) {
+      this.emit(line + "\n");
+      return;
+    }
+    this.held.push(line);
+    const start = bannerStart(this.held, this.previous);
+    this.emitLines(this.held.slice(0, start));
+    this.held = this.held.slice(start);
+  }
+
+  private pushPartial(text: string): void {
+    if (text.length === 0) return;
+    if (this.partialShown) {
+      this.shownLine += text;
+      this.emit(text);
+      return;
+    }
+    this.partial += text;
+    if (
+      !this.hideBanner ||
+      (this.held.length === 0 && !couldBeSuspendPrefix(this.partial))
+    ) {
+      this.partialShown = true;
+      this.shownLine = this.partial;
+      this.emit(this.partial);
+      this.partial = "";
+    }
+  }
+
+  private emitLines(lines: string[]): void {
+    if (lines.length > 0) this.previous = lines[lines.length - 1];
+    this.emit(lines.map((line) => line + "\n").join(""));
   }
 
   private emit(text: string): void {
+    if (text.length === 0) return;
     if (!this.sawContent) {
       const stripped = text.replace(/^\n+/, "");
       if (stripped.length === 0) return;
@@ -473,7 +499,7 @@ class QDebugSession extends DebugSession {
     this.requestedBreakpoints.set(file, lines);
 
     const [lambdas, statements] = await Promise.all([
-      Promise.all(lines.map((line) => this.lambdaPathAt(file, line))),
+      Promise.all(lines.map((line) => this.breakpointLambdaAt(file, line))),
       this.topLevelStatements(file),
     ]);
     response.body = {
@@ -966,7 +992,7 @@ class QDebugSession extends DebugSession {
       this.requestedBreakpoints.get(this.programPath) ?? []
     ).filter((line) => line >= stmt.startLine && line <= stmt.endLine);
     for (const line of lines) {
-      if (!(await this.lambdaPathAt(this.programPath, line))) return true;
+      if (!(await this.breakpointLambdaAt(this.programPath, line))) return true;
     }
     return false;
   }
@@ -1039,22 +1065,11 @@ class QDebugSession extends DebugSession {
       const trace = await this.backtrace();
       await this.recoverStepInTraps(parseBacktrace(trace));
       const pos = parseCurrentPosition(trace);
-      const file = this.mapToProgram(pos?.file);
-      const lambda =
-        file !== undefined && pos?.line !== undefined
-          ? await this.lambdaPathAt(file, pos.line)
-          : undefined;
-      if (lambda && this.armedTraps.has(trapKeyOf(lambda))) {
-        const outcome = await this.advanceToBreakpoint();
-        if (outcome === "exited") {
-          await this.pauseAfterStep();
-        } else {
-          await this.reportStopped(outcome);
-        }
-        return;
-      }
-
-      await this.reportStopped("step");
+      await this.reportStopped(
+        this.isBreakpointLine(this.mapToProgram(pos?.file), pos?.line)
+          ? "breakpoint"
+          : "step",
+      );
       return;
     }
 
@@ -1083,20 +1098,21 @@ class QDebugSession extends DebugSession {
     return this.sendForwarded(`\\l ${file}`);
   }
 
-  private async sendForwarded(command: string): Promise<QCommandResult> {
+  private async sendForwarded(command: string): Promise<ForwardedResult> {
     if (!this.driver) throw new Error("no active debug session");
-    const forwarder = new LiveOutputForwarder(
-      this.verboseTrace ? [] : [SUSPEND_MARKER_RE, FRAME_LINE_RE],
-      this.driver,
-    );
+    const forwarder = new LiveOutputForwarder(!this.verboseTrace, this.driver);
     const result = await this.driver.sendCommand(
       command,
       false,
       true,
       (chunk) => forwarder.push(chunk),
     );
-    forwarder.finish();
-    return result;
+    const trapped =
+      this.driver.suspended &&
+      isTrapMarker(suspendBanner(result.output)?.marker) &&
+      (await this.atTrap());
+    forwarder.finish(trapped);
+    return { ...result, trapped };
   }
 
   private async hoistRootLambdas(stmt: QStatement): Promise<string> {
@@ -1264,24 +1280,74 @@ class QDebugSession extends DebugSession {
     return { start, startLine, file, lambda, leftStatement };
   }
 
+  private async enterTrap(
+    pos: QPosition,
+    mode: StepMode,
+  ): Promise<"stopped" | "ignored" | number> {
+    const file = this.mapToProgram(pos.file);
+    if (this.isBreakpointLine(file, pos.line)) {
+      await this.reportStopped("breakpoint");
+      return "stopped";
+    }
+    if (mode !== "into") {
+      const lambda =
+        file !== undefined && pos.line !== undefined
+          ? await this.lambdaPathAt(file, pos.line)
+          : undefined;
+      if (
+        lambda &&
+        pos.index !== undefined &&
+        this.armedTraps.has(trapKeyOf(lambda))
+      ) {
+        return pos.index;
+      }
+      if (mode === "out") return "ignored";
+    }
+    await this.reportStopped("step");
+    return "stopped";
+  }
+
   private async stepUntil(
     stops: (pos: QPosition | undefined) => boolean,
     skipPhantoms = true,
+    mode: StepMode = "over",
   ): Promise<boolean> {
     if (!this.driver) return false;
     let pc = skipPhantoms ? await this.programCounter() : undefined;
+    let pendingTrap = false;
+    let trapIndex: number | undefined;
     let guard = 0;
     while (this.driver.suspended && guard++ < MAX_STEPS) {
-      const pos = await this.stepPosition();
+      const { pos, trapped } = await this.stepPosition();
       if (!this.driver.suspended) break;
       if (this.driver.stopReason === "exception") {
         await this.reportStopped("exception");
         return true;
       }
+      if (trapped) pendingTrap = true;
       if (skipPhantoms) {
         const prevPc = pc;
         pc = await this.programCounter();
         if (isPhantomStep(prevPc, pc) || (pc && pc.position < 0)) continue;
+      }
+      const trap = pendingTrap;
+      pendingTrap = false;
+      if (trapIndex !== undefined) {
+        if (pos?.index === undefined || pos.index >= trapIndex) {
+          if (this.isBreakpointLine(this.mapToProgram(pos?.file), pos?.line)) {
+            await this.reportStopped("breakpoint");
+            return true;
+          }
+          continue;
+        }
+        trapIndex = undefined;
+      } else if (trap && pos) {
+        const outcome = await this.enterTrap(pos, mode);
+        if (outcome === "stopped") return true;
+        if (typeof outcome === "number") {
+          trapIndex = outcome;
+          continue;
+        }
       }
       if (stops(pos)) {
         await this.reportStopped("step");
@@ -1322,7 +1388,13 @@ class QDebugSession extends DebugSession {
       pos?.index !== undefined &&
       startIndex !== undefined &&
       pos.index > startIndex;
-    if (await this.stepUntil((pos) => descended(pos) || leftStatement(pos))) {
+    if (
+      await this.stepUntil(
+        (pos) => descended(pos) || leftStatement(pos),
+        true,
+        "into",
+      )
+    ) {
       return;
     }
     await this.recoverStepInTraps();
@@ -1336,7 +1408,7 @@ class QDebugSession extends DebugSession {
       pos?.index !== undefined &&
       startIndex !== undefined &&
       pos.index < startIndex;
-    if (await this.stepUntil(returned, false)) return;
+    if (await this.stepUntil(returned, false, "out")) return;
     await this.recoverStepInTraps();
     await this.pauseAfterStep();
   }
@@ -1479,18 +1551,21 @@ class QDebugSession extends DebugSession {
     resumeLine?: number,
   ): Promise<"breakpoint" | "exception" | "pause" | "exited"> {
     if (!this.driver) return "exited";
-    let pos =
-      resumeLine === undefined
-        ? await this.position()
-        : await this.stepPosition();
     let leftResumeLine = false;
+    let pos: QPosition | undefined;
+    if (resumeLine === undefined) {
+      pos = await this.position();
+    } else {
+      ({ pos, trapped: leftResumeLine } = await this.stepPosition());
+    }
     let pc = await this.programCounter();
     let prevPc: ProgramCounter | undefined;
     const step = async () => {
       const next = await this.stepPosition();
       prevPc = pc;
       pc = await this.programCounter();
-      return next;
+      if (next.trapped) leftResumeLine = true;
+      return next.pos;
     };
     let guard = 0;
     while (this.driver.suspended && guard++ < MAX_STEPS) {
@@ -1718,7 +1793,7 @@ class QDebugSession extends DebugSession {
     for (const [file, lines] of this.requestedBreakpoints) {
       const isProgram = file === this.programPath;
       for (const line of lines) {
-        const lambda = await this.lambdaPathAt(file, line);
+        const lambda = await this.breakpointLambdaAt(file, line);
         if (!lambda || lambda.name === "") continue;
 
         let name = lambda.name;
@@ -1742,6 +1817,10 @@ class QDebugSession extends DebugSession {
           this.armedTraps.delete(key);
         }
 
+        if (this.stepInTraps.delete(key)) {
+          this.armedTraps.set(key, target);
+          continue;
+        }
         if (opts.skipKeys?.has(key)) continue;
         const res = await this.evaluate(dbgCall("bs", target));
         if (!res.errored) this.armedTraps.set(key, target);
@@ -1805,8 +1884,7 @@ class QDebugSession extends DebugSession {
     if (names.length === 0) return [];
     const expr = `.dbg.vals[(${qSymbolVector(names)})!(${qIdentVector(names)})]`;
     const values = (await this.evaluateJson(expr)) as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     if (values) {
       return names.map((name) => new Variable(name, formatValue(values[name])));
     }
@@ -1959,8 +2037,7 @@ class QDebugSession extends DebugSession {
   private async programCounter(): Promise<ProgramCounter | undefined> {
     if (!this.driver?.suspended) return undefined;
     const value = (await this.evaluateJson(".dbg.pc[]")) as
-      | number[]
-      | undefined;
+      number[] | undefined;
     if (!value || value.length !== 4 || value[0] < 0) return undefined;
     return {
       index: value[0],
@@ -1970,12 +2047,24 @@ class QDebugSession extends DebugSession {
     };
   }
 
-  private async stepPosition(): Promise<QPosition | undefined> {
-    if (!this.driver) return undefined;
+  private async stepPosition(): Promise<{
+    pos: QPosition | undefined;
+    trapped: boolean;
+  }> {
+    if (!this.driver) return { pos: undefined, trapped: false };
     const result = await this.sendForwarded(">");
-    return this.driver.suspended
-      ? parseCurrentPosition(this.cleanBacktrace(result.output))
-      : undefined;
+    if (!this.driver.suspended) return { pos: undefined, trapped: false };
+    const banner = suspendBanner(result.output);
+    return {
+      pos: parseCurrentPosition(
+        this.cleanBacktrace(banner?.lines.join("\n") ?? result.output),
+      ),
+      trapped: result.trapped,
+    };
+  }
+
+  private async atTrap(): Promise<boolean> {
+    return (await this.evaluateJson(".dbg.atTrap[]")) === true;
   }
 
   private async frameUp(): Promise<void> {
@@ -2018,16 +2107,21 @@ class QDebugSession extends DebugSession {
     }
   }
 
+  private breakpointLambdaAt(file: string, line1Based: number) {
+    return this.lambdaPathAt(file, line1Based, undefined, true);
+  }
+
   private async lambdaPathAt(
     file: string,
     line1Based: number,
     column?: number,
+    body?: boolean,
   ): Promise<
     (QLambdaTarget & { startLine: number; rootLine: number }) | undefined
   > {
     const result = await this.request(
       "kdb.qls.lambdaPath",
-      { path: file, line: line1Based - 1, anonymous: true, column },
+      { path: file, line: line1Based - 1, anonymous: true, column, body },
       null,
     );
     if (!result) return undefined;

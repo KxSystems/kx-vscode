@@ -945,18 +945,26 @@ describe("QDebugSession methods", () => {
       assert.strictEqual(await s.capturesValue("k)1"), false);
     });
 
+    let atTrap = "true";
+
+    function chunks(...parts: string[]) {
+      return sinon
+        .stub(driver, "sendCommand")
+        .callsFake(async (...args: any[]) => {
+          const asked = args[0] === ".dbg.atTrap[]";
+          if (!asked) for (const part of parts) args[3]?.(part);
+          return {
+            output: asked ? atTrap : parts.join(""),
+            depth: driver.promptDepth,
+            namespace: "",
+            errored: false,
+          };
+        });
+    }
+
     it("forwards live output until a suspension marker", async () => {
-      driver.on2(/s\d+\.q$/, "");
-      sinon.stub(driver, "sendCommand").callsFake(async (...args: any[]) => {
-        const onChunk = args[3];
-        if (onChunk) {
-          onChunk("\n\nhel");
-          onChunk("lo\n#");
-          onChunk("1\n>>[1] f\n");
-          onChunk("more\n");
-        }
-        return { output: "", depth: 1, namespace: "", errored: false };
-      });
+      driver.promptDepth = 2;
+      chunks("\n\nhel", "lo\n#", "0\n>>[1] f\n", "more\n");
       await s.loadStatement({
         startLine: 1,
         startColumn: 0,
@@ -967,12 +975,64 @@ describe("QDebugSession methods", () => {
       assert.deepStrictEqual(driver.data, ["hel", "lo\n"]);
     });
 
+    it("forwards everything when the command returns to the top level", async () => {
+      chunks("hello\n#", "0\n>>[1] f\n", "more");
+      await s.continueFromBreakpoint();
+      assert.strictEqual(driver.data.join(""), "hello\n#0\n>>[1] f\nmore");
+    });
+
+    it("forwards printed lines shaped like a suspension before the real one", async () => {
+      driver.promptDepth = 2;
+      chunks(
+        "Add function #3\n#3\n  [1]  printed, not a frame\n",
+        "  [1]  /lib.q:8: caller:{[x]\n    r:printer x;\n    ^\n    r};",
+      );
+      await s.continueFromBreakpoint();
+      assert.strictEqual(
+        driver.data.join(""),
+        "Add function #3\n#3\n  [1]  printed, not a frame\n",
+      );
+    });
+
+    it("forwards a printed marker that comes right before a step", async () => {
+      driver.promptDepth = 2;
+      chunks("#3\n", '  [2]  /lib.q:4: printer:\n    -1 "#3";\n    ^');
+      await s.stepPosition();
+      assert.strictEqual(driver.data.join(""), "#3\n");
+    });
+
+    it("forwards a printed trap marker that q does not confirm", async () => {
+      driver.promptDepth = 2;
+      atTrap = "false";
+      chunks("#0\n", "  [1]  /lib.q:6: caller:\n    b:a+1;\n    ^");
+      await s.stepPosition();
+      assert.strictEqual(driver.data.join(""), "#0\n");
+      atTrap = "true";
+      driver.data.length = 0;
+      await s.stepPosition();
+      assert.deepStrictEqual(driver.data, []);
+    });
+
+    it("forwards printed lines once they cannot start a suspension", async () => {
+      driver.promptDepth = 2;
+      chunks("#3\n  [1]  printed\n", "a\n", "b\n", "c\n");
+      await s.continueFromBreakpoint();
+      assert.strictEqual(driver.data.join(""), "#3\n  [1]  printed\na\nb\nc\n");
+    });
+
+    it("forwards an error and hides the backtrace after it", async () => {
+      driver.promptDepth = 2;
+      chunks(
+        "tried\n'notfound: m\n  [5]  (.Q.m.mn)\n",
+        "\n  [3]  /a.q:1: use `m\n  ^",
+      );
+      await s.continueFromBreakpoint();
+      assert.strictEqual(driver.data.join(""), "tried\n'notfound: m\n");
+    });
+
     it("forwards held output at the end", async () => {
-      sinon.stub(driver, "sendCommand").callsFake(async (...args: any[]) => {
-        const onChunk = args[3];
-        onChunk?.("#1");
-        return { output: "", depth: 1, namespace: "", errored: false };
-      });
+      driver.promptDepth = 2;
+      chunks("#0");
       await s.continueFromBreakpoint();
       assert.deepStrictEqual(driver.data, []);
       s.verboseTrace = true;
@@ -989,15 +1049,16 @@ describe("QDebugSession methods", () => {
     });
 
     it("hides suspend markers while stepping unless verbose", async () => {
+      driver.promptDepth = 2;
       sinon.stub(driver, "sendCommand").callsFake(async (...args: any[]) => {
-        args[3]?.("#1\n");
+        args[3]?.("#0\n");
         return { output: "", depth: 1, namespace: "", errored: false };
       });
       await s.stepPosition();
       assert.deepStrictEqual(driver.data, []);
       s.verboseTrace = true;
       await s.stepPosition();
-      assert.deepStrictEqual(driver.data, ["#1\n"]);
+      assert.deepStrictEqual(driver.data, ["#0\n"]);
     });
   });
 
@@ -1083,7 +1144,7 @@ describe("QDebugSession methods", () => {
       const clock = { steps: 0 };
       sinon.stub(s, "stepPosition").callsFake(async () => {
         clock.steps++;
-        return { file: "/lib.q", line: 1 };
+        return { pos: { file: "/lib.q", line: 1 }, trapped: false };
       });
       const outcome = await s.advanceToBreakpoint();
       assert.strictEqual(outcome, "pause");
@@ -1094,7 +1155,9 @@ describe("QDebugSession methods", () => {
     it("reports an exception when stepping loses the position", async () => {
       driver.promptDepth = 2;
       driver.stopReason = "breakpoint";
-      sinon.stub(s, "stepPosition").resolves(undefined);
+      sinon
+        .stub(s, "stepPosition")
+        .resolves({ pos: undefined, trapped: false });
       assert.strictEqual(await s.advanceToBreakpoint(), "exception");
       driver.stopReason = "exception";
       assert.strictEqual(await s.advanceToBreakpoint(), "exception");
@@ -1145,6 +1208,188 @@ describe("QDebugSession methods", () => {
       });
       await s.stepStatement();
       assert.strictEqual(events("stopped")[0].body.reason, "exception");
+    });
+
+    it("stops at a breakpoint line reached through a trap", async () => {
+      suspendedAt("/lib.q", 3);
+      s.requestedBreakpoints.set("/lib.q", [3]);
+      sinon.stub(s, "stepPosition").resolves({
+        pos: { file: "/lib.q", line: 3 },
+        trapped: true,
+      });
+      assert.strictEqual(await s.stepUntil(() => false, false), true);
+      assert.strictEqual(events("stopped")[0].body.reason, "breakpoint");
+    });
+
+    it("runs through an armed trap to its breakpoint", async () => {
+      suspendedAt("/lib.q", 5);
+      s.armedTraps.set("f#", { name: "f", descentPath: [] });
+      s.requestedBreakpoints.set("/lib.q", [3]);
+      const stepPosition = sinon.stub(s, "stepPosition");
+      stepPosition.onFirstCall().resolves({
+        pos: { file: "/lib.q", line: 2, index: 2 },
+        trapped: true,
+      });
+      stepPosition.resolves({
+        pos: { file: "/lib.q", line: 3, index: 2 },
+        trapped: false,
+      });
+      assert.strictEqual(await s.stepUntil(() => true, false, "out"), true);
+      sinon.assert.calledTwice(stepPosition);
+      assert.strictEqual(events("stopped")[0].body.reason, "breakpoint");
+    });
+
+    it("returns to the caller when an armed trap misses its breakpoint", async () => {
+      suspendedAt("/main.q", 5);
+      s.armedTraps.set("f#", { name: "f", descentPath: [] });
+      s.requestedBreakpoints.set("/lib.q", [9]);
+      const stepPosition = sinon.stub(s, "stepPosition");
+      stepPosition.onCall(0).resolves({
+        pos: { file: "/lib.q", line: 2, index: 2 },
+        trapped: true,
+      });
+      stepPosition.onCall(1).resolves({
+        pos: { file: "/lib.q", line: 3, index: 2 },
+        trapped: false,
+      });
+      stepPosition.resolves({
+        pos: { file: "/main.q", line: 6, index: 1 },
+        trapped: false,
+      });
+      const advance = sinon.spy(s, "advanceToBreakpoint");
+      assert.strictEqual(await s.stepUntil(() => true, false), true);
+      sinon.assert.calledThrice(stepPosition);
+      sinon.assert.notCalled(advance);
+      assert.strictEqual(events("stopped").length, 1);
+      assert.strictEqual(events("stopped")[0].body.reason, "step");
+    });
+
+    it("ends stepping when an armed trap runs to the end", async () => {
+      suspendedAt("/lib.q", 5);
+      s.armedTraps.set("f#", { name: "f", descentPath: [] });
+      const stepPosition = sinon.stub(s, "stepPosition");
+      stepPosition.onFirstCall().resolves({
+        pos: { file: "/lib.q", line: 2, index: 2 },
+        trapped: true,
+      });
+      stepPosition.callsFake(async () => {
+        driver.promptDepth = 1;
+        return { pos: undefined, trapped: false };
+      });
+      assert.strictEqual(await s.stepUntil(() => true, false, "out"), false);
+      assert.strictEqual(events("stopped").length, 0);
+    });
+
+    it("stops at the first line of an armed trap when stepping in", async () => {
+      suspendedAt("/lib.q", 5);
+      s.armedTraps.set("f#", { name: "f", descentPath: [] });
+      s.requestedBreakpoints.set("/lib.q", [3]);
+      sinon.stub(s, "stepPosition").resolves({
+        pos: { file: "/lib.q", line: 2, index: 2 },
+        trapped: true,
+      });
+      assert.strictEqual(await s.stepUntil(() => false, false, "into"), true);
+      assert.strictEqual(events("stopped")[0].body.reason, "step");
+    });
+
+    it("keeps a trap that fired on a phantom step", async () => {
+      suspendedAt("/lib.q", 5);
+      const pcs = sinon.stub(s, "programCounter");
+      pcs.onCall(0).resolves({ index: 0, length: 9, depth: 2, position: 1 });
+      pcs.onCall(1).resolves({ index: 6, length: 9, depth: 2, position: 1 });
+      pcs.resolves({ index: 1, length: 9, depth: 3, position: 1 });
+      const stepPosition = sinon.stub(s, "stepPosition");
+      stepPosition.onFirstCall().resolves({
+        pos: { file: "/lib.q", line: 2, index: 2 },
+        trapped: true,
+      });
+      stepPosition.resolves({
+        pos: { file: "/lib.q", line: 3, index: 2 },
+        trapped: false,
+      });
+      assert.strictEqual(await s.stepUntil(() => false, true, "into"), true);
+      sinon.assert.calledTwice(stepPosition);
+      assert.strictEqual(events("stopped")[0].body.reason, "step");
+    });
+
+    it("does not stop at a trap without a position", async () => {
+      suspendedAt("/lib.q", 4);
+      const stepPosition = sinon.stub(s, "stepPosition");
+      stepPosition.onFirstCall().resolves({ pos: undefined, trapped: true });
+      stepPosition.resolves({
+        pos: { file: "/lib.q", line: 5 },
+        trapped: false,
+      });
+      const stops = (pos: any) => pos?.line === 5;
+      assert.strictEqual(await s.stepUntil(stops, false, "into"), true);
+      sinon.assert.calledTwice(stepPosition);
+      assert.strictEqual(events("stopped").length, 1);
+    });
+
+    it("tells a trap from printed output that looks like its marker", async () => {
+      suspendedAt("/lib.q", 2);
+      const replies = [
+        "#3\nmore\n>>[1]  /lib.q:3: f:{x}",
+        "#0\n  [2]  /lib.q:2: g:{x}\n       ^",
+      ];
+      driver.on2(/^>$/, () => replies.shift() ?? "");
+      driver.on2(/^\.dbg\.atTrap\[\]$/, "true");
+      assert.strictEqual((await s.stepPosition()).trapped, false);
+      assert.strictEqual((await s.stepPosition()).trapped, true);
+    });
+
+    it("tells a trap from a printed trap marker by asking q", async () => {
+      suspendedAt("/lib.q", 2);
+      driver.on2(/^>$/, "#0\n  [1]  /lib.q:3: f:\n    a:1;\n    ^");
+      driver.on2(/^\.dbg\.atTrap\[\]$/, "false");
+      assert.strictEqual((await s.stepPosition()).trapped, false);
+      driver.on2(/^\.dbg\.atTrap\[\]$/, "true");
+      assert.strictEqual((await s.stepPosition()).trapped, true);
+    });
+
+    it("asks q about a trap only when its marker was printed", async () => {
+      suspendedAt("/lib.q", 2);
+      driver.on2(/^>$/, "#3\n  [1]  /lib.q:3: f:\n    a:1;\n    ^");
+      await s.stepPosition();
+      assert.ok(!driver.commands.includes(".dbg.atTrap[]"));
+    });
+
+    it("tells a trap from printed lines that precede a step", async () => {
+      suspendedAt("/lib.q", 7);
+      const replies = [
+        "#3\n  [1]  printed, not a frame\n  [1]  /lib.q:8: caller:\n    r:printer x;\n    ^\n    r};",
+        '#3\n  [2]  /lib.q:3: printer:\n    -1 "#3";\n    ^',
+      ];
+      driver.on2(/^>$/, () => replies.shift() ?? "");
+      const { pos, trapped } = await s.stepPosition();
+      assert.deepStrictEqual([pos.file, pos.line, pos.index], ["/lib.q", 8, 1]);
+      assert.strictEqual(trapped, false);
+      assert.strictEqual((await s.stepPosition()).trapped, false);
+    });
+
+    it("stops in a call trapped for stepping in when stepping over", async () => {
+      suspendedAt("/lib.q", 3);
+      sinon.stub(s, "stepPosition").resolves({
+        pos: { file: "/lib.q", line: 3 },
+        trapped: true,
+      });
+      assert.strictEqual(await s.stepUntil(() => false, false), true);
+      assert.strictEqual(events("stopped")[0].body.reason, "step");
+    });
+
+    it("steps past a trapped call when stepping out", async () => {
+      suspendedAt("/lib.q", 4);
+      const stepPosition = sinon.stub(s, "stepPosition");
+      stepPosition.onFirstCall().resolves({ pos: undefined, trapped: true });
+      stepPosition.resolves({
+        pos: { file: "/lib.q", line: 4 },
+        trapped: false,
+      });
+      const stops = (pos: any) => pos?.line === 4;
+      assert.strictEqual(await s.stepUntil(stops, false, "out"), true);
+      sinon.assert.calledTwice(stepPosition);
+      assert.strictEqual(events("stopped").length, 1);
+      assert.strictEqual(events("stopped")[0].body.reason, "step");
     });
 
     it("pauses after the function returns while stepping over", async () => {
@@ -1236,9 +1481,10 @@ describe("QDebugSession methods", () => {
       it(`pauses with a message when ${command} reaches the step limit`, async () => {
         suspendedAt("/lib.q", 2, index);
         sinon.stub(s, "programCounter").resolves(undefined);
-        const stepPosition = sinon
-          .stub(s, "stepPosition")
-          .resolves({ file: "/lib.q", line: 2, index });
+        const stepPosition = sinon.stub(s, "stepPosition").resolves({
+          pos: { file: "/lib.q", line: 2, index },
+          trapped: false,
+        });
         await s[command]();
         sinon.assert.callCount(stepPosition, 100000);
         assert.ok(
@@ -1303,6 +1549,37 @@ describe("QDebugSession methods", () => {
       s.armedTraps.set("gone#", { name: "gone", descentPath: [] });
       await s.syncBreakpoints(2);
       assert.ok(driver.commands.includes(".dbg.bu[`gone;`long$()]"));
+    });
+
+    it("keeps a step-in trap as the breakpoint trap instead of setting it again", async () => {
+      s.requestedBreakpoints.set(program, [2]);
+      requests.callsFake(async (method: string) =>
+        method === "kdb.qls.lambdaPath"
+          ? { name: "f", path: [0], startLine: 1, rootLine: 0 }
+          : null,
+      );
+      s.stepInTraps.set("f#0", { name: "f", descentPath: [0] });
+      await s.syncBreakpoints(2);
+      assert.ok(s.armedTraps.has("f#0"));
+      assert.strictEqual(s.stepInTraps.size, 0);
+      assert.ok(!driver.commands.some((c) => c.startsWith(".dbg.bs")));
+    });
+
+    it("keeps a step-in trap as the breakpoint trap while its function is on the stack", async () => {
+      s.requestedBreakpoints.set(program, [2]);
+      requests.callsFake(async (method: string) =>
+        method === "kdb.qls.lambdaPath"
+          ? { name: "f", path: [0], startLine: 1, rootLine: 0 }
+          : null,
+      );
+      s.stepInTraps.set("f#0", { name: "f", descentPath: [0] });
+      await s.syncBreakpoints(2, {
+        armOnly: true,
+        skipKeys: new Set(["f#0"]),
+      });
+      assert.ok(s.armedTraps.has("f#0"));
+      assert.strictEqual(s.stepInTraps.size, 0);
+      assert.ok(!driver.commands.some((c) => c.startsWith(".dbg.bs")));
     });
 
     it("skips breakpoints on the stack and in unknown external files", async () => {
@@ -1667,7 +1944,10 @@ describe("QDebugSession methods", () => {
 
     it("answers nothing without a driver", async () => {
       s.driver = undefined;
-      assert.strictEqual(await s.stepPosition(), undefined);
+      assert.deepStrictEqual(await s.stepPosition(), {
+        pos: undefined,
+        trapped: false,
+      });
       assert.deepStrictEqual(await s.frames(), []);
       assert.strictEqual(await s.position(), undefined);
       assert.strictEqual(await s.handleSuspension(), false);
