@@ -144,7 +144,8 @@ export function mcpServerName(workspaceLabel: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/^-/, "")
+    .replace(/-$/, "");
   return slug ? `kdb-${slug}` : "kdb";
 }
 
@@ -275,11 +276,14 @@ async function copyMcpConfig(
   await env.clipboard.writeText(picked.text);
   const exportLine = "Copy export line";
   const where = agent.agent === "claude" ? ".mcp.json" : "~/.codex/config.toml";
-  const message = picked.terminal
-    ? `Copied. Paste into a terminal to add the server to ${agent.label}. It contains your MCP token, so keep it out of source control.`
-    : picked.usesEnv
-      ? `Copied. Paste into ${where}, then set ${envVar} in your environment (the export line) and restart the agent.`
-      : `Copied. Paste into ${where}. It contains your MCP token, so keep it out of source control.`;
+  let message: string;
+  if (picked.terminal) {
+    message = `Copied. Paste into a terminal to add the server to ${agent.label}. It contains your MCP token, so keep it out of source control.`;
+  } else if (picked.usesEnv) {
+    message = `Copied. Paste into ${where}, then set ${envVar} in your environment (the export line) and restart the agent.`;
+  } else {
+    message = `Copied. Paste into ${where}. It contains your MCP token, so keep it out of source control.`;
+  }
   const choice = await notify(
     message,
     MessageKind.INFO,
