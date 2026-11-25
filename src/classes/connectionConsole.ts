@@ -32,6 +32,7 @@ const ANSI = {
   BOLD_OFF: "\x1b[22m",
   RED_ON: "\x1b[31m",
   RED_OFF: "\x1b[39m",
+  MARK: "\x1b]633;SetMark;Hidden\x07",
 };
 
 const KEY = {
@@ -57,7 +58,13 @@ const CURSOR_POSITION = /\[\d+;(\d+)R/;
 
 const SIZE_TO_CONTENT = "workbench.action.terminal.sizeToContentWidth";
 
+const SCROLL_TO_BOTTOM = "workbench.action.terminal.scrollToBottom";
+
+const SCROLL_TO_MARK = "workbench.action.terminal.scrollToPreviousCommand";
+
 const LAYOUT_TIMEOUT = 1000;
+
+const ACTIVATE_TIMEOUT = 1000;
 
 // A terminal's dimensions as a value that can be compared. VS Code reports a
 // placeholder size (80x30) before the panel has laid the terminal out, so the
@@ -79,7 +86,7 @@ export class ConnectionConsole {
 
   // Buffers output produced before the console has been sized; flushed in
   // begin() and then left undefined so writes go straight to the emitter.
-  private buffer?: { text: string; fit: boolean }[] = [];
+  private buffer?: { text: string; fit: boolean; follow?: boolean }[] = [];
   private _exited = false;
   // The size the terminal was opened with, whether the report echoing it has
   // arrived, and whether the one sizing has been started — see {@link resize}.
@@ -88,6 +95,11 @@ export class ConnectionConsole {
   private sizing = false;
   private waiting?: NodeJS.Timeout;
   private _columns = 0;
+  // Width probes written and answered, and the answer a follow waits for
+  // before scrolling, it being the proof that the block has been drawn.
+  private probes = 0;
+  private answers = 0;
+  private awaited?: number;
   // True while we are tearing the console down programmatically (dispose), so
   // the pty close handler can tell a user-initiated close apart from our own.
   private disposing = false;
@@ -142,12 +154,24 @@ export class ConnectionConsole {
       .join(ANSI.CRLF);
   }
 
-  private send(data: string, fit = false): void {
+  private send(data: string, fit = false, follow = false): void {
     if (this.buffer) {
-      this.buffer.push({ text: data, fit });
+      this.buffer.push({ text: data, fit, follow });
     } else {
-      this.onDidWrite.fire(fit ? this.fit(data) + WIDTH_QUERY : data);
+      this.emit(data, fit, follow);
     }
+  }
+
+  private emit(data: string, fit: boolean, follow = false): void {
+    if (!fit && !follow) {
+      this.onDidWrite.fire(data);
+      return;
+    }
+    this.probes++;
+    if (follow) {
+      this.awaited = this.probes;
+    }
+    this.onDidWrite.fire((fit ? this.fit(data) : data) + WIDTH_QUERY);
   }
 
   /**
@@ -218,8 +242,8 @@ export class ConnectionConsole {
         ANSI.CRLF +
         ANSI.CRLF,
     );
-    this.buffer?.forEach(({ text, fit }) =>
-      this.onDidWrite.fire(fit ? this.fit(text) + WIDTH_QUERY : text),
+    this.buffer?.forEach(({ text, fit, follow }) =>
+      this.emit(text, fit, follow),
     );
     this.buffer = undefined;
     this.measure();
@@ -227,7 +251,7 @@ export class ConnectionConsole {
 
   private measure(): void {
     if (!this._exited) {
-      this.onDidWrite.fire(WIDTH_QUERY);
+      this.emit("", true);
     }
   }
 
@@ -248,6 +272,7 @@ export class ConnectionConsole {
     const position = CURSOR_POSITION.exec(data);
     if (position) {
       this._columns = parseInt(position[1], 10);
+      this.answered();
     } else if (data === KEY.CTRL_L) {
       this.send(ANSI.CLEAR);
     }
@@ -317,6 +342,61 @@ export class ConnectionConsole {
    */
   reveal(): void {
     this.pty.show(true);
+  }
+
+  /**
+   * Marks where a block starts, for {@link follow} to bring into view.
+   */
+  mark(): void {
+    this.send(ANSI.MARK);
+  }
+
+  /**
+   * Reveals the console and, once the block written since the last
+   * {@link mark} has been drawn, scrolls its start into view.
+   */
+  follow(): void {
+    this.reveal();
+    this.send("", false, true);
+  }
+
+  private answered(): void {
+    this.answers++;
+    if (this.awaited !== undefined && this.answers >= this.awaited) {
+      this.awaited = undefined;
+      void this.scrollToMark();
+    }
+  }
+
+  private async scrollToMark(): Promise<void> {
+    if (!(await this.activated()) || this._exited) {
+      return;
+    }
+    try {
+      await vscode.commands.executeCommand(SCROLL_TO_BOTTOM);
+      await vscode.commands.executeCommand(SCROLL_TO_MARK);
+    } catch {
+      return;
+    }
+  }
+
+  private activated(): Promise<boolean> {
+    if (vscode.window.activeTerminal === this.pty) {
+      return Promise.resolve(true);
+    }
+    return new Promise((resolve) => {
+      const settle = (value: boolean) => {
+        clearTimeout(timer);
+        listener.dispose();
+        resolve(value);
+      };
+      const listener = vscode.window.onDidChangeActiveTerminal((terminal) => {
+        if (terminal === this.pty) {
+          settle(true);
+        }
+      });
+      const timer = setTimeout(() => settle(false), ACTIVATE_TIMEOUT);
+    });
   }
 
   dispose(): void {

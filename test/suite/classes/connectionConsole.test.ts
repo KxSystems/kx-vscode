@@ -26,6 +26,10 @@ const MAX_COLUMNS = 2000;
 const CLEAR = "\x1b[2J\x1b[3J\x1b[H";
 const WIDTH_QUERY = `\x1b7\x1b[${MAX_COLUMNS}G\x1b[6n\x1b8`;
 const FIT_COMMAND = "workbench.action.terminal.sizeToContentWidth";
+const SCROLL_COMMAND = "workbench.action.terminal.scrollToBottom";
+const MARK_COMMAND = "workbench.action.terminal.scrollToPreviousCommand";
+const MARK = "\x1b]633;SetMark;Hidden\x07";
+const ACTIVATE_TIMEOUT = 1000;
 // The size a pty is opened with, echoed back in the first report, and the
 // layout the panel reports once it has laid the terminal out.
 const OPENED = { columns: 80, rows: 30 };
@@ -39,6 +43,7 @@ describe("ConnectionConsole", () => {
   let executed: string[];
   let terminal: vscode.Terminal;
   let active: vscode.Terminal | undefined;
+  let activation: vscode.EventEmitter<vscode.Terminal | undefined>;
   let clock: sinon.SinonFakeTimers;
 
   beforeEach(() => {
@@ -46,6 +51,10 @@ describe("ConnectionConsole", () => {
     revealed = [];
     executed = [];
     active = undefined;
+    activation = new vscode.EventEmitter<vscode.Terminal | undefined>();
+    sinon
+      .stub(vscode.window, "onDidChangeActiveTerminal")
+      .callsFake((listener: any) => activation.event(listener));
     clock = sinon.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     sinon.stub(vscode.window, "createTerminal").callsFake((options: any) => {
       pty = options.pty;
@@ -68,6 +77,7 @@ describe("ConnectionConsole", () => {
   });
 
   afterEach(() => {
+    activation.dispose();
     sinon.restore();
   });
 
@@ -120,6 +130,13 @@ describe("ConnectionConsole", () => {
     pty.handleInput?.(`\x1b[5;${columns}R`);
     written.length = 0;
     return console;
+  }
+
+  async function answer(times = 1) {
+    for (let i = 0; i < times; i++) {
+      pty.handleInput?.("\x1b[5;80R");
+    }
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
   }
 
   function payload() {
@@ -308,6 +325,96 @@ describe("ConnectionConsole", () => {
     const console = await started();
     console.reveal();
     assert.deepStrictEqual(revealed, [true]);
+  });
+
+  it("should mark where a block starts", async () => {
+    const console = await started();
+    console.mark();
+    assert.strictEqual(payload(), MARK);
+  });
+
+  it("should follow a block by revealing itself and probing once it is written", async () => {
+    const console = await started();
+    console.follow();
+    assert.deepStrictEqual(revealed, [true]);
+    assert.strictEqual(payload(), WIDTH_QUERY);
+    assert.deepStrictEqual(executed, []);
+  });
+
+  it("should scroll to the start of a block once its probe is answered", async () => {
+    const console = await started();
+    console.appendResult(["a"]);
+    console.follow();
+    await answer(2);
+    assert.deepStrictEqual(executed, []);
+    await answer();
+    assert.deepStrictEqual(executed, [SCROLL_COMMAND, MARK_COMMAND]);
+  });
+
+  it("should scroll once for a follow written before the console started", async () => {
+    const console = open();
+    console.follow();
+    await layout();
+    executed.length = 0;
+    await answer(2);
+    await answer(2);
+    assert.deepStrictEqual(executed, [SCROLL_COMMAND, MARK_COMMAND]);
+  });
+
+  it("should scroll to the start of a block once it becomes the active terminal", async () => {
+    const console = await started();
+    active = undefined;
+    (<any>terminal).show = (preserveFocus?: boolean) => {
+      revealed.push(!!preserveFocus);
+    };
+    console.follow();
+    await answer(2);
+    assert.deepStrictEqual(executed, []);
+    active = terminal;
+    activation.fire(terminal);
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
+    assert.deepStrictEqual(executed, [SCROLL_COMMAND, MARK_COMMAND]);
+  });
+
+  it("should not scroll another terminal", async () => {
+    const console = await started();
+    const other = <vscode.Terminal>(<any>{});
+    active = other;
+    (<any>terminal).show = (preserveFocus?: boolean) => {
+      revealed.push(!!preserveFocus);
+    };
+    console.follow();
+    await answer(2);
+    activation.fire(other);
+    await clock.tickAsync(ACTIVATE_TIMEOUT);
+    activation.fire(terminal);
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
+    assert.deepStrictEqual(executed, []);
+  });
+
+  it("should not scroll a console disposed before it becomes active", async () => {
+    const console = await started();
+    active = undefined;
+    (<any>terminal).show = () => {};
+    console.follow();
+    await answer(2);
+    console.dispose();
+    active = terminal;
+    activation.fire(terminal);
+    await new Promise((resolve) => globalThis.setImmediate(resolve));
+    assert.deepStrictEqual(executed, []);
+  });
+
+  it("should keep going when scrolling fails", async () => {
+    const console = await started();
+    (<any>vscode.commands.executeCommand).callsFake(
+      () => <any>Promise.reject(new Error("no such command")),
+    );
+    console.follow();
+    await answer(2);
+    written.length = 0;
+    console.appendLine("after");
+    assert.strictEqual(payload(), "after\r\n");
   });
 
   it("should write a row as it is until a width is reported", async () => {

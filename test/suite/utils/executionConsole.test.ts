@@ -230,20 +230,23 @@ describe("executionConsole", () => {
       let appendError: sinon.SinonStub;
       let appendParts: sinon.SinonStub;
       let appendResult: sinon.SinonStub;
-      let show: sinon.SinonStub;
+      let follow: sinon.SinonStub;
+      let mark: sinon.SinonStub;
 
       beforeEach(() => {
         appendLine = sinon.stub();
         appendError = sinon.stub();
         appendParts = sinon.stub();
         appendResult = sinon.stub();
-        show = sinon.stub();
+        follow = sinon.stub();
+        mark = sinon.stub();
         ext.connectionConsoles.set(connLabel, <any>{
           appendLine,
           appendError,
           appendParts,
           appendResult,
-          terminal: { show },
+          follow,
+          mark,
         });
         getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
         getConfigurationStub.returns({
@@ -257,14 +260,14 @@ describe("executionConsole", () => {
         getConfigurationStub.restore();
       });
 
-      it("should write to the connection console and reveal its terminal", () => {
+      it("should write to the connection console and follow its output", () => {
         queryConsole.append("test", "a:1", "fileName", connLabel);
 
         sinon.assert.calledWith(appendResult, ["test"]);
-        sinon.assert.calledWith(show, true);
+        sinon.assert.callOrder(mark, appendResult, follow);
       });
 
-      it("should write errors to the connection console", () => {
+      it("should write errors to the connection console and follow its output", () => {
         queryConsole.appendQueryError(
           "a:1",
           "error",
@@ -276,6 +279,21 @@ describe("executionConsole", () => {
         sinon.assert.calledWith(appendParts, [
           { text: "Error: error", error: true },
         ]);
+        sinon.assert.callOrder(mark, appendParts, follow);
+      });
+
+      it("should not follow the connection console when auto focus is off", () => {
+        getConfigurationStub.returns({
+          get: (key: string, fallback: boolean) =>
+            key === "autoFocusOutputOnEntry" ? false : fallback,
+          update: sinon.stub(),
+        });
+
+        queryConsole.append("test", "a:1", "fileName", connLabel);
+
+        sinon.assert.calledWith(appendResult, ["test"]);
+        sinon.assert.calledOnce(mark);
+        sinon.assert.notCalled(follow);
       });
 
       it("should fall back to the shared channel for unknown connections", () => {
@@ -313,7 +331,8 @@ describe("executionConsole", () => {
           appendError: (value: string) => writes.push(["error", value]),
           appendParts: (parts: any[]) => writes.push(["parts", parts]),
           appendResult: (lines: string[]) => writes.push(["result", lines]),
-          terminal: { show: sinon.stub() },
+          follow: sinon.stub(),
+          mark: sinon.stub(),
         });
       });
 
@@ -333,6 +352,16 @@ describe("executionConsole", () => {
           assert.deepStrictEqual(writes.slice(1), [
             ["line", "1+1"],
             ["line", ""],
+            ["result", ["2"]],
+            ["line", "<<<"],
+            ["line", ""],
+          ]);
+        });
+
+        it("should put the footer right under a result ending in a newline", () => {
+          queryConsole.append("2\n", "1+1", "fileName", connLabel);
+
+          assert.deepStrictEqual(body(), [
             ["result", ["2"]],
             ["line", "<<<"],
             ["line", ""],
@@ -558,6 +587,18 @@ describe("executionConsole", () => {
 
           assert.deepStrictEqual(writes, [
             ["result", ["2"]],
+            ["line", ""],
+          ]);
+        });
+
+        it("should separate results ending in a newline by a single blank line", () => {
+          queryConsole.append("76\n", "rand 100", "fileName", connLabel);
+          queryConsole.append("26\n", "rand 100", "fileName", connLabel);
+
+          assert.deepStrictEqual(writes, [
+            ["result", ["76"]],
+            ["line", ""],
+            ["result", ["26"]],
             ["line", ""],
           ]);
         });
