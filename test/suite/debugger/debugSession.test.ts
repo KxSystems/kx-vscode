@@ -348,6 +348,8 @@ describe("QDebugSession", function () {
       assert.strictEqual(await inNamespace("s"), "3");
       assert.strictEqual(await inNamespace("`helper in key `."), "0b");
       assert.strictEqual(await inNamespace("`helper in key `.foo"), "1b");
+      assert.strictEqual(await inNamespace("`r in key `."), "1b");
+      assert.strictEqual(await inNamespace("`r in key `.foo"), "0b");
 
       await client.request("continue", { threadId });
       await client.waitForEvent("terminated");
