@@ -19,6 +19,7 @@ import {
   DEBUG_TYPE,
   debugFile,
   registerDebugger,
+  showValueInConsole,
 } from "../../../src/commands/debugCommand";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
@@ -106,6 +107,74 @@ describe("debugCommand", () => {
         startDebugging.firstCall.args[1].program,
         vscode.Uri.file("/tmp/book.kdb.q").fsPath,
       );
+    });
+  });
+
+  describe("showValueInConsole", () => {
+    let customRequest: sinon.SinonStub;
+    let appendLine: sinon.SinonStub;
+    let executeCommand: sinon.SinonStub;
+    let session: vscode.DebugSession;
+    let active: sinon.SinonStub;
+
+    beforeEach(() => {
+      customRequest = sinon.stub().resolves({ result: "a| 1\nb| 2" });
+      session = <vscode.DebugSession>(<unknown>{
+        id: "s1",
+        type: DEBUG_TYPE,
+        customRequest,
+      });
+      active = sinon.stub(vscode.debug, "activeDebugSession").value(session);
+      appendLine = sinon.stub();
+      sinon
+        .stub(vscode.debug, "activeDebugConsole")
+        .value(<vscode.DebugConsole>(<unknown>{ appendLine }));
+      executeCommand = sinon.stub(vscode.commands, "executeCommand").resolves();
+    });
+
+    it("should print the full value of a variable in the focused frame", async () => {
+      const item = Object.assign(
+        Object.create(vscode.DebugStackFrame.prototype),
+        { session, threadId: 1, frameId: 3 },
+      );
+      sinon.stub(vscode.debug, "activeStackItem").value(item);
+      await showValueInConsole({
+        sessionId: "s1",
+        variable: { value: "`a`b!1 2", evaluateName: "d" },
+      });
+      sinon.assert.calledOnceWithExactly(customRequest, "evaluate", {
+        expression: "d",
+        frameId: 3,
+        context: "clipboard",
+      });
+      sinon.assert.calledOnceWithExactly(appendLine, "a| 1\nb| 2");
+      sinon.assert.calledWith(
+        executeCommand,
+        "workbench.debug.action.focusRepl",
+      );
+    });
+
+    it("should print the shown value when it cannot be evaluated", async () => {
+      sinon.stub(vscode.debug, "activeStackItem").value(undefined);
+      customRequest.rejects(new Error("not paused"));
+      await showValueInConsole({
+        variable: { value: "`a`b!1 2", evaluateName: "d" },
+      });
+      assert.strictEqual(customRequest.firstCall.args[1].frameId, undefined);
+      sinon.assert.calledOnceWithExactly(appendLine, "`a`b!1 2");
+    });
+
+    it("should print the shown value when it has no expression", async () => {
+      await showValueInConsole({ variable: { value: "a| 1" } });
+      sinon.assert.notCalled(customRequest);
+      sinon.assert.calledOnceWithExactly(appendLine, "a| 1");
+    });
+
+    it("should ignore other debuggers and missing variables", async () => {
+      await showValueInConsole();
+      active.value({ type: "node" });
+      await showValueInConsole({ variable: { value: "1" } });
+      sinon.assert.notCalled(appendLine);
     });
   });
 

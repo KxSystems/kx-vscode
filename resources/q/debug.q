@@ -62,13 +62,46 @@
   .dbg.out $[100h = type f; string @[{raze (value x) 1 2};f;`$()]; `$()] };
 
 .dbg.cap:16384;
-.dbg.val:{[v]
-  $[.dbg.cap >= @[{-22!x};v;{0W}];
-    v;
-    "<",string[type v],"h type; ",string[count v]," count; too large to display>"] };
-.dbg.vals:{[d]
-  @[.dbg.out;.dbg.val each d;::];
+.dbg.width:1000;
+.dbg.size:1000 2000;
+.dbg.big:{[v]
+  $[.dbg.cap < @[{-22!x};v;{0W}];
+    "<",string[type v],"h type; ",string[count v]," count; too large to display>";
+    ""] };
+.dbg.console:{[hw;f;v;e]
+  c:system"c";
+  system"c "," " sv string hw;
+  r:@[f;v;e];
+  system"c "," " sv string c;
+  r };
+.dbg.flat:{[s]
+  $["\n" in s; " " sv {@[x;1_til count x;ltrim]} "\n" vs s except "\r"; s] };
+.dbg.line:{[v]
+  $[count b:.dbg.big v; b; .dbg.flat .dbg.console[25,.dbg.width;-3!;v;{"'",x}]] };
+.dbg.text:{[v]
+  if[count b:.dbg.big v; :enlist b];
+  t:.dbg.console[.dbg.size;.Q.S[.dbg.size;0];v;{enlist "'",x}];
+  t:raze {"\n" vs (),x except "\r"} each t;
+  $[all raze[t] in " \n"; enlist .dbg.line v; t] };
+.dbg.gen:-1;
+.dbg.held:enlist (::);
+.dbg.hold:{[g;v]
+  if[not g~.dbg.gen; .dbg.gen::g; .dbg.held::enlist (::)];
+  .dbg.held::@[.dbg.held,(::);count .dbg.held;:;v];
+  -1+count .dbg.held };
+.dbg.view:{[g;v]
+  l:.dbg.line v;
+  t:.dbg.text v;
+  (l; $[(1<count t) or not l~first t; .dbg.hold[g;v]; 0]) };
+.dbg.vals:{[g;d]
+  @[.dbg.out;.dbg.view[g] each d;::];
   };
+.dbg.show:{[g;v] .dbg.out .dbg.view[g;v] };
+.dbg.rows:{[g;r]
+  ok:(g~.dbg.gen) and r within 1,-1+count .dbg.held;
+  .dbg.out $[ok; .dbg.text .dbg.held r; ()] };
+.dbg.watchable:{[s]
+  $[.dbg.wraps s; [p:parse s; not (0h=type p) and ";"~first p]; 0b] };
 
 .dbg.globalNames:{[ns]
   ns:(),ns;

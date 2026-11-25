@@ -25,7 +25,11 @@ import { initActiveTargetTracking } from "./classes/activeTargetTracker";
 import { OPEN_RESULTS_HINT } from "./classes/connectionConsole";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
-import { debugFile, registerDebugger } from "./commands/debugCommand";
+import {
+  debugFile,
+  registerDebugger,
+  showValueInConsole,
+} from "./commands/debugCommand";
 import { convertDataSources } from "./commands/queryCommand";
 import {
   activeConnection,
@@ -1160,6 +1164,10 @@ function registerDebugCommands(): CommandRegistration[] {
     {
       command: "kdb.debugFile",
       callback: (uri?: vscode.Uri) => debugFile(uri),
+    },
+    {
+      command: "kdb.debug.showValue",
+      callback: showValueInConsole,
     },
   ];
 }
