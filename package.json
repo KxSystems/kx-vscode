@@ -192,7 +192,7 @@
           "type": "number",
           "default": 20000,
           "minimum": 1000,
-          "markdownDescription": "The most characters of q output an agent gets back from one `run_q` query. Longer output is cut short, with a note telling the agent to narrow the query.",
+          "markdownDescription": "The most characters of q output an agent gets back from one `run_q` query. Longer output is cut short, with a note telling the agent to narrow the query. Has no effect while `#kdb.mcp.enabled#` is off.",
           "scope": "application"
         },
         "kdb.mcp.queryTimeoutSeconds": {
@@ -200,7 +200,7 @@
           "default": 60,
           "minimum": 5,
           "maximum": 3600,
-          "markdownDescription": "How many seconds q gets to run an agent's `run_q` query. Set the q process's `\\T` timeout to the same value so that q stops the query at this limit; without it the query isn't cancelled and keeps running in q. Agents also limit how long they wait for a tool to answer; if that limit is shorter than this setting, the agent gives up before q finishes.",
+          "markdownDescription": "How many seconds q gets to run an agent's `run_q` query. Set the q process's `\\T` timeout to the same value so that q stops the query at this limit; without it the query isn't cancelled and keeps running in q. Agents also limit how long they wait for a tool to answer; if that limit is shorter than this setting, the agent gives up before q finishes. Has no effect while `#kdb.mcp.enabled#` is off.",
           "scope": "application"
         },
         "kdb.mcp.port": {
@@ -208,7 +208,7 @@
           "default": 7464,
           "minimum": 1024,
           "maximum": 65535,
-          "markdownDescription": "The port on 127.0.0.1 a workspace's kdb MCP server tries first. If it's taken, the server picks another, and the workspace keeps using that port from then on. Set this in a workspace's settings to always use a specific port for that workspace.",
+          "markdownDescription": "The port on 127.0.0.1 a workspace's kdb MCP server tries first. If it's taken, the server picks another, and the workspace keeps using that port from then on. Set this in a workspace's settings to always use a specific port for that workspace. Has no effect while `#kdb.mcp.enabled#` is off.",
           "scope": "window"
         }
       }
@@ -1149,19 +1149,19 @@
         },
         {
           "command": "kdb.mcp.removeAllAccess",
-          "when": "true"
+          "when": "config.kdb.mcp.enabled"
         },
         {
           "command": "kdb.mcp.generateConfig",
-          "when": "true"
+          "when": "config.kdb.mcp.enabled"
         },
         {
           "command": "kdb.mcp.showServers",
-          "when": "true"
+          "when": "config.kdb.mcp.enabled"
         },
         {
           "command": "kdb.mcp.regenerateToken",
-          "when": "true"
+          "when": "config.kdb.mcp.enabled"
         }
       ],
       "webview/context": [

@@ -109,8 +109,8 @@ keeps its access; changing its host or port, or removing it, clears access.
 ## Turning it on
 
 - The `kdb.mcp.enabled` setting (on by default) is the master switch. Turning it
-  off stops the server and refuses all MCP access, keeping each connection's
-  choice.
+  off stops the server, blocks all agent access and hides the MCP commands; the
+  connections you allowed stay allowed for when you turn it back on.
 - The server listens on `127.0.0.1` only, and only in trusted workspaces. It
   starts when a connection that's allowed for MCP is connected in the window,
   and stops when the last one is disconnected or loses its access, or the window
