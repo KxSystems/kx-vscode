@@ -125,7 +125,7 @@ async function checkProcessTimeout(connection: LocalConnection): Promise<void> {
 
   if (current === 0) {
     notifyWithSettings(
-      `'${label}' has no query timeout. Set \\T ${limit} on the process to match the ${limit}-second MCP query timeout.`,
+      `'${label}' has no query timeout. Set the timeout on the process to match the ${limit}-second MCP query timeout.`,
       MessageKind.WARNING,
     );
     return;

@@ -349,7 +349,13 @@ class KdbMcpServer implements Disposable {
 
       if (!this.authorized(req.headers.authorization)) {
         res.setHeader("WWW-Authenticate", "Bearer");
-        return reply(res, 401, { error: "Unauthorized" });
+        // Agents show this body in their error, so say how to fix it
+        return reply(res, 401, {
+          error: "Unauthorized",
+          hint: req.headers.authorization
+            ? "The token doesn't match this kdb MCP server. It may have been regenerated. Run 'KX: Generate MCP config' in VS Code and update the agent's config."
+            : "Send the kdb MCP token as 'Authorization: Bearer <token>'. Run 'KX: Generate MCP config' in VS Code to get it.",
+        });
       }
 
       if (path === "/mcp") {

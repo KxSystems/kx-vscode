@@ -200,7 +200,7 @@
           "default": 60,
           "minimum": 5,
           "maximum": 3600,
-          "markdownDescription": "How long, in seconds, q gets to run an agent's `run_q` query. Set `\\T` on the process to the same value so that q stops the query at this limit; without `\\T` the query isn't cancelled and keeps running in q. The extension waits 2 seconds longer, only so that q's `'stop` error can reach it. The agent's MCP tool timeout must be greater than this value plus 2 seconds: Codex configs from **Generate MCP config** set `tool_timeout_sec` to this value plus 12; for other agents, set it in the agent (Claude Code: `MCP_TOOL_TIMEOUT`, in milliseconds).",
+          "markdownDescription": "How many seconds q gets to run an agent's `run_q` query. Set the q process's `\\T` timeout to the same value so that q stops the query at this limit; without it the query isn't cancelled and keeps running in q. Agents also limit how long they wait for a tool to answer; if that limit is shorter than this setting, the agent gives up before q finishes.",
           "scope": "application"
         },
         "kdb.mcp.port": {

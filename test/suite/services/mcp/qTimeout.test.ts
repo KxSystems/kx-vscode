@@ -95,7 +95,7 @@ describe("MCP q timeout", () => {
       assert.strictEqual(warnings.length, 1);
       assert.match(
         warnings[0],
-        /^'local-q' has no query timeout\. Set \\T 60 on the process to match the 60-second MCP query timeout\.$/,
+        /^'local-q' has no query timeout\. Set the timeout on the process to match the 60-second MCP query timeout\.$/,
       );
     });
 
