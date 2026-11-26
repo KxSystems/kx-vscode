@@ -75,7 +75,7 @@ async function confirmFirstAllow(label: string): Promise<boolean> {
     {
       modal: true,
       detail:
-        "Agents in VS Code (Copilot, Codex, Claude Code) will be able to run q on this connection while it's connected in this window, through the kdb extension's MCP server. The q they run can change data, write files and run system commands on that process.\n\nYour agent will also ask you to approve the server, and each call unless you choose to always allow it. You can remove access at any time.\n\nDon't type passwords or other credentials into the agent's chat, and don't have it write them into q. What the agent runs and gets back stays in its chat history. The extension doesn't log the q text.",
+        "AI agents such as Copilot, Codex and Claude Code, in VS Code or a terminal, will be able to run q on this connection through the kdb extension's MCP server, while it's connected in this window. The q they run can change data, write files and run system commands on that process.\n\nYour agent will also ask you to approve the server, and to approve each query unless you set it to always allow them. You can remove access at any time.\n\nDon't type passwords or other credentials into the agent's chat, and don't have it write them into q. What the agent runs and gets back stays in its chat history. The extension doesn't log the q text.",
     },
     allow,
   );
@@ -215,7 +215,7 @@ async function copyMcpConfig(
       { label: "Claude Code", agent: "claude" as const },
       { label: "Codex", agent: "codex" as const },
     ],
-    { title: "Copy MCP config", placeHolder: "Which agent?" },
+    { title: "Generate MCP config", placeHolder: "Which agent?" },
   );
   if (!agent) {
     return;
@@ -266,7 +266,7 @@ async function copyMcpConfig(
         ];
 
   const picked = await window.showQuickPick(choices, {
-    title: `Copy MCP config for ${agent.label}`,
+    title: `Generate MCP config for ${agent.label}`,
     placeHolder: "Where should the token come from?",
   });
   if (!picked) {
@@ -330,7 +330,7 @@ export async function showMcpServers(): Promise<void> {
 
   const action = await window.showQuickPick(
     [
-      { label: "Copy MCP config", action: "copy" as const },
+      { label: "Generate MCP config", action: "copy" as const },
       {
         label: "Forget port",
         description: "the next start picks a port again",

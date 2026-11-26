@@ -139,7 +139,7 @@ async function checkProcessTimeout(connection: LocalConnection): Promise<void> {
     );
   } else if (current > limit) {
     notifyWithSettings(
-      `'${label}' stops queries after ${current} seconds (\\T), but agent queries time out after ${limit}. Set \\T ${limit} on the process, or raise kdb.mcp.queryTimeoutSeconds to ${current}.`,
+      `'${label}' stops queries after ${current} seconds, but the MCP query timeout is ${limit} seconds, so an agent's query can keep running in q after the agent stops waiting. Set the timeout on the process to ${limit} seconds, or raise the MCP query timeout to ${current}.`,
       MessageKind.INFO,
     );
   }

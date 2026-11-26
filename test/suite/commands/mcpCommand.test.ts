@@ -280,7 +280,7 @@ describe("MCP commands", () => {
       answerNext(
         pick,
         (items) => items[0],
-        () => ({ label: "Copy MCP config", action: "copy" }),
+        () => ({ label: "Generate MCP config", action: "copy" }),
         (items) => items.find((item) => item.agent === "claude"),
         (items) => items[0],
       );

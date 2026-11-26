@@ -108,7 +108,7 @@ describe("MCP q timeout", () => {
       assert.strictEqual(info.length, 1);
       assert.match(
         info[0],
-        /^'local-q' stops queries after 120 seconds \(\\T\), but agent queries time out after 60\. Set \\T 60 on the process, or raise kdb\.mcp\.queryTimeoutSeconds to 120\.$/,
+        /^'local-q' stops queries after 120 seconds, but the MCP query timeout is 60 seconds, so an agent's query can keep running in q after the agent stops waiting\. Set the timeout on the process to 60 seconds, or raise the MCP query timeout to 120\.$/,
       );
     });
 

@@ -242,7 +242,7 @@ describe("MCP tools", () => {
         assert.strictEqual(warnings.length, 1);
         assert.match(
           String(warnings[0].args[0]),
-          /exceeded its configured 60-second execution budget, and q did not respond within the additional 2-second grace period/,
+          /^An agent's query on '.+' ran past the 60-second MCP query timeout and may still be running in q\. Other queries on this connection will wait until it finishes\.$/,
         );
         // Nothing is offered: disconnecting wouldn't stop the query in q
         assert.strictEqual(warnings[0].args.length, 3);

@@ -266,9 +266,9 @@ class KdbMcpServer implements Disposable {
 
   // Codex and Claude Code need the port in their configs, which Copilot doesn't
   private offerConfig(port: number): void {
-    const copy = "Copy MCP config";
+    const copy = "Generate MCP config";
     void notify(
-      `The kdb MCP server for this workspace is on port ${port}. Copy the config to connect Codex or Claude Code to it.`,
+      `The kdb MCP server for this workspace is on port ${port}. Generate the MCP config to connect Codex or Claude Code to it.`,
       MessageKind.INFO,
       { logger },
       copy,

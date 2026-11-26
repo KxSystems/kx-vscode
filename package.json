@@ -185,14 +185,14 @@
         "kdb.mcp.enabled": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Allow AI agents to query kdb connections through the extension's MCP server. Each connection must still be allowed and connected. Turning this off stops the server and refuses all MCP access, keeping each connection's choice.",
+          "markdownDescription": "Allow AI agents to query kdb connections through the extension's MCP server. Each connection must also be allowed and connected. Turning this off stops the server and blocks all agent access; the connections you allowed stay allowed for when you turn it back on.",
           "scope": "application"
         },
         "kdb.mcp.maxOutputChars": {
           "type": "number",
           "default": 20000,
           "minimum": 1000,
-          "markdownDescription": "The most characters of q output an agent gets back from one run_q call. Longer output is cut short, with a note telling the agent to narrow the query.",
+          "markdownDescription": "The most characters of q output an agent gets back from one `run_q` query. Longer output is cut short, with a note telling the agent to narrow the query.",
           "scope": "application"
         },
         "kdb.mcp.queryTimeoutSeconds": {
@@ -208,7 +208,7 @@
           "default": 7464,
           "minimum": 1024,
           "maximum": 65535,
-          "markdownDescription": "The port a workspace's kdb MCP server first uses, on 127.0.0.1. Each workspace then keeps its own port. Set this in a workspace's settings to fix that workspace's port.",
+          "markdownDescription": "The port on 127.0.0.1 a workspace's kdb MCP server tries first. If it's taken, the server picks another, and the workspace keeps using that port from then on. Set this in a workspace's settings to always use a specific port for that workspace.",
           "scope": "window"
         }
       }

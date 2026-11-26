@@ -57,7 +57,7 @@ function withTimeout<T>(promise: Promise<T>, seconds: number): Promise<T> {
 // busy, with nothing offered.
 function warnTimedOut(connectionName: string, seconds: number): void {
   notify(
-    `An agent's query on '${connectionName}' exceeded its configured ${seconds}-second execution budget, and q did not respond within the additional ${TIMEOUT_GRACE_MS / 1000}-second grace period. q did not confirm that execution stopped, so the query may still be running, and queries on this connection wait until it finishes.`,
+    `An agent's query on '${connectionName}' ran past the ${seconds}-second MCP query timeout and may still be running in q. Other queries on this connection will wait until it finishes.`,
     MessageKind.WARNING,
     { logger },
   );
