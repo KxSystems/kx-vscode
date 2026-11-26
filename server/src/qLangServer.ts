@@ -517,12 +517,14 @@ export default class QLangServer {
     line,
     anonymous,
     column,
+    body,
   }: LambdaPathParams) {
     return (
       (await this.getStructure(path))?.lambdaPath(
         line,
         anonymous === true,
         column,
+        body === true,
       ) ?? null
     );
   }

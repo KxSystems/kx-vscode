@@ -458,6 +458,38 @@ export class Structure {
     return undefined;
   }
 
+  private headedBy(idx: number) {
+    return this.lambdas.find((range) => {
+      if (range.open === idx) {
+        return true;
+      }
+      const params = this.skipWhiteSpace(range.open + 1);
+      if (params > idx || !this.is(this.units[params], LBracket)) {
+        return false;
+      }
+      const group = this.groups.find((g) => g.open === params);
+      return !!group && idx <= group.close;
+    });
+  }
+
+  private bodyAtLine(line: number) {
+    const units = this.unitsOnLine(line);
+    const code = units.filter((idx) => !this.units[idx].trivia);
+    for (const idx of code.length > 0 ? code : units) {
+      const header = this.headedBy(idx);
+      const home = this.innermost(
+        header
+          ? this.lambdas.filter((range) => range !== header)
+          : this.lambdas,
+        idx,
+      );
+      if (home) {
+        return home;
+      }
+    }
+    return undefined;
+  }
+
   private statement(first: number, last: number) {
     const head = this.units[first];
     const tail = this.units[last];
@@ -595,11 +627,14 @@ export class Structure {
     line: number,
     anonymous = false,
     column?: number,
+    body = false,
   ): LambdaPath | null {
     const home =
-      column === undefined
-        ? this.lambdaAtLine(line)
-        : this.executing(this.unitAt(line, column));
+      column !== undefined
+        ? this.executing(this.unitAt(line, column))
+        : body
+          ? this.bodyAtLine(line)
+          : this.lambdaAtLine(line);
     return home ? this.pathOf(home, anonymous) : null;
   }
 

@@ -137,6 +137,38 @@ describe("Structure", () => {
     });
   });
 
+  describe("breakpoint lookups", () => {
+    const text =
+      "display:{\n    -1 string x\n    };\nf:{[x] x+1}\ng:{[a;b]\n  {\n    a+b}[]\n  }\n{[y]\n  y}[1]";
+    const structure = new Structure(text);
+    const body = (line: number) =>
+      structure.lambdaPath(line, true, undefined, true);
+
+    it("leaves a line that only opens a lambda at the top level", () => {
+      assert.strictEqual(body(0), null);
+      assert.strictEqual(body(4), null);
+      assert.strictEqual(body(8), null);
+      assert.strictEqual(structure.lambdaPath(0)?.name, "display");
+    });
+
+    it("keeps a line with code in its lambda", () => {
+      assert.strictEqual(body(1)?.name, "display");
+      assert.strictEqual(body(2)?.name, "display");
+      assert.deepStrictEqual(body(3), {
+        name: "f",
+        path: [],
+        startLine: 3,
+        rootLine: 3,
+      });
+      assert.strictEqual(body(9)?.rootColumn, 0);
+    });
+
+    it("gives the line that opens a nested lambda to its parent", () => {
+      assert.deepStrictEqual(body(5)?.path, []);
+      assert.deepStrictEqual(body(6)?.path, [0]);
+    });
+  });
+
   describe("column aware lookups", () => {
     const text = "foo:{\n    {\n        x*2\n        } each til 3\n    }";
 

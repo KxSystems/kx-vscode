@@ -719,6 +719,14 @@ describe("qLangServer", () => {
         await server.onLambdaPath({ path, line: 13, anonymous: true }),
         { name: "", path: [], startLine: 13, rootLine: 13, rootColumn: 5 },
       );
+      assert.strictEqual(
+        await server.onLambdaPath({ path, line: 15, body: true }),
+        null,
+      );
+      assert.deepStrictEqual(
+        await server.onLambdaPath({ path, line: 16, body: true }),
+        { name: "w", path: [], startLine: 15, rootLine: 15 },
+      );
     });
 
     it("should reuse the analysis while the file is unchanged", async () => {

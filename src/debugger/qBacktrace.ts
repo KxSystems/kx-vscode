@@ -39,6 +39,75 @@ export function isCaretLine(line: string): boolean {
   return CARET_RE.test(line);
 }
 
+export const TRAP_MARKER = "#0";
+
+export function isTrapMarker(line: string | undefined): boolean {
+  return line?.trimEnd() === TRAP_MARKER;
+}
+
+const MAX_LINES_BEFORE_CARET = 2;
+
+const MAX_LINES_AFTER_CARET = 1;
+
+function isFrameBlockPrefix(lines: string[]): boolean {
+  if (lines.some((line) => SUSPEND_MARKER_RE.test(line))) return false;
+  const caret = lines.findIndex(isCaretLine);
+  if (caret < 0) return lines.length <= MAX_LINES_BEFORE_CARET;
+  return (
+    caret <= MAX_LINES_BEFORE_CARET &&
+    lines.length - caret - 1 <= MAX_LINES_AFTER_CARET
+  );
+}
+
+function isFramesPrefix(lines: string[], backtrace: boolean): boolean {
+  let blocks = 0;
+  let i = 0;
+  while (i < lines.length) {
+    if (!FRAME_LINE_RE.test(lines[i])) return false;
+    if (blocks++ > 0 && !backtrace) return false;
+    let next = i + 1;
+    while (next < lines.length && !FRAME_LINE_RE.test(lines[next])) next++;
+    if (!isFrameBlockPrefix(lines.slice(i + 1, next))) return false;
+    i = next;
+  }
+  return true;
+}
+
+function isErrorLine(line: string | undefined): boolean {
+  return line?.startsWith("'") ?? false;
+}
+
+export function bannerStart(lines: string[], previous?: string): number {
+  for (let start = 0; start < lines.length; start++) {
+    if (
+      isTrapMarker(lines[start]) &&
+      isFramesPrefix(lines.slice(start + 1), false)
+    ) {
+      return start;
+    }
+    const before = start > 0 ? lines[start - 1] : previous;
+    if (isFramesPrefix(lines.slice(start), isErrorLine(before))) return start;
+  }
+  return lines.length;
+}
+
+export interface SuspendBanner {
+  lines: string[];
+
+  marker?: string;
+}
+
+export function suspendBanner(output: string): SuspendBanner | undefined {
+  const lines = output.split("\n");
+  while (lines.length > 0 && lines[lines.length - 1].trim() === "") {
+    lines.pop();
+  }
+  const start = bannerStart(lines);
+  const frame = isTrapMarker(lines[start]) ? start + 1 : start;
+  if (frame >= lines.length) return undefined;
+  return { lines: lines.slice(frame), marker: lines[frame - 1] };
+}
+
 const FUNC_NAME_RE = /^([.\w]+)[@:]/;
 
 export function funcName(text: string): string | undefined {

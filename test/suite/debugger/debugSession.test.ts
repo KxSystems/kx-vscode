@@ -30,6 +30,7 @@ import {
 import {
   FRAME_LINE_RE,
   SUSPEND_MARKER_RE,
+  TRAP_MARKER,
 } from "../../../src/debugger/qBacktrace";
 
 const GLOBALS_VAR_REF = 999;
@@ -78,6 +79,11 @@ const TABLE_VALUE_FIXTURE = fixture("tableValue.q");
 const STEP_IN_MARKER_FIXTURE = fixture("stepInMarker.q");
 const CONSOLE_ABORT_FIXTURE = fixture("consoleAbort.q");
 const ITERATOR_BREAK_FIXTURE = fixture("iteratorBreak.q");
+const EACH_DISPLAY_FIXTURE = fixture("eachDisplay.q");
+const TRAP_CALLER_FIXTURE = fixture("trapCaller.q");
+const TOP_TRAP_CALLER_FIXTURE = fixture("topTrapCaller.q");
+const PRINTED_MARKER_FIXTURE = fixture("printedMarker.q");
+const PRINTED_TRAP_FIXTURE = fixture("printedTrap.q");
 
 interface StackFrame {
   id: number;
@@ -140,6 +146,24 @@ async function step(
   const from = client.events.length;
   await client.request(command, { threadId });
   return settle(client, from);
+}
+
+async function stopsWithLocals(
+  client: DapClient,
+  command: string,
+  threadId: number,
+): Promise<string[]> {
+  const stops: string[] = [];
+  for (let guard = 0; guard < 20; guard++) {
+    const [frame] = await stackFrames(client, threadId);
+    const locals =
+      frame.name === "<top level>"
+        ? []
+        : (await localsOf(client, frame.id)).map((v) => `${v.name}=${v.value}`);
+    stops.push([`${frame.name}:${frame.line}`, ...locals].join(" "));
+    if ((await step(client, command, threadId)) !== "stopped") break;
+  }
+  return stops;
 }
 
 async function stopsWhileStepping(
@@ -887,9 +911,11 @@ describe("QDebugSession", function () {
   it("arms a breakpoint added mid-session in a not-yet-called function, and hits it on continue", async () => {
     const client = DapClient.start();
     try {
-      const threadId = await launch(client, MID_SESSION_BREAKPOINT_FIXTURE, [
-        4,
-      ]);
+      const threadId = await launch(
+        client,
+        MID_SESSION_BREAKPOINT_FIXTURE,
+        [4],
+      );
       let frames = await stackFrames(client, threadId);
       assert.strictEqual(frames[0].name, "a");
       assert.strictEqual(frames[0].line, 4);
@@ -1894,6 +1920,227 @@ describe("QDebugSession", function () {
         await next.request("disconnect", {});
       } finally {
         next.close();
+      }
+    });
+  });
+
+  describe("KXI-75331", () => {
+    it("stops at a breakpoint on the line that opens a function definition", async () => {
+      const client = DapClient.start();
+      try {
+        const threadId = await launch(client, EACH_DISPLAY_FIXTURE, [1]);
+        assert.deepStrictEqual(
+          await stopsWithLocals(client, "continue", threadId),
+          ["<top level>:1"],
+        );
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
+      }
+    });
+
+    it("stops at the definition, then in the body of the function", async () => {
+      const client = DapClient.start();
+      try {
+        const threadId = await launch(client, EACH_DISPLAY_FIXTURE, [1, 2]);
+        assert.deepStrictEqual(
+          await stopsWithLocals(client, "continue", threadId),
+          [
+            "<top level>:1",
+            "display:2 x=10",
+            "display:2 x=20",
+            "display:2 x=30",
+            "display:2 x=40",
+          ],
+        );
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
+      }
+    });
+  });
+
+  describe("KXI-75332", () => {
+    for (const command of ["continue", "next", "stepIn", "stepOut"]) {
+      it(`stops on every call through each after ${command}`, async () => {
+        const client = DapClient.start();
+        try {
+          const threadId = await launch(client, EACH_DISPLAY_FIXTURE, [2]);
+          assert.deepStrictEqual(
+            await stopsWithLocals(client, command, threadId),
+            [
+              "display:2 x=10",
+              "display:2 x=20",
+              "display:2 x=30",
+              "display:2 x=40",
+            ],
+          );
+          await client.request("disconnect", {});
+        } finally {
+          client.close();
+        }
+      });
+    }
+
+    for (const breakpoints of [[4], [4, 2], [1, 2]]) {
+      it(`steps into every call through each with breakpoints on ${breakpoints}`, async () => {
+        const client = DapClient.start();
+        try {
+          const threadId = await launch(
+            client,
+            EACH_DISPLAY_FIXTURE,
+            breakpoints,
+          );
+          const stops = await stopsWithLocals(client, "stepIn", threadId);
+          assert.deepStrictEqual(stops.slice(-5), [
+            "<top level>:4",
+            "display:2 x=10",
+            "display:2 x=20",
+            "display:2 x=30",
+            "display:2 x=40",
+          ]);
+          const q = getOrCreateDebugTerminal(FIXTURES).process;
+          assert.strictEqual(q.exited, false);
+          await client.request("disconnect", {});
+        } finally {
+          client.close();
+        }
+      });
+    }
+  });
+
+  describe("stepping through a call that has a breakpoint", () => {
+    async function where(client: DapClient, threadId: number) {
+      const [frame] = await stackFrames(client, threadId);
+      return `${frame.name}:${frame.line}`;
+    }
+
+    it("steps over the call when it misses its breakpoint", async () => {
+      const client = DapClient.start();
+      try {
+        const threadId = await launch(client, TRAP_CALLER_FIXTURE, [3, 6]);
+        assert.strictEqual(await where(client, threadId), "small:6");
+        assert.strictEqual(await step(client, "next", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "small:7");
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
+      }
+    });
+
+    it("steps in to the first line of the call, then runs on to its breakpoint", async () => {
+      const client = DapClient.start();
+      try {
+        const threadId = await launch(client, TRAP_CALLER_FIXTURE, [3, 10]);
+        assert.strictEqual(await where(client, threadId), "big:10");
+        assert.strictEqual(await step(client, "stepIn", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "calc:2");
+        assert.strictEqual(await step(client, "continue", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "calc:3");
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
+      }
+    });
+
+    it("steps in from the top level to the first line of a call with a breakpoint", async () => {
+      const client = DapClient.start();
+      try {
+        const threadId = await launch(client, TOP_TRAP_CALLER_FIXTURE, [3, 5]);
+        assert.strictEqual(await where(client, threadId), "<top level>:5");
+        assert.strictEqual(await step(client, "stepIn", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "calc:2");
+        assert.strictEqual(await step(client, "continue", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "calc:3");
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
+      }
+    });
+
+    it("steps in from the top level to a call that misses its breakpoint", async () => {
+      const client = DapClient.start();
+      try {
+        const threadId = await launch(client, TOP_TRAP_CALLER_FIXTURE, [3, 6]);
+        assert.strictEqual(await where(client, threadId), "calc:3");
+        assert.strictEqual(await step(client, "continue", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "<top level>:6");
+        assert.strictEqual(await step(client, "stepIn", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "calc:2");
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
+      }
+    });
+
+    it("steps over a call that prints the trap marker", async () => {
+      const client = DapClient.start();
+      try {
+        const terminal = getOrCreateDebugTerminal(FIXTURES).terminal;
+        const threadId = await launch(client, PRINTED_TRAP_FIXTURE, [5]);
+        assert.strictEqual(await where(client, threadId), "caller:5");
+        const before = terminals.outputOf(terminal).length;
+        assert.strictEqual(await step(client, "next", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "caller:6");
+        const out = terminals
+          .outputOf(terminal)
+          .slice(before)
+          .replace(/\r/g, "")
+          .split("\n");
+        assert.ok(out.includes(TRAP_MARKER), out.join("\n"));
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
+      }
+    });
+
+    it("prints lines shaped like a trap while stepping through them", async () => {
+      const client = DapClient.start();
+      try {
+        const terminal = getOrCreateDebugTerminal(FIXTURES).terminal;
+        const threadId = await launch(client, PRINTED_MARKER_FIXTURE, [9]);
+        const before = terminals.outputOf(terminal).length;
+        const stops = await stopsWhileStepping(client, "stepIn", threadId);
+        assert.deepStrictEqual(stops.slice(0, 4), [
+          "<top level>:9",
+          "caller:7",
+          "printer:2",
+          "printer:3",
+        ]);
+        const out = terminals
+          .outputOf(terminal)
+          .slice(before)
+          .replace(/\r/g, "")
+          .split("\n");
+        assert.ok(out.includes("#3"), out.join("\n"));
+        assert.ok(out.includes("  [1]  printed, not a frame"), out.join("\n"));
+        assert.ok(out.includes("done"), out.join("\n"));
+      } finally {
+        client.close();
+      }
+    });
+
+    it("steps over a call that prints lines shaped like a trap", async () => {
+      const client = DapClient.start();
+      try {
+        const terminal = getOrCreateDebugTerminal(FIXTURES).terminal;
+        const threadId = await launch(client, PRINTED_MARKER_FIXTURE, [9]);
+        const before = terminals.outputOf(terminal).length;
+        assert.strictEqual(await step(client, "stepIn", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "caller:7");
+        assert.strictEqual(await step(client, "next", threadId), "stopped");
+        assert.strictEqual(await where(client, threadId), "caller:8");
+        const out = terminals
+          .outputOf(terminal)
+          .slice(before)
+          .replace(/\r/g, "")
+          .split("\n");
+        assert.ok(out.includes("#3"), out.join("\n"));
+        assert.ok(out.includes("  [1]  printed, not a frame"), out.join("\n"));
+        assert.ok(!out.includes(TRAP_MARKER), out.join("\n"));
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
       }
     });
   });

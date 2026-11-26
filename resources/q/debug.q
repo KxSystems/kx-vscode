@@ -92,9 +92,17 @@
   if[(3=count p) and (type h) within 100 112h; if[":"=last string h; :0b]];
   1b };
 
-.dbg.pc:{
+.dbg.frame:{
   fs:.Q.btx .Q.Ll`;
   i:1+first where {".Q.dbg"~x[1;0]} each fs;
-  v:$[i<count fs; fs[i;0]; ()];
+  (fs; i; $[i<count fs; fs[i;0]; ()]) };
+
+.dbg.pc:{
+  f:.dbg.frame[]; fs:f 0; i:f 1; v:f 2;
   .dbg.out $[2=count v; (v 1; $[100h=type v 0; count first value v 0; -1]; count[fs]-i; fs[i;2]); -1 -1 -1 0];
+  };
+
+.dbg.atTrap:{
+  v:.dbg.frame[] 2;
+  .dbg.out $[(2=count v) and 100h=type v 0; 0xff=(first value v 0) v 1; 0b];
   };

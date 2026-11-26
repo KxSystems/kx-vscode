@@ -15,7 +15,7 @@ import * as cp from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 
-import { FRAME_LINE_RE, SUSPEND_MARKER_RE } from "./qBacktrace";
+import { SUSPEND_MARKER_RE, suspendBanner } from "./qBacktrace";
 
 const Q_PIPE_ENV = { KX_TTY: "1", KX_LINE: "0" };
 
@@ -34,11 +34,12 @@ function stopOf(line: string): { kind: StopReason; signal?: string } {
 function findStopMarker(
   output: string,
 ): { kind: StopReason; signal?: string } | undefined {
-  const lines = output.split("\n");
-  for (let i = 0; i < lines.length - 1; i++) {
-    const line = lines[i];
-    if (!(line.startsWith("'") || SUSPEND_MARKER_RE.test(line))) continue;
-    if (FRAME_LINE_RE.test(lines[i + 1])) return stopOf(line);
+  const marker = suspendBanner(output)?.marker;
+  if (
+    marker !== undefined &&
+    (marker.startsWith("'") || SUSPEND_MARKER_RE.test(marker))
+  ) {
+    return stopOf(marker);
   }
   const first = output.trimStart().split("\n", 1)[0];
   if (first.startsWith("'")) return stopOf(first);
