@@ -363,12 +363,13 @@ describe("kdb MCP server", () => {
       }
     });
 
-    it("offers the agent config once, on a workspace's first start", async () => {
+    it("says the server is running once per window, with the agent config", async () => {
       await kdbMcpServer.stop();
+      (kdbMcpServer as unknown as { toldRunning: boolean }).toldRunning = false;
 
       assert.strictEqual(await kdbMcpServer.start(true), true);
 
-      assert.ok(said(new RegExp(`is on port ${port}\\.`)));
+      assert.ok(said(new RegExp(`is running on port ${port}\\.`)));
     });
   });
 

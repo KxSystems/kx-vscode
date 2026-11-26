@@ -127,8 +127,10 @@ start its own.
 
 - The first time a workspace's server starts, it uses `kdb.mcp.port` (default
   `7464`). The port is then saved for the workspace, on this machine only; it
-  never appears in `.vscode/settings.json`. That first start also offers **Copy
-  MCP config**.
+  never appears in `.vscode/settings.json`.
+- The first time the server starts in a window, a notification says which port
+  it's running on and offers **Generate MCP config**. Later starts in that
+  window, after you disconnect and reconnect, don't show it again.
 - If the default is held by another workspace's saved port, or by another
   program, a notification says what holds it and offers **Use port N**, **Choose
   port…** or **Don't start**. Suggested ports start 10 above the taken one, to

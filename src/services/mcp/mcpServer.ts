@@ -36,7 +36,6 @@ import {
   MCP_HOST,
   McpHealth,
   probeHealth,
-  getPortClaims,
   keyHash,
   savePortClaim,
   workspaceKey,
@@ -68,6 +67,9 @@ class KdbMcpServer implements Disposable {
   // The user picked Don't start; cleared by an explicit action
   private declined = false;
   private toldSessionOnly = false;
+  // Said once per window session that the server is running; later starts
+  // only log it
+  private toldRunning = false;
   // Said once per window session that another window holds the port; later
   // connects only log it
   private toldOtherWindow = false;
@@ -175,6 +177,9 @@ class KdbMcpServer implements Disposable {
     if (cancelled() || this.declined) {
       return false;
     }
+    // Load the token before serving: until it is, definition() offers Copilot
+    // nothing and every request is refused as unauthorized
+    await this.getToken();
     const key = workspaceKey();
     const choice = choosePort();
     let port = choice.port;
@@ -238,12 +243,7 @@ class KdbMcpServer implements Disposable {
 
     this.port = port;
     if (key && choice.source !== "setting") {
-      // No saved port until now: the first start for this workspace
-      const firstStart = getPortClaims()[key] === undefined;
       await savePortClaim(key, port);
-      if (firstStart) {
-        this.offerConfig(port);
-      }
     } else if (!key && !this.toldSessionOnly) {
       this.toldSessionOnly = true;
       notify(
@@ -252,9 +252,13 @@ class KdbMcpServer implements Disposable {
         { logger },
       );
     }
+    // Said once per window session; the port-moved message names the port too
     if (choice.source === "saved" && port !== choice.port) {
       void this.tellPortMoved(choice.port, port);
+    } else if (!this.toldRunning) {
+      this.tellRunning(port);
     }
+    this.toldRunning = true;
     notify(
       `MCP server listening on http://${MCP_HOST}:${port}/mcp for workspace '${workspaceName()}'`,
       MessageKind.DEBUG,
@@ -265,10 +269,10 @@ class KdbMcpServer implements Disposable {
   }
 
   // Codex and Claude Code need the port in their configs, which Copilot doesn't
-  private offerConfig(port: number): void {
+  private tellRunning(port: number): void {
     const copy = "Generate MCP config";
     void notify(
-      `The kdb MCP server for this workspace is on port ${port}. Generate the MCP config to connect Codex or Claude Code to it.`,
+      `kdb MCP server is running on port ${port}. AI agents can now connect.`,
       MessageKind.INFO,
       { logger },
       copy,
