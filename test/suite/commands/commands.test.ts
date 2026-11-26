@@ -54,10 +54,6 @@ describe("Commands", () => {
         "kdb.createNotebook",
         "kdb.query.create",
         "kdb.query.convert",
-        "kdb.mcp.removeAllAccess",
-        "kdb.mcp.generateConfig",
-        "kdb.mcp.showServers",
-        "kdb.mcp.regenerateToken",
       ];
       const shown = palette.filter((cmd: any) => cmd.when === "true");
       assert.strictEqual(shown.length, visible.length);
@@ -80,6 +76,10 @@ describe("Commands", () => {
         "kdb.notebook.rowLimit",
         "kdb.notebook.rowLimitFrom.first",
         "kdb.debugFile",
+        "kdb.mcp.removeAllAccess",
+        "kdb.mcp.generateConfig",
+        "kdb.mcp.showServers",
+        "kdb.mcp.regenerateToken",
       ];
       const shown = palette.filter(
         (cmd: any) => cmd.when !== "true" && cmd.when !== "false",
