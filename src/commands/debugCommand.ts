@@ -58,6 +58,39 @@ export async function debugFile(uri?: vscode.Uri) {
   );
 }
 
+interface DebugValueContext {
+  sessionId?: string;
+  variable?: { value?: string; evaluateName?: string };
+}
+
+export async function showValueInConsole(context?: DebugValueContext) {
+  const variable = context?.variable;
+  const session =
+    activeSessions.get(context?.sessionId ?? "") ??
+    vscode.debug.activeDebugSession;
+  if (!variable || session?.type !== DEBUG_TYPE) return;
+  let text = variable.value ?? "";
+  if (variable.evaluateName) {
+    const item = vscode.debug.activeStackItem;
+    const frameId =
+      item instanceof vscode.DebugStackFrame && item.session.id === session.id
+        ? item.frameId
+        : undefined;
+    text = await session
+      .customRequest("evaluate", {
+        expression: variable.evaluateName,
+        frameId,
+        context: "clipboard",
+      })
+      .then(
+        (reply: { result?: string }) => reply.result ?? text,
+        () => text,
+      );
+  }
+  vscode.debug.activeDebugConsole.appendLine(text);
+  await vscode.commands.executeCommand("workbench.debug.action.focusRepl");
+}
+
 async function stopRunningSessions(
   configuration: vscode.DebugConfiguration,
 ): Promise<boolean> {

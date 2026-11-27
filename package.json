@@ -591,6 +591,10 @@
         "command": "kdb.debugFile",
         "title": "KX: Debug File",
         "icon": "$(debug-alt)"
+      },
+      {
+        "command": "kdb.debug.showValue",
+        "title": "Show Value in Debug Console"
       }
     ],
     "keybindings": [
@@ -1079,6 +1083,24 @@
         {
           "command": "kdb.debugFile",
           "when": "resourceFilename =~ /\\.q$/i"
+        },
+        {
+          "command": "kdb.debug.showValue",
+          "when": "false"
+        }
+      ],
+      "debug/variables/context": [
+        {
+          "command": "kdb.debug.showValue",
+          "group": "5_cutcopypaste@100",
+          "when": "debugType == 'q'"
+        }
+      ],
+      "debug/watch/context": [
+        {
+          "command": "kdb.debug.showValue",
+          "group": "5_cutcopypaste@100",
+          "when": "debugType == 'q'"
         }
       ],
       "webview/context": [

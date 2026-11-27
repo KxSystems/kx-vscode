@@ -5,7 +5,7 @@ description:
   Command palette entries, keybindings, settings, execution matrix and telemetry
   events for the kdb VS Code extension.
 tags: [kdb, vscode, reference, keybindings, settings, telemetry]
-timestamp: 2026-11-06
+timestamp: 2026-11-26
 ---
 
 ## Command Palette
@@ -84,6 +84,18 @@ cursor. Several lines are shown under the prompt and held: `RETURN` runs them,
 `ctrl`+`c` discards them (and stops a running query), and a further paste adds
 to them. Whether a right click pastes is VS Code's
 `terminal.integrated.rightClickBehavior` setting.
+
+### Debugging
+
+While a q debug session is paused, the Variables and Watch views show each value
+on one line as q writes it, with the lines of a function joined, ending in `..`
+when q cuts it short. A value that does not fit on one line expands into the
+numbered lines q displays it with. **Copy Value** copies those lines, or a
+single line, and **Show Value in Debug Console** on the right-click menu prints
+them in the Debug Console. Expanding or copying a value never runs its
+expression again: both use the value read when it was shown. Copying anything
+else, such as an assignment in the Watch view or a result in the Debug Console,
+copies the text shown.
 
 ## Settings
 

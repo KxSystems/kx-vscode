@@ -61,6 +61,8 @@ const VAR_REF_BASE = 1000;
 
 const GLOBALS_VAR_REF = 999;
 
+const VALUE_REF_BASE = 100000;
+
 const MAX_STEPS = 100000;
 
 const MAX_FRAME_MOVES = 128;
@@ -100,6 +102,65 @@ function isSafeLookup(expression: string): boolean {
 
 const CAPTURE = ".dbg.v::(";
 const NAMESPACE_PROBE = '.dbg.ns:string system"d"';
+
+function isConsoleCommand(text: string): boolean {
+  return text.endsWith(";") || text.startsWith("\\") || /^[kps]\)/.test(text);
+}
+
+function withoutComment(text: string): string {
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === "\\") i++;
+      else if (c === '"') quoted = false;
+    } else if (c === '"') {
+      quoted = true;
+    } else if (c === "/" && (i === 0 || /\s/.test(text[i - 1]))) {
+      return text.slice(0, i).trimEnd();
+    }
+  }
+  return text;
+}
+
+type ValueView = [string, number];
+
+function isValueView(value: unknown): value is ValueView {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === "string" &&
+    Number.isInteger(value[1])
+  );
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === "string");
+}
+
+function lastJson(output: string): unknown {
+  const lines = output.trimEnd().split("\n");
+  try {
+    return JSON.parse(lines[lines.length - 1]);
+  } catch {
+    return undefined;
+  }
+}
+
+function errorLine(output: string): string {
+  const lines = output.trim().split("\n");
+  return lines.find((line) => line.trimStart().startsWith("'")) ?? lines[0];
+}
+
+interface ShownValue {
+  line: string;
+  ref: number;
+}
+
+interface EvaluateBody {
+  result: string;
+  variablesReference: number;
+}
 
 function qText(value: string): string {
   return `(),"${value
@@ -219,10 +280,6 @@ function dbgCall(fn: string, target: QLambdaTarget): string {
 
 function errText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
-}
-
-function formatValue(v: unknown): string {
-  return typeof v === "string" ? v : JSON.stringify(v);
 }
 
 function couldBeSuspendPrefix(text: string): boolean {
@@ -445,6 +502,10 @@ class QDebugSession extends DebugSession {
 
   private pendingValue = false;
 
+  private valueGeneration = 0;
+  private readonly heldValues = new Set<number>();
+  private readonly shownValues = new Map<string, ShownValue>();
+
   private readonly anonAliases = new Map<string, string>();
   private readonly capturedFiles = new Set<string>();
   private anonSeq = 0;
@@ -467,6 +528,7 @@ class QDebugSession extends DebugSession {
     response.body = response.body ?? {};
     response.body.supportsConfigurationDoneRequest = true;
     response.body.supportsEvaluateForHovers = true;
+    response.body.supportsClipboardContext = true;
     response.body.supportsTerminateRequest = true;
 
     response.body.supportsExceptionInfoRequest = true;
@@ -689,6 +751,17 @@ class QDebugSession extends DebugSession {
     response: DebugProtocol.VariablesResponse,
     args: DebugProtocol.VariablesArguments,
   ): Promise<void> {
+    if (this.heldValues.has(args.variablesReference)) {
+      const ref = args.variablesReference;
+      const lines = (await this.settle(() => this.heldLines(ref))) ?? [];
+      response.body = {
+        variables: lines.map(
+          (line, index) => new Variable(String(index), line),
+        ),
+      };
+      this.sendResponse(response);
+      return;
+    }
     if (args.variablesReference === GLOBALS_VAR_REF) {
       const variables =
         (await this.settle(async () => {
@@ -709,7 +782,7 @@ class QDebugSession extends DebugSession {
           const names = await this.localNamesForFrame(frame);
           if (names.length === 0) return [];
           await this.navigateTo(frameIndex);
-          return this.readValues(names);
+          return this.readValues(names, frameIndex);
         })) ?? [];
     }
     response.body = { variables };
@@ -728,6 +801,22 @@ class QDebugSession extends DebugSession {
     args: DebugProtocol.EvaluateArguments,
   ): Promise<void> {
     const expression = args.expression.trim();
+    if (args.context === "clipboard") {
+      const copied = await this.settle(() =>
+        this.copiedValue(expression, args.frameId),
+      );
+      if (copied === undefined) {
+        this.sendErrorResponse(response, {
+          id: 1002,
+          format: "Cannot copy this expression.",
+        });
+        return;
+      }
+      response.body = { result: copied, variablesReference: 0 };
+      this.sendResponse(response);
+      return;
+    }
+
     if (expression.length === 0) {
       response.body = { result: "", variablesReference: 0 };
       this.sendResponse(response);
@@ -735,35 +824,30 @@ class QDebugSession extends DebugSession {
     }
 
     if (args.context === "hover") {
-      const value = isSafeLookup(expression)
+      const variable = isSafeLookup(expression)
         ? await this.settle(() => this.hoverValue(expression, args.frameId))
         : undefined;
-      response.body = { result: value ?? "", variablesReference: 0 };
+      response.body = {
+        result: variable?.value ?? "",
+        variablesReference: variable?.variablesReference ?? 0,
+      };
       this.sendResponse(response);
       return;
     }
 
     const topLevel = this.topLevelPaused !== undefined;
-    const res =
+    const body =
       topLevel || this.driver?.suspended
-        ? await this.settle(async () => {
-            if (!topLevel) {
-              if (!this.driver?.suspended) return undefined;
-              if (args.frameId !== undefined) {
-                await this.navigateTo(args.frameId);
-              }
-            }
-            return this.evaluateLines(expression);
-          })
+        ? await this.settle(() => this.evaluateBody(expression, args))
         : undefined;
-    if (res === undefined) {
+    if (body === undefined) {
       this.sendErrorResponse(response, {
         id: 1002,
         format: "Not paused: cannot evaluate.",
       });
       return;
     }
-    response.body = { result: res.output.trim(), variablesReference: 0 };
+    response.body = body;
     this.sendResponse(response);
 
     if (!topLevel && !this.driver?.suspended && !this.topLevelPaused) {
@@ -1003,6 +1087,7 @@ class QDebugSession extends DebugSession {
   ): void {
     this.topLevelPaused = stmt;
     this.currentFrames = [];
+    this.forgetValues();
     this.qCurrentIndex = 0;
     this.currentMarker = { line: stmt.startLine, col: stmt.startColumn };
 
@@ -1167,9 +1252,7 @@ class QDebugSession extends DebugSession {
 
   private async capturesValue(statement: string): Promise<boolean> {
     const text = statement.trimEnd();
-    if (text.endsWith(";") || text.startsWith("\\") || /^[kps]\)/.test(text)) {
-      return false;
-    }
+    if (isConsoleCommand(text)) return false;
     const res = await this.evaluate(`.dbg.wraps ${qText(text)}`);
     return !res.errored && res.output.trim() === "1b";
   }
@@ -1631,6 +1714,7 @@ class QDebugSession extends DebugSession {
     const allFrames = parseBacktrace(trace);
 
     this.currentFrames = allFrames.filter((f) => !this.isTempLoaderFrame(f));
+    this.forgetValues();
     this.qCurrentIndex =
       this.currentFrames.find((f) => f.current)?.index ??
       this.currentFrames[0]?.index ??
@@ -1880,22 +1964,136 @@ class QDebugSession extends DebugSession {
     return name ? { name, descentPath: [] } : undefined;
   }
 
-  private async readValues(names: string[]): Promise<DebugProtocol.Variable[]> {
+  private async readValues(
+    names: string[],
+    frameId?: number,
+  ): Promise<DebugProtocol.Variable[]> {
     if (names.length === 0) return [];
-    const expr = `.dbg.vals[(${qSymbolVector(names)})!(${qIdentVector(names)})]`;
+    const gen = this.valueGeneration;
+    const expr = `.dbg.vals[${gen};(${qSymbolVector(names)})!(${qIdentVector(names)})]`;
     const values = (await this.evaluateJson(expr)) as
       Record<string, unknown> | undefined;
     if (values) {
-      return names.map((name) => new Variable(name, formatValue(values[name])));
+      return names.map((name) => this.variableOf(name, values[name], frameId));
     }
     const variables: DebugProtocol.Variable[] = [];
     for (const name of names) {
-      const r = await this.evaluate(name);
-      variables.push(
-        new Variable(name, r.errored ? "<error>" : r.output.trim()),
-      );
+      const view = await this.evaluateJson(`.dbg.show[${gen};${name}]`);
+      variables.push(this.variableOf(name, view, frameId));
     }
     return variables;
+  }
+
+  private variableOf(
+    name: string,
+    view: unknown,
+    frameId: number | undefined,
+  ): DebugProtocol.Variable {
+    let variable: DebugProtocol.Variable;
+    if (isValueView(view)) {
+      const ref = this.showValue(frameId, name, view);
+      variable = new Variable(name, view[0], ref);
+    } else {
+      variable = new Variable(name, "<error>");
+    }
+    variable.evaluateName = name;
+    return variable;
+  }
+
+  private shownKey(frameId: number | undefined, expression: string): string {
+    const frame = this.topLevelPaused ? "top" : String(frameId);
+    return `${frame} ${expression}`;
+  }
+
+  private showValue(
+    frameId: number | undefined,
+    expression: string,
+    view: ValueView,
+  ): number {
+    const ref = view[1] > 0 ? VALUE_REF_BASE + view[1] : 0;
+    if (ref) this.heldValues.add(ref);
+    this.shownValues.set(this.shownKey(frameId, expression), {
+      line: view[0],
+      ref,
+    });
+    return ref;
+  }
+
+  private forgetValues(): void {
+    this.valueGeneration++;
+    this.heldValues.clear();
+    this.shownValues.clear();
+  }
+
+  private async enterFrame(frameId: number | undefined): Promise<boolean> {
+    if (this.topLevelPaused) return true;
+    if (!this.driver?.suspended) return false;
+    if (frameId !== undefined) await this.navigateTo(frameId);
+    return true;
+  }
+
+  private async heldLines(ref: number): Promise<string[]> {
+    if (!this.topLevelPaused && !this.driver?.suspended) return [];
+    const index = ref - VALUE_REF_BASE;
+    const lines = await this.evaluateJson(
+      `.dbg.rows[${this.valueGeneration};${index}]`,
+    );
+    return isStringArray(lines) ? lines : [];
+  }
+
+  private async copiedValue(
+    expression: string,
+    frameId: number | undefined,
+  ): Promise<string | undefined> {
+    const shown = this.shownValues.get(this.shownKey(frameId, expression));
+    if (!shown) return undefined;
+    if (!shown.ref) return shown.line;
+    const lines = await this.heldLines(shown.ref);
+    return lines.length > 0 ? lines.join("\n") : undefined;
+  }
+
+  private async evaluateBody(
+    expression: string,
+    args: DebugProtocol.EvaluateArguments,
+  ): Promise<EvaluateBody | undefined> {
+    if (!(await this.enterFrame(args.frameId))) return undefined;
+    const watched =
+      args.context === "watch"
+        ? await this.watchValue(expression, args.frameId)
+        : undefined;
+    return (
+      watched ?? {
+        result: (await this.evaluateLines(expression)).output.trim(),
+        variablesReference: 0,
+      }
+    );
+  }
+
+  private async watchable(text: string): Promise<boolean> {
+    if (text === "" || text.includes("\n") || isConsoleCommand(text)) {
+      return false;
+    }
+    const res = await this.evaluate(`.dbg.watchable ${qText(text)}`);
+    return !res.errored && res.output.trim() === "1b";
+  }
+
+  private async watchValue(
+    expression: string,
+    frameId: number | undefined,
+  ): Promise<EvaluateBody | undefined> {
+    const text = withoutComment(expression);
+    if (!(await this.watchable(text))) return undefined;
+    const res = await this.evaluate(
+      `.dbg.show[${this.valueGeneration};(${text})]`,
+    );
+    const view = res.errored ? undefined : lastJson(res.output);
+    if (!isValueView(view)) {
+      return { result: errorLine(res.output), variablesReference: 0 };
+    }
+    return {
+      result: view[0],
+      variablesReference: this.showValue(frameId, expression, view),
+    };
   }
 
   private async readGlobals(): Promise<DebugProtocol.Variable[]> {
@@ -1911,11 +2109,11 @@ class QDebugSession extends DebugSession {
   private async hoverValue(
     name: string,
     frameId: number | undefined,
-  ): Promise<string | undefined> {
+  ): Promise<DebugProtocol.Variable | undefined> {
     if (this.topLevelPaused) {
       const target = this.inScopeSpelling(name, await this.globalNames());
       if (target === undefined) return undefined;
-      return (await this.readValues([target]))[0]?.value;
+      return (await this.readValues([target]))[0];
     }
     if (!this.driver?.suspended || frameId === undefined) return undefined;
     const frame = this.currentFrames.find((f) => f.index === frameId);
@@ -1926,7 +2124,7 @@ class QDebugSession extends DebugSession {
       ...(await this.globalNames()),
     ]);
     if (target === undefined) return undefined;
-    return (await this.readValues([target]))[0]?.value;
+    return (await this.readValues([target], frameId))[0];
   }
 
   private inScopeSpelling(name: string, inScope: string[]): string | undefined {

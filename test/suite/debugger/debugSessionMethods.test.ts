@@ -150,6 +150,7 @@ describe("QDebugSession methods", () => {
       s.initializeRequest(response());
       const [reply] = responses();
       assert.strictEqual(reply.body.supportsConfigurationDoneRequest, true);
+      assert.strictEqual(reply.body.supportsClipboardContext, true);
       assert.strictEqual(reply.body.exceptionBreakpointFilters.length, 1);
       assert.strictEqual(events("initialized").length, 1);
     });
@@ -382,15 +383,149 @@ describe("QDebugSession methods", () => {
       s.topLevelPaused = { startLine: 1 };
       driver
         .on2(/^\.dbg\.globalNames/, '["a","","b"]')
-        .on2(/^\.dbg\.vals/, '{"a":1,"b":"x"}');
+        .on2(/^\.dbg\.vals/, '{"a":["1",0],"b":["\\"x\\"",0]}');
       await s.onVariables(response(), { variablesReference: 999 });
       assert.deepStrictEqual(
-        responses()[0].body.variables.map((v: any) => [v.name, v.value]),
+        responses()[0].body.variables.map((v: any) => [
+          v.name,
+          v.value,
+          v.evaluateName,
+          v.variablesReference,
+        ]),
         [
-          ["a", "1"],
-          ["b", "x"],
+          ["a", "1", "a", 0],
+          ["b", '"x"', "b", 0],
         ],
       );
+    });
+
+    it("expands a value that does not fit on one line into the lines held for it", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.globalNames/, '["t"]')
+        .on2(/^\.dbg\.vals\[0;/, '{"t":["+`a`b!(1 2;`x`y)",1]}')
+        .on2(/^\.dbg\.rows\[0;1\]$/, '["a b","---","1 x","2 y"]');
+      await s.onVariables(response(), { variablesReference: 999 });
+      const [t] = responses()[0].body.variables;
+      assert.strictEqual(t.value, "+`a`b!(1 2;`x`y)");
+      assert.strictEqual(t.variablesReference, 100001);
+      await s.onVariables(response(), {
+        variablesReference: t.variablesReference,
+      });
+      assert.deepStrictEqual(
+        responses()[1].body.variables.map((v: any) => [
+          v.name,
+          v.value,
+          v.evaluateName,
+          v.variablesReference,
+        ]),
+        [
+          ["0", "a b", undefined, 0],
+          ["1", "---", undefined, 0],
+          ["2", "1 x", undefined, 0],
+          ["3", "2 y", undefined, 0],
+        ],
+      );
+    });
+
+    it("refuses to copy a line of an expanded value, so it is copied as shown", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.globalNames/, '["t"]')
+        .on2(/^\.dbg\.vals/, '{"t":["+`a`b!(1 2;`x`y)",1]}')
+        .on2(/^\.dbg\.rows/, '["a b","---","1 x","  "]');
+      await s.onVariables(response(), { variablesReference: 999 });
+      const [t] = responses()[0].body.variables;
+      await s.onVariables(response(), {
+        variablesReference: t.variablesReference,
+      });
+      const rows = responses()[1].body.variables;
+      driver.commands.length = 0;
+      await s.onEvaluate(response(), {
+        expression: rows[2].value,
+        frameId: 0,
+        context: "clipboard",
+      });
+      await s.onEvaluate(response(), {
+        expression: rows[3].value,
+        frameId: 0,
+        context: "clipboard",
+      });
+      assert.deepStrictEqual(
+        responses()
+          .slice(2)
+          .map((r) => [r.success, r.message]),
+        [
+          [false, "Cannot copy this expression."],
+          [false, "Cannot copy this expression."],
+        ],
+      );
+      assert.deepStrictEqual(driver.commands, []);
+    });
+
+    it("expands a local from the value held for it, without reading it again", async () => {
+      driver.promptDepth = 2;
+      s.currentFrames = [
+        frame({ index: 0, text: "g:{y}" }),
+        frame({ index: 1, text: "f:{x}" }),
+      ];
+      s.qCurrentIndex = 0;
+      driver
+        .on2(/^\.dbg\.locals/, '["x"]')
+        .on2(/^\.dbg\.vals/, '{"x":["(1 2;3 4)",1]}')
+        .on2(/^\.dbg\.rows\[0;1\]$/, '["1 2","3 4"]');
+      await s.onVariables(response(), { variablesReference: 1001 });
+      const [x] = responses()[0].body.variables;
+      s.qCurrentIndex = 0;
+      driver.commands.length = 0;
+      await s.onVariables(response(), {
+        variablesReference: x.variablesReference,
+      });
+      assert.strictEqual(s.qCurrentIndex, 0);
+      assert.deepStrictEqual(driver.commands, [".dbg.rows[0;1]"]);
+      assert.deepStrictEqual(
+        responses()[1].body.variables.map((v: any) => v.value),
+        ["1 2", "3 4"],
+      );
+    });
+
+    it("expands nothing once the pause has ended or the lines cannot be read", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.globalNames/, '["t","u"]')
+        .on2(/^\.dbg\.vals/, '{"t":["t",1],"u":["u",2]}')
+        .on2(/^\.dbg\.rows/, "'type");
+      await s.onVariables(response(), { variablesReference: 999 });
+      const [t, u] = responses()[0].body.variables;
+      await s.onVariables(response(), {
+        variablesReference: t.variablesReference,
+      });
+      s.topLevelPaused = undefined;
+      await s.onVariables(response(), {
+        variablesReference: u.variablesReference,
+      });
+      assert.deepStrictEqual(responses()[1].body.variables, []);
+      assert.deepStrictEqual(responses()[2].body.variables, []);
+    });
+
+    it("forgets the values shown and held at the next stop", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      s.showValue(0, "x", ["(1 2;3 4)", 1]);
+      s.reportTopLevelStopped({ startLine: 1, startColumn: 0 });
+      assert.strictEqual(s.valueGeneration, 1);
+      assert.strictEqual(s.heldValues.size, 0);
+      assert.strictEqual(s.shownValues.size, 0);
+      s.showValue(0, "x", ["(1 2;3 4)", 1]);
+      s.topLevelPaused = undefined;
+      await s.reportStopped("step");
+      assert.strictEqual(s.valueGeneration, 2);
+      assert.strictEqual(s.heldValues.size, 0);
+      assert.strictEqual(s.shownValues.size, 0);
+      driver.commands.length = 0;
+      driver.promptDepth = 2;
+      await s.onVariables(response(), { variablesReference: 100001 });
+      assert.deepStrictEqual(responses()[0].body.variables, []);
+      assert.ok(!driver.commands.some((c) => c.startsWith(".dbg.rows")));
     });
 
     it("reads no globals once the pause has ended", async () => {
@@ -413,8 +548,8 @@ describe("QDebugSession methods", () => {
       driver
         .on2(/^\.dbg\.locals/, '["x","y",""]')
         .on2(/^\.dbg\.vals/, "'type")
-        .on2(/^x$/, "1")
-        .on2(/^y$/, "'y");
+        .on2(/^\.dbg\.show\[0;x\]$/, '["1",0]')
+        .on2(/^\.dbg\.show\[0;y\]$/, "'y");
       await s.onVariables(response(), { variablesReference: 1001 });
       assert.deepStrictEqual(
         responses()[0].body.variables.map((v: any) => v.value),
@@ -448,7 +583,7 @@ describe("QDebugSession methods", () => {
       s.currentNamespace = ".foo";
       driver
         .on2(/^\.dbg\.globalNames/, '[".foo.a"]')
-        .on2(/^\.dbg\.vals/, '{".foo.a":7}');
+        .on2(/^\.dbg\.vals/, '{".foo.a":["7",0]}');
       await s.onEvaluate(response(), { expression: "a", context: "hover" });
       await s.onEvaluate(response(), { expression: "zz", context: "hover" });
       assert.strictEqual(responses()[0].body.result, "7");
@@ -461,7 +596,7 @@ describe("QDebugSession methods", () => {
       driver
         .on2(/^\.dbg\.locals/, '["x"]')
         .on2(/^\.dbg\.globalNames/, "[]")
-        .on2(/^\.dbg\.vals/, '{"x":3}');
+        .on2(/^\.dbg\.vals/, '{"x":["3",1]}');
       await s.onEvaluate(response(), {
         expression: "x",
         context: "hover",
@@ -474,6 +609,7 @@ describe("QDebugSession methods", () => {
       });
       await s.onEvaluate(response(), { expression: "x", context: "hover" });
       assert.strictEqual(responses()[0].body.result, "3");
+      assert.ok(responses()[0].body.variablesReference >= 100000);
       assert.strictEqual(responses()[1].body.result, "");
       assert.strictEqual(responses()[2].body.result, "");
     });
@@ -483,6 +619,183 @@ describe("QDebugSession methods", () => {
       driver.on2(/^1\+1$/, "2\n");
       await s.onEvaluate(response(), { expression: "1+1" });
       assert.strictEqual(responses()[0].body.result, "2");
+    });
+
+    it("shows a watch expression on one line, expandable without running it again", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.watchable /, "1b")
+        .on2(/^\.dbg\.show\[0;\(\(1 2 3;4 5 6\)\)\]$/, '["(1 2 3;4 5 6)",1]')
+        .on2(/^\.dbg\.show\[0;\(\(\)!\(\)\)\]$/, '["()!()",0]')
+        .on2(/^\.dbg\.rows\[0;1\]$/, '["1 2 3","4 5 6"]');
+      await s.onEvaluate(response(), {
+        expression: "(1 2 3;4 5 6) / two rows",
+        context: "watch",
+      });
+      await s.onEvaluate(response(), { expression: "()!()", context: "watch" });
+      const [rows, empty] = responses().map((r) => r.body);
+      assert.strictEqual(rows.result, "(1 2 3;4 5 6)");
+      assert.strictEqual(empty.result, "()!()");
+      assert.strictEqual(empty.variablesReference, 0);
+      driver.commands.length = 0;
+      await s.onVariables(response(), {
+        variablesReference: rows.variablesReference,
+      });
+      assert.deepStrictEqual(driver.commands, [".dbg.rows[0;1]"]);
+      assert.deepStrictEqual(
+        responses()[2].body.variables.map((v: any) => v.value),
+        ["1 2 3", "4 5 6"],
+      );
+    });
+
+    it("copies the value already shown for an expression, without running it again", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.watchable /, "1b")
+        .on2(/^\.dbg\.show\[0;\(t\)\]$/, '["+(,`a)!,,1",1]')
+        .on2(/^\.dbg\.show\[0;\(n\)\]$/, '["42",0]')
+        .on2(/^\.dbg\.rows\[0;1\]$/, '["a","-","1"]');
+      await s.onEvaluate(response(), { expression: "t", context: "watch" });
+      await s.onEvaluate(response(), { expression: "n", context: "watch" });
+      driver.commands.length = 0;
+      await s.onEvaluate(response(), {
+        expression: "t",
+        frameId: 0,
+        context: "clipboard",
+      });
+      await s.onEvaluate(response(), {
+        expression: "n",
+        frameId: 0,
+        context: "clipboard",
+      });
+      assert.strictEqual(responses()[2].body.result, "a\n-\n1");
+      assert.strictEqual(responses()[3].body.result, "42");
+      assert.deepStrictEqual(driver.commands, [".dbg.rows[0;1]"]);
+    });
+
+    it("copies a local from the frame it was shown in", async () => {
+      driver.promptDepth = 2;
+      s.currentFrames = [
+        frame({ index: 0, text: "f:{x}" }),
+        frame({ index: 1, text: "f:{x}" }),
+      ];
+      s.qCurrentIndex = 0;
+      let held = 0;
+      driver
+        .on2(/^\.dbg\.locals/, '["x"]')
+        .on2(/^\.dbg\.vals/, () => `{"x":["x${++held}",${held}]}`)
+        .on2(/^\.dbg\.rows\[0;(\d)\]$/, (c) => `["frame ${c.at(-2)}"]`);
+      await s.onVariables(response(), { variablesReference: 1000 });
+      await s.onVariables(response(), { variablesReference: 1001 });
+      await s.onEvaluate(response(), {
+        expression: "x",
+        frameId: 0,
+        context: "clipboard",
+      });
+      await s.onEvaluate(response(), {
+        expression: "x",
+        frameId: 1,
+        context: "clipboard",
+      });
+      assert.deepStrictEqual(
+        responses()
+          .slice(2)
+          .map((r) => r.body.result),
+        ["frame 1", "frame 2"],
+      );
+    });
+
+    it("shows only the error of a failing watch expression", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.watchable /, "1b")
+        .on2(/^\.dbg\.show\[/, "'zz\n  [3]  .dbg.show[0;(zz)]\n             ^");
+      await s.onEvaluate(response(), { expression: "zz", context: "watch" });
+      assert.strictEqual(responses()[0].body.result, "'zz");
+    });
+
+    it("evaluates a watch expression at the console when it cannot be wrapped", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.watchable /, "0b")
+        .on2(/^a:1$/, "")
+        .on2(/^\\c$/, "25 80\n")
+        .on2(/^\.dbg\.show\[/, "[]");
+      await s.onEvaluate(response(), { expression: "a:1", context: "watch" });
+      await s.onEvaluate(response(), { expression: "\\c", context: "watch" });
+      await s.onEvaluate(response(), {
+        expression: "/ note",
+        context: "watch",
+      });
+      assert.deepStrictEqual(
+        responses().map((r) => r.body.result),
+        ["", "25 80", ""],
+      );
+      assert.ok(!driver.commands.some((c) => c.startsWith(".dbg.show")));
+      assert.strictEqual(
+        driver.commands.filter((c) => c.startsWith(".dbg.watchable")).length,
+        1,
+      );
+    });
+
+    it("runs a watch expression that prints once, showing its value", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.watchable /, "1b")
+        .on2(/^\.dbg\.show\[0;\(0N!x\)\]$/, '42\n["42",0]\n')
+        .on2(/^\.dbg\.show\[0;\(g x\)\]$/, "42\n'boom\n  [4]  g:{0N!x;'`boom}")
+        .on2(/^\.dbg\.show\[0;\(h x\)\]$/, "42\nnot json");
+      for (const expression of ["0N!x", "g x", "h x"]) {
+        await s.onEvaluate(response(), { expression, context: "watch" });
+      }
+      assert.deepStrictEqual(
+        responses().map((r) => r.body.result),
+        ["42", "'boom", "42"],
+      );
+      assert.deepStrictEqual(
+        driver.commands.filter((c) => !c.startsWith(".dbg.watchable")),
+        [".dbg.show[0;(0N!x)]", ".dbg.show[0;(g x)]", ".dbg.show[0;(h x)]"],
+      );
+    });
+
+    it("refuses to copy what it has not shown as a value, without running anything", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.watchable /, "0b")
+        .on2(/^x\+:1$/, "")
+        .on2(/^`t insert 1$/, ",3\n");
+      await s.onEvaluate(response(), { expression: "x+:1", context: "watch" });
+      await s.onEvaluate(response(), {
+        expression: "`t insert 1",
+        context: "repl",
+      });
+      driver.commands.length = 0;
+      for (const expression of ["x+:1", "`t insert 1", "\\c", "x", ""]) {
+        await s.onEvaluate(response(), {
+          expression,
+          frameId: 0,
+          context: "clipboard",
+        });
+      }
+      assert.deepStrictEqual(
+        responses()
+          .slice(2)
+          .map((r) => [r.success, r.message]),
+        Array(5).fill([false, "Cannot copy this expression."]),
+      );
+      assert.deepStrictEqual(driver.commands, []);
+    });
+
+    it("keeps a quoted slash in a watch expression", async () => {
+      s.topLevelPaused = { startLine: 1 };
+      driver
+        .on2(/^\.dbg\.watchable /, "1b")
+        .on2(/^\.dbg\.show\[/, '["\\"a /b\\"",0]');
+      await s.onEvaluate(response(), {
+        expression: '"a /b" / \\" quoted',
+        context: "watch",
+      });
+      assert.strictEqual(driver.commands.at(-1), '.dbg.show[0;("a /b")]');
     });
 
     it("refuses to evaluate when not paused", async () => {

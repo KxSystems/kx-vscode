@@ -84,6 +84,7 @@ const TRAP_CALLER_FIXTURE = fixture("trapCaller.q");
 const TOP_TRAP_CALLER_FIXTURE = fixture("topTrapCaller.q");
 const PRINTED_MARKER_FIXTURE = fixture("printedMarker.q");
 const PRINTED_TRAP_FIXTURE = fixture("printedTrap.q");
+const VALUES_FIXTURE = fixture("values.q");
 
 interface StackFrame {
   id: number;
@@ -95,6 +96,7 @@ interface StackFrame {
 interface Variable {
   name: string;
   value: string;
+  evaluateName?: string;
 }
 
 async function stackFrames(
@@ -1008,6 +1010,102 @@ describe("QDebugSession", function () {
     }
   });
 
+  describe("KXI-75305", () => {
+    it("shows locals and watch expressions as q displays them, expandable when they do not fit", async () => {
+      const client = DapClient.start();
+      try {
+        const threadId = await launch(client, VALUES_FIXTURE, [10]);
+        const frames = await stackFrames(client, threadId);
+        assert.strictEqual(frames[0].line, 10);
+
+        const variables = await localsOf(client, frames[0].id);
+        const value = (name: string) =>
+          variables.find((v) => v.name === name)?.value;
+        assert.strictEqual(value("d"), "()!()");
+        assert.strictEqual(
+          value("k"),
+          "(+(,`id)!,`guid$())!+(,`a)!,`symbol$()",
+        );
+        assert.strictEqual(value("n"), "::");
+        assert.strictEqual(value("e"), '""');
+        assert.strictEqual(value("c"), '"\\001\\002"');
+        assert.strictEqual(value("m"), "(1 2 3;4 5 6)");
+
+        const expanded = variables.find((v) => v.name === "k") as Variable & {
+          variablesReference: number;
+        };
+        const lines = await client.request<{ variables: Variable[] }>(
+          "variables",
+          { variablesReference: expanded.variablesReference },
+        );
+        assert.deepStrictEqual(
+          lines.variables.map((v) => [v.name, v.value, v.evaluateName]),
+          [
+            ["0", "id| a", undefined],
+            ["1", "--| -", undefined],
+          ],
+        );
+
+        const watch = async (expression: string, context = "watch") =>
+          client.request<{ result: string; variablesReference: number }>(
+            "evaluate",
+            { expression, frameId: frames[0].id, context },
+          );
+        const rowsOf = async (variablesReference: number) =>
+          (
+            await client.request<{ variables: Variable[] }>("variables", {
+              variablesReference,
+            })
+          ).variables.map((v) => v.value);
+
+        const fn = await watch("h");
+        assert.strictEqual(fn.result, "{[a] a*2}");
+        assert.deepStrictEqual(await rowsOf(fn.variablesReference), [
+          "{[a]",
+          "  a*2}",
+        ]);
+        assert.strictEqual((await watch("0N!7")).result, "7");
+        assert.strictEqual((await watch('";abc"')).result, '";abc"');
+        const drawn = await watch("(-100?1000;-100?1000)");
+        const [first, second] = await rowsOf(drawn.variablesReference);
+        const squeeze = (row: string) => row.trim().replace(/ +/g, " ");
+        assert.strictEqual(
+          drawn.result,
+          `(${squeeze(first)};${squeeze(second)})`,
+        );
+        assert.strictEqual(
+          (await watch("(-100?1000;-100?1000)", "clipboard")).result,
+          `${first}\n${second}`,
+        );
+        assert.strictEqual((await watch("()!()")).result, "()!()");
+        assert.strictEqual((await watch("()")).result, "()");
+        assert.strictEqual((await watch("enlist enlist `")).result, ",,`");
+        const rows = await watch("(1 2 3;4 5 6)");
+        assert.strictEqual(rows.result, "(1 2 3;4 5 6)");
+        assert.ok(rows.variablesReference > 0);
+        assert.strictEqual((await watch("m 1")).result, "4 5 6");
+        assert.strictEqual(
+          (await watch("m", "clipboard")).result,
+          "1 2 3\n4 5 6",
+        );
+        assert.strictEqual((await watch("count til 3000")).result, "3000");
+        assert.ok(
+          (await watch("til 3000")).result.includes("too large to display"),
+        );
+        const long = await watch("til 300");
+        assert.ok(long.result.endsWith(".."));
+        assert.ok(long.variablesReference > 0);
+        assert.ok((await watch("til 300", "clipboard")).result.endsWith("299"));
+
+        await client.request("continue", { threadId });
+        await client.waitForEvent("terminated");
+        await client.request("disconnect", {});
+      } finally {
+        client.close();
+      }
+    });
+  });
+
   it("stops at each of two breakpoints in the same function in turn, not skipping the second", async () => {
     const client = DapClient.start();
     try {
@@ -1565,7 +1663,7 @@ describe("QDebugSession", function () {
       assert.strictEqual(frames[0].line, 2);
       assert.strictEqual(frames[0].source?.path, LOAD_HELPER_FIXTURE);
       const locals = await localsOf(client, frames[0].id);
-      assertContains(locals, { name: "name", value: "world" });
+      assertContains(locals, { name: "name", value: '"world"' });
 
       await client.request("continue", { threadId: tid });
       await client.waitForEvent("terminated");
