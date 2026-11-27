@@ -87,7 +87,7 @@ describe("MCP and connection management", () => {
     assert.ok(start.notCalled);
   });
 
-  it("disconnecting stops the MCP server when nothing is left using it", () => {
+  it("disconnecting asks the MCP server whether it is still needed", () => {
     const stop = sinon.stub(mcpServer, "stopMcpServerIfUnused").resolves();
     const connection = new LocalConnection("localhost:5001", "server1", []);
     ext.connectedConnectionList.push(connection);

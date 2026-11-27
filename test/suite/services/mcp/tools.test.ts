@@ -124,6 +124,29 @@ describe("MCP tools", () => {
       assert.strictEqual(body.workspace, "test-workspace");
     });
 
+    it("adds a hint when no connection is listed", async () => {
+      addLocal("sleeping", false);
+      await setMcpAccess(nodeName("sleeping"), true);
+
+      const result = await tools.get("list_connections")!({});
+      const body = JSON.parse(result.content[0].text);
+
+      assert.deepStrictEqual(body.connections, []);
+      assert.match(
+        body.hint,
+        /connected in VS Code, and has MCP access allowed/,
+      );
+    });
+
+    it("gives no hint when a connection is listed", async () => {
+      addLocal("local-q", true);
+      await setMcpAccess(nodeName("local-q"), true);
+
+      const result = await tools.get("list_connections")!({});
+
+      assert.strictEqual(JSON.parse(result.content[0].text).hint, undefined);
+    });
+
     it("leaves out a label that an Insights connection shares", async () => {
       addLocal("shared", true);
       addInsightsNodeNamed(nodeName("shared"));

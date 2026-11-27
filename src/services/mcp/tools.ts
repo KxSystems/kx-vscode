@@ -223,20 +223,27 @@ const RUN_Q_DESCRIPTION = `Run q code on a kdb connection the user has allowed a
 The code runs in that q process, so it can change its data and files.
 Output longer than the user's limit is cut short. Call list_connections first to find the connection names.`;
 
+const NO_CONNECTIONS =
+  "No q connections are available. Ask the user to check that their q process is running, connected in VS Code, and has MCP access allowed.";
+
 export function registerTools(server: McpServer, workspaceLabel: string): void {
   server.registerTool(
     "list_connections",
     {
       description:
-        "List the kdb connections the user has allowed for MCP and connected in this VS Code window, and the workspace name.",
+        "List the q / kdb connections (q processes, kdb+, KDB-X) the user has allowed for MCP and connected in the kdb VS Code extension, and the workspace name. Use this whenever the user asks which q or kdb connections, servers or processes are available.",
       annotations: { readOnlyHint: true },
     },
     async () => {
       const connections = listUsableConnections();
       log(`list_connections returned ${connections.length} connection(s)`);
-      return text(
-        JSON.stringify({ workspace: workspaceLabel, connections }, null, 2),
-      );
+      // The server runs while any connection is allowed, connected or not,
+      // so an empty list usually means the q process isn't connected yet
+      const body =
+        connections.length > 0
+          ? { workspace: workspaceLabel, connections }
+          : { workspace: workspaceLabel, connections, hint: NO_CONNECTIONS };
+      return text(JSON.stringify(body, null, 2));
     },
   );
 

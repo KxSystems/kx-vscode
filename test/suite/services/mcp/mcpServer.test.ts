@@ -374,7 +374,7 @@ describe("kdb MCP server", () => {
   });
 
   describe("startMcpServerIfNeeded", () => {
-    it("does nothing without an allowed, connected connection", async () => {
+    it("does nothing while no connection is allowed, even if one is connected", async () => {
       await kdbMcpServer.stop();
       ext.connectedConnectionList.push(connectedLocal("local-q"));
 
@@ -383,14 +383,15 @@ describe("kdb MCP server", () => {
       assert.strictEqual(kdbMcpServer.running, false);
     });
 
-    it("ignores a connected connection that is not allowed", async () => {
+    it("starts the server for an allowed connection that isn't connected, with no timeout check", async () => {
       await kdbMcpServer.stop();
       await mcpAccess.setMcpAccess("other", true);
       ext.connectedConnectionList.push(connectedLocal("local-q"));
 
       await mcpServer.startMcpServerIfNeeded();
 
-      assert.strictEqual(kdbMcpServer.running, false);
+      assert.strictEqual(kdbMcpServer.running, true);
+      assert.ok(checkTimeouts.notCalled);
     });
 
     it("starts the server for an allowed, connected connection and checks q's timeouts", async () => {
@@ -406,16 +407,15 @@ describe("kdb MCP server", () => {
   });
 
   describe("stopMcpServerIfUnused", () => {
-    it("keeps the server while an allowed connection is connected", async () => {
+    it("keeps the server while a connection is allowed, even if none is connected", async () => {
       await mcpAccess.setMcpAccess("local-q", true);
-      ext.connectedConnectionList.push(connectedLocal("local-q"));
 
       await mcpServer.stopMcpServerIfUnused();
 
       assert.strictEqual(kdbMcpServer.running, true);
     });
 
-    it("stops the server when no allowed connection is left", async () => {
+    it("stops the server when no connection is allowed", async () => {
       await mcpServer.stopMcpServerIfUnused();
 
       assert.strictEqual(kdbMcpServer.running, false);
@@ -491,7 +491,6 @@ describe("kdb MCP server", () => {
       await kdbMcpServer.stop();
       sinon.stub(mcpAccess, "isMcpEnabled").returns(true);
       await mcpAccess.setMcpAccess("local-q", true);
-      ext.connectedConnectionList.push(connectedLocal("local-q"));
 
       configListener(changed("kdb.mcp.enabled"));
 
@@ -509,7 +508,6 @@ describe("kdb MCP server", () => {
     it("starts the server when the workspace is trusted", async () => {
       await kdbMcpServer.stop();
       await mcpAccess.setMcpAccess("local-q", true);
-      ext.connectedConnectionList.push(connectedLocal("local-q"));
 
       trustListener();
 
@@ -521,6 +519,27 @@ describe("kdb MCP server", () => {
 
       await waitUntil(() => !kdbMcpServer.running);
       assert.ok(reload.calledOnce);
+    });
+
+    it("starts the server when the window gains focus after another window allowed a connection", async () => {
+      await kdbMcpServer.stop();
+      await mcpAccess.setMcpAccess("local-q", true);
+
+      focusListener({ focused: true } as vscode.WindowState);
+
+      await waitUntil(() => kdbMcpServer.running);
+    });
+
+    it("starts the server on registration when a connection is allowed", async () => {
+      await kdbMcpServer.stop();
+      await mcpAccess.setMcpAccess("local-q", true);
+      const context = Object.assign(fakeContext(), { subscriptions: [] });
+
+      mcpServer.registerMcpServer(
+        context as unknown as vscode.ExtensionContext,
+      );
+
+      await waitUntil(() => kdbMcpServer.running);
     });
 
     it("does nothing when the window loses focus", () => {

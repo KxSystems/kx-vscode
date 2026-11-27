@@ -55,7 +55,9 @@ describe("MCP commands", () => {
     notify = sinon.stub(notifications, "notify").resolves(undefined);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Allowing access starts the server, even with nothing connected
+    await kdbMcpServer.stop();
     sinon.restore();
   });
 

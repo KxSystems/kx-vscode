@@ -5,7 +5,7 @@ description:
   How the kdb extension's MCP server lets AI agents in VS Code run q on the
   connections you allow.
 tags: [kdb, vscode, mcp, ai, agents, copilot]
-timestamp: 2026-11-20
+timestamp: 2026-11-27
 ---
 
 # MCP Server
@@ -34,6 +34,11 @@ connections are supported; Insights connections aren't yet.
 | `list_connections` | The connections that are allowed and connected.                       |
 | `run_q`            | Runs q on a connection and returns console-style text or the q error. |
 
+- When no connection is both allowed and connected, `list_connections` returns
+  an empty list with a hint, so the agent asks you to start the q process and
+  connect to it.
+- A call to an allowed connection that isn't connected, for example because its
+  q process stopped, is refused with a message naming that connection.
 - Output longer than `kdb.mcp.maxOutputChars` (default 20000) is cut short, and
   the agent is told to narrow the query.
 - A query still running after `kdb.mcp.queryTimeoutSeconds` (default 60) is
@@ -112,9 +117,16 @@ keeps its access; changing its host or port, or removing it, clears access.
   off stops the server, blocks all agent access and hides the MCP commands; the
   connections you allowed stay allowed for when you turn it back on.
 - The server listens on `127.0.0.1` only, and only in trusted workspaces. It
-  starts when a connection that's allowed for MCP is connected in the window,
-  and stops when the last one is disconnected or loses its access, or the window
-  closes. Agents show the server as unavailable while it's stopped.
+  runs while at least one connection has MCP access allowed, whether or not it
+  is connected: it starts when the extension loads in a window or when you allow
+  the first connection, and stops when the last connection loses its access, MCP
+  is turned off, or the window closes. Disconnecting, or a q process stopping,
+  leaves it running, so the agent is told which connection is unavailable.
+  Agents show the server as unavailable while it's stopped.
+- The extension loads when you open the kdb explorer, a q file or a kdb command,
+  not as soon as VS Code opens. If an agent can't reach the server after VS Code
+  restarts, open the kdb explorer. Agents that gave up while the server was down
+  may need reconnecting; in Claude Code, use `/mcp`.
 - Every request needs a bearer token, which is kept in VS Code's secret storage
   and shared by all windows. **KX: Regenerate MCP token** replaces it.
 
@@ -130,7 +142,8 @@ start its own.
   never appears in `.vscode/settings.json`.
 - The first time the server starts in a window, a notification says which port
   it's running on and offers **Generate MCP config**. Later starts in that
-  window, after you disconnect and reconnect, don't show it again.
+  window, for example after you remove and allow access again, don't show it
+  again.
 - If the default is held by another workspace's saved port, or by another
   program, a notification says what holds it and offers **Use port N**, **Choose
   port…** or **Don't start**. Suggested ports start 10 above the taken one, to
@@ -138,8 +151,9 @@ start its own.
 - If another window for the same workspace already serves on the port, this
   window says so once and doesn't start. AI agents in this window may still
   reach the other window's server, and then use its connections and access, not
-  this window's. It tries again the next time it connects, so a window that
-  dropped without closing (WSL or SSH) recovers once its port is free.
+  this window's. It tries again the next time it connects or is focused, so a
+  window that dropped without closing (WSL or SSH) recovers once its port is
+  free.
 - **KX: Show MCP servers** lists each workspace and its saved port. You can copy
   a config for any of them, or forget a port. Forget the port for another
   workspace; a window can't forget the port it's using.

@@ -27,7 +27,11 @@ import {
   workspace,
 } from "vscode";
 
-import { isMcpEnabled, updateMcpContext } from "./mcpAccess";
+import {
+  getMcpAllowedLabels,
+  isMcpEnabled,
+  updateMcpContext,
+} from "./mcpAccess";
 import {
   askForAnotherPort,
   choosePort,
@@ -193,7 +197,8 @@ class KdbMcpServer implements Disposable {
       if (!(result instanceof Server) && result.code === "EADDRINUSE") {
         health = await probeHealth(port);
         // Another window for this workspace already serves on this port. Leave
-        // it running and don't start here; the next connect tries again.
+        // it running and don't start here; the next connect or focus tries
+        // again.
         if (
           key &&
           health?.keyHash === keyHash(key) &&
@@ -391,10 +396,16 @@ class KdbMcpServer implements Disposable {
     req: IncomingMessage,
     res: ServerResponse,
   ): Promise<void> {
-    const server = new McpServer({
-      name: "kdb",
-      version: ext.context.extension.packageJSON.version ?? "0.0.0",
-    });
+    const server = new McpServer(
+      {
+        name: "kdb",
+        version: ext.context.extension.packageJSON.version ?? "0.0.0",
+      },
+      {
+        instructions:
+          "This server is the kdb VS Code extension. It gives access to the user's q / kdb connections (q processes, kdb+, KDB-X). When the user asks about q or kdb connections, servers, processes or data, use these tools, not other connectors: call list_connections to see what is available, then run_q to query one.",
+      },
+    );
     registerTools(server, workspaceName());
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
@@ -440,25 +451,29 @@ function reply(res: ServerResponse, status: number, body: object): void {
 
 export const kdbMcpServer = new KdbMcpServer();
 
+// Allowing access is the user's opt-in, so the server runs while any
+// connection has it, connected or not. An agent then finds the server before
+// the user connects, and a q process that stops is reported by the tools as
+// that connection, not as the whole server going away.
 function hasAllowedConnection(): boolean {
-  return ext.connectedConnectionList.some(isAllowedAndConnected);
+  return getMcpAllowedLabels().length > 0;
 }
 
-// The server runs only while an allowed connection is connected in this
-// window. It never opens a connection itself.
+// Starts the server while MCP is enabled, the workspace is trusted (both
+// checked by start()) and a connection is allowed. It never opens a
+// connection itself.
 export async function startMcpServerIfNeeded(retry = false): Promise<void> {
   if (hasAllowedConnection()) {
     await kdbMcpServer.start(retry);
-    if (kdbMcpServer.running) {
-      void checkProcessTimeouts(
-        ext.connectedConnectionList.filter(isAllowedAndConnected),
-      );
+    const connected = ext.connectedConnectionList.filter(isAllowedAndConnected);
+    if (kdbMcpServer.running && connected.length > 0) {
+      void checkProcessTimeouts(connected);
     }
   }
 }
 
-// Frees the port once the last allowed connection is disconnected or loses
-// its access
+// Frees the port once no connection has access. Disconnecting leaves it
+// running.
 export async function stopMcpServerIfUnused(): Promise<void> {
   if (!hasAllowedConnection()) {
     await kdbMcpServer.stop();
@@ -500,14 +515,16 @@ export function registerMcpServer(context: ExtensionContext): void {
     }),
     workspace.onDidGrantWorkspaceTrust(() => void startMcpServerIfNeeded()),
     // Access is saved for every window, so another window may have changed it
-    // while this one was in the background. Its menus and markers only update
-    // from its own changes, so refresh them when it's focused again.
+    // while this one was in the background. Its menus, markers and server
+    // only follow its own changes, so catch up when it's focused again.
     window.onDidChangeWindowState((state) => {
       if (state.focused) {
         updateMcpContext();
         ext.serverProvider.reload();
-        void stopMcpServerIfUnused();
+        void stopMcpServerIfUnused().then(() => startMcpServerIfNeeded());
       }
     }),
   );
+
+  void startMcpServerIfNeeded();
 }
