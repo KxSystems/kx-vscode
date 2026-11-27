@@ -54,6 +54,7 @@ import {
   KdbNode,
   MetaObjectPayloadNode,
 } from "../services/kdbTreeProvider";
+import { updateMcpAccessOnEdit } from "../services/mcp/mcpAccess";
 import { MetaContentProvider } from "../services/metaContentProvider";
 import { inputVariable } from "../services/notebookProviders";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
@@ -61,6 +62,7 @@ import {
   checkOpenSslInstalled,
   getInsights,
   getKeyForServerName,
+  getServerName,
   getServers,
   isQuickAlias,
   offerReconnectionAfterEdit,
@@ -594,6 +596,13 @@ export async function editKdbConnection(
 
           await updateServers(servers);
         }
+        // MCP access follows a rename, but not a new host or port
+        await updateMcpAccessOnEdit(
+          getServerName(oldServer),
+          getServerName(kdbData),
+          oldServer.serverName === kdbData.serverName &&
+            String(oldServer.serverPort) === String(kdbData.serverPort),
+        );
         const newServers = getServers();
         if (newServers != undefined) {
           ext.latestLblsChanged.length = 0;

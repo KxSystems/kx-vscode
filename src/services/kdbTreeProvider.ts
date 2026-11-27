@@ -39,6 +39,7 @@ import {
   getStatus,
 } from "../utils/core";
 import { getIconPath } from "../utils/iconsUtils";
+import { isMcpAllowed, isMcpEnabled } from "./mcp/mcpAccess";
 import { MessageKind, notify } from "../utils/notifications";
 
 export class KdbTreeProvider
@@ -545,6 +546,12 @@ export class KdbTreeProvider
   }
 }
 
+// Allowed connections show an MCP marker while MCP is turned on
+function showsMcpMarker(label: string): boolean {
+  // Access first: it needs no configuration, which some tests stub out
+  return isMcpAllowed(label) && isMcpEnabled();
+}
+
 export class KdbNode extends vscode.TreeItem {
   constructor(
     public readonly children: string[],
@@ -623,14 +630,23 @@ export class KdbNode extends vscode.TreeItem {
     tooltipMd.appendMarkdown(
       `${this.details.serverName}:${this.details.serverPort}`,
     );
+    if (showsMcpMarker(this.label)) {
+      tooltipMd.appendMarkdown("\n\nMCP access allowed");
+    }
     return tooltipMd;
   }
 
   getDescription(): string {
-    return this.collapsibleState === vscode.TreeItemCollapsibleState.None &&
+    const description =
+      this.collapsibleState === vscode.TreeItemCollapsibleState.None &&
       this.children.length > 2
-      ? `${this.children[2]}:${"*".repeat(this.children[3].length)}`
-      : "";
+        ? `${this.children[2]}:${"*".repeat(this.children[3].length)}`
+        : "";
+    return showsMcpMarker(this.label)
+      ? description
+        ? `${description} · MCP`
+        : "MCP"
+      : description;
   }
 
   iconPath = getNamedIconPath("conn-kdb", this.label);

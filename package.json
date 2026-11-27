@@ -181,6 +181,35 @@
           "default": "first",
           "description": "Default for whether a KX notebook cell output shows the first or the last rows of a table; each notebook can set its own",
           "scope": "machine-overridable"
+        },
+        "kdb.mcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Allow AI agents to query kdb connections through the extension's MCP server. Each connection must also be allowed and connected. Turning this off stops the server and blocks all agent access; the connections you allowed stay allowed for when you turn it back on.",
+          "scope": "application"
+        },
+        "kdb.mcp.maxOutputChars": {
+          "type": "number",
+          "default": 20000,
+          "minimum": 1000,
+          "markdownDescription": "The most characters of q output an agent gets back from one `run_q` query. Longer output is cut short, with a note telling the agent to narrow the query. Has no effect while `#kdb.mcp.enabled#` is off.",
+          "scope": "application"
+        },
+        "kdb.mcp.queryTimeoutSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 5,
+          "maximum": 3600,
+          "markdownDescription": "How many seconds q gets to run an agent's `run_q` query. Set the q process's `\\T` timeout to the same value so that q stops the query at this limit; without it the query isn't cancelled and keeps running in q. Agents also limit how long they wait for a tool to answer; if that limit is shorter than this setting, the agent gives up before q finishes. Has no effect while `#kdb.mcp.enabled#` is off.",
+          "scope": "application"
+        },
+        "kdb.mcp.port": {
+          "type": "number",
+          "default": 7464,
+          "minimum": 1024,
+          "maximum": 65535,
+          "markdownDescription": "The port on 127.0.0.1 a workspace's kdb MCP server tries first. If it's taken, the server picks another, and the workspace keeps using that port from then on. Set this in a workspace's settings to always use a specific port for that workspace. Has no effect while `#kdb.mcp.enabled#` is off.",
+          "scope": "window"
         }
       }
     },
@@ -591,6 +620,36 @@
         "command": "kdb.debugFile",
         "title": "KX: Debug File",
         "icon": "$(debug-alt)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.regenerateToken",
+        "title": "Regenerate MCP token"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.allowAccess",
+        "title": "Allow MCP access"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.removeAccess",
+        "title": "Remove MCP access"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.removeAllAccess",
+        "title": "Remove MCP access from all connections"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.generateConfig",
+        "title": "Generate MCP config"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.mcp.showServers",
+        "title": "Show MCP servers"
       }
     ],
     "keybindings": [
@@ -1079,6 +1138,30 @@
         {
           "command": "kdb.debugFile",
           "when": "resourceFilename =~ /\\.q$/i"
+        },
+        {
+          "command": "kdb.mcp.allowAccess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.mcp.removeAccess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.mcp.removeAllAccess",
+          "when": "config.kdb.mcp.enabled"
+        },
+        {
+          "command": "kdb.mcp.generateConfig",
+          "when": "config.kdb.mcp.enabled"
+        },
+        {
+          "command": "kdb.mcp.showServers",
+          "when": "config.kdb.mcp.enabled"
+        },
+        {
+          "command": "kdb.mcp.regenerateToken",
+          "when": "config.kdb.mcp.enabled"
         }
       ],
       "webview/context": [
@@ -1255,6 +1338,16 @@
           "command": "kdb.connections.content.selectView",
           "when": "view == kdb-servers && viewItem in kdb.selectContentNodesContext",
           "group": "inline"
+        },
+        {
+          "command": "kdb.mcp.allowAccess",
+          "when": "view == kdb-servers && viewItem in kdb.rootNodes && viewItem not in kdb.mcp.allowed && config.kdb.mcp.enabled && isWorkspaceTrusted",
+          "group": "mcp@1"
+        },
+        {
+          "command": "kdb.mcp.removeAccess",
+          "when": "view == kdb-servers && viewItem in kdb.rootNodes && viewItem in kdb.mcp.allowed && config.kdb.mcp.enabled",
+          "group": "mcp@1"
         }
       ],
       "editor/title": [
@@ -1530,6 +1623,12 @@
           }
         ]
       }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "kdb.mcp",
+        "label": "kdb"
+      }
     ]
   },
   "license": "MIT",
@@ -1628,5 +1727,9 @@
     "vscode-languageserver-textdocument": "1.0.16",
     "vscode-uri": "3.2.0",
     "ws": "8.23.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "4.6.7"
   }
 }

@@ -5,7 +5,7 @@ description:
   Command palette entries, keybindings, settings, execution matrix and telemetry
   events for the kdb VS Code extension.
 tags: [kdb, vscode, reference, keybindings, settings, telemetry]
-timestamp: 2026-11-06
+timestamp: 2026-11-20
 ---
 
 ## Command Palette
@@ -18,7 +18,8 @@ timestamp: 2026-11-06
 | KX: Import Connections                            | KX: New Workbook (Python)                          | KX: Focus on Query History view     |
 | KX: Export Connections                            | KX: New Workbook (SQL)                             | KX: Focus on Help and Feedback view |
 | KX: Debug File                                    | KX: New Query                                      | KX: Focus on KDB Results view       |
-|                                                   | KX: Convert datasources to queries                 |                                     |
+| KX: Regenerate MCP token                          | KX: Convert datasources to queries                 |                                     |
+| KX: Remove MCP access from all connections        | KX: Generate MCP config                            | KX: Show MCP servers                |
 | KX: Set Notebook Row Limit (not used by the REPL) | KX: Show First or Last Rows (not used by the REPL) |                                     |
 
 ## Keybindings
@@ -99,6 +100,10 @@ to them. Whether a right click pastes is VS Code's
 | kdb.hideSubscribeRegistrationNotification          | machine             | `boolean` | `false`       |
 | kdb.neverShowQInstallAgain                         | machine             | `boolean` | `false`       |
 | kdb.autoFocusOutputOnEntry                         | machine             | `boolean` | `true`        |
+| [kdb.mcp.enabled](mcp-server.md)                   | application         | `boolean` | `true`        |
+| [kdb.mcp.maxOutputChars](mcp-server.md)            | application         | `number`  | `20000`       |
+| [kdb.mcp.queryTimeoutSeconds](mcp-server.md)       | application         | `number`  | `60`          |
+| [kdb.mcp.port](mcp-server.md)                      | window              | `number`  | `7464`        |
 | kdb.notebookRowLimit                               | machine-overridable | `number`  | `100`         |
 | kdb.notebookRowLimitFrom                           | machine-overridable | `string`  | `"first"`     |
 | [kdb.qHomeDirectoryWorkspace](q-home-directory.md) | resource            | `string`  | `""`          |
@@ -150,6 +155,11 @@ whole file run.
 | Repl.Start                        |              | src/commands/workspaceCommand.ts         |
 | Repl.StartFolder                  |              | src/commands/workspaceCommand.ts         |
 | Debug.Start                       |              | src/commands/debugCommand.ts             |
+| MCP.AllowAccess                   |              | src/commands/mcpCommand.ts               |
+| MCP.RemoveAccess                  |              | src/commands/mcpCommand.ts               |
+| MCP.RemoveAllAccess               |              | src/commands/mcpCommand.ts               |
+| MCP.GenerateConfig                |              | src/commands/mcpCommand.ts               |
+| MCP.RegenerateToken               |              | src/commands/mcpCommand.ts               |
 | ¦                                 |              |                                          |
 | Connection.Create.kdb             |              | src/commands/serverCommand.ts            |
 | Connection.Edit.kdb               |              | src/commands/serverCommand.ts            |
